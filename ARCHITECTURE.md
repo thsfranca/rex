@@ -64,6 +64,7 @@ flowchart LR
 | Default storage | SQLite | Zero-dependency, single-file, good enough for single user |
 | Cost tracking | LiteLLM runtime cost calculation | LiteLLM's `completion_cost()` returns actual cost per request from its built-in pricing database; no manual cost config needed for known models |
 | Prompt enrichment | Pluggable pipeline, opt-in per enricher | Keeps enrichment logic separate from routing; each enricher toggles independently; zero overhead when disabled |
+| Observability dashboard | [Datasette](https://datasette.io/) + [datasette-dashboards](https://datasette.io/plugins/datasette-dashboards) (optional) | Same Python ecosystem; built for SQLite; Rex ships a YAML config, not a UI — no frontend code to maintain; user installs only if they want the dashboard |
 
 ## Task Categories
 
