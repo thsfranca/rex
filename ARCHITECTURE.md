@@ -161,8 +161,6 @@ The enrichment pipeline transforms requests after routing but before the model c
 - The pipeline only applies to `chat` requests — `completion` requests (tab completions) skip it entirely.
 - If no enrichers are enabled, the pipeline is a no-op with zero overhead.
 
-> Detailed spec: [docs/specs/enrichment-pipeline.md](docs/specs/enrichment-pipeline.md)
-
 ### Task Decomposition Enricher
 
 The first enricher. When enabled, it detects complex tasks and injects a system-level instruction telling the model to break the task into numbered steps and work through them one at a time.
@@ -174,7 +172,7 @@ The first enricher. When enabled, it detects complex tasks and injects a system-
 | Task category | `generation`, `refactoring`, `migration`, `code_review`, `test_generation`, `documentation` are inherently multi-step |
 
 - The enricher appends to the existing system message — it never replaces it.
-- Simple tasks (`explanation`, `completion`, `general`) skip enrichment entirely.
+- Simple tasks (`completion`, `debugging`, `optimization`, `explanation`, `general`) skip enrichment entirely.
 - Rex decides complexity, not the model. The classifier output is already available at zero cost.
 
 ## Learning Pipeline
