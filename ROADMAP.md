@@ -128,6 +128,22 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ---
 
+## Phase 5.3 — CLI + Config-First Model Registry
+
+**Goal**: Make Rex installable as a global CLI command and prioritize config-defined models over auto-discovered ones.
+
+**Deliverables**:
+- [ ] CLI entry point: install Rex globally (e.g., `uv tool install rex`), run with `rex start` or `rex`
+- [ ] `rex stop` shuts down a running Rex instance gracefully
+- [ ] CLI runs Rex as a background process that any AI tool can connect to via `http://localhost:8000/v1`
+- [ ] Config-first model registry: when `models` is defined in `config.yaml`, Rex uses that list as the primary model source
+- [ ] Auto-discovery supplements config-defined models only — adds models not already listed in config
+- [ ] Without a config file, auto-discovery works as it does today (no behavior change)
+
+**Design**: Rex currently discovers models automatically and treats config as optional overrides. This inverts the priority — config-defined models come first, auto-discovery fills in the gaps. The CLI makes Rex a single command away from running globally, so any AI tool (Cursor, Claude Code, Continue, Aider, etc.) can connect to the same instance.
+
+---
+
 ## Phase 6 — Observability Dashboard (optional)
 
 **Goal**: Give users a visual dashboard to explore routing decisions, cost breakdown, model usage, and reliability — without adding UI maintenance burden to Rex. Users install and run the dashboard only if they want it.
