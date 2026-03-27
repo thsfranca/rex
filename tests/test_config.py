@@ -5,7 +5,6 @@ import yaml
 
 from app.config import ModelConfig, RoutingConfig, Settings, load_config
 
-
 VALID_MODELS = [
     {
         "name": "openai/gpt-4o",
