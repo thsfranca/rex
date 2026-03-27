@@ -187,9 +187,9 @@ flowchart TD
 ## Project Structure
 
 ```
-rex/
+app/
   main.py                # FastAPI app entry point
-  config.yaml            # Model registry + routing config
+  config.py              # Pydantic settings model + YAML loader
   adapters/
     base.py              # Client adapter interface
     cursor.py            # Cursor-specific request normalization
@@ -214,7 +214,7 @@ rex/
     base.py              # Storage interface
     sqlite_store.py      # SQLite implementation
     cli.py               # CLI for stats and export
-  requirements.txt
-  README.md
-  ROADMAP.md
+config.yaml.example     # Example configuration
+pyproject.toml           # Project dependencies (uv)
+tests/                   # pytest test suite
 ```
