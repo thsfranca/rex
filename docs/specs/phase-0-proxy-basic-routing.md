@@ -7,79 +7,53 @@ For the full delivery plan, see [ROADMAP.md](../../ROADMAP.md). For system desig
 ## Goal
 
 - Build an OpenAI-compatible proxy that routes requests across multiple model backends.
-- Automatically discover available models from environment variables and provider APIs — zero configuration required.
 - Detect whether a request is a tab completion or a chat/agent interaction.
-- Route all tasks to the cheapest model. The fallback chain escalates to more expensive models on failure.
+- Auto-select the cheapest model as the primary (prefer local over cloud at equal cost).
+- Allow the user to override the primary model via optional config.
 - Fall back to the next available model if the primary fails.
 - Validate end-to-end integration with AI coding tools (streaming, request formats, connectivity).
 
 ---
 
-## Model Discovery
+## Routing Criteria
 
-Rex discovers available models automatically at startup. No configuration file is required.
+Rex selects models based on measurable properties available at startup — no manual tagging required.
 
-```mermaid
-flowchart TD
-    Start[Rex starts] --> ScanEnv["Scan env vars (OPENAI_API_KEY, ANTHROPIC_API_KEY, ...)"]
-    ScanEnv --> ProbeLocal["Probe local endpoints (Ollama at localhost:11434)"]
-    ProbeLocal --> QueryProviders["Query each provider's /v1/models"]
-    QueryProviders --> Enrich["Enrich with litellm.get_model_info()"]
-    Enrich --> Filter["Filter to text-completion-capable models"]
-    Filter --> AutoRoute["Auto-select completion + default models"]
-    AutoRoute --> Ready["Registry built, start serving"]
-```
+Phase 0 uses two properties:
 
-### Provider Detection
+| Property | Source | How Rex uses it |
+|---|---|---|
+| `cost_per_1k_input` | Config or LiteLLM `get_model_info()` | Cheaper models rank higher |
+| `is_local` | Config or auto-detected (Ollama probe) | Local models rank above cloud at equal cost |
 
-Rex scans environment variables for known API keys:
+Later phases will add:
 
-| Environment Variable | Provider |
-|---|---|
-| `OPENAI_API_KEY` | OpenAI |
-| `ANTHROPIC_API_KEY` | Anthropic |
-| `GROQ_API_KEY` | Groq |
-| `GEMINI_API_KEY` | Gemini |
-| `XAI_API_KEY` | xAI |
-| `TOGETHERAI_API_KEY` | Together AI |
-| `MISTRAL_API_KEY` | Mistral |
-| `COHERE_API_KEY` | Cohere |
+| Property | Source | How Rex uses it |
+|---|---|---|
+| Context window | LiteLLM `get_model_info()` | Route large-context tasks (refactoring, code review) to models with adequate context |
+| `supports_reasoning` | LiteLLM capability flags | Route debugging/optimization to reasoning-capable models |
+| `supports_function_calling` | LiteLLM capability flags | Route agent/tool-use tasks to models that support it |
 
-Rex also probes well-known local endpoints:
-- Ollama at `http://localhost:11434`
+Rex never uses a manually curated "strengths" list. All routing signals come from cost, context window, and capability flags that LiteLLM provides automatically for known models.
 
-### Model Listing
+---
 
-For each detected provider, Rex queries the provider's model listing API to get all available models.
-
-### Metadata Enrichment
-
-Rex calls `litellm.get_model_info()` for each discovered model to get:
-- Context window (max tokens)
-- Input/output cost per token
-- Capabilities (supports vision, function calling, etc.)
-
-For models not in LiteLLM's database (custom/private), Rex uses them without metadata — zero cost assumed, unknown context window.
-
-### Auto-Routing
-
-Rex selects the cheapest available model (prefers local, then lowest cloud cost) as the primary model for all tasks. The fallback chain orders remaining models by ascending cost, so failures escalate to progressively more capable models.
-
-When only one model is discovered, it handles everything.
-
-## Config Schema (Optional)
+## Config Schema
 
 Rex works without a config file. When present, `config.yaml` acts as an override mechanism.
 
 ```yaml
 server:
   host: "0.0.0.0"
-  port: 9000
+  port: 8000
 
 models:
-  - name: "my-company/custom-model"
-    api_base: "https://internal.company.com/v1"
+  - name: "openai/gpt-4o-mini"
     api_key: "sk-..."
+
+  - name: "ollama/llama3"
+    api_base: "http://localhost:11434"
+    is_local: true
 
 routing:
   primary_model: "ollama/llama3"
@@ -89,35 +63,42 @@ routing:
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `server.host` | string | no | `0.0.0.0` | Address Rex listens on |
+| `server.host` | string | no | `"0.0.0.0"` | Address Rex listens on |
 | `server.port` | integer | no | `8000` | Port Rex listens on |
 
 ### Models
 
-Manually defined models are merged with discovered models. A manual entry with the same name as a discovered model overrides it.
+Each entry in the `models` list describes a model backend:
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `name` | string | yes | LiteLLM model identifier (e.g., `openai/gpt-4o`, `ollama/llama3`) |
-| `api_key` | string | no | API key for this model's provider (overrides env var) |
-| `api_base` | string | no | Override the provider's default API URL |
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `name` | string | yes | — | LiteLLM model identifier (e.g., `openai/gpt-4o-mini`, `ollama/llama3`) |
+| `api_key` | string | no | `null` | API key for this model's provider |
+| `api_base` | string | no | `null` | Override the provider's default API URL |
+| `cost_per_1k_input` | float | no | `0.0` | Cost per 1,000 input tokens (0 for local models) |
+| `is_local` | boolean | no | `false` | Whether the model runs locally |
 
 ### Routing
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `routing.primary_model` | string | no | Override which model handles all tasks (default: auto-selected cheapest) |
+| Field | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `routing.primary_model` | string | no | `null` | Override which model Rex uses as primary. When omitted, Rex auto-selects the cheapest model (local first, then lowest cloud cost). |
 
+- Rex validates the config at startup using a Pydantic `Settings` model.
+- If the config file is missing, Rex discovers models from environment variables and local runtimes.
+- If the config file exists but is invalid, Rex fails with Pydantic validation errors.
+- If `routing.primary_model` is set but not found in the `models` list, Rex fails with `"Primary model '{name}' not found in registry"`.
 - LiteLLM infers the provider from the model identifier prefix (e.g., `openai/` → OpenAI, `ollama/` → Ollama).
-- When `routing` is omitted, Rex uses the cheapest discovered model as primary. The fallback chain orders remaining models by ascending cost.
 
 ---
 
 ## Model Registry
 
-- Rex populates the registry from model discovery results, merged with any manual config overrides.
-- Each model entry becomes a `ModelConfig` Pydantic model with fields: `name`, `api_key`, `api_base`.
-- The registry provides lookups by name and listing all models.
+- At startup, Rex runs model discovery (env vars, Ollama probe, provider APIs) and merges the results with any models from `config.yaml`.
+- Manual config entries override discovered models with the same name.
+- Each model becomes a `ModelConfig` Pydantic model enriched with cost from `litellm.get_model_info()`.
+- The registry provides lookups by name (`get_by_name`), full list (`get_all`), cost-sorted list (`sorted_by_cost`), and name list (`names`).
+- `sorted_by_cost` ranks local models first, then by ascending `cost_per_1k_input`.
 
 ---
 
@@ -129,31 +110,31 @@ Rex detects whether a request is a **tab completion** or a **chat/agent** intera
 |---|---|---|
 | Conversation length | Single turn (1 user message) | Multi-turn (2+ messages) |
 | Prompt length | Short (< 200 tokens) | Longer |
-| System prompt | Contains code context / cursor position | General instructions |
 | `max_tokens` | Low (< 500) | Higher or unset |
 | `temperature` | Low (0-0.2) | Higher or unset |
 
 - The detector examines the request and returns a feature type: `completion` or `chat`.
 - Phase 0 uses a simple scoring approach: each signal contributes a weighted score, and the highest-scoring feature type wins.
-- If the score is too close to call, the detector defaults to `chat` (the safer option — uses the model with adequate context for multi-turn).
+- If the score is too close to call, the detector defaults to `chat` (the safer option).
+- Phase 0 detects the feature type but routes all requests to the primary model. Per-feature routing (separate completion vs. chat models) is a future enhancement.
 
 ### Routing Logic
 
 ```
-model = cheapest_model  # or override from config
-# fallback chain escalates to more expensive models on failure
+primary = cheapest model (local-first), or config override
+
+selected = primary  # Phase 0: all requests go to primary
 ```
 
 ---
 
 ## Fallback Chain
 
-If the primary model fails (connection error, timeout, rate limit), Rex escalates to the next model by ascending cost:
+If the selected model fails (connection error, timeout, rate limit), Rex tries the next available model:
 
-1. Try the primary model (cheapest).
-2. On failure, try the next cheapest model in the registry.
-3. Continue up the cost ladder until a model succeeds.
-4. If all models fail, return the error from the last attempt to the client.
+1. Try the primary model.
+2. On failure, try remaining models in cost order (local first, then cheapest cloud).
+3. If all models fail, return the error from the last attempt to the client.
 
 - Rex logs each fallback attempt (which model failed, why, which model it fell back to).
 - The fallback chain adds no overhead on the happy path — it only activates on failure.
@@ -165,9 +146,9 @@ If the primary model fails (connection error, timeout, rate limit), Rex escalate
 ### POST /v1/chat/completions
 
 - Accepts the full OpenAI chat completions request body.
-- Runs feature detection on the request to determine `completion` vs. `chat`.
-- Selects the model based on the routing logic and ignores the `model` field from the request.
+- Runs feature detection on the request (logged, but routing uses primary model in Phase 0).
 - Passes all other parameters through to LiteLLM (`messages`, `temperature`, `max_tokens`, `top_p`, `stop`, `stream`, etc.).
+- Uses the client's `Authorization: Bearer <key>` as the API key if the model config has no `api_key` set.
 
 **Non-streaming** (`stream: false` or omitted):
 
@@ -183,9 +164,8 @@ If the primary model fails (connection error, timeout, rate limit), Rex escalate
 
 ### POST /v1/completions
 
-- Same pattern as chat completions but calls `await litellm.atext_completion()`.
+- Same pattern as chat completions but calls `await litellm.acompletion()`.
 - Supports both streaming and non-streaming modes.
-- Always routes to the primary model (cheapest).
 
 ### GET /v1/models
 
@@ -196,15 +176,15 @@ If the primary model fails (connection error, timeout, rate limit), Rex escalate
   "object": "list",
   "data": [
     {
-      "id": "openai/gpt-4o",
+      "id": "openai/gpt-4o-mini",
       "object": "model",
-      "created": 1700000000,
+      "created": 0,
       "owned_by": "rex"
     },
     {
       "id": "ollama/llama3",
       "object": "model",
-      "created": 1700000000,
+      "created": 0,
       "owned_by": "rex"
     }
   ]
@@ -213,15 +193,11 @@ If the primary model fails (connection error, timeout, rate limit), Rex escalate
 
 ### GET /health
 
-- Returns proxy status and model availability:
+- Returns proxy status:
 
 ```json
 {
-  "status": "ok",
-  "models": {
-    "openai/gpt-4o": "available",
-    "ollama/llama3": "unavailable"
-  }
+  "status": "ok"
 }
 ```
 
@@ -230,7 +206,7 @@ If the primary model fails (connection error, timeout, rate limit), Rex escalate
 - Catches any request to a path not handled above.
 - Forwards the raw request (method, path, headers, query params, body) to the primary model's `api_base` via `httpx.AsyncClient`.
 - Returns the upstream response as-is (status code, headers, body).
-- If no `api_base` is configured for the default model, returns `501 Not Implemented`.
+- If no `api_base` is configured for the primary model, returns `501 Not Implemented`.
 
 ---
 
@@ -287,11 +263,10 @@ Rex follows the graceful degradation strategy from [ARCHITECTURE.md](../../ARCHI
 
 ### Startup Failures
 
-- No providers detected and no config file → exit with a clear error listing the environment variables Rex looked for.
-- Discovery finds zero models (e.g., all API keys invalid, all providers unreachable) → exit with error.
-- Config exists but is invalid → exit with Pydantic validation errors.
-- Config specifies a `routing.primary_model` that doesn't exist in the final registry (discovered + manual) → exit with `"Model '{name}' referenced in routing but not found"`.
-- Provider API unreachable at startup → Rex skips that provider, logs a warning, continues with remaining providers.
+- Missing config file → Rex discovers models from environment variables and local runtimes.
+- Invalid config values → Rex fails with Pydantic validation errors.
+- `routing.primary_model` not found in the registry → Rex fails with `"Primary model '{name}' not found in registry"`.
+- Empty model registry (no providers detected and no models in config) → Rex exits with a message listing the supported environment variables.
 
 ---
 
@@ -302,19 +277,20 @@ Phase 0 creates only the files needed for a working proxy with basic routing:
 ```
 app/
   main.py              # FastAPI app, lifespan, endpoint definitions
-  config.py            # Pydantic Settings model, optional YAML loader
+  config.py            # Pydantic Settings model, YAML loader
   discovery/
     providers.py       # Detects available providers from env vars
     models.py          # Queries provider APIs for available models
     metadata.py        # Enriches models with LiteLLM metadata
+    registry_builder.py # Orchestrates discovery and builds the model registry
   proxy/
     handler.py         # Completion request handling via LiteLLM
     streaming.py       # SSE async generator
   router/
-    registry.py        # Model registry + lookups
+    registry.py        # Model registry (lookups, cost sorting)
     detector.py        # Feature detection (completion vs. chat)
-    engine.py          # Routing engine (detector -> model selection + fallback)
-config.yaml.example   # Example configuration (optional overrides)
+    engine.py          # Routing engine (primary selection + fallback)
+config.yaml.example   # Example configuration (optional)
 pyproject.toml         # Project dependencies (uv)
 tests/                 # pytest test suite
 ```
@@ -322,38 +298,22 @@ tests/                 # pytest test suite
 ### main.py
 
 - Defines the FastAPI app with a lifespan context manager.
-- Runs model discovery, optionally merges config overrides, and initializes the model registry at startup.
+- Loads the config (optional), runs model discovery, and builds the model registry at startup via `build_registry()`.
 - Registers all endpoint routes.
 - The catch-all route handles transparent passthrough.
 
 ### config.py
 
-- `ModelConfig` Pydantic model for each model entry (`name`, `api_key`, `api_base`).
-- `RoutingConfig` Pydantic model for optional routing overrides.
-- `Settings` Pydantic model for the full config schema (all fields optional).
-- `load_config(path: str) -> Settings | None` function that reads YAML if the file exists.
-
-### discovery/providers.py
-
-- Scans environment variables for known API keys.
-- Probes local endpoints (Ollama).
-- Returns a list of detected providers with their credentials.
-
-### discovery/models.py
-
-- Queries each detected provider's model listing API.
-- Returns a list of available model names per provider.
-
-### discovery/metadata.py
-
-- Calls `litellm.get_model_info()` for each discovered model.
-- Returns enriched model data (context window, pricing, capabilities).
+- `ModelConfig` Pydantic model for each model entry (name required, everything else optional with defaults).
+- `RoutingConfig` Pydantic model for routing settings (optional `primary_model`).
+- `Settings` Pydantic model for the full config schema (all sections optional with defaults).
+- `load_config(path) -> Settings | None` — reads YAML, returns `None` if file missing.
 
 ### proxy/handler.py
 
-- `handle_chat_completion(request, engine) -> Response` — runs feature detection, selects model, calls LiteLLM, returns JSON or streaming.
-- `handle_text_completion(request, engine) -> Response` — routes to completion model, calls LiteLLM.
-- `handle_passthrough(request, settings) -> Response` — forwards raw requests via httpx.
+- `handle_chat_completion(body, engine, authorization) -> Response` — runs feature detection, selects model, calls LiteLLM, returns JSON or streaming.
+- `handle_text_completion(body, engine, authorization) -> Response` — routes to primary model, calls LiteLLM.
+- `handle_passthrough(request, api_base) -> Response` — forwards raw requests via httpx.
 
 ### proxy/streaming.py
 
@@ -361,18 +321,20 @@ tests/                 # pytest test suite
 
 ### router/registry.py
 
-- `ModelRegistry` class populated from discovery results + config overrides.
-- Lookups: `get_by_name(name)`, `get_all()`, `names()`.
+- `ModelRegistry` class that stores and queries discovered and config-provided models.
+- Lookups: `get_by_name(name)`, `get_all()`, `sorted_by_cost()`, `names()`.
 
 ### router/detector.py
 
-- `detect_feature(request) -> FeatureType` — analyzes request signals, returns `completion` or `chat`.
+- `detect_feature(messages, max_tokens, temperature) -> FeatureType` — analyzes request signals, returns `completion` or `chat`.
 - `FeatureType` enum: `COMPLETION`, `CHAT`.
 
 ### router/engine.py
 
 - `RoutingEngine` class that combines detection + model selection + fallback.
-- `route(request) -> ModelConfig` — detects feature type, selects model, handles fallback chain.
+- `select_model(messages, max_tokens, temperature) -> ModelConfig` — detects feature type, returns primary model.
+- `fallback_order(primary) -> list[ModelConfig]` — returns remaining models sorted by cost.
+- Auto-selects cheapest model (local first) as primary if no override is set.
 
 ---
 
@@ -400,32 +362,28 @@ httpx>=0.27.0
 
 ### Basic Connectivity
 
-1. Set at least one provider API key:
-   ```bash
-   export OPENAI_API_KEY="sk-..."
-   ```
-2. Start Rex:
+1. Start Rex:
    ```bash
    uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
    ```
-3. Test health:
+2. Test health:
    ```bash
    curl http://localhost:8000/health
    ```
-4. Test models list (should show discovered models):
+3. Test models list:
    ```bash
    curl http://localhost:8000/v1/models
    ```
 
 ### Completion Routing
 
-5. Send a short single-turn request (should route to cheapest model):
+4. Send a short single-turn request (detected as completion):
    ```bash
    curl -X POST http://localhost:8000/v1/chat/completions \
      -H "Content-Type: application/json" \
      -d '{"messages": [{"role": "user", "content": "complete: def hello"}], "max_tokens": 50, "temperature": 0}'
    ```
-6. Send a multi-turn chat request (should route to cheapest model, same as completion):
+5. Send a multi-turn chat request (detected as chat):
    ```bash
    curl -X POST http://localhost:8000/v1/chat/completions \
      -H "Content-Type: application/json" \
@@ -434,7 +392,7 @@ httpx>=0.27.0
 
 ### Streaming
 
-7. Test streaming with a chat request:
+6. Test streaming with a chat request:
    ```bash
    curl -X POST http://localhost:8000/v1/chat/completions \
      -H "Content-Type: application/json" \
@@ -445,12 +403,12 @@ httpx>=0.27.0
 
 ### Fallback
 
-8. Configure a model with an invalid API key or unreachable `api_base`.
+7. Configure a model with an invalid API key or unreachable `api_base`.
    - Send a request that routes to the broken model.
    - Verify Rex falls back to the next model and returns a valid response.
 
 ### Client Integration
 
-9. Configure a coding tool to use `http://localhost:8000` as the API base URL.
-   - Send a tab completion and verify the cheapest model responds.
-   - Send a chat message and verify the cheapest model responds (or fallback if it fails).
+8. Configure a coding tool to use `http://localhost:8000` as the API base URL.
+   - Send a tab completion and verify the primary model responds.
+   - Send a chat message and verify the primary model responds.
