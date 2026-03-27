@@ -86,6 +86,28 @@ _STACK_TRACE_PATTERN = re.compile(
     re.M,
 )
 
+_CODE_BLOCK_PATTERN = re.compile(r"```[\s\S]*?```")
+
+_CODE_HEAVY_CATEGORIES = frozenset(
+    {
+        TaskCategory.DEBUGGING,
+        TaskCategory.REFACTORING,
+        TaskCategory.OPTIMIZATION,
+        TaskCategory.TEST_GENERATION,
+        TaskCategory.CODE_REVIEW,
+        TaskCategory.GENERATION,
+    }
+)
+
+_LONG_CONTEXT_CATEGORIES = frozenset(
+    {
+        TaskCategory.REFACTORING,
+        TaskCategory.CODE_REVIEW,
+        TaskCategory.GENERATION,
+        TaskCategory.TEST_GENERATION,
+    }
+)
+
 
 @dataclass(frozen=True)
 class ClassificationResult:
@@ -108,6 +130,14 @@ def _has_stack_trace(text: str) -> bool:
     return bool(_STACK_TRACE_PATTERN.search(text))
 
 
+def _code_block_ratio(text: str) -> float:
+    if not text:
+        return 0.0
+    code_blocks = _CODE_BLOCK_PATTERN.findall(text)
+    code_length = sum(len(block) for block in code_blocks)
+    return code_length / len(text)
+
+
 def _count_keyword_matches(text: str, category: TaskCategory) -> int:
     patterns = _KEYWORD_PATTERNS.get(category, [])
     return sum(len(p.findall(text)) for p in patterns)
@@ -128,6 +158,18 @@ def classify(messages: list[dict]) -> ClassificationResult:
 
     if _has_stack_trace(text):
         scores[TaskCategory.DEBUGGING] = scores.get(TaskCategory.DEBUGGING, 0.0) + 0.3
+
+    code_ratio = _code_block_ratio(text)
+    if code_ratio > 0.3:
+        for cat in _CODE_HEAVY_CATEGORIES:
+            if cat in scores:
+                scores[cat] += 0.1
+
+    prompt_length = len(text)
+    if prompt_length > 500:
+        for cat in _LONG_CONTEXT_CATEGORIES:
+            if cat in scores:
+                scores[cat] += 0.1
 
     if not scores:
         return ClassificationResult(category=TaskCategory.GENERAL, confidence=0.2)
