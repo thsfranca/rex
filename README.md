@@ -9,7 +9,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 ## Features
 
-- **Zero-config model discovery**: Rex detects available providers from environment variables and local runtimes (Ollama), queries their APIs for available models, and enriches each model with metadata (cost, context window) from LiteLLM — no config file needed.
+- **Zero-config model discovery**: Rex detects available providers from environment variables and local runtimes (Ollama), queries their APIs for available models, and enriches each model with metadata (cost, context window) from LiteLLM — no config file needed. Models from `config.yaml` are merged into the registry (and override discovered models with the same name).
 - **Cost-first routing**: Rex auto-selects the cheapest model as the primary (local models first, then cheapest cloud). All requests go to the primary model.
 - **Fallback chains**: If the primary model fails, Rex tries the next model in cost order.
 - **SSE streaming**: Full Server-Sent Events streaming support for chat completions.
@@ -18,7 +18,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 ## How It Works
 
-1. On startup, Rex **discovers** available models from environment variables (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.), local runtimes (Ollama), and provider APIs — then merges with any `config.yaml` overrides.
+1. On startup, Rex **discovers** available models from environment variables (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.), local runtimes (Ollama), provider APIs, and models listed in `config.yaml`.
 2. Rex sorts models by cost (local first, then cheapest cloud) and selects the **primary model**.
 3. The **proxy** forwards incoming requests to the primary model via LiteLLM and streams the response back.
 4. If the primary fails, the **fallback chain** tries remaining models in cost order.
