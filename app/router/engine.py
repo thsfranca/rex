@@ -7,6 +7,7 @@ from app.config import ModelConfig
 from app.router.categories import TaskCategory, TaskRequirements, get_requirements
 from app.router.classifier import classify
 from app.router.detector import FeatureType, detect_feature
+from app.router.llm_judge import LLMJudge
 from app.router.registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
@@ -21,9 +22,17 @@ class RoutingDecision:
 
 
 class RoutingEngine:
-    def __init__(self, registry: ModelRegistry, primary_model: str | None = None) -> None:
+    def __init__(
+        self,
+        registry: ModelRegistry,
+        primary_model: str | None = None,
+        judge: LLMJudge | None = None,
+        confidence_threshold: float = 0.5,
+    ) -> None:
         self._registry = registry
         self._primary = self._resolve_primary(primary_model)
+        self._judge = judge
+        self._confidence_threshold = confidence_threshold
 
     def _resolve_primary(self, override: str | None) -> ModelConfig:
         if override:
@@ -59,7 +68,7 @@ class RoutingEngine:
                 return False
         return True
 
-    def select_model(
+    async def select_model(
         self,
         messages: list[dict],
         max_tokens: int | None = None,
@@ -77,6 +86,23 @@ class RoutingEngine:
             )
 
         result = classify(messages)
+
+        if self._judge is not None and result.confidence < self._confidence_threshold:
+            judge_result = await self._judge.classify(messages)
+            if judge_result is not None:
+                logger.info(
+                    "LLM judge reclassified from %s (confidence=%.2f) to %s",
+                    result.category.value,
+                    result.confidence,
+                    judge_result.category.value,
+                )
+                from app.router.classifier import ClassificationResult
+
+                result = ClassificationResult(
+                    category=judge_result.category,
+                    confidence=0.9,
+                )
+
         requirements = get_requirements(result.category)
 
         if self._model_meets_requirements(self._primary, requirements):
