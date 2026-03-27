@@ -390,3 +390,55 @@ class TestResolveConfigProviders:
         )
         assert len(providers) == 1
         assert providers[0].api_key is None
+
+    def test_resolves_api_base_from_env(self, monkeypatch):
+        monkeypatch.setenv("PROXY_URL", "https://proxy.example.com/anthropic")
+        providers = _resolve_config_providers(
+            [
+                ProviderConfig(
+                    prefix="anthropic",
+                    api_base_env="PROXY_URL",
+                    api_key="sk-test",
+                )
+            ]
+        )
+        assert len(providers) == 1
+        assert providers[0].api_base == "https://proxy.example.com/anthropic"
+
+    def test_direct_api_base_takes_precedence_over_env(self, monkeypatch):
+        monkeypatch.setenv("PROXY_URL", "https://env-proxy.example.com")
+        providers = _resolve_config_providers(
+            [
+                ProviderConfig(
+                    prefix="anthropic",
+                    api_base="https://direct-proxy.example.com",
+                    api_base_env="PROXY_URL",
+                    api_key="sk-test",
+                )
+            ]
+        )
+        assert len(providers) == 1
+        assert providers[0].api_base == "https://direct-proxy.example.com"
+
+    def test_skips_provider_when_api_base_env_missing(self):
+        providers = _resolve_config_providers(
+            [
+                ProviderConfig(
+                    prefix="anthropic",
+                    api_base_env="MISSING_PROXY_URL",
+                    api_key="sk-test",
+                )
+            ]
+        )
+        assert len(providers) == 0
+
+    def test_skips_provider_when_no_api_base_or_env(self):
+        providers = _resolve_config_providers(
+            [
+                ProviderConfig(
+                    prefix="anthropic",
+                    api_key="sk-test",
+                )
+            ]
+        )
+        assert len(providers) == 0
