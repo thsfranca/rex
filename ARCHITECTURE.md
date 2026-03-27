@@ -171,10 +171,10 @@ The first enricher. When enabled, it detects complex tasks and injects a system-
 
 | Signal | How it indicates complexity |
 |---|---|
-| Task category | `generation`, `refactoring`, `migration`, `code_review`, `test_generation` are inherently multi-step |
+| Task category | `generation`, `refactoring`, `migration`, `code_review`, `test_generation`, `documentation` are inherently multi-step |
 
 - The enricher appends to the existing system message — it never replaces it.
-- Simple tasks (`explanation`, `documentation`, `completion`, `general`) skip enrichment entirely.
+- Simple tasks (`explanation`, `completion`, `general`) skip enrichment entirely.
 - Rex decides complexity, not the model. The classifier output is already available at zero cost.
 
 ## Learning Pipeline

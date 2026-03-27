@@ -11,6 +11,7 @@ COMPLEX_CATEGORIES: frozenset[TaskCategory] = frozenset(
         TaskCategory.MIGRATION,
         TaskCategory.CODE_REVIEW,
         TaskCategory.TEST_GENERATION,
+        TaskCategory.DOCUMENTATION,
     }
 )
 
