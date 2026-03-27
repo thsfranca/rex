@@ -287,7 +287,8 @@ class ServerConfig(BaseModel):
 
 class ProviderConfig(BaseModel):
     prefix: str
-    api_base: str
+    api_base: str | None = None
+    api_base_env: str | None = None
     api_key: str | None = None
     api_key_env: str | None = None
 
@@ -307,7 +308,8 @@ class Settings(BaseModel):
 | `server.port` | integer | no | `8000` | HTTP server port |
 | `providers` | list | no | `[]` | Remote provider endpoints to probe for models (override auto-discovered providers by prefix) |
 | `providers[].prefix` | string | yes | — | Provider prefix (e.g., `anthropic`, `openai`) |
-| `providers[].api_base` | string | yes | — | Base URL of the remote provider or LiteLLM proxy |
+| `providers[].api_base` | string | no | `null` | Base URL of the remote provider or LiteLLM proxy (direct value) |
+| `providers[].api_base_env` | string | no | `null` | Name of environment variable containing the base URL |
 | `providers[].api_key` | string | no | `null` | API key (direct value) |
 | `providers[].api_key_env` | string | no | `null` | Name of environment variable containing the API key |
 | `models` | list | no | `[]` | Manual model definitions (override discovered models by name) |

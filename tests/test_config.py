@@ -57,6 +57,7 @@ class TestProviderConfig:
         provider = ProviderConfig(prefix="anthropic", api_base="https://proxy.example.com")
         assert provider.prefix == "anthropic"
         assert provider.api_base == "https://proxy.example.com"
+        assert provider.api_base_env is None
         assert provider.api_key is None
         assert provider.api_key_env is None
 
@@ -78,15 +79,26 @@ class TestProviderConfig:
         assert provider.api_key is None
         assert provider.api_key_env == "ANTHROPIC_AUTH_TOKEN"
 
+    def test_with_api_base_env(self):
+        provider = ProviderConfig(
+            prefix="anthropic",
+            api_base_env="LITELLM_PROXY_URL",
+            api_key="sk-test",
+        )
+        assert provider.api_base is None
+        assert provider.api_base_env == "LITELLM_PROXY_URL"
+
     def test_all_fields_set(self):
         provider = ProviderConfig(
             prefix="openai",
             api_base="https://proxy.example.com/openai",
+            api_base_env="PROXY_URL",
             api_key="sk-direct",
             api_key_env="OPENAI_PROXY_KEY",
         )
         assert provider.prefix == "openai"
         assert provider.api_base == "https://proxy.example.com/openai"
+        assert provider.api_base_env == "PROXY_URL"
         assert provider.api_key == "sk-direct"
         assert provider.api_key_env == "OPENAI_PROXY_KEY"
 
