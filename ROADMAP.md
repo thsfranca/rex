@@ -88,14 +88,14 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 **Goal**: Train a personalized ML classifier from accumulated data using unsupervised clustering and weak supervision. The classifier replaces heuristics as the primary router once it reaches quality thresholds.
 
 **Deliverables**:
-- [ ] Unsupervised K-means clustering on stored query embeddings with [silhouette score](https://doi.org/10.1016/0377-0427(87)90125-7) for optimal cluster count (Rousseeuw, 1987)
-- [ ] Periodic re-clustering as query volume grows (~every 100 new queries)
-- [ ] Weak supervision label model: heuristic rules as noisy labeling functions, probabilistic aggregation of votes ([Ratner et al., 2017](https://arxiv.org/abs/1711.10160))
-- [ ] ML classifier module: logistic regression inference, integration into the classifier chain, model persistence
-- [ ] ML classifier training: train on cluster-derived + weakly-supervised labels, automatic retraining as usage patterns evolve
-- [ ] Automatic promotion: ML classifier replaces heuristics as primary when silhouette score > 0.5 and label model converges; heuristics demote to labeling functions only
-- [ ] Per-category outcome tracking (fallback triggers, error rate, latency, re-ask rate)
-- [ ] Upward migration: promote categories with persistent poor outcomes to more capable models
+- [x] Unsupervised K-means clustering on stored query embeddings with [silhouette score](https://doi.org/10.1016/0377-0427(87)90125-7) for optimal cluster count (Rousseeuw, 1987)
+- [x] Periodic re-clustering as query volume grows (~every 100 new queries)
+- [x] Weak supervision label model: heuristic rules as noisy labeling functions, probabilistic aggregation of votes ([Ratner et al., 2017](https://arxiv.org/abs/1711.10160))
+- [x] ML classifier module: logistic regression inference, integration into the classifier chain, model persistence
+- [x] ML classifier training: train on cluster-derived + weakly-supervised labels, automatic retraining as usage patterns evolve
+- [x] Automatic promotion: ML classifier replaces heuristics as primary when silhouette score > 0.5 and label model converges; heuristics demote to labeling functions only
+- [x] Per-category outcome tracking (fallback triggers, error rate, latency, re-ask rate)
+- [x] Upward migration: promote categories with persistent poor outcomes to more capable models
 
 ---
 

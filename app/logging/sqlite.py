@@ -28,6 +28,16 @@ CREATE TABLE IF NOT EXISTS decisions (
 );
 """
 
+_CREATE_OVERRIDES_TABLE = """
+CREATE TABLE IF NOT EXISTS category_overrides (
+    category TEXT PRIMARY KEY,
+    needs_reasoning INTEGER NOT NULL DEFAULT 0,
+    needs_cloud INTEGER NOT NULL DEFAULT 0,
+    min_context_window INTEGER,
+    trigger_reason TEXT
+);
+"""
+
 _CREATE_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_decisions_timestamp ON decisions(timestamp);",
     "CREATE INDEX IF NOT EXISTS idx_decisions_category ON decisions(category);",
@@ -45,6 +55,7 @@ class SQLiteDecisionRepository:
         conn.row_factory = sqlite3.Row
         if not self._initialized:
             conn.execute(_CREATE_TABLE)
+            conn.execute(_CREATE_OVERRIDES_TABLE)
             for idx_sql in _CREATE_INDEXES:
                 conn.execute(idx_sql)
             conn.commit()
@@ -162,5 +173,48 @@ class SQLiteDecisionRepository:
     async def get_embeddings(self) -> list[tuple[str, bytes]]:
         return await asyncio.to_thread(self._get_embeddings_sync)
 
+    def _save_override_sync(
+        self, category: str, needs_reasoning: bool, needs_cloud: bool, reason: str
+    ) -> None:
+        conn = self._get_connection()
+        try:
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO category_overrides
+                    (category, needs_reasoning, needs_cloud, trigger_reason)
+                VALUES (?, ?, ?, ?)
+                """,
+                (category, int(needs_reasoning), int(needs_cloud), reason),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def _get_overrides_sync(self) -> dict[str, dict]:
+        conn = self._get_connection()
+        try:
+            rows = conn.execute("SELECT * FROM category_overrides").fetchall()
+            return {
+                row["category"]: {
+                    "needs_reasoning": bool(row["needs_reasoning"]),
+                    "needs_cloud": bool(row["needs_cloud"]),
+                    "min_context_window": row["min_context_window"],
+                    "trigger_reason": row["trigger_reason"],
+                }
+                for row in rows
+            }
+        finally:
+            conn.close()
+
     async def get_rule_votes(self) -> dict[str, dict[str, float]]:
         return await asyncio.to_thread(self._get_rule_votes_sync)
+
+    async def save_override(
+        self, category: str, needs_reasoning: bool, needs_cloud: bool, reason: str
+    ) -> None:
+        await asyncio.to_thread(
+            self._save_override_sync, category, needs_reasoning, needs_cloud, reason
+        )
+
+    async def get_overrides(self) -> dict[str, dict]:
+        return await asyncio.to_thread(self._get_overrides_sync)
