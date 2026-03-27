@@ -10,6 +10,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 ## Key Features
 
+- **Zero-config model discovery**: Rex detects available providers from environment variables and local runtimes (Ollama) — no config file needed.
 - **Cost-first routing**: All tasks start on the cheapest model. Rex auto-selects the primary model by cost (local first, then cheapest cloud).
 - **Smart routing** (planned): Classifies each prompt by task type (debugging, refactoring, code generation, etc.) and routes to the cheapest model that meets the task's needs.
 - **Measurable routing criteria**: Routes based on cost, context window, and LiteLLM capability flags (`supports_reasoning`, `supports_function_calling`, etc.) — no manually curated "strengths" list.
@@ -20,7 +21,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 ## How It Works
 
-1. Rex loads model backends from the config file (auto-discovery from environment variables is planned).
+1. Rex **discovers** available models from environment variables, local runtimes (Ollama), and provider APIs — then merges with any `config.yaml` overrides.
 2. The **feature detector** identifies whether the request is a tab completion or a chat/agent interaction.
 3. The **routing engine** selects the primary model (cheapest by default, or a config override).
 4. The **proxy** forwards the request to the selected backend and streams the response back.
@@ -55,6 +56,11 @@ Rex has completed **Phase 0 — Proxy + Basic Routing**. The proxy accepts reque
 app/
   main.py                # FastAPI app entry point
   config.py              # Pydantic settings model + optional YAML loader
+  discovery/
+    providers.py         # Detects available providers from env vars
+    models.py            # Queries provider APIs for available models
+    metadata.py          # Enriches models with LiteLLM metadata
+    registry_builder.py  # Orchestrates discovery and builds the model registry
   router/
     detector.py          # Feature detection (completion vs. chat)
     engine.py            # Routing engine (primary selection + fallback)
@@ -68,7 +74,6 @@ tests/                   # pytest test suite
 ```
 
 Future phases will add:
-- `app/discovery/` — auto-detect providers from env vars, query provider APIs, enrich with LiteLLM metadata
 - `app/adapters/` — client adapter interface (Cursor, Claude Code, etc.)
 - `app/router/classifier.py` — heuristic task classifier
 - `app/router/ml_classifier.py` — trained ML classifier
@@ -96,9 +101,9 @@ The script installs dependencies and shows how to start Rex.
    ```bash
    uv sync
    ```
-3. Copy the example config and add your model backends:
+3. Set at least one provider API key:
    ```bash
-   cp config.yaml.example config.yaml
+   export OPENAI_API_KEY="sk-..."
    ```
 4. Start the Rex proxy:
    ```bash
@@ -106,7 +111,7 @@ The script installs dependencies and shows how to start Rex.
    ```
 5. Point your AI coding tool's base URL to `http://localhost:8000/v1`.
 
-See `config.yaml.example` for configuration options. Rex auto-selects the cheapest model as primary when `routing.primary_model` is not set.
+Rex discovers available models automatically from environment variables and local runtimes. No config file needed. See `config.yaml.example` for optional overrides.
 
 ## Documentation
 

@@ -210,6 +210,11 @@ flowchart TD
 app/
   main.py                # FastAPI app entry point
   config.py              # Pydantic settings model + optional YAML loader
+  discovery/
+    providers.py         # Detects available providers from env vars
+    models.py            # Queries provider APIs for available models
+    metadata.py          # Enriches models with LiteLLM metadata
+    registry_builder.py  # Orchestrates discovery and builds the model registry
   router/
     detector.py          # Feature detection (completion vs. chat)
     engine.py            # Routing engine (primary selection + fallback)
@@ -223,7 +228,6 @@ tests/                   # pytest test suite
 ```
 
 Future phases will add:
-- `app/discovery/` — auto-detect providers from env vars, query provider APIs, enrich with LiteLLM metadata
 - `app/adapters/` — client adapter interface (Cursor, Claude Code, etc.)
 - `app/router/classifier.py` — heuristic task classifier
 - `app/router/ml_classifier.py` — trained ML classifier

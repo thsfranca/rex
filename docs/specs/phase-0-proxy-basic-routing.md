@@ -321,7 +321,7 @@ tests/                 # pytest test suite
 
 ### router/registry.py
 
-- `ModelRegistry` class that loads models from config.
+- `ModelRegistry` class that stores and queries discovered and config-provided models.
 - Lookups: `get_by_name(name)`, `get_all()`, `sorted_by_cost()`, `names()`.
 
 ### router/detector.py
