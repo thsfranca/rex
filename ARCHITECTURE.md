@@ -144,6 +144,28 @@ flowchart TD
 3. **LLM judge**: A small local LLM classifies the task when the above are uncertain ([Zheng et al., 2023](https://arxiv.org/abs/2306.05685)).
    - Only triggered for chat/agent requests where 200-500ms extra latency is acceptable.
 
+### Confidence-Based Model Escalation (planned)
+
+Currently, low classification confidence triggers **classifier escalation** — the system tries more sophisticated classifiers (heuristics → centroid → LLM judge) to get a better category label. But after that chain, model selection always picks the cheapest model meeting the category's requirements, regardless of how uncertain the classification was.
+
+Confidence-based model escalation extends this: when confidence remains below the threshold after the full classifier chain, the engine escalates the **model** — picking the next more capable model in cost order instead of the cheapest one.
+
+```mermaid
+flowchart TD
+    Request[Request] --> ClassifierChain[Classifier Chain]
+    ClassifierChain --> ConfCheck{Confidence >= threshold?}
+    ConfCheck -->|Yes| CheapModel[Cheapest model meeting requirements]
+    ConfCheck -->|No| EscalateModel[Next model up in cost order]
+    CheapModel --> Response[Response]
+    EscalateModel --> Response
+```
+
+The key principle: uncertainty about a task is a signal that the task is likely complex or ambiguous. Complex tasks benefit from more capable models. This is a per-request decision — no persistence, no tracking windows, no retroactive category promotion. The confidence score computed on every request is the only input.
+
+This aligns with the Confidence-Driven LLM Router research ([Zhang et al., 2025](https://arxiv.org/abs/2502.11021)) which demonstrates that uncertainty-based routing outperforms both accuracy-based and human-preference-based routing for balancing cost and response quality.
+
+The routing decision will carry an `escalated` flag for observability in the decision log.
+
 ## Enrichment Pipeline
 
 The enrichment pipeline transforms requests after routing but before the model call. Each enricher receives the request (messages, selected model, task category) and returns a modified request.
@@ -250,7 +272,6 @@ app/
     labeling.py          # Weak supervision label model
     trainer.py           # ML classifier training pipeline
     scheduler.py         # Re-training scheduler
-    outcomes.py          # Per-category outcome tracking
   logging/
     models.py            # DecisionRecord dataclass
     repository.py        # DecisionRepository protocol
@@ -271,4 +292,4 @@ pyproject.toml           # Project dependencies (uv)
 tests/                   # pytest test suite
 ```
 
-All learning pipeline modules are implemented: clustering, weak supervision, ML classifier training, re-training scheduler, and outcome tracking.
+All learning pipeline modules are implemented: clustering, weak supervision, ML classifier training, and re-training scheduler.
