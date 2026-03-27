@@ -7,31 +7,39 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  changes:
+    name: Detect changes
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.12"]
-
+    permissions:
+      pull-requests: read
+    outputs:
+      test: ${{ steps.filter.outputs.test }}
+      lint: ${{ steps.filter.outputs.lint }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
         with:
-          enable-cache: true
+          filters: |
+            test:
+              - 'app/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - '.github/workflows/ci.yml'
+            lint:
+              - 'app/**'
+              - 'tests/**'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - '.flake8'
+              - '.github/workflows/ci.yml'
 
-      - name: Set up Python ${{ matrix.python-version }}
-        run: uv python install ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: uv sync --group dev
-
-      - name: Run tests
-        run: uv run pytest -v --tb=short
-
-  lint:
+  test:
+    name: Tests
+    needs: changes
+    if: needs.changes.outputs.test == 'true'
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -45,8 +53,39 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
 
-      - name: Check formatting with black
+      - name: Run tests
+        run: uv run pytest -v --tb=short
+
+  lint:
+    name: Lint & Formatting
+    needs: changes
+    if: needs.changes.outputs.lint == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Check formatting
         run: uv run black --check .
 
-      - name: Lint with flake8
+      - name: Lint
         run: uv run flake8 app/ tests/
+
+  ci:
+    name: CI ✓
+    if: always()
+    needs: [test, lint]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify results
+        run: bash .github/scripts/verify-ci-results.sh "${{ needs.test.result }}" "${{ needs.lint.result }}"
