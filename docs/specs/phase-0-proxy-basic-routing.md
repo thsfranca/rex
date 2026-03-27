@@ -23,8 +23,8 @@ Phase 0 uses two properties:
 
 | Property | Source | How Rex uses it |
 |---|---|---|
-| `cost_per_1k_input` | Config or LiteLLM (future) | Cheaper models rank higher |
-| `is_local` | Config or auto-detected (future) | Local models rank above cloud at equal cost |
+| `cost_per_1k_input` | Config or LiteLLM `get_model_info()` | Cheaper models rank higher |
+| `is_local` | Config or auto-detected (Ollama probe) | Local models rank above cloud at equal cost |
 
 Later phases will add:
 
@@ -85,7 +85,7 @@ Each entry in the `models` list describes a model backend:
 | `routing.primary_model` | string | no | `null` | Override which model Rex uses as primary. When omitted, Rex auto-selects the cheapest model (local first, then lowest cloud cost). |
 
 - Rex validates the config at startup using a Pydantic `Settings` model.
-- If the config file is missing, Rex starts with an empty model list (relies on future auto-discovery).
+- If the config file is missing, Rex discovers models from environment variables and local runtimes.
 - If the config file exists but is invalid, Rex fails with Pydantic validation errors.
 - If `routing.primary_model` is set but not found in the `models` list, Rex fails with `"Primary model '{name}' not found in registry"`.
 - LiteLLM infers the provider from the model identifier prefix (e.g., `openai/` → OpenAI, `ollama/` → Ollama).
@@ -94,8 +94,9 @@ Each entry in the `models` list describes a model backend:
 
 ## Model Registry
 
-- Rex loads the `models` list from config at startup into an in-memory registry.
-- Each model entry becomes a `ModelConfig` Pydantic model.
+- At startup, Rex runs model discovery (env vars, Ollama probe, provider APIs) and merges the results with any models from `config.yaml`.
+- Manual config entries override discovered models with the same name.
+- Each model becomes a `ModelConfig` Pydantic model enriched with cost from `litellm.get_model_info()`.
 - The registry provides lookups by name (`get_by_name`), full list (`get_all`), cost-sorted list (`sorted_by_cost`), and name list (`names`).
 - `sorted_by_cost` ranks local models first, then by ascending `cost_per_1k_input`.
 
@@ -262,10 +263,10 @@ Rex follows the graceful degradation strategy from [ARCHITECTURE.md](../../ARCHI
 
 ### Startup Failures
 
-- Missing config file → Rex starts with empty model list (relies on future auto-discovery).
+- Missing config file → Rex discovers models from environment variables and local runtimes.
 - Invalid config values → Rex fails with Pydantic validation errors.
-- `routing.primary_model` not found in `models` list → Rex fails with `"Primary model '{name}' not found in registry"`.
-- Empty model registry (no models configured) → Rex fails with `"No models available in registry"`.
+- `routing.primary_model` not found in the registry → Rex fails with `"Primary model '{name}' not found in registry"`.
+- Empty model registry (no providers detected and no models in config) → Rex exits with a message listing the supported environment variables.
 
 ---
 
@@ -277,6 +278,11 @@ Phase 0 creates only the files needed for a working proxy with basic routing:
 app/
   main.py              # FastAPI app, lifespan, endpoint definitions
   config.py            # Pydantic Settings model, YAML loader
+  discovery/
+    providers.py       # Detects available providers from env vars
+    models.py          # Queries provider APIs for available models
+    metadata.py        # Enriches models with LiteLLM metadata
+    registry_builder.py # Orchestrates discovery and builds the model registry
   proxy/
     handler.py         # Completion request handling via LiteLLM
     streaming.py       # SSE async generator
@@ -284,7 +290,7 @@ app/
     registry.py        # Model registry (lookups, cost sorting)
     detector.py        # Feature detection (completion vs. chat)
     engine.py          # Routing engine (primary selection + fallback)
-config.yaml.example   # Example configuration
+config.yaml.example   # Example configuration (optional)
 pyproject.toml         # Project dependencies (uv)
 tests/                 # pytest test suite
 ```
@@ -292,7 +298,7 @@ tests/                 # pytest test suite
 ### main.py
 
 - Defines the FastAPI app with a lifespan context manager.
-- Loads the config (optional) and initializes the model registry at startup.
+- Loads the config (optional), runs model discovery, and builds the model registry at startup via `build_registry()`.
 - Registers all endpoint routes.
 - The catch-all route handles transparent passthrough.
 
