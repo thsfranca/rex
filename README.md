@@ -22,7 +22,8 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 1. On startup, Rex **discovers** available models from environment variables (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.), local runtimes (Ollama), and provider APIs — enriches each with metadata (cost, context window, capabilities) and merges with any `config.yaml` overrides.
 2. Rex sorts models by cost (local first, then cheapest cloud) and selects the **primary model**.
 3. For each request, the **classifier** identifies the task type (debugging, refactoring, code review, etc.) and the **router** picks the cheapest model that meets the task's requirements. If the primary already qualifies, it stays on primary.
-4. If the selected model fails, the **fallback chain** tries remaining models in cost order.
+4. For complex tasks (generation, refactoring, migration, code review, test generation), the **enrichment pipeline** injects task decomposition instructions into the request before the model call. Each enricher is opt-in via config.
+5. If the selected model fails, the **fallback chain** tries remaining models in cost order.
 
 ## API
 
