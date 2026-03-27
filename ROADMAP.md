@@ -102,11 +102,11 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 **Goal**: Route uncertain requests to more capable models based on classification confidence. Extends the classifier chain so that low confidence triggers not just classifier escalation but also model escalation.
 
 **Deliverables**:
-- [ ] Confidence-based model escalation: when confidence remains below threshold after the full classifier chain, select the next more capable model in cost order instead of the cheapest
-- [ ] `escalated` flag on routing decisions for observability in the decision log
-- [ ] Remove outcome tracker (`outcomes.py`) — per-request escalation replaces retroactive outcome-based category promotion
+- [x] Confidence-based model escalation: when confidence remains below threshold after the full classifier chain, select the next more capable model in cost order instead of the cheapest
+- [x] `escalated` flag on routing decisions for observability in the decision log
+- [x] Remove outcome tracker (`outcomes.py`) — per-request escalation replaces retroactive outcome-based category promotion
 
-**Design**: See [ARCHITECTURE.md — Confidence-Based Model Escalation](ARCHITECTURE.md#confidence-based-model-escalation-planned) for the full design rationale and flow diagram.
+**Design**: See [ARCHITECTURE.md — Confidence-Based Model Escalation](ARCHITECTURE.md#confidence-based-model-escalation) for the full design rationale and flow diagram.
 
 **Research basis**: [Confidence-Driven LLM Router](https://arxiv.org/abs/2502.11021) (Zhang et al., 2025) — uncertainty-based routing outperforms accuracy-based and preference-based routing.
 
