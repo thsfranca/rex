@@ -56,6 +56,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 ```
 app/
   main.py                # FastAPI app entry point
+  cli.py                 # CLI entry point (rex start/stop/reset)
   config.py              # Pydantic settings model + optional YAML loader
   utils.py               # Shared utility functions
   adapters/
@@ -122,13 +123,26 @@ The script installs dependencies and shows how to start Rex.
    ```bash
    export OPENAI_API_KEY="sk-..."
    ```
-4. Start the Rex proxy:
+4. Start Rex:
    ```bash
-   uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+   rex start
    ```
 5. Point your AI coding tool's base URL to `http://localhost:8000/v1`.
 
 Rex discovers available models automatically from environment variables and local runtimes. No config file needed. See `config.yaml.example` for optional overrides.
+
+### CLI
+
+Install Rex globally with `uv tool install rex`, then use:
+
+| Command | Description |
+|---|---|
+| `rex` or `rex start` | Start Rex as a background process |
+| `rex stop` | Shut down a running Rex instance |
+| `rex reset` | Clear all learning data (asks for confirmation) |
+| `rex reset --yes` | Clear all learning data without confirmation |
+
+Rex runs as a background process that any AI tool can connect to via `http://localhost:8000/v1`.
 
 ## Documentation
 
