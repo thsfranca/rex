@@ -250,6 +250,13 @@ app/
     context.py           # EnrichmentContext dataclass
     pipeline.py          # Enricher protocol and pipeline runner
     task_decomposition.py # Task decomposition enricher
+  learning/
+    embeddings.py        # Sentence transformer embedding service
+    centroids.py         # Centroid classifier with synthetic exemplars
+  logging/
+    models.py            # DecisionRecord dataclass
+    repository.py        # DecisionRepository protocol
+    sqlite.py            # SQLite implementation of decision repository
   router/
     categories.py        # Task categories and routing requirements
     classifier.py        # Heuristic task classifier (keyword + structural)
@@ -267,5 +274,5 @@ tests/                   # pytest test suite
 
 Future phases will add:
 - `app/router/ml_classifier.py` — trained ML classifier
-- `app/learning/` — embedding pipeline, clustering, weak supervision
-- `app/logging/` — decision logging with storage interface
+- `app/learning/clustering.py` — K-means clustering and weak supervision
+- `app/learning/ml_classifier.py` — logistic regression classifier training

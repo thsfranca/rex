@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,6 +9,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from app.config import ModelConfig
 from app.proxy.handler import (
     _extract_bearer_token,
+    _hash_prompt,
     handle_chat_completion,
     handle_text_completion,
 )
@@ -158,6 +160,66 @@ class TestExtractBearerToken:
 
     def test_returns_none_for_non_bearer(self):
         assert _extract_bearer_token("Basic dXNlcjpwYXNz") is None
+
+
+class TestDecisionLogging:
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_logs_decision_when_repository_provided(self, mock_litellm):
+        fake_response = FakeResponse()
+        fake_response.usage = MagicMock(prompt_tokens=10, completion_tokens=20)
+        mock_litellm.acompletion = AsyncMock(return_value=fake_response)
+        mock_litellm.completion_cost.return_value = 0.001
+
+        model = _make_model(name="test/model")
+        engine = _make_engine([model])
+
+        repository = MagicMock()
+        repository.save = AsyncMock()
+
+        body = {"messages": [{"role": "user", "content": "hello"}]}
+        await handle_chat_completion(body, engine, repository=repository)
+        await asyncio.sleep(0.05)
+
+        repository.save.assert_called_once()
+        record = repository.save.call_args[0][0]
+        assert record.selected_model == "test/model"
+        assert record.used_model == "test/model"
+        assert record.category == "general"
+        assert record.prompt_hash == _hash_prompt("hello")
+        assert record.input_tokens == 10
+        assert record.output_tokens == 20
+
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_no_logging_when_no_repository(self, mock_litellm):
+        mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
+        model = _make_model(name="test/model")
+        engine = _make_engine([model])
+
+        body = {"messages": [{"role": "user", "content": "hello"}]}
+        response = await handle_chat_completion(body, engine)
+        assert isinstance(response, JSONResponse)
+
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_logging_failure_does_not_break_response(self, mock_litellm):
+        mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
+        model = _make_model(name="test/model")
+        engine = _make_engine([model])
+
+        repository = MagicMock()
+        repository.save = AsyncMock(side_effect=Exception("db error"))
+
+        body = {"messages": [{"role": "user", "content": "hello"}]}
+        response = await handle_chat_completion(body, engine, repository=repository)
+        await asyncio.sleep(0.05)
+
+        assert isinstance(response, JSONResponse)
+
+    def test_hash_prompt_deterministic(self):
+        assert _hash_prompt("test") == _hash_prompt("test")
+        assert _hash_prompt("test") != _hash_prompt("other")
 
 
 class TestHandleTextCompletion:

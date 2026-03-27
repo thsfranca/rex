@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import logging
+import time
+from datetime import datetime, timezone
 
 import litellm
 from fastapi import Request, Response
@@ -11,6 +15,8 @@ from app.adapters.default import DefaultAdapter
 from app.config import ModelConfig
 from app.enrichment.context import EnrichmentContext
 from app.enrichment.pipeline import EnrichmentPipeline
+from app.logging.models import DecisionRecord
+from app.logging.repository import DecisionRepository
 from app.proxy.streaming import stream_completion
 from app.router.engine import RoutingEngine
 
@@ -88,12 +94,77 @@ async def _call_with_fallback(
     raise last_error
 
 
+def _hash_prompt(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def _extract_last_user_text(messages: list[dict]) -> str:
+    for msg in reversed(messages):
+        if msg.get("role") == "user":
+            content = msg.get("content", "")
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                return " ".join(part.get("text", "") for part in content if isinstance(part, dict))
+    return ""
+
+
+async def _log_decision(
+    repository: DecisionRepository,
+    decision,
+    used_model: ModelConfig,
+    response_time_ms: int,
+    response,
+    prompt_hash: str,
+    embedding_bytes: bytes | None,
+) -> None:
+    try:
+        input_tokens = None
+        output_tokens = None
+        cost = None
+
+        if hasattr(response, "usage") and response.usage is not None:
+            input_tokens = getattr(response.usage, "prompt_tokens", None)
+            output_tokens = getattr(response.usage, "completion_tokens", None)
+
+        try:
+            cost = litellm.completion_cost(completion_response=response)
+        except Exception:
+            pass
+
+        rule_votes = None
+        if decision.scores:
+            rule_votes = {k.value: v for k, v in decision.scores.items()}
+
+        record = DecisionRecord(
+            timestamp=datetime.now(timezone.utc),
+            prompt_hash=prompt_hash,
+            category=decision.category.value,
+            confidence=decision.confidence,
+            feature_type=decision.feature_type.value,
+            selected_model=decision.model.name,
+            used_model=used_model.name,
+            response_time_ms=response_time_ms,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost=cost,
+            fallback_triggered=decision.model.name != used_model.name,
+            rule_votes=rule_votes,
+            embedding=embedding_bytes,
+        )
+        await repository.save(record)
+    except Exception as e:
+        logger.warning("Failed to log decision: %s", e)
+
+
 async def handle_chat_completion(
     body: dict,
     engine: RoutingEngine,
     authorization: str | None = None,
     adapter: ClientAdapter | None = None,
     pipeline: EnrichmentPipeline | None = None,
+    repository: DecisionRepository | None = None,
+    embedding_service=None,
 ) -> Response:
     stream = body.get("stream", False)
     request_api_key = _extract_bearer_token(authorization)
@@ -105,11 +176,24 @@ async def handle_chat_completion(
         temperature=body.get("temperature"),
     )
 
+    embedding = None
+    embedding_bytes = None
+    last_user_text = _extract_last_user_text(normalized.messages)
+    prompt_hash = _hash_prompt(last_user_text)
+
+    if embedding_service is not None and last_user_text.strip():
+        try:
+            embedding = embedding_service.embed(last_user_text)
+            embedding_bytes = embedding.tobytes()
+        except Exception as e:
+            logger.warning("Embedding failed: %s", e)
+
     decision = await engine.select_model(
         messages=normalized.messages,
         max_tokens=normalized.max_tokens,
         temperature=normalized.temperature,
         feature_type=normalized.feature_type,
+        embedding=embedding,
     )
 
     if pipeline is not None:
@@ -122,10 +206,25 @@ async def handle_chat_completion(
         enrichment_ctx = pipeline.run(enrichment_ctx)
         body = {**body, "messages": enrichment_ctx.messages}
 
+    start_time = time.perf_counter()
     response, used_model = await _call_with_fallback(
         engine, decision.model, body, stream, request_api_key
     )
+    response_time_ms = int((time.perf_counter() - start_time) * 1000)
     logger.info("Routed to %s", used_model.name)
+
+    if repository is not None:
+        asyncio.create_task(
+            _log_decision(
+                repository,
+                decision,
+                used_model,
+                response_time_ms,
+                response,
+                prompt_hash,
+                embedding_bytes,
+            )
+        )
 
     if stream:
         return StreamingResponse(

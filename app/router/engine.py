@@ -4,8 +4,9 @@ import logging
 from dataclasses import dataclass
 
 from app.config import ModelConfig
+from app.learning.centroids import CentroidClassifier
 from app.router.categories import TaskCategory, TaskRequirements, get_requirements
-from app.router.classifier import classify
+from app.router.classifier import ClassificationResult, classify
 from app.router.detector import FeatureType, detect_feature
 from app.router.llm_judge import LLMJudge
 from app.router.registry import ModelRegistry
@@ -19,6 +20,7 @@ class RoutingDecision:
     category: TaskCategory
     confidence: float
     feature_type: FeatureType
+    scores: dict[TaskCategory, float] | None = None
 
 
 class RoutingEngine:
@@ -28,11 +30,13 @@ class RoutingEngine:
         primary_model: str | None = None,
         judge: LLMJudge | None = None,
         confidence_threshold: float = 0.5,
+        centroid_classifier: CentroidClassifier | None = None,
     ) -> None:
         self._registry = registry
         self._primary = self._resolve_primary(primary_model)
         self._judge = judge
         self._confidence_threshold = confidence_threshold
+        self._centroid_classifier = centroid_classifier
 
     def _resolve_primary(self, override: str | None) -> ModelConfig:
         if override:
@@ -74,6 +78,7 @@ class RoutingEngine:
         max_tokens: int | None = None,
         temperature: float | None = None,
         feature_type: FeatureType | None = None,
+        embedding=None,
     ) -> RoutingDecision:
         feature = feature_type or detect_feature(messages, max_tokens, temperature)
 
@@ -87,21 +92,33 @@ class RoutingEngine:
 
         result = classify(messages)
 
-        if self._judge is not None and result.confidence < self._confidence_threshold:
-            judge_result = await self._judge.classify(messages)
-            if judge_result is not None:
-                logger.info(
-                    "LLM judge reclassified from %s (confidence=%.2f) to %s",
-                    result.category.value,
-                    result.confidence,
-                    judge_result.category.value,
-                )
-                from app.router.classifier import ClassificationResult
+        if result.confidence < self._confidence_threshold:
+            if self._centroid_classifier is not None and embedding is not None:
+                centroid_result = self._centroid_classifier.classify(embedding)
+                if centroid_result.confidence >= self._confidence_threshold:
+                    logger.info(
+                        "Centroid classifier reclassified from %s (confidence=%.2f) "
+                        "to %s (confidence=%.2f)",
+                        result.category.value,
+                        result.confidence,
+                        centroid_result.category.value,
+                        centroid_result.confidence,
+                    )
+                    result = centroid_result
 
-                result = ClassificationResult(
-                    category=judge_result.category,
-                    confidence=0.9,
-                )
+            if result.confidence < self._confidence_threshold and self._judge is not None:
+                judge_result = await self._judge.classify(messages)
+                if judge_result is not None:
+                    logger.info(
+                        "LLM judge reclassified from %s (confidence=%.2f) to %s",
+                        result.category.value,
+                        result.confidence,
+                        judge_result.category.value,
+                    )
+                    result = ClassificationResult(
+                        category=judge_result.category,
+                        confidence=0.9,
+                    )
 
         requirements = get_requirements(result.category)
 
@@ -111,6 +128,7 @@ class RoutingEngine:
                 category=result.category,
                 confidence=result.confidence,
                 feature_type=feature,
+                scores=result.scores if result.scores else None,
             )
 
         candidates = self._registry.filter_by_requirements(requirements)
@@ -128,6 +146,7 @@ class RoutingEngine:
                 category=result.category,
                 confidence=result.confidence,
                 feature_type=feature,
+                scores=result.scores if result.scores else None,
             )
 
         logger.info(
@@ -139,6 +158,7 @@ class RoutingEngine:
             category=result.category,
             confidence=result.confidence,
             feature_type=feature,
+            scores=result.scores if result.scores else None,
         )
 
     def fallback_order(self, primary: ModelConfig) -> list[ModelConfig]:

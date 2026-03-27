@@ -69,9 +69,9 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 **Goal**: Build the data collection infrastructure that feeds the learning pipeline. Decision logging provides routing observability, and sentence transformer embeddings enable semantic classification from the first query.
 
 **Deliverables**:
-- [ ] Decision logging with storage interface: repository pattern, SQLite implementation (timestamp, prompt hash, category, confidence, selected model, response time, token count, cost, rule votes)
-- [ ] Sentence transformer integration ([all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2); [Reimers & Gurevych, 2019](https://arxiv.org/abs/1908.10084)): embed every query (~10ms, local CPU), store embeddings alongside decision logs
-- [ ] Pre-seeded cluster centroids: synthetic exemplar queries per category, embedded at startup as initial centroids, nearest-centroid classification from the first query
+- [x] Decision logging with storage interface: repository pattern, SQLite implementation (timestamp, prompt hash, category, confidence, selected model, response time, token count, cost, rule votes)
+- [x] Sentence transformer integration ([all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2); [Reimers & Gurevych, 2019](https://arxiv.org/abs/1908.10084)): embed every query (~10ms, local CPU), store embeddings alongside decision logs
+- [x] Pre-seeded cluster centroids: synthetic exemplar queries per category, embedded at startup as initial centroids, nearest-centroid classification from the first query
 
 ---
 
