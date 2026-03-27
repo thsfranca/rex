@@ -22,6 +22,7 @@ flowchart LR
     MLClassifier --> Router
     LLMJudge --> Router
     Router --> Registry[Model Registry]
+    Discovery[Model Discovery] -->|env vars + provider APIs| Registry
     Registry --> Local[Local Models]
     Registry --> Cloud[Cloud APIs]
     Router --> Logger[Decision Logger]
@@ -34,6 +35,7 @@ flowchart LR
     LearningPipeline --> MLClassifier
 ```
 
+- **Model Discovery** detects available providers from environment variables, queries their APIs for available models, and enriches each model with metadata from LiteLLM's built-in database.
 - The **Client Adapter** normalizes tool-specific request patterns into a common format for the classifier.
 - Each supported tool (Cursor, Claude Code, etc.) has its own adapter that detects features like tab completion vs. chat.
 - The **Learning Pipeline** runs in the background, consuming query embeddings and heuristic votes to train the ML classifier automatically.
@@ -48,33 +50,37 @@ flowchart LR
 | Query embeddings | Sentence Transformer ([all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)) | ~80MB local model, ~10ms per query on CPU, zero API cost; produces vectors for clustering and classification ([Reimers & Gurevych, 2019](https://arxiv.org/abs/1908.10084); [Wang et al., 2020](https://arxiv.org/abs/2002.10957)) |
 | Category discovery | Unsupervised K-means clustering | Automatically discovers task categories from query embeddings without labels; [silhouette score](https://doi.org/10.1016/0377-0427(87)90125-7) selects optimal cluster count (Rousseeuw, 1987) |
 | Automated labeling | Weak supervision | Heuristic rules act as noisy labeling functions; a probabilistic label model aggregates their votes into clean training labels without manual annotation ([Ratner et al., 2016](https://arxiv.org/abs/1605.07723); [Ratner et al., 2017](https://arxiv.org/abs/1711.10160)) |
-| Config format | YAML | Human-readable, easy to edit |
+| Model discovery | Automatic from environment variables | Rex scans for known API keys (e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`), queries each provider's `/v1/models` endpoint, and probes local runtimes (Ollama at `localhost:11434`); zero configuration required |
+| Model metadata | LiteLLM built-in database | `litellm.get_model_info()` provides context window, pricing, and capabilities for known models; no manual metadata needed |
+| Config format | Optional YAML overrides | Config file is not required; when present, it adds or overrides discovered models |
 | Client detection | User-Agent header → adapter | Rex selects the adapter based on the client's User-Agent header; new tools supported by adding an adapter |
 | API compatibility | Full OpenAI, transparent proxy | Rex routes known endpoints and passes through everything else to the default backend; never blocks unknown endpoints |
 | Error handling | Graceful degradation | Every failure falls back to a simpler path; classification failure → default model; all models fail → error to client |
 | Logging storage | Repository pattern | Core logic decoupled from storage; SQLite as default implementation, swappable without touching routing code |
 | Deployment model | Per-user local instance | All data stays on the user's machine; each instance learns independently from its own usage |
 | Default storage | SQLite | Zero-dependency, single-file, good enough for single user |
-| Cost tracking | LiteLLM runtime cost calculation | LiteLLM's `completion_cost()` returns actual cost per request from its built-in pricing database; no manual cost config needed for known models; optional YAML override for custom endpoints or local models |
+| Cost tracking | LiteLLM runtime cost calculation | LiteLLM's `completion_cost()` returns actual cost per request from its built-in pricing database; no manual cost config needed for known models |
 
 ## Task Categories
 
 The heuristic classifier uses these predefined categories as a starting point:
 
-| Category | Signals | Model Needs |
-|---|---|---|
-| **completion** | Short prompt, code context, single-turn | Fastest model, latency < 100ms |
-| **debugging** | Stack traces, "error", "fix", "bug", "crash" | Strong reasoning model |
-| **refactoring** | "refactor", "clean up", "simplify", "restructure" | Large context window |
-| **optimization** | "faster", "performance", "optimize", "memory", "efficient" | Strong reasoning + code analysis |
-| **test_generation** | "write tests", "add test", "spec", "coverage" | Good instruction-following model |
-| **explanation** | "explain", "what does", "how does", "why" | Any decent model, optimize cost |
-| **documentation** | "document", "docstring", "README", "API docs" | Any decent model, optimize cost |
-| **code_review** | "review", "is this correct", "what's wrong", "security" | Strong analysis model |
-| **generation** | Writing new code from description | Strong coding model |
-| **migration** | "upgrade", "migrate", "convert to", "update from" | Cloud model (needs current knowledge) |
-| **general** | Fallback when nothing else matches | Default model |
+| Category | Signals |
+|---|---|
+| **completion** | Short prompt, code context, single-turn |
+| **debugging** | Stack traces, "error", "fix", "bug", "crash" |
+| **refactoring** | "refactor", "clean up", "simplify", "restructure" |
+| **optimization** | "faster", "performance", "optimize", "memory", "efficient" |
+| **test_generation** | "write tests", "add test", "spec", "coverage" |
+| **explanation** | "explain", "what does", "how does", "why" |
+| **documentation** | "document", "docstring", "README", "API docs" |
+| **code_review** | "review", "is this correct", "what's wrong", "security" |
+| **generation** | Writing new code from description |
+| **migration** | "upgrade", "migrate", "convert to", "update from" |
+| **general** | Fallback when nothing else matches |
 
+- Rex does not prescribe which model serves each category — it learns this from usage.
+- All categories start on the cheapest model. The learning pipeline tracks outcomes and promotes categories to more capable models when needed (see [Upward Migration](#upward-migration)).
 - Once clustering produces a silhouette score above the quality threshold (>0.5), unsupervised clustering takes over.
 - The learning pipeline discovers the user's actual task categories from their real usage patterns.
 - Discovered categories may differ from the predefined ones — they reflect how the individual user actually works.
@@ -101,21 +107,24 @@ flowchart TD
     ClientAdapter --> EndpointCheck{Routed Endpoint?}
     EndpointCheck -->|No| Passthrough[Forward to default backend]
     EndpointCheck -->|Yes| FeatureDetect{Feature Detection}
-    FeatureDetect -->|Completion| FastPath[Always use fastest model]
+    FeatureDetect -->|Completion| FastPath[Cheapest model]
     FeatureDetect -->|Chat / Agent| ClassifierChain{Classifier Chain}
-    ClassifierChain -->|heuristics confident| RouteDirectly[Route to best model for category]
+    ClassifierChain -->|heuristics confident| RouteDirectly[Route to assigned model for category]
     ClassifierChain -->|ML model available| MLClassify[ML Classifier]
     ClassifierChain -->|still uncertain| LLMJudge[LLM-as-Judge classification]
     MLClassify --> RouteClassified[Route based on classification]
     LLMJudge --> RouteClassified
-    FastPath --> Log[Log decision]
-    RouteDirectly --> Log
-    RouteClassified --> Log
-    Log --> FeedbackData[Accumulate labeled data for ML training]
+    FastPath --> Fallback{Success?}
+    RouteDirectly --> Fallback
+    RouteClassified --> Fallback
+    Fallback -->|Yes| Log[Log decision + outcome]
+    Fallback -->|No| Escalate[Fallback to next model up]
+    Escalate --> Log
+    Log --> FeedbackData[Accumulate data for learning pipeline]
 ```
 
 - **Client adapter**: Normalizes the incoming request from a specific tool into a common format. Detects features (completion vs. chat/agent) based on tool-specific request patterns.
-- **Fast path**: Completion requests skip classification — the router always selects the fastest available model.
+- **Cheap-first**: All tasks start on the cheapest available model. The fallback chain escalates to more expensive models on failure.
 
 **Classifier chain** (the router evaluates in order, stops at the first confident result):
 
@@ -127,6 +136,15 @@ flowchart TD
    - Runs locally, <50ms inference.
 3. **LLM judge**: A small local LLM classifies the task when the above are uncertain ([Zheng et al., 2023](https://arxiv.org/abs/2306.05685)).
    - Only triggered for chat/agent requests where 200-500ms extra latency is acceptable.
+
+### Upward Migration
+
+Rex optimizes for cost. Every task category starts on the cheapest model. The learning pipeline tracks outcomes per category and promotes categories to more capable models when needed.
+
+- The fallback chain handles individual failures in real time — if the cheap model fails, Rex escalates to the next model immediately.
+- The learning pipeline spots patterns: if a category consistently triggers fallbacks, Rex permanently promotes it to a more capable model, avoiding repeated fallback latency.
+- Promotion is data-driven — Rex only moves a category up when it observes a persistent pattern of poor outcomes, not on a single failure.
+- Outcome signals: fallback triggers, user re-asks, error rate, response latency patterns.
 
 ## Learning Pipeline
 
@@ -189,7 +207,11 @@ flowchart TD
 ```
 app/
   main.py                # FastAPI app entry point
-  config.py              # Pydantic settings model + YAML loader
+  config.py              # Pydantic settings model + optional YAML loader
+  discovery/
+    providers.py         # Detects available providers from env vars
+    models.py            # Queries provider APIs for available models
+    metadata.py          # Enriches models with LiteLLM metadata
   adapters/
     base.py              # Client adapter interface
     cursor.py            # Cursor-specific request normalization
@@ -200,7 +222,7 @@ app/
     ml_classifier.py     # Trained ML classifier
     llm_judge.py         # LLM-as-Judge fallback
     engine.py            # Routing engine (classifier -> model selection)
-    registry.py          # Model registry loader
+    registry.py          # Model registry
   learning/
     embedder.py          # Sentence transformer query embedding
     seeds.py             # Synthetic exemplar queries per category
@@ -214,7 +236,7 @@ app/
     base.py              # Storage interface
     sqlite_store.py      # SQLite implementation
     cli.py               # CLI for stats and export
-config.yaml.example     # Example configuration
+config.yaml.example     # Example configuration (optional overrides)
 pyproject.toml           # Project dependencies (uv)
 tests/                   # pytest test suite
 ```

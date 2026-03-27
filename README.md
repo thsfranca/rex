@@ -8,12 +8,13 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 ## Key Features
 
+- **Zero-config**: Rex discovers available models automatically from environment variables and local runtimes — no config file needed.
 - **Smart routing**: Classifies each prompt by task type (debugging, refactoring, code generation, etc.) and routes to the best-suited model.
 - **Hybrid classification**: Combines fast keyword heuristics, a local ML classifier, and an LLM-as-Judge fallback for accurate task detection.
 - **Self-improving**: A learning pipeline trains the classifier automatically from usage data — no manual labeling required.
 - **Local-first**: All data, embeddings, and models run on the user's machine. Nothing leaves without explicit cloud API configuration.
-- **Cost-aware**: Tracks actual cost per request via LiteLLM's built-in pricing database — no manual cost configuration needed. Routes cheaper tasks to cheaper models.
-- **Fallback chains**: If the primary model fails or times out, the router tries the next best option.
+- **Cost-first**: All tasks start on the cheapest model. Rex tracks actual cost per request via LiteLLM's built-in pricing database — no manual cost configuration needed.
+- **Fallback chains**: If the primary model fails, Rex escalates to the next model up the cost ladder. The learning pipeline permanently promotes task categories that consistently need more capable models.
 
 ## How It Works
 
@@ -43,7 +44,7 @@ Rex has completed **Phase 0 — Proxy + Basic Routing**. The proxy accepts reque
 | Clustering | K-means with silhouette score for optimal cluster count |
 | Label generation | Weak supervision ([Ratner et al., 2017](https://arxiv.org/abs/1711.10160)) |
 | ML classifier | Logistic regression |
-| Configuration | YAML |
+| Configuration | Optional YAML overrides |
 | Storage | SQLite (default, swappable via repository pattern) |
 
 ## Project Structure
@@ -51,15 +52,19 @@ Rex has completed **Phase 0 — Proxy + Basic Routing**. The proxy accepts reque
 ```
 app/
   main.py                # FastAPI app entry point
-  config.py              # Pydantic settings model + YAML loader
+  config.py              # Pydantic settings model + optional YAML loader
+  discovery/
+    providers.py         # Detects available providers from env vars
+    models.py            # Queries provider APIs for available models
+    metadata.py          # Enriches models with LiteLLM metadata
   router/
     detector.py          # Feature detection (completion vs. chat)
     engine.py            # Routing engine (detector -> model selection + fallback)
-    registry.py          # Model registry loader
+    registry.py          # Model registry
   proxy/
     handler.py           # OpenAI-compatible request handler
     streaming.py         # SSE streaming response logic
-config.yaml.example     # Example configuration
+config.yaml.example     # Example configuration (optional overrides)
 pyproject.toml           # Project dependencies (uv)
 tests/                   # pytest test suite
 ```
@@ -80,7 +85,7 @@ Future phases will add:
 ./setup.sh
 ```
 
-The script installs dependencies, walks you through creating `config.yaml`, and shows how to start Rex.
+The script installs dependencies and shows how to start Rex.
 
 ### Manual Setup
 
@@ -92,15 +97,17 @@ The script installs dependencies, walks you through creating `config.yaml`, and 
    ```bash
    uv sync
    ```
-3. Copy the example config and edit with your model backends:
+3. Set at least one provider API key:
    ```bash
-   cp config.yaml.example config.yaml
+   export OPENAI_API_KEY="sk-..."
    ```
 4. Start the Rex proxy:
    ```bash
    uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
    ```
 5. Point your AI coding tool's base URL to `http://localhost:8000/v1`.
+
+Rex discovers available models automatically from environment variables and local runtimes. No config file needed. See `config.yaml.example` for optional overrides.
 
 ## Documentation
 
