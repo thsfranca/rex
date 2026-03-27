@@ -15,8 +15,6 @@ COMPLEX_CATEGORIES: frozenset[TaskCategory] = frozenset(
     }
 )
 
-PROMPT_LENGTH_THRESHOLD = 500
-
 DECOMPOSITION_INSTRUCTION = (
     "Before starting, break this task into a numbered list of concrete subtasks. "
     "Work through each subtask one at a time. "
