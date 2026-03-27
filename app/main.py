@@ -62,8 +62,9 @@ def _error_response(status_code: int, message: str, error_type: str) -> JSONResp
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request):
     body = await request.json()
+    authorization = request.headers.get("authorization")
     try:
-        return await handle_chat_completion(body, _get_engine())
+        return await handle_chat_completion(body, _get_engine(), authorization)
     except Exception as e:
         logger.exception("Chat completion failed")
         return _error_response(502, f"All model backends failed. Last error: {e}", "proxy_error")
@@ -72,8 +73,9 @@ async def chat_completions(request: Request):
 @app.post("/v1/completions")
 async def text_completions(request: Request):
     body = await request.json()
+    authorization = request.headers.get("authorization")
     try:
-        return await handle_text_completion(body, _get_engine())
+        return await handle_text_completion(body, _get_engine(), authorization)
     except Exception as e:
         logger.exception("Text completion failed")
         return _error_response(502, f"All model backends failed. Last error: {e}", "proxy_error")

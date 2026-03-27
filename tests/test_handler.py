@@ -6,7 +6,11 @@ import pytest
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.config import ModelConfig, RoutingConfig
-from app.proxy.handler import handle_chat_completion, handle_text_completion
+from app.proxy.handler import (
+    _extract_bearer_token,
+    handle_chat_completion,
+    handle_text_completion,
+)
 from app.router.engine import RoutingEngine
 from app.router.registry import ModelRegistry
 
@@ -116,6 +120,56 @@ class TestHandleChatCompletion:
         with pytest.raises(Exception, match="all failed"):
             await handle_chat_completion(body, engine)
 
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_uses_request_api_key_when_config_has_none(self, mock_litellm):
+        mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
+        model = _make_model(name="test/model", api_key=None)
+        engine = _make_engine([model], "test/model", "test/model")
+
+        body = {"messages": [{"role": "user", "content": "hello"}]}
+        await handle_chat_completion(body, engine, authorization="Bearer sk-from-client")
+
+        call_kwargs = mock_litellm.acompletion.call_args.kwargs
+        assert call_kwargs["api_key"] == "sk-from-client"
+
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_config_api_key_overrides_request_key(self, mock_litellm):
+        mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
+        model = _make_model(name="test/model", api_key="sk-from-config")
+        engine = _make_engine([model], "test/model", "test/model")
+
+        body = {"messages": [{"role": "user", "content": "hello"}]}
+        await handle_chat_completion(body, engine, authorization="Bearer sk-from-client")
+
+        call_kwargs = mock_litellm.acompletion.call_args.kwargs
+        assert call_kwargs["api_key"] == "sk-from-config"
+
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_no_api_key_anywhere(self, mock_litellm):
+        mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
+        model = _make_model(name="test/model", api_key=None)
+        engine = _make_engine([model], "test/model", "test/model")
+
+        body = {"messages": [{"role": "user", "content": "hello"}]}
+        await handle_chat_completion(body, engine)
+
+        call_kwargs = mock_litellm.acompletion.call_args.kwargs
+        assert "api_key" not in call_kwargs
+
+
+class TestExtractBearerToken:
+    def test_extracts_bearer_token(self):
+        assert _extract_bearer_token("Bearer sk-abc123") == "sk-abc123"
+
+    def test_returns_none_for_no_header(self):
+        assert _extract_bearer_token(None) is None
+
+    def test_returns_none_for_non_bearer(self):
+        assert _extract_bearer_token("Basic dXNlcjpwYXNz") is None
+
 
 class TestHandleTextCompletion:
     @pytest.mark.asyncio
@@ -131,3 +185,16 @@ class TestHandleTextCompletion:
 
         call_kwargs = mock_litellm.acompletion.call_args.kwargs
         assert call_kwargs["model"] == "fast/model"
+
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_uses_request_api_key(self, mock_litellm):
+        mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
+        fast = _make_model(name="fast/model", api_key=None)
+        engine = _make_engine([fast], "fast/model", "fast/model")
+
+        body = {"messages": [{"role": "user", "content": "complete this"}]}
+        await handle_text_completion(body, engine, authorization="Bearer sk-req")
+
+        call_kwargs = mock_litellm.acompletion.call_args.kwargs
+        assert call_kwargs["api_key"] == "sk-req"

@@ -32,10 +32,22 @@ LITELLM_PASSTHROUGH_PARAMS = [
 ]
 
 
-def _build_litellm_params(body: dict, model_config: ModelConfig) -> dict:
+def _extract_bearer_token(authorization: str | None) -> str | None:
+    if not authorization:
+        return None
+    if authorization.startswith("Bearer "):
+        return authorization[7:]
+    return None
+
+
+def _build_litellm_params(
+    body: dict, model_config: ModelConfig, request_api_key: str | None = None
+) -> dict:
     params = {"model": model_config.name}
     if model_config.api_key:
         params["api_key"] = model_config.api_key
+    elif request_api_key:
+        params["api_key"] = request_api_key
     if model_config.api_base:
         params["api_base"] = model_config.api_base
 
@@ -51,13 +63,14 @@ async def _call_with_fallback(
     primary: ModelConfig,
     body: dict,
     stream: bool,
+    request_api_key: str | None = None,
 ):
     models_to_try = [primary] + engine.fallback_order(primary)
     last_error = None
 
     for model in models_to_try:
         try:
-            params = _build_litellm_params(body, model)
+            params = _build_litellm_params(body, model, request_api_key)
             if stream:
                 params["stream"] = True
             response = await litellm.acompletion(**params)
@@ -69,8 +82,11 @@ async def _call_with_fallback(
     raise last_error
 
 
-async def handle_chat_completion(body: dict, engine: RoutingEngine) -> Response:
+async def handle_chat_completion(
+    body: dict, engine: RoutingEngine, authorization: str | None = None
+) -> Response:
     stream = body.get("stream", False)
+    request_api_key = _extract_bearer_token(authorization)
 
     selected = engine.select_model(
         messages=body.get("messages", []),
@@ -78,7 +94,9 @@ async def handle_chat_completion(body: dict, engine: RoutingEngine) -> Response:
         temperature=body.get("temperature"),
     )
 
-    response, used_model = await _call_with_fallback(engine, selected, body, stream)
+    response, used_model = await _call_with_fallback(
+        engine, selected, body, stream, request_api_key
+    )
     logger.info("Routed to %s", used_model.name)
 
     if stream:
@@ -89,15 +107,20 @@ async def handle_chat_completion(body: dict, engine: RoutingEngine) -> Response:
     return JSONResponse(content=response.model_dump())
 
 
-async def handle_text_completion(body: dict, engine: RoutingEngine) -> Response:
+async def handle_text_completion(
+    body: dict, engine: RoutingEngine, authorization: str | None = None
+) -> Response:
     stream = body.get("stream", False)
+    request_api_key = _extract_bearer_token(authorization)
 
     completion_model_name = engine._routing_config.completion_model
     selected = engine._registry.get_by_name(completion_model_name)
     if selected is None:
         raise ValueError(f"Completion model '{completion_model_name}' not found in registry")
 
-    response, used_model = await _call_with_fallback(engine, selected, body, stream)
+    response, used_model = await _call_with_fallback(
+        engine, selected, body, stream, request_api_key
+    )
     logger.info("Routed text completion to %s", used_model.name)
 
     if stream:
