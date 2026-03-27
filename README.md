@@ -2,7 +2,7 @@
 
 > This project only exists because I'm too lazy to pick the best model myself.
 
-An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud), routing all requests to the cheapest available model.
+An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud), routing each request to the cheapest model that fits the task.
 
 - Works with any tool that supports a custom OpenAI API base URL (Cursor, Claude Code, Continue, Aider, etc.).
 - Each user runs their own Rex instance locally.
@@ -10,18 +10,18 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 ## Features
 
 - **Zero-config model discovery**: Rex detects available providers from environment variables and local runtimes (Ollama), queries their APIs for available models, and enriches each model with metadata (cost, context window) from LiteLLM — no config file needed.
-- **Cost-first routing**: Rex auto-selects the cheapest model as the primary (local models first, then cheapest cloud). All requests go to the primary model.
-- **Fallback chains**: If the primary model fails, Rex tries the next model in cost order.
+- **Task-aware routing**: Rex classifies each request (debugging, refactoring, code review, etc.) and picks the cheapest model that meets the task's requirements (context window, capabilities). Tasks with no special needs stay on the primary (cheapest) model.
+- **Fallback chains**: If the selected model fails, Rex tries the next model in cost order.
 - **SSE streaming**: Full Server-Sent Events streaming support for chat completions.
 - **Transparent passthrough**: Unknown endpoints are forwarded to the primary model's backend — Rex never blocks an endpoint it doesn't handle.
 - **Optional YAML config**: Add custom models or override the auto-selected primary model via `config.yaml`.
 
 ## How It Works
 
-1. On startup, Rex **discovers** available models from environment variables (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.), local runtimes (Ollama), and provider APIs — then merges with any `config.yaml` overrides.
+1. On startup, Rex **discovers** available models from environment variables (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.), local runtimes (Ollama), and provider APIs — enriches each with metadata (cost, context window, capabilities) and merges with any `config.yaml` overrides.
 2. Rex sorts models by cost (local first, then cheapest cloud) and selects the **primary model**.
-3. The **proxy** forwards incoming requests to the primary model via LiteLLM and streams the response back.
-4. If the primary fails, the **fallback chain** tries remaining models in cost order.
+3. For each request, the **classifier** identifies the task type (debugging, refactoring, code review, etc.) and the **router** picks the cheapest model that meets the task's requirements. If the primary already qualifies, it stays on primary.
+4. If the selected model fails, the **fallback chain** tries remaining models in cost order.
 
 ## API
 
@@ -55,9 +55,11 @@ app/
     metadata.py          # Enriches models with LiteLLM metadata
     registry_builder.py  # Orchestrates discovery and builds the model registry
   router/
+    categories.py        # Task categories and routing requirements
+    classifier.py        # Heuristic task classifier (keyword + structural)
     detector.py          # Feature detection (completion vs. chat)
-    engine.py            # Routing engine (primary selection + fallback)
-    registry.py          # Model registry (lookups, cost sorting)
+    engine.py            # Routing engine (task-aware selection + fallback)
+    registry.py          # Model registry (lookups, cost sorting, filtering)
   proxy/
     handler.py           # OpenAI-compatible request handler
     streaming.py         # SSE streaming response logic
