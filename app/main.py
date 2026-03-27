@@ -16,6 +16,7 @@ from app.proxy.handler import (
     handle_text_completion,
 )
 from app.router.engine import RoutingEngine
+from app.router.llm_judge import LLMJudge
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -32,7 +33,26 @@ async def lifespan(app: FastAPI):
     config = load_config("config.yaml")
     registry, _settings = await build_registry(config)
     primary_model = _settings.routing.primary_model
-    _engine = RoutingEngine(registry, primary_model)
+
+    judge = None
+    if _settings.llm_judge.enabled:
+        judge_model = _settings.llm_judge.model
+        if judge_model is None:
+            local_models = [m for m in registry.sorted_by_cost() if m.is_local]
+            if local_models:
+                judge_model = local_models[0].name
+        if judge_model:
+            judge = LLMJudge(model=judge_model)
+            logger.info("LLM judge enabled with model: %s", judge_model)
+        else:
+            logger.warning("LLM judge enabled but no model available, disabling")
+
+    _engine = RoutingEngine(
+        registry,
+        primary_model,
+        judge=judge,
+        confidence_threshold=_settings.llm_judge.confidence_threshold,
+    )
     _adapter_registry = AdapterRegistry()
     _pipeline = build_pipeline(_settings)
     logger.info(
