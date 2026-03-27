@@ -2,9 +2,9 @@
 
 For a project overview and getting started guide, see [README.md](README.md). For the delivery plan, see [ROADMAP.md](ROADMAP.md).
 
-An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud). Rex identifies what each coding task needs and routes it to the cheapest model that fits.
+An OpenAI- and Anthropic-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud). Rex identifies what each coding task needs and routes it to the cheapest model that fits.
 
-- Compatible with any tool that supports a custom OpenAI API base URL (Cursor, Claude Code, Continue, Aider, etc.).
+- Compatible with any tool that supports a custom OpenAI or Anthropic API base URL (Cursor, Claude Code, Continue, Aider, etc.).
 - Each user runs their own Rex instance locally — all data, embeddings, and trained classifiers stay on the user's machine.
 - The ML classifier personalizes to each user's coding patterns over time.
 
@@ -12,7 +12,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 ```mermaid
 flowchart LR
-    Client[AI Coding Tool] -->|OpenAI API| Proxy[Rex Proxy]
+    Client[AI Coding Tool] -->|OpenAI / Anthropic API| Proxy[Rex Proxy]
     Proxy --> Adapter[Client Adapter]
     Adapter --> Classifier{Task Classifier}
     Classifier -->|fast path| Heuristics[Heuristic Rules]
@@ -57,7 +57,7 @@ flowchart LR
 | Routing criteria | Cost + context window + capability flags | All routing signals come from measurable model properties — no manually curated "strengths" list |
 | Config format | Optional YAML overrides | Config file is not required; when present, it adds models and overrides routing defaults |
 | Client detection | User-Agent header → adapter | Rex selects the adapter based on the client's User-Agent header; new tools supported by adding an adapter |
-| API compatibility | Full OpenAI, transparent proxy | Rex routes known endpoints and passes through everything else to the primary model's backend; never blocks unknown endpoints |
+| API compatibility | Full OpenAI + Anthropic Messages API, transparent proxy | Rex routes known endpoints (OpenAI and Anthropic) and passes through everything else to the primary model's backend; never blocks unknown endpoints |
 | Error handling | Graceful degradation | Every failure falls back to a simpler path; classification failure → primary model; all models fail → error to client |
 | Logging storage | Repository pattern | Core logic decoupled from storage; SQLite as default implementation, swappable without touching routing code |
 | Deployment model | Global CLI, per-user local instance | Rex installs as a CLI tool; `rex start` launches the proxy, `rex stop` shuts it down; any AI tool connects to the same instance; all data stays on the user's machine; each instance learns independently from its own usage |
@@ -93,10 +93,11 @@ All routing criteria come from measurable model properties — cost, context win
 
 ## API Surface
 
-Rex exposes a fully OpenAI-compatible API as a transparent proxy:
+Rex exposes a fully OpenAI- and Anthropic-compatible API as a transparent proxy:
 
 - **Routed endpoints** — Rex applies classification and routing logic:
-  - `POST /v1/chat/completions` (streaming and non-streaming)
+  - `POST /v1/chat/completions` — OpenAI format (streaming and non-streaming)
+  - `POST /v1/messages` — Anthropic Messages API format (streaming and non-streaming)
   - `POST /v1/completions` (legacy)
 - **Handled directly**:
   - `GET /v1/models` — returns models from Rex's registry
@@ -303,8 +304,9 @@ app/
     ml_classifier.py     # Trained ML classifier (logistic regression)
     registry.py          # Model registry (lookups, cost sorting, filtering)
   proxy/
-    handler.py           # OpenAI-compatible request handler
-    streaming.py         # SSE streaming response logic
+    anthropic.py         # Anthropic Messages API translator (request/response/streaming)
+    handler.py           # Request handlers (OpenAI + Anthropic)
+    streaming.py         # OpenAI SSE streaming response logic
 config.yaml.example     # Example configuration (optional)
 pyproject.toml           # Project dependencies (uv)
 tests/                   # pytest test suite

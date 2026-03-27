@@ -2,9 +2,9 @@
 
 > This project only exists because I'm too lazy to pick the best model myself.
 
-An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud), routing each request to the cheapest model that fits the task.
+An OpenAI- and Anthropic-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud), routing each request to the cheapest model that fits the task.
 
-- Works with any tool that supports a custom OpenAI API base URL (Cursor, Claude Code, Continue, Aider, etc.).
+- Works with any tool that supports a custom OpenAI or Anthropic API base URL (Cursor, Claude Code, Continue, Aider, etc.).
 - Each user runs their own Rex instance locally.
 
 ## Features
@@ -12,7 +12,8 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 - **Config-first model registry**: Define your models in `~/.rex/config.yaml`. Rex supplements the config with auto-discovered providers (environment variables, Ollama) and enriches each model with metadata (cost, context window) from LiteLLM.
 - **Task-aware routing**: Rex classifies each request (debugging, refactoring, code review, etc.) and picks the cheapest model that meets the task's requirements (context window, capabilities). Tasks with no special needs stay on the primary (cheapest) model.
 - **Fallback chains**: If the selected model fails, Rex tries the next model in cost order.
-- **SSE streaming**: Full Server-Sent Events streaming support for chat completions.
+- **Anthropic Messages API**: Full support for Anthropic's `POST /v1/messages` endpoint — accepts Anthropic-format requests, routes through Rex's engine, returns Anthropic-format responses. Streaming and non-streaming. Claude Code and other Anthropic clients connect by setting `ANTHROPIC_BASE_URL=http://localhost:8000`.
+- **SSE streaming**: Full Server-Sent Events streaming support for both OpenAI chat completions and Anthropic messages.
 - **Enrichment pipeline**: Rex transforms complex requests (generation, refactoring, migration, code review, test generation) by injecting task decomposition instructions before the model call. Each enricher is opt-in via config.
 - **LLM-as-Judge fallback**: When heuristic classification confidence is low, Rex calls a small local LLM to reclassify the task. The judge only triggers for chat/agent requests — never for tab completions. If the judge fails, Rex falls back to heuristics.
 - **Decision logging**: Every routing decision is logged to SQLite with timestamps, prompt hash, category, confidence, selected/used model, response time, token counts, cost, and rule votes — providing full routing observability.
@@ -34,7 +35,8 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 | Endpoint | Description |
 |---|---|
-| `POST /v1/chat/completions` | Chat completions (streaming and non-streaming) |
+| `POST /v1/chat/completions` | OpenAI chat completions (streaming and non-streaming) |
+| `POST /v1/messages` | Anthropic Messages API (streaming and non-streaming) |
 | `POST /v1/completions` | Legacy completions |
 | `GET /v1/models` | Lists all discovered models |
 | `GET /health` | Proxy status |
@@ -92,8 +94,9 @@ app/
     ml_classifier.py     # Trained ML classifier (logistic regression)
     registry.py          # Model registry (lookups, cost sorting, filtering)
   proxy/
-    handler.py           # OpenAI-compatible request handler
-    streaming.py         # SSE streaming response logic
+    anthropic.py         # Anthropic Messages API translator (request/response/streaming)
+    handler.py           # Request handlers (OpenAI + Anthropic)
+    streaming.py         # OpenAI SSE streaming response logic
 config.yaml.example     # Example configuration (optional)
 pyproject.toml           # Project dependencies (uv)
 tests/                   # pytest test suite
