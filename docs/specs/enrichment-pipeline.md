@@ -66,11 +66,11 @@ The enricher uses the task category from classification to decide whether a task
 | Signal | Condition | Rationale |
 |---|---|---|
 | Feature type | `CHAT` only | Tab completions never need decomposition |
-| Task category | `generation`, `refactoring`, `migration`, `code_review`, `test_generation` | These categories are inherently multi-step |
+| Task category | `generation`, `refactoring`, `migration`, `code_review`, `test_generation`, `documentation` | These categories are inherently multi-step |
 
 The enricher skips tasks whose category is not in the complex set.
 
-Simple categories (`completion`, `explanation`, `documentation`, `general`, `debugging`, `optimization`) skip enrichment.
+Simple categories (`completion`, `explanation`, `general`, `debugging`, `optimization`) skip enrichment.
 
 ### Injected Instruction
 
@@ -93,11 +93,11 @@ Before starting, break this task into a numbered list of concrete subtasks. Work
 | `migration` | Yes | Upgrades span dependencies, code changes, and config updates |
 | `code_review` | Yes | Reviews cover multiple concerns (correctness, style, security, performance) |
 | `test_generation` | Yes | Test suites cover multiple scenarios, edge cases, and setup steps |
+| `documentation` | Yes | Documentation spans API docs, README sections, docstrings, and examples |
 | `completion` | No | Single-line completions are atomic |
 | `debugging` | No | Typically focused on a single error |
 | `optimization` | No | Usually targets a specific bottleneck |
 | `explanation` | No | Answering a question, not executing a task |
-| `documentation` | No | Typically a single-concern task |
 | `general` | No | Fallback category, no special handling |
 
 ---
