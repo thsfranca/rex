@@ -18,5 +18,6 @@ class DecisionRecord:
     output_tokens: int | None = None
     cost: float | None = None
     fallback_triggered: bool = False
+    escalated: bool = False
     rule_votes: dict[str, float] | None = None
     embedding: bytes | None = None
