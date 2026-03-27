@@ -145,6 +145,21 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ---
 
+## Phase 5.4 — Anthropic Messages API
+
+**Goal**: Support Anthropic-native clients (Claude Code, etc.) by accepting and responding in Anthropic Messages API format, while routing through Rex's existing engine.
+
+**Deliverables**:
+- [x] Anthropic message format translator: convert between Anthropic Messages API and OpenAI chat completions format (system prompt extraction, content block flattening, stop reason mapping)
+- [x] `POST /v1/messages` endpoint: accept Anthropic-format requests, route through Rex's engine, return Anthropic-format responses
+- [x] API key extraction from `x-api-key` header (Anthropic convention) with passthrough to model backends
+- [x] Anthropic SSE streaming: convert OpenAI streaming chunks to Anthropic event format (`message_start`, `content_block_start`, `content_block_delta`, `content_block_stop`, `message_delta`, `message_stop`)
+- [x] Echo the client's requested model name in responses while routing to the best model internally
+
+**Design**: Rex translates Anthropic requests to OpenAI format internally, routes through the same engine, and translates the response back. Anthropic clients (e.g., Claude Code with `ANTHROPIC_BASE_URL=http://localhost:8000`) connect without knowing Rex routes to different backends.
+
+---
+
 ## Phase 6 — Observability Dashboard (optional)
 
 **Goal**: Give users a visual dashboard to explore routing decisions, cost breakdown, model usage, and reliability — without adding UI maintenance burden to Rex. Users install and run the dashboard only if they want it.
