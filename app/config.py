@@ -27,10 +27,15 @@ class RoutingConfig(BaseModel):
     primary_model: str | None = None
 
 
+class EnrichmentsConfig(BaseModel):
+    task_decomposition: bool = False
+
+
 class Settings(BaseModel):
     server: ServerConfig = ServerConfig()
     models: list[ModelConfig] = []
     routing: RoutingConfig = RoutingConfig()
+    enrichments: EnrichmentsConfig = EnrichmentsConfig()
 
 
 def load_config(path: str | Path) -> Settings | None:
