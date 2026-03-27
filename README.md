@@ -74,6 +74,16 @@ Future phases will add:
 
 ## Getting Started
 
+### Quick Setup
+
+```bash
+./setup.sh
+```
+
+The script installs dependencies, walks you through creating `config.yaml`, and shows how to start Rex.
+
+### Manual Setup
+
 1. Install [uv](https://docs.astral.sh/uv/):
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -90,7 +100,7 @@ Future phases will add:
    ```bash
    uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
    ```
-5. Point your AI coding tool's base URL to `http://localhost:8000`.
+5. Point your AI coding tool's base URL to `http://localhost:8000/v1`.
 
 ## Documentation
 
