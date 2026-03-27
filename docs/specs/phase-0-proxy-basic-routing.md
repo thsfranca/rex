@@ -263,6 +263,11 @@ server:
   host: "0.0.0.0"
   port: 8000
 
+providers:
+  - prefix: "anthropic"
+    api_base: "https://litellm-proxy.company.com/anthropic"
+    api_key_env: "ANTHROPIC_AUTH_TOKEN"
+
 models:
   - name: "openai/gpt-4o"
     api_key: "sk-..."
@@ -280,12 +285,19 @@ class ServerConfig(BaseModel):
     host: str = "0.0.0.0"
     port: int = 8000
 
+class ProviderConfig(BaseModel):
+    prefix: str
+    api_base: str
+    api_key: str | None = None
+    api_key_env: str | None = None
+
 class RoutingConfig(BaseModel):
     primary_model: str | None = None
 
 class Settings(BaseModel):
     server: ServerConfig = ServerConfig()
     models: list[ModelConfig] = []
+    providers: list[ProviderConfig] = []
     routing: RoutingConfig = RoutingConfig()
 ```
 
@@ -293,6 +305,11 @@ class Settings(BaseModel):
 |---|---|---|---|---|
 | `server.host` | string | no | `"0.0.0.0"` | HTTP server bind address |
 | `server.port` | integer | no | `8000` | HTTP server port |
+| `providers` | list | no | `[]` | Remote provider endpoints to probe for models (override auto-discovered providers by prefix) |
+| `providers[].prefix` | string | yes | — | Provider prefix (e.g., `anthropic`, `openai`) |
+| `providers[].api_base` | string | yes | — | Base URL of the remote provider or LiteLLM proxy |
+| `providers[].api_key` | string | no | `null` | API key (direct value) |
+| `providers[].api_key_env` | string | no | `null` | Name of environment variable containing the API key |
 | `models` | list | no | `[]` | Manual model definitions (override discovered models by name) |
 | `routing.primary_model` | string | no | `null` | Override the auto-selected primary model |
 
