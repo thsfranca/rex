@@ -9,6 +9,8 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from app.adapters.base import ClientAdapter
 from app.adapters.default import DefaultAdapter
 from app.config import ModelConfig
+from app.enrichment.context import EnrichmentContext
+from app.enrichment.pipeline import EnrichmentPipeline
 from app.proxy.streaming import stream_completion
 from app.router.engine import RoutingEngine
 
@@ -91,6 +93,7 @@ async def handle_chat_completion(
     engine: RoutingEngine,
     authorization: str | None = None,
     adapter: ClientAdapter | None = None,
+    pipeline: EnrichmentPipeline | None = None,
 ) -> Response:
     stream = body.get("stream", False)
     request_api_key = _extract_bearer_token(authorization)
@@ -108,6 +111,16 @@ async def handle_chat_completion(
         temperature=normalized.temperature,
         feature_type=normalized.feature_type,
     )
+
+    if pipeline is not None:
+        enrichment_ctx = EnrichmentContext(
+            messages=list(body.get("messages", [])),
+            category=decision.category,
+            confidence=decision.confidence,
+            feature_type=decision.feature_type,
+        )
+        enrichment_ctx = pipeline.run(enrichment_ctx)
+        body = {**body, "messages": enrichment_ctx.messages}
 
     response, used_model = await _call_with_fallback(
         engine, decision.model, body, stream, request_api_key

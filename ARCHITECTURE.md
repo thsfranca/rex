@@ -249,6 +249,10 @@ app/
     models.py            # Queries provider APIs for available models
     metadata.py          # Enriches models with LiteLLM metadata
     registry_builder.py  # Orchestrates discovery and builds the model registry
+  enrichment/
+    context.py           # EnrichmentContext dataclass
+    pipeline.py          # Enricher protocol and pipeline runner
+    task_decomposition.py # Task decomposition enricher
   router/
     categories.py        # Task categories and routing requirements
     classifier.py        # Heuristic task classifier (keyword + structural)
@@ -264,7 +268,6 @@ tests/                   # pytest test suite
 ```
 
 Future phases will add:
-- `app/enrichment/` — enrichment pipeline (task decomposition, future enrichers)
 - `app/router/ml_classifier.py` — trained ML classifier
 - `app/router/llm_judge.py` — LLM-as-Judge fallback
 - `app/learning/` — embedding pipeline, clustering, weak supervision
