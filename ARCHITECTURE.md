@@ -144,11 +144,9 @@ flowchart TD
 3. **LLM judge**: A small local LLM classifies the task when the above are uncertain ([Zheng et al., 2023](https://arxiv.org/abs/2306.05685)).
    - Only triggered for chat/agent requests where 200-500ms extra latency is acceptable.
 
-### Confidence-Based Model Escalation (planned)
+### Confidence-Based Model Escalation
 
-Currently, low classification confidence triggers **classifier escalation** — the system tries more sophisticated classifiers (heuristics → centroid → LLM judge) to get a better category label. But after that chain, model selection always picks the cheapest model meeting the category's requirements, regardless of how uncertain the classification was.
-
-Confidence-based model escalation extends this: when confidence remains below the threshold after the full classifier chain, the engine escalates the **model** — picking the next more capable model in cost order instead of the cheapest one.
+Low classification confidence triggers **classifier escalation** — the system tries more sophisticated classifiers (heuristics → centroid → LLM judge) to get a better category label. When confidence remains below the threshold after the full classifier chain, the engine escalates the **model** — picking the next more capable model in cost order instead of the cheapest one.
 
 ```mermaid
 flowchart TD
@@ -164,7 +162,7 @@ The key principle: uncertainty about a task is a signal that the task is likely 
 
 This aligns with the Confidence-Driven LLM Router research ([Zhang et al., 2025](https://arxiv.org/abs/2502.11021)) which demonstrates that uncertainty-based routing outperforms both accuracy-based and human-preference-based routing for balancing cost and response quality.
 
-The routing decision will carry an `escalated` flag for observability in the decision log.
+The routing decision carries an `escalated` flag for observability in the decision log.
 
 ## Enrichment Pipeline
 
