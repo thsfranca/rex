@@ -144,5 +144,23 @@ class SQLiteDecisionRepository:
     async def count(self) -> int:
         return await asyncio.to_thread(self._count_sync)
 
+    def _get_rule_votes_sync(self) -> dict[str, dict[str, float]]:
+        conn = self._get_connection()
+        try:
+            rows = conn.execute(
+                "SELECT prompt_hash, rule_votes FROM decisions WHERE rule_votes IS NOT NULL"
+            ).fetchall()
+            result = {}
+            for row in rows:
+                votes = json.loads(row["rule_votes"])
+                if votes:
+                    result[row["prompt_hash"]] = votes
+            return result
+        finally:
+            conn.close()
+
     async def get_embeddings(self) -> list[tuple[str, bytes]]:
         return await asyncio.to_thread(self._get_embeddings_sync)
+
+    async def get_rule_votes(self) -> dict[str, dict[str, float]]:
+        return await asyncio.to_thread(self._get_rule_votes_sync)

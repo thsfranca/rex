@@ -9,6 +9,7 @@ from app.router.categories import TaskCategory, TaskRequirements, get_requiremen
 from app.router.classifier import ClassificationResult, classify
 from app.router.detector import FeatureType, detect_feature
 from app.router.llm_judge import LLMJudge
+from app.router.ml_classifier import MLClassifier
 from app.router.registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
@@ -31,12 +32,22 @@ class RoutingEngine:
         judge: LLMJudge | None = None,
         confidence_threshold: float = 0.5,
         centroid_classifier: CentroidClassifier | None = None,
+        ml_classifier: MLClassifier | None = None,
+        ml_promoted: bool = False,
     ) -> None:
         self._registry = registry
         self._primary = self._resolve_primary(primary_model)
         self._judge = judge
         self._confidence_threshold = confidence_threshold
         self._centroid_classifier = centroid_classifier
+        self._ml_classifier = ml_classifier
+        self._ml_promoted = ml_promoted
+
+    def set_ml_promoted(self, promoted: bool) -> None:
+        self._ml_promoted = promoted
+
+    def set_centroid_classifier(self, classifier: CentroidClassifier | None) -> None:
+        self._centroid_classifier = classifier
 
     def _resolve_primary(self, override: str | None) -> ModelConfig:
         if override:
@@ -90,7 +101,15 @@ class RoutingEngine:
                 feature_type=feature,
             )
 
-        result = classify(messages)
+        if (
+            self._ml_promoted
+            and self._ml_classifier is not None
+            and self._ml_classifier.is_trained()
+            and embedding is not None
+        ):
+            result = self._ml_classifier.classify(embedding)
+        else:
+            result = classify(messages)
 
         if result.confidence < self._confidence_threshold:
             if self._centroid_classifier is not None and embedding is not None:

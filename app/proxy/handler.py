@@ -165,6 +165,7 @@ async def handle_chat_completion(
     pipeline: EnrichmentPipeline | None = None,
     repository: DecisionRepository | None = None,
     embedding_service=None,
+    scheduler=None,
 ) -> Response:
     stream = body.get("stream", False)
     request_api_key = _extract_bearer_token(authorization)
@@ -225,6 +226,9 @@ async def handle_chat_completion(
                 embedding_bytes,
             )
         )
+
+    if scheduler is not None:
+        asyncio.create_task(scheduler.on_new_decision())
 
     if stream:
         return StreamingResponse(
