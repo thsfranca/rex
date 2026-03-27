@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
+from app.adapters.registry import AdapterRegistry
 from app.config import ModelConfig, Settings
 from app.main import app
 from app.router.engine import RoutingEngine
@@ -31,6 +32,7 @@ def _setup_app():
     registry = ModelRegistry(models)
     main_module._engine = RoutingEngine(registry)
     main_module._settings = Settings(models=models)
+    main_module._adapter_registry = AdapterRegistry()
 
 
 @pytest.fixture(autouse=True)
@@ -41,6 +43,7 @@ def setup_test_app():
 
     main_module._engine = None
     main_module._settings = None
+    main_module._adapter_registry = None
 
 
 client = TestClient(app, raise_server_exceptions=False)
