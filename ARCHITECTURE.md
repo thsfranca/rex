@@ -255,6 +255,7 @@ app/
     classifier.py        # Heuristic task classifier (keyword + structural)
     detector.py          # Feature detection (completion vs. chat)
     engine.py            # Routing engine (task-aware selection + fallback)
+    llm_judge.py         # LLM-as-Judge fallback classifier
     registry.py          # Model registry (lookups, cost sorting, filtering)
   proxy/
     handler.py           # OpenAI-compatible request handler
@@ -266,6 +267,5 @@ tests/                   # pytest test suite
 
 Future phases will add:
 - `app/router/ml_classifier.py` — trained ML classifier
-- `app/router/llm_judge.py` — LLM-as-Judge fallback
 - `app/learning/` — embedding pipeline, clustering, weak supervision
 - `app/logging/` — decision logging with storage interface
