@@ -31,7 +31,6 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] Confidence scoring: each signal contributes a weighted score, highest-scoring category wins
 - [x] Task-aware routing: categories route to the cheapest model that meets their requirements (context window, cloud, capabilities)
 - [ ] Structural analysis (code block ratio, prompt length)
-- [ ] Language detection (to prefer models that excel in specific languages)
 - [ ] Outcome logging per category for future upward migration
 - [ ] Sentence transformer integration ([all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2); [Reimers & Gurevych, 2019](https://arxiv.org/abs/1908.10084)): embed every query (~10ms, local CPU), store alongside heuristic rule votes in SQLite
 - [ ] Pre-seeded cluster centroids: synthetic exemplar queries per category, embedded at startup as initial centroids, nearest-centroid classification from the first query
@@ -55,7 +54,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ## Phase 3 — Learning Pipeline + Visibility
 
-**Goal**: Train the ML classifier automatically from accumulated data using unsupervised clustering and weak supervision. Provide visibility into routing behavior.
+**Goal**: Train the ML classifier automatically from accumulated data using unsupervised clustering and weak supervision.
 
 **Deliverables**:
 - [ ] Unsupervised K-means clustering on stored query embeddings with [silhouette score](https://doi.org/10.1016/0377-0427(87)90125-7) for optimal cluster count (Rousseeuw, 1987)
@@ -64,7 +63,6 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [ ] ML classifier training: logistic regression on cluster-derived + weakly-supervised labels, automatic retraining
 - [ ] Per-category outcome tracking (fallback triggers, error rate, latency, re-ask rate)
 - [ ] Upward migration: promote categories with persistent poor outcomes to more capable models
-- [ ] CLI tool (`rex stats`): routing statistics, cost tracking, cluster visualization, dataset export
 
 ---
 
