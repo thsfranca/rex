@@ -267,6 +267,7 @@ After reset:
 ```
 app/
   main.py                # FastAPI app entry point
+  cli.py                 # CLI entry point (rex start/stop/reset)
   config.py              # Pydantic settings model + optional YAML loader
   utils.py               # Shared utility functions
   adapters/
