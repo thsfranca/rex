@@ -6,6 +6,8 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ## Phase 0 — Proxy + Basic Routing
 
+> Detailed spec: [docs/specs/phase-0-proxy-basic-routing.md](docs/specs/phase-0-proxy-basic-routing.md)
+
 **Goal**: An OpenAI-compatible proxy that routes requests across multiple model backends based on feature detection.
 
 **Deliverables**:
@@ -21,6 +23,8 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ## Phase 1 — Heuristic Task Classifier
 
+> Detailed spec: [docs/specs/phase-1-heuristic-task-classifier.md](docs/specs/phase-1-heuristic-task-classifier.md)
+
 **Goal**: Classify chat/agent prompts by coding task type using fast pattern-based heuristics.
 
 **Deliverables**:
@@ -35,6 +39,8 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 ---
 
 ## Phase 2 — Enrichment Pipeline
+
+> Detailed spec: [docs/specs/phase-2-enrichment-pipeline.md](docs/specs/phase-2-enrichment-pipeline.md)
 
 **Goal**: A pluggable pipeline that transforms requests after routing but before the model call. The first enricher injects task decomposition instructions for complex tasks, replicating structured step-by-step execution across all models.
 
@@ -90,3 +96,25 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [ ] Automatic promotion: ML classifier replaces heuristics as primary when silhouette score > 0.5 and label model converges; heuristics demote to labeling functions only
 - [ ] Per-category outcome tracking (fallback triggers, error rate, latency, re-ask rate)
 - [ ] Upward migration: promote categories with persistent poor outcomes to more capable models
+
+---
+
+## Phase 6 — Observability Dashboard (optional)
+
+**Goal**: Give users a visual dashboard to explore routing decisions, cost breakdown, model usage, and reliability — without adding UI maintenance burden to Rex. Users install and run the dashboard only if they want it.
+
+**Approach**: Rex ships a pre-configured [Datasette](https://datasette.io/) dashboard definition file. Datasette is a Python tool built specifically for exploring SQLite databases. The [datasette-dashboards](https://datasette.io/plugins/datasette-dashboards) plugin renders interactive charts from declarative YAML config. Rex owns the YAML file with query definitions; Datasette handles all rendering, filtering, and visualization.
+
+**Why Datasette**:
+- Same Python ecosystem as Rex — installs with `pip`
+- Built for SQLite — reads `~/.rex/decisions.db` directly, zero integration code
+- Rex ships a YAML config file, not a UI — no frontend code to build or maintain
+- Users also get raw table browsing and a SQL editor for free
+
+**Deliverables**:
+- [ ] Datasette dashboard definition file (`rex-dashboards.yml`) with pre-configured panels:
+  - Cost overview: total spend, cost over time, cost by category, cost by model
+  - Routing: requests by category, requests by model, local vs. cloud ratio, classifier path distribution
+  - Reliability: fallback rate, fallbacks by model, error count by model
+  - Latency: average latency by model, average latency by category
+- [ ] Documentation: install instructions (`pip install datasette datasette-dashboards`), run command (`datasette ~/.rex/decisions.db --metadata rex-dashboards.yml`)

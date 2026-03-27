@@ -198,6 +198,31 @@ class TestLoadConfig:
         settings = Settings()
         assert settings.learning.db_path == "~/.rex/decisions.db"
         assert settings.learning.embeddings_model == "all-MiniLM-L6-v2"
+        assert settings.learning.recluster_interval == 100
+        assert settings.learning.max_k == 20
+        assert settings.learning.promotion_silhouette_threshold == 0.5
+        assert settings.learning.migration_window == 50
+
+    def test_loads_learning_pipeline_config_from_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            yaml.dump(
+                {
+                    "learning": {
+                        "recluster_interval": 200,
+                        "max_k": 30,
+                        "promotion_silhouette_threshold": 0.6,
+                        "migration_window": 100,
+                    }
+                }
+            )
+        )
+        settings = load_config(config_file)
+        assert settings is not None
+        assert settings.learning.recluster_interval == 200
+        assert settings.learning.max_k == 30
+        assert settings.learning.promotion_silhouette_threshold == 0.6
+        assert settings.learning.migration_window == 100
 
     def test_load_invalid_yaml(self, tmp_path):
         config_file = tmp_path / "config.yaml"

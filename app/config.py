@@ -40,6 +40,10 @@ class LLMJudgeConfig(BaseModel):
 class LearningConfig(BaseModel):
     db_path: str = "~/.rex/decisions.db"
     embeddings_model: str = "all-MiniLM-L6-v2"
+    recluster_interval: int = 100
+    max_k: int = 20
+    promotion_silhouette_threshold: float = 0.5
+    migration_window: int = 50
 
 
 class Settings(BaseModel):
