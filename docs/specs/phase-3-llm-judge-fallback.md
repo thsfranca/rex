@@ -56,7 +56,7 @@ flowchart TD
 ## Judge Model Selection
 
 - The judge uses a small, fast model to minimize latency.
-- The user can specify the model via `routing.judge.model` in config.
+- The user can specify the model via `llm_judge.model` in config.
 - When no model is specified, the engine auto-selects the cheapest local model from the registry.
 - If no local model is available and no model is specified, the engine disables the judge and logs a warning.
 - The judge model does not need to be separate from the routing registry — it can be any model Rex knows about.
@@ -69,39 +69,23 @@ The judge receives a system prompt and the user's last message, then returns a s
 
 ### System Prompt
 
+The prompt lists all valid `TaskCategory` values dynamically and asks for a JSON response with `category` and `min_context_window`:
+
 ```
-You are a task classifier for a coding assistant. Classify the user's request into exactly one category.
+You are a coding task classifier. Analyze the user's message and classify it into exactly one category.
 
-Categories:
-- debugging: fixing errors, bugs, crashes, exceptions
-- refactoring: restructuring or simplifying existing code
-- optimization: improving performance, speed, memory usage
-- test_generation: writing tests, test cases, specs
-- explanation: explaining code, concepts, or behavior
-- documentation: writing docs, docstrings, READMEs
-- code_review: reviewing code for correctness, style, security
-- generation: creating new code from a description
-- migration: upgrading, converting, or porting code
-- general: anything that does not fit the above
+Valid categories: code_review, completion, debugging, documentation, explanation, general, generation, migration, optimization, refactoring, test_generation
 
-Respond with a JSON object:
-{
-  "category": "<category>",
-  "confidence": <0.0-1.0>,
-  "complexity": "<simple|complex>",
-  "min_context_window": <integer or null>
-}
+Respond with a JSON object containing:
+- "category": one of the valid categories listed above
+- "min_context_window": minimum context window needed in tokens (null if no special requirement)
 
-Rules:
-- "confidence" reflects how certain you are about the category.
-- "complexity" is "complex" if the task involves multiple steps, files, or concerns; "simple" otherwise.
-- "min_context_window" is the minimum context window (in tokens) the task requires. Use null if the default is sufficient.
-- Respond ONLY with the JSON object, no other text.
+Respond ONLY with the JSON object, no other text.
 ```
 
 ### User Message
 
-The judge receives only the last user message from the conversation — the same text the heuristic classifier analyzes.
+The judge extracts and sends only the last user message from the conversation — the same text the heuristic classifier analyzes.
 
 ### LiteLLM Call
 
@@ -112,10 +96,8 @@ response = await litellm.acompletion(
         {"role": "system", "content": JUDGE_SYSTEM_PROMPT},
         {"role": "user", "content": last_user_message},
     ],
-    response_format={"type": "json_object"},
-    max_tokens=150,
     temperature=0.0,
-    timeout=timeout_seconds,
+    max_tokens=100,
 )
 ```
 
@@ -128,13 +110,11 @@ The judge parses the model's response as JSON and validates each field:
 | Field | Type | Required | Validation |
 |---|---|---|---|
 | `category` | string | yes | Must be a valid `TaskCategory` value |
-| `confidence` | float | yes | Must be between 0.0 and 1.0 |
-| `complexity` | string | no | Must be `"simple"` or `"complex"` if present |
-| `min_context_window` | integer | no | Must be positive if present |
+| `min_context_window` | integer | no | Must be a valid integer if present |
 
 - If JSON parsing fails, the judge returns `None` (fallback to heuristics).
-- If a required field is missing or invalid, the judge returns `None`.
-- Optional fields that are missing or invalid are ignored (defaults apply).
+- If `category` is missing or not a valid `TaskCategory`, the judge returns `None`.
+- If `min_context_window` is present but not a valid integer, the field is set to `None`.
 
 ### JudgeResult
 
@@ -142,8 +122,6 @@ The judge parses the model's response as JSON and validates each field:
 @dataclass(frozen=True)
 class JudgeResult:
     category: TaskCategory
-    confidence: float
-    complexity: str | None = None
     min_context_window: int | None = None
 ```
 
@@ -153,27 +131,9 @@ class JudgeResult:
 
 When the judge provides a result, the engine uses it for model selection:
 
-- **`category`**: replaces the heuristic category in `RoutingDecision`.
-- **`confidence`**: replaces the heuristic confidence.
-- **`min_context_window`**: if provided, overrides the default `TaskRequirements.min_context_window` for the category.
-- **`complexity`**: carried on `RoutingDecision` as an optional field. The enrichment pipeline uses it to override the category-based complexity check.
-
-### RoutingDecision Extension
-
-```python
-@dataclass(frozen=True)
-class RoutingDecision:
-    model: ModelConfig
-    category: TaskCategory
-    confidence: float
-    feature_type: FeatureType
-    complexity_override: str | None = None
-```
-
-When `complexity_override` is set:
-- `"complex"` → the enrichment pipeline treats the request as complex regardless of category.
-- `"simple"` → the enrichment pipeline skips enrichment regardless of category.
-- `None` → the pipeline uses the default category-based logic.
+- **`category`**: replaces the heuristic category. The engine creates a new `ClassificationResult` with the judge's category.
+- **`confidence`**: the engine sets confidence to `0.9` (a fixed value indicating the judge is trusted more than low-confidence heuristics). LLM self-reported confidence is unreliable, so a fixed value is a more pragmatic choice.
+- The engine then applies the standard `get_requirements(category)` logic to select the model — the same path as heuristic results.
 
 ---
 
@@ -199,45 +159,43 @@ The judge follows the graceful degradation strategy:
 - The judge only runs for `CHAT` feature type requests.
 - `COMPLETION` requests skip the judge entirely (the engine routes them to primary without classification).
 - Expected latency: 200–500ms for a small local model.
-- The timeout (`timeout_seconds`, default: `5.0`) prevents the judge from blocking the request indefinitely.
+- If the judge call fails or times out (via LiteLLM's default timeout), the exception handler catches it and returns `None`, falling back to heuristics.
 
 ---
 
 ## Config Schema
 
-Add a `judge` section under `routing`:
+Add an `llm_judge` section at the top level:
 
 ```yaml
-routing:
-  primary_model: "ollama/llama3"
-  judge:
-    enabled: true
-    model: "ollama/llama3.2:1b"
-    confidence_threshold: 0.5
-    timeout_seconds: 5.0
+llm_judge:
+  enabled: true
+  model: "ollama/llama3.2:1b"
+  confidence_threshold: 0.5
 ```
 
-### JudgeConfig
+### LLMJudgeConfig
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `routing.judge.enabled` | boolean | no | `false` | Enable the LLM judge fallback |
-| `routing.judge.model` | string | no | `null` | Model to use for judging. When null, auto-selects the cheapest local model. |
-| `routing.judge.confidence_threshold` | float | no | `0.5` | Heuristic confidence below this triggers the judge |
-| `routing.judge.timeout_seconds` | float | no | `5.0` | Maximum seconds to wait for the judge response |
+| `llm_judge.enabled` | boolean | no | `false` | Enable the LLM judge fallback |
+| `llm_judge.model` | string | no | `null` | Model to use for judging. When null, auto-selects the cheapest local model. |
+| `llm_judge.confidence_threshold` | float | no | `0.5` | Heuristic confidence below this triggers the judge |
 
 ### Settings Extension
 
 ```python
-class JudgeConfig(BaseModel):
+class LLMJudgeConfig(BaseModel):
     enabled: bool = False
     model: str | None = None
     confidence_threshold: float = 0.5
-    timeout_seconds: float = 5.0
 
-class RoutingConfig(BaseModel):
-    primary_model: str | None = None
-    judge: JudgeConfig = JudgeConfig()
+class Settings(BaseModel):
+    server: ServerConfig = ServerConfig()
+    models: list[ModelConfig] = []
+    routing: RoutingConfig = RoutingConfig()
+    enrichments: EnrichmentsConfig = EnrichmentsConfig()
+    llm_judge: LLMJudgeConfig = LLMJudgeConfig()
 ```
 
 ---
@@ -248,58 +206,42 @@ Phase 3 adds the judge module and modifies existing files:
 
 ```
 app/
-  config.py                # Add JudgeConfig, extend RoutingConfig
+  config.py                # Add LLMJudgeConfig, extend Settings
   router/
     llm_judge.py           # LLM judge classifier
     engine.py              # Integrate judge into select_model (becomes async)
-  enrichment/
-    context.py             # Add optional complexity_override field
-    task_decomposition.py  # Respect complexity_override from EnrichmentContext
   proxy/
-    handler.py             # Pass complexity_override to enrichment context
+    handler.py             # await engine.select_model(...)
 tests/
   test_llm_judge.py
   test_engine.py           # Updated for async select_model + judge integration
-  test_task_decomposition.py # Updated for complexity_override
 ```
 
 ### router/llm_judge.py
 
-- `JUDGE_SYSTEM_PROMPT` constant: the classification meta-prompt.
-- `JudgeResult` frozen dataclass: `category`, `confidence`, `complexity`, `min_context_window`.
+- `JUDGE_SYSTEM_PROMPT` constant: the classification meta-prompt (dynamically lists valid categories).
+- `JudgeResult` frozen dataclass: `category`, `min_context_window`.
 - `LLMJudge` class:
-  - `__init__(model: str, timeout_seconds: float)`.
-  - `async classify(last_user_message: str) -> JudgeResult | None`: calls LiteLLM, parses JSON, validates fields, returns `JudgeResult` or `None` on failure.
-  - `_parse_response(content: str) -> JudgeResult | None`: JSON parsing and validation.
+  - `__init__(model: str)`.
+  - `async classify(messages: list[dict]) -> JudgeResult | None`: extracts last user message, calls LiteLLM, parses JSON, validates fields, returns `JudgeResult` or `None` on failure.
+- `_parse_judge_response(content: str) -> JudgeResult | None`: JSON parsing and validation (module-level function).
+- `_extract_last_user_message(messages: list[dict]) -> str`: extracts last user message text (handles string and list content).
 
 ### router/engine.py (modified)
 
-- `RoutingDecision` gains optional `complexity_override: str | None = None`.
 - `select_model` becomes `async select_model`.
-- After heuristic classification, if `feature == CHAT` and `result.confidence < threshold` and judge is available, calls `await judge.classify(last_user_message)`.
-- If judge returns a result, the engine uses the judge's category and confidence. If the judge provides `min_context_window`, the engine builds custom `TaskRequirements` overriding the category default.
+- After heuristic classification, if `feature == CHAT` and `result.confidence < threshold` and judge is available, calls `await judge.classify(messages)`.
+- If judge returns a result, the engine creates a new `ClassificationResult` with the judge's category and confidence `0.9`.
 - `RoutingEngine.__init__` accepts optional `LLMJudge` instance and `confidence_threshold`.
-
-### enrichment/context.py (modified)
-
-- `EnrichmentContext` gains optional `complexity_override: str | None = None`.
-
-### enrichment/task_decomposition.py (modified)
-
-- `_is_complex` checks `context.complexity_override` first:
-  - `"complex"` → returns `True` regardless of category.
-  - `"simple"` → returns `False` regardless of category.
-  - `None` → falls through to the existing category-based check.
 
 ### proxy/handler.py (modified)
 
-- `handle_chat_completion` passes `decision.complexity_override` to `EnrichmentContext`.
-- `await engine.select_model(...)` replaces the current synchronous call.
+- `await engine.select_model(...)` replaces the previous synchronous call.
 
 ### config.py (modified)
 
-- `JudgeConfig` Pydantic model with `enabled`, `model`, `confidence_threshold`, `timeout_seconds`.
-- `RoutingConfig` gains `judge: JudgeConfig = JudgeConfig()`.
+- `LLMJudgeConfig` Pydantic model with `enabled`, `model`, `confidence_threshold`.
+- `Settings` gains `llm_judge: LLMJudgeConfig = LLMJudgeConfig()`.
 
 ---
 
@@ -309,9 +251,8 @@ tests/
 
 1. Enable the judge in config:
    ```yaml
-   routing:
-     judge:
-       enabled: true
+   llm_judge:
+     enabled: true
    ```
 2. Send a request with no obvious keywords (heuristics return GENERAL at 0.2):
    ```bash
