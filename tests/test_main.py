@@ -8,8 +8,12 @@ from fastapi.testclient import TestClient
 from app.adapters.registry import AdapterRegistry
 from app.config import ModelConfig, Settings
 from app.enrichment.pipeline import EnrichmentPipeline
+from app.learning.labeling import LabelModel
+from app.learning.scheduler import RetrainingScheduler
+from app.logging.sqlite import SQLiteDecisionRepository
 from app.main import app
 from app.router.engine import RoutingEngine
+from app.router.ml_classifier import MLClassifier
 from app.router.registry import ModelRegistry
 
 
@@ -47,6 +51,7 @@ def setup_test_app():
     main_module._settings = None
     main_module._adapter_registry = None
     main_module._pipeline = None
+    main_module._scheduler = None
 
 
 client = TestClient(app, raise_server_exceptions=False)
@@ -104,6 +109,69 @@ class TestChatCompletionsEndpoint:
         assert response.status_code == 200
         call_kwargs = mock_litellm.acompletion.call_args.kwargs
         assert call_kwargs["api_key"] == "sk-from-header"
+
+
+class TestResetEndpoint:
+    def test_reset_returns_ok(self, tmp_path):
+        import app.main as main_module
+
+        repo = SQLiteDecisionRepository(db_path=str(tmp_path / "test.db"))
+        ml = MLClassifier(model_path=str(tmp_path / "model.joblib"))
+        engine = main_module._engine
+        main_module._scheduler = RetrainingScheduler(
+            repository=repo,
+            label_model=LabelModel(),
+            ml_classifier=ml,
+            engine=engine,
+        )
+
+        response = client.post("/v1/reset")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert "cleared" in data["message"]
+
+    def test_reset_clears_data(self, tmp_path):
+        import app.main as main_module
+
+        from datetime import datetime, timezone
+
+        from app.logging.models import DecisionRecord
+
+        repo = SQLiteDecisionRepository(db_path=str(tmp_path / "test.db"))
+        ml = MLClassifier(model_path=str(tmp_path / "model.joblib"))
+        engine = main_module._engine
+        main_module._scheduler = RetrainingScheduler(
+            repository=repo,
+            label_model=LabelModel(),
+            ml_classifier=ml,
+            engine=engine,
+        )
+
+        record = DecisionRecord(
+            timestamp=datetime.now(timezone.utc),
+            prompt_hash="test",
+            category="debugging",
+            confidence=0.8,
+            feature_type="chat",
+            selected_model="test/model",
+            used_model="test/model",
+            response_time_ms=100,
+        )
+        repo._save_sync(record)
+
+        response = client.post("/v1/reset")
+        assert response.status_code == 200
+
+        assert repo._count_sync() == 0
+
+    def test_reset_returns_503_without_scheduler(self):
+        import app.main as main_module
+
+        main_module._scheduler = None
+
+        response = client.post("/v1/reset")
+        assert response.status_code == 503
 
 
 class TestPassthroughEndpoint:

@@ -117,12 +117,12 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 **Goal**: Allow users to intentionally reset all learning data and trained models, returning Rex to its initial state.
 
 **Deliverables**:
-- [ ] `POST /v1/reset` endpoint that clears all learning state in a single call
-- [ ] Clear all decision records from the SQLite database (`decisions` table)
-- [ ] Delete the trained ML classifier model file (`~/.rex/ml_classifier.joblib`) and clear in-memory model state
-- [ ] Reset the retraining scheduler (training counter, promotion status, label model)
-- [ ] Restore the cold-start centroid classifier from synthetic exemplars
-- [ ] Demote the ML classifier in the routing engine so heuristics resume as the primary classifier
+- [x] `POST /v1/reset` endpoint that clears all learning state in a single call
+- [x] Clear all decision records from the SQLite database (`decisions` table)
+- [x] Delete the trained ML classifier model file (`~/.rex/ml_classifier.joblib`) and clear in-memory model state
+- [x] Reset the retraining scheduler (training counter, promotion status, label model)
+- [x] Restore the cold-start centroid classifier from synthetic exemplars
+- [x] Demote the ML classifier in the routing engine so heuristics resume as the primary classifier
 
 **Design**: After reset, Rex behaves exactly as it does on a fresh start — heuristics classify requests, cold-start centroids provide semantic fallback, and the learning pipeline begins accumulating data from scratch.
 
