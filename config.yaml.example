@@ -21,3 +21,7 @@
 #   enabled: true
 #   model: "ollama/llama3"
 #   confidence_threshold: 0.5
+
+# learning:
+#   db_path: "~/.rex/decisions.db"
+#   embeddings_model: "all-MiniLM-L6-v2"

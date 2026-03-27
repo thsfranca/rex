@@ -3,10 +3,13 @@ from __future__ import annotations
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import numpy as np
 import pytest
 
 from app.config import ModelConfig
+from app.learning.centroids import CentroidClassifier
 from app.router.categories import TaskCategory
+from app.router.classifier import ClassificationResult
 from app.router.detector import FeatureType
 from app.router.engine import RoutingDecision, RoutingEngine
 from app.router.llm_judge import LLMJudge
@@ -24,9 +27,10 @@ def _make_engine(
     primary_model: str | None = None,
     judge: LLMJudge | None = None,
     confidence_threshold: float = 0.5,
+    centroid_classifier: CentroidClassifier | None = None,
 ) -> RoutingEngine:
     registry = ModelRegistry(models)
-    return RoutingEngine(registry, primary_model, judge, confidence_threshold)
+    return RoutingEngine(registry, primary_model, judge, confidence_threshold, centroid_classifier)
 
 
 class TestSelectModel:
@@ -531,3 +535,80 @@ class TestLLMJudgeIntegration:
         decision = await engine.select_model(messages)
         assert decision.category == TaskCategory.REFACTORING
         assert decision.model.name == "large/model"
+
+
+class TestCentroidClassifierIntegration:
+    def _make_centroid_classifier(self, category, confidence):
+        mock = MagicMock(spec=CentroidClassifier)
+        mock.classify.return_value = ClassificationResult(category=category, confidence=confidence)
+        return mock
+
+    @pytest.mark.asyncio
+    async def test_centroid_triggers_on_low_heuristic_confidence(self):
+        centroid = self._make_centroid_classifier(TaskCategory.DEBUGGING, 0.85)
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001, supports_reasoning=True)
+        engine = _make_engine([cheap], confidence_threshold=0.5, centroid_classifier=centroid)
+
+        embedding = np.ones(384, dtype=np.float32)
+        messages = [{"role": "user", "content": "hello world"}]
+        decision = await engine.select_model(messages, embedding=embedding)
+
+        centroid.classify.assert_called_once()
+        assert decision.category == TaskCategory.DEBUGGING
+
+    @pytest.mark.asyncio
+    async def test_centroid_skips_when_heuristic_confident(self):
+        centroid = self._make_centroid_classifier(TaskCategory.MIGRATION, 0.9)
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001, supports_reasoning=True)
+        engine = _make_engine([cheap], confidence_threshold=0.5, centroid_classifier=centroid)
+
+        embedding = np.ones(384, dtype=np.float32)
+        messages = [{"role": "user", "content": "Fix this error in my code"}]
+        decision = await engine.select_model(messages, embedding=embedding)
+
+        centroid.classify.assert_not_called()
+        assert decision.category == TaskCategory.DEBUGGING
+
+    @pytest.mark.asyncio
+    async def test_centroid_skips_when_no_embedding(self):
+        centroid = self._make_centroid_classifier(TaskCategory.DEBUGGING, 0.9)
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        engine = _make_engine([cheap], confidence_threshold=0.5, centroid_classifier=centroid)
+
+        messages = [{"role": "user", "content": "hello world"}]
+        await engine.select_model(messages)
+
+        centroid.classify.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_centroid_falls_through_to_judge_when_low_confidence(self):
+        centroid = self._make_centroid_classifier(TaskCategory.DEBUGGING, 0.3)
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001, supports_reasoning=True)
+        judge = MagicMock(spec=LLMJudge)
+        judge.classify = AsyncMock(return_value=MagicMock(category=TaskCategory.OPTIMIZATION))
+
+        engine = _make_engine(
+            [cheap],
+            judge=judge,
+            confidence_threshold=0.5,
+            centroid_classifier=centroid,
+        )
+
+        embedding = np.ones(384, dtype=np.float32)
+        messages = [{"role": "user", "content": "hello world"}]
+        decision = await engine.select_model(messages, embedding=embedding)
+
+        centroid.classify.assert_called_once()
+        judge.classify.assert_called_once()
+        assert decision.category == TaskCategory.OPTIMIZATION
+
+    @pytest.mark.asyncio
+    async def test_decision_includes_scores(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001, supports_reasoning=True)
+        engine = _make_engine([cheap])
+
+        messages = [{"role": "user", "content": "Fix this error in my code"}]
+        decision = await engine.select_model(messages)
+
+        assert decision.scores is not None
+        assert TaskCategory.DEBUGGING in decision.scores

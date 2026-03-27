@@ -37,12 +37,18 @@ class LLMJudgeConfig(BaseModel):
     confidence_threshold: float = 0.5
 
 
+class LearningConfig(BaseModel):
+    db_path: str = "~/.rex/decisions.db"
+    embeddings_model: str = "all-MiniLM-L6-v2"
+
+
 class Settings(BaseModel):
     server: ServerConfig = ServerConfig()
     models: list[ModelConfig] = []
     routing: RoutingConfig = RoutingConfig()
     enrichments: EnrichmentsConfig = EnrichmentsConfig()
     llm_judge: LLMJudgeConfig = LLMJudgeConfig()
+    learning: LearningConfig = LearningConfig()
 
 
 def load_config(path: str | Path) -> Settings | None:
