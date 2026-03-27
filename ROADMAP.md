@@ -21,9 +21,9 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ---
 
-## Phase 1 — Heuristic Task Classifier + Embedding Pipeline
+## Phase 1 — Heuristic Task Classifier
 
-**Goal**: Classify chat/agent prompts by coding task type using fast pattern-based heuristics. Begin storing query embeddings for the learning pipeline.
+**Goal**: Classify chat/agent prompts by coding task type using fast pattern-based heuristics.
 
 **Deliverables**:
 - [x] Keyword matching on last user message (error/fix/bug → debugging, refactor/clean → refactoring, etc.)
@@ -31,10 +31,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] Confidence scoring: each signal contributes a weighted score, highest-scoring category wins
 - [x] Task-aware routing: categories route to the cheapest model that meets their requirements (context window, cloud, capabilities)
 - [ ] Structural analysis (code block ratio, prompt length)
-- [ ] Outcome logging per category for future upward migration
-- [ ] Sentence transformer integration ([all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2); [Reimers & Gurevych, 2019](https://arxiv.org/abs/1908.10084)): embed every query (~10ms, local CPU), store alongside heuristic rule votes in SQLite
-- [ ] Pre-seeded cluster centroids: synthetic exemplar queries per category, embedded at startup as initial centroids, nearest-centroid classification from the first query
-- [ ] SQLite decision logging: timestamp, prompt hash, category, confidence, selected model, response time, token count, cost, embedding vector, rule votes
+- [ ] Client adapter interface: normalize tool-specific request patterns (Cursor, Claude Code, etc.) into a common format for the classifier
 
 ---
 
@@ -48,13 +45,23 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [ ] Classification meta-prompt that returns structured JSON (`category`, `complexity`, `min_context_window`)
 - [ ] JSON mode parsing of judge response
 - [ ] Latency guard: only triggered for chat/agent paths, never for completions
-- [ ] Separate logging of judge decisions for accuracy analysis
 
 ---
 
-## Phase 3 — Learning Pipeline + ML Classifier
+## Phase 3 — Decision Logging + Embedding Pipeline
 
-**Goal**: Train a personalized ML classifier automatically from accumulated data using unsupervised clustering and weak supervision. The classifier replaces heuristics as the primary router once it reaches quality thresholds.
+**Goal**: Build the data collection infrastructure that feeds the learning pipeline. Decision logging provides routing observability, and sentence transformer embeddings enable semantic classification from the first query.
+
+**Deliverables**:
+- [ ] Decision logging with storage interface: repository pattern, SQLite implementation (timestamp, prompt hash, category, confidence, selected model, response time, token count, cost, rule votes)
+- [ ] Sentence transformer integration ([all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2); [Reimers & Gurevych, 2019](https://arxiv.org/abs/1908.10084)): embed every query (~10ms, local CPU), store embeddings alongside decision logs
+- [ ] Pre-seeded cluster centroids: synthetic exemplar queries per category, embedded at startup as initial centroids, nearest-centroid classification from the first query
+
+---
+
+## Phase 4 — Learning Pipeline + ML Classifier
+
+**Goal**: Train a personalized ML classifier from accumulated data using unsupervised clustering and weak supervision. The classifier replaces heuristics as the primary router once it reaches quality thresholds.
 
 **Deliverables**:
 - [ ] Unsupervised K-means clustering on stored query embeddings with [silhouette score](https://doi.org/10.1016/0377-0427(87)90125-7) for optimal cluster count (Rousseeuw, 1987)
