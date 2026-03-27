@@ -53,12 +53,14 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ## Phase 3 — LLM-as-Judge Fallback
 
+> Detailed spec: [docs/specs/phase-3-llm-judge-fallback.md](docs/specs/phase-3-llm-judge-fallback.md)
+
 **Goal**: Use a small local LLM to classify the task when heuristic confidence is low ([Zheng et al., 2023](https://arxiv.org/abs/2306.05685)).
 
 **Deliverables**:
 - [ ] Confidence threshold: below this, trigger the judge instead of routing on low-confidence heuristics
 - [ ] Small local model integration via LiteLLM
-- [ ] Classification meta-prompt that returns structured JSON (`category`, `complexity`, `min_context_window`)
+- [ ] Classification meta-prompt that returns structured JSON (`category`, `min_context_window`)
 - [ ] JSON mode parsing of judge response
 - [ ] Latency guard: only triggered for chat/agent paths, never for completions
 
