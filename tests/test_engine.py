@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from app.config import ModelConfig
+from app.router.detector import FeatureType
 from app.router.engine import RoutingEngine
 from app.router.registry import ModelRegistry
 
@@ -56,6 +57,31 @@ class TestSelectModel:
         messages = [{"role": "user", "content": "hello"}]
         selected = engine.select_model(messages)
         assert selected.name == "only/model"
+
+    def test_uses_provided_feature_type(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
+        engine = _make_engine([cheap, expensive])
+
+        messages = [
+            {"role": "user", "content": "Explain async in Python"},
+            {"role": "assistant", "content": "..."},
+            {"role": "user", "content": "Show me an example"},
+        ]
+        selected = engine.select_model(messages, feature_type=FeatureType.COMPLETION)
+        assert selected.name == "cheap/model"
+
+    def test_feature_type_none_falls_back_to_detection(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        engine = _make_engine([cheap])
+
+        messages = [
+            {"role": "user", "content": "Explain async"},
+            {"role": "assistant", "content": "..."},
+            {"role": "user", "content": "More details"},
+        ]
+        selected = engine.select_model(messages, feature_type=None)
+        assert selected.name == "cheap/model"
 
 
 class TestTaskAwareRouting:

@@ -32,11 +32,26 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] Task-aware routing: categories route to the cheapest model that meets their requirements (context window, cloud, capabilities)
 - [x] `supports_reasoning` routing criterion: add to `ModelConfig`, `TaskRequirements`, and enrich from LiteLLM metadata; require for debugging, optimization, and code review categories
 - [x] Structural analysis (code block ratio, prompt length)
-- [ ] Client adapter interface: normalize tool-specific request patterns (Cursor, Claude Code, etc.) into a common format for the classifier
+- [x] Client adapter interface: normalize tool-specific request patterns (Cursor, Claude Code, etc.) into a common format for the classifier
 
 ---
 
-## Phase 2 — LLM-as-Judge Fallback
+## Phase 2 — Enrichment Pipeline
+
+> Detailed spec: [docs/specs/enrichment-pipeline.md](docs/specs/enrichment-pipeline.md)
+
+**Goal**: A pluggable pipeline that transforms requests after routing but before the model call. The first enricher injects task decomposition instructions for complex tasks, replicating structured step-by-step execution across all models.
+
+**Deliverables**:
+- [ ] Enricher interface: receives request (messages, model, task category), returns modified request
+- [ ] Enrichment pipeline runner: executes enabled enrichers in sequence, no-op when none are enabled
+- [ ] Task decomposition enricher: detects complex tasks via classifier output and prompt signals, injects system-level decomposition instruction
+- [ ] Config extension: `enrichments.task_decomposition` opt-in toggle (default: off)
+- [ ] Skip logic: pipeline only applies to `chat` requests, never to `completion` (tab completions)
+
+---
+
+## Phase 3 — LLM-as-Judge Fallback
 
 **Goal**: Use a small local LLM to classify the task when heuristic confidence is low ([Zheng et al., 2023](https://arxiv.org/abs/2306.05685)).
 
@@ -49,7 +64,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ---
 
-## Phase 3 — Decision Logging + Embedding Pipeline
+## Phase 4 — Decision Logging + Embedding Pipeline
 
 **Goal**: Build the data collection infrastructure that feeds the learning pipeline. Decision logging provides routing observability, and sentence transformer embeddings enable semantic classification from the first query.
 
@@ -60,7 +75,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ---
 
-## Phase 4 — Learning Pipeline + ML Classifier
+## Phase 5 — Learning Pipeline + ML Classifier
 
 **Goal**: Train a personalized ML classifier from accumulated data using unsupervised clustering and weak supervision. The classifier replaces heuristics as the primary router once it reaches quality thresholds.
 

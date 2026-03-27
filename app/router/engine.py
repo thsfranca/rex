@@ -55,8 +55,9 @@ class RoutingEngine:
         messages: list[dict],
         max_tokens: int | None = None,
         temperature: float | None = None,
+        feature_type: FeatureType | None = None,
     ) -> ModelConfig:
-        feature = detect_feature(messages, max_tokens, temperature)
+        feature = feature_type or detect_feature(messages, max_tokens, temperature)
 
         if feature == FeatureType.COMPLETION:
             return self._primary

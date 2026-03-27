@@ -23,8 +23,9 @@ flowchart LR
     LLMJudge --> Router
     Router --> Registry[Model Registry]
     Discovery[Model Discovery] -->|env vars + provider APIs| Registry
-    Registry --> Local[Local Models]
-    Registry --> Cloud[Cloud APIs]
+    Registry --> Enrichment[Enrichment Pipeline]
+    Enrichment --> Local[Local Models]
+    Enrichment --> Cloud[Cloud APIs]
     Router --> Logger[Decision Logger]
     Logger --> Store[Storage Interface]
     Store --> DataStore[SQLite]
@@ -39,6 +40,7 @@ flowchart LR
 - The **Client Adapter** normalizes tool-specific request patterns into a common format for the classifier.
 - Each supported tool (Cursor, Claude Code, etc.) has its own adapter that detects features like tab completion vs. chat.
 - The **Learning Pipeline** runs in the background, consuming query embeddings and heuristic votes to train the ML classifier automatically.
+- The **Enrichment Pipeline** transforms requests after routing but before the model call. Each enricher is opt-in and modifies the request (e.g., injecting task decomposition instructions for complex tasks).
 
 ## Design Decisions
 
@@ -61,6 +63,7 @@ flowchart LR
 | Deployment model | Per-user local instance | All data stays on the user's machine; each instance learns independently from its own usage |
 | Default storage | SQLite | Zero-dependency, single-file, good enough for single user |
 | Cost tracking | LiteLLM runtime cost calculation | LiteLLM's `completion_cost()` returns actual cost per request from its built-in pricing database; no manual cost config needed for known models |
+| Prompt enrichment | Pluggable pipeline, opt-in per enricher | Keeps enrichment logic separate from routing; each enricher toggles independently; zero overhead when disabled |
 
 ## Task Categories
 
@@ -117,8 +120,9 @@ flowchart TD
     MLClassify --> RouteClassified[Route based on classification]
     LLMJudge --> RouteClassified
     FastPath --> Fallback{Success?}
-    RouteDirectly --> Fallback
-    RouteClassified --> Fallback
+    RouteDirectly --> Enrichment[Enrichment Pipeline]
+    RouteClassified --> Enrichment
+    Enrichment --> Fallback{Success?}
     Fallback -->|Yes| Log[Log decision + outcome]
     Fallback -->|No| Escalate[Fallback to next model up]
     Escalate --> Log
@@ -147,6 +151,32 @@ Rex optimizes for cost. Every task category starts on the cheapest model. The le
 - The learning pipeline spots patterns: if a category consistently triggers fallbacks, Rex permanently promotes it to a more capable model, avoiding repeated fallback latency.
 - Promotion is data-driven — Rex only moves a category up when it observes a persistent pattern of poor outcomes, not on a single failure.
 - Outcome signals: fallback triggers, user re-asks, error rate, response latency patterns.
+
+## Enrichment Pipeline
+
+The enrichment pipeline transforms requests after routing but before the model call. Each enricher receives the request (messages, selected model, task category) and returns a modified request.
+
+- Enrichers are opt-in — each one toggles independently via config.
+- Enrichers run in sequence. Each one receives the output of the previous one.
+- The pipeline only applies to `chat` requests — `completion` requests (tab completions) skip it entirely.
+- If no enrichers are enabled, the pipeline is a no-op with zero overhead.
+
+> Detailed spec: [docs/specs/enrichment-pipeline.md](docs/specs/enrichment-pipeline.md)
+
+### Task Decomposition Enricher
+
+The first enricher. When enabled, it detects complex tasks and injects a system-level instruction telling the model to break the task into numbered steps and work through them one at a time.
+
+**Complexity detection** uses signals already available after classification:
+
+| Signal | How it indicates complexity |
+|---|---|
+| Task category | `generation`, `refactoring`, `migration`, `code_review`, `test_generation` are inherently multi-step |
+| Prompt length | Longer prompts tend to describe multi-concern tasks |
+
+- The enricher appends to the existing system message — it never replaces it.
+- Simple tasks (`explanation`, `documentation`, `completion`, `general`) skip enrichment entirely.
+- Rex decides complexity, not the model. The classifier output and request signals are already available at zero cost.
 
 ## Learning Pipeline
 
@@ -210,6 +240,10 @@ flowchart TD
 app/
   main.py                # FastAPI app entry point
   config.py              # Pydantic settings model + optional YAML loader
+  adapters/
+    base.py              # Client adapter interface and NormalizedRequest
+    default.py           # Default adapter (generic feature detection)
+    registry.py          # Selects adapter by User-Agent header
   discovery/
     providers.py         # Detects available providers from env vars
     models.py            # Queries provider APIs for available models
@@ -230,7 +264,7 @@ tests/                   # pytest test suite
 ```
 
 Future phases will add:
-- `app/adapters/` — client adapter interface (Cursor, Claude Code, etc.)
+- `app/enrichment/` — enrichment pipeline (task decomposition, future enrichers)
 - `app/router/ml_classifier.py` — trained ML classifier
 - `app/router/llm_judge.py` — LLM-as-Judge fallback
 - `app/learning/` — embedding pipeline, clustering, weak supervision
