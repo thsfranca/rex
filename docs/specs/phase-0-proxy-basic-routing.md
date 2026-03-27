@@ -281,20 +281,19 @@ Rex follows the graceful degradation strategy from [ARCHITECTURE.md](../../ARCHI
 Phase 0 creates only the files needed for a working proxy with basic routing:
 
 ```
-rex/
+app/
   main.py              # FastAPI app, lifespan, endpoint definitions
   config.py            # Pydantic Settings model, YAML loader
-  config.yaml          # Default configuration
   proxy/
-    __init__.py
     handler.py         # Completion request handling via LiteLLM
     streaming.py       # SSE async generator
   router/
-    __init__.py
     registry.py        # Model registry loader + lookups
     detector.py        # Feature detection (completion vs. chat)
     engine.py          # Routing engine (detector → model selection + fallback)
-  requirements.txt
+config.yaml.example   # Example configuration
+pyproject.toml         # Project dependencies (uv)
+tests/                 # pytest test suite
 ```
 
 ### main.py

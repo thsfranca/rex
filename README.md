@@ -27,7 +27,7 @@ For full system diagrams and design decisions, see [ARCHITECTURE.md](ARCHITECTUR
 
 ## Current Status
 
-Rex is in the **design and planning phase**. The architecture and roadmap are defined, but implementation has not started yet.
+Rex has completed **Phase 0 — Proxy + Basic Routing**. The proxy accepts requests, detects feature type (completion vs. chat), routes to the appropriate model, and falls back on failure.
 
 - See [ROADMAP.md](ROADMAP.md) for the phased delivery plan (Phase 0 through Phase 4).
 - See [ARCHITECTURE.md](ARCHITECTURE.md) for system design, routing strategy, and the learning pipeline.
@@ -49,49 +49,48 @@ Rex is in the **design and planning phase**. The architecture and roadmap are de
 ## Project Structure
 
 ```
-rex/
+app/
   main.py                # FastAPI app entry point
-  config.yaml            # Model registry + routing config
-  adapters/
-    base.py              # Client adapter interface
-    cursor.py            # Cursor-specific request normalization
-    generic.py           # Fallback adapter for unknown clients
+  config.py              # Pydantic settings model + YAML loader
   router/
     detector.py          # Feature detection (completion vs. chat)
-    classifier.py        # Heuristic task classifier
-    ml_classifier.py     # Trained ML classifier
-    llm_judge.py         # LLM-as-Judge fallback
-    engine.py            # Routing engine (classifier -> model selection)
+    engine.py            # Routing engine (detector -> model selection + fallback)
     registry.py          # Model registry loader
-  learning/
-    embedder.py          # Sentence transformer query embedding
-    seeds.py             # Synthetic exemplar queries per category
-    clustering.py        # K-means unsupervised category discovery
-    weak_supervision.py  # Noisy label aggregation from heuristic rules
-    trainer.py           # ML classifier training orchestration
   proxy/
     handler.py           # OpenAI-compatible request handler
     streaming.py         # SSE streaming response logic
-  logging/
-    base.py              # Storage interface
-    sqlite_store.py      # SQLite implementation
-    cli.py               # CLI for stats and export
-  requirements.txt
-  README.md
-  ROADMAP.md
+config.yaml.example     # Example configuration
+pyproject.toml           # Project dependencies (uv)
+tests/                   # pytest test suite
 ```
+
+Future phases will add:
+- `app/adapters/` — client adapter interface (Cursor, Claude Code, etc.)
+- `app/router/classifier.py` — heuristic task classifier
+- `app/router/ml_classifier.py` — trained ML classifier
+- `app/router/llm_judge.py` — LLM-as-Judge fallback
+- `app/learning/` — embedding pipeline, clustering, weak supervision
+- `app/logging/` — decision logging with storage interface
 
 ## Getting Started
 
-> [!NOTE]
-> Setup instructions will be available once Phase 0 (Proxy + Basic Routing) is complete. See [ROADMAP.md](ROADMAP.md) for progress.
-
-The general flow will be:
-
-1. Install Python dependencies.
-2. Configure `config.yaml` with model backends and API keys.
-3. Start the Rex proxy server.
-4. Point the AI coding tool's base URL to the Rex instance.
+1. Install [uv](https://docs.astral.sh/uv/):
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+2. Install dependencies:
+   ```bash
+   uv sync
+   ```
+3. Copy the example config and edit with your model backends:
+   ```bash
+   cp config.yaml.example config.yaml
+   ```
+4. Start the Rex proxy:
+   ```bash
+   uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
+5. Point your AI coding tool's base URL to `http://localhost:8000`.
 
 ## Documentation
 
