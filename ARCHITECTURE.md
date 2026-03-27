@@ -229,6 +229,7 @@ flowchart TD
 app/
   main.py                # FastAPI app entry point
   config.py              # Pydantic settings model + optional YAML loader
+  utils.py               # Shared utility functions
   adapters/
     base.py              # Client adapter interface and NormalizedRequest
     default.py           # Default adapter (generic feature detection)
