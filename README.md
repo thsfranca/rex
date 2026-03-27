@@ -2,7 +2,7 @@
 
 > This project only exists because I'm too lazy to pick the best model myself.
 
-An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud), automatically selecting the cheapest model for each coding task.
+An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud). Rex identifies what each coding task needs and routes it to the cheapest model that fits.
 
 - Works with any tool that supports a custom OpenAI API base URL (Cursor, Claude Code, Continue, Aider, etc.).
 - Each user runs their own Rex instance locally — all data, embeddings, and trained classifiers stay on the user's machine.
@@ -11,8 +11,8 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 ## Key Features
 
 - **Zero-config model discovery**: Rex detects available providers from environment variables and local runtimes (Ollama) — no config file needed.
-- **Cost-first routing**: All tasks start on the cheapest model. Rex auto-selects the primary model by cost (local first, then cheapest cloud).
-- **Smart routing** (planned): Classifies each prompt by task type (debugging, refactoring, code generation, etc.) and routes to the cheapest model that meets the task's needs.
+- **Task-aware routing** (planned): Classifies each prompt by task type (debugging, refactoring, code generation, etc.) and routes to the cheapest model with the right capabilities (context window, reasoning, function calling).
+- **Cost-first default**: Until the task classifier is trained, all tasks route to the cheapest available model (local first, then cheapest cloud).
 - **Measurable routing criteria**: Routes based on cost, context window, and LiteLLM capability flags (`supports_reasoning`, `supports_function_calling`, etc.) — no manually curated "strengths" list.
 - **Hybrid classification** (planned): Combines fast keyword heuristics, a local ML classifier, and an LLM-as-Judge fallback for accurate task detection.
 - **Self-improving** (planned): A learning pipeline trains the classifier automatically from usage data — no manual labeling required.
@@ -23,7 +23,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 1. Rex **discovers** available models from environment variables, local runtimes (Ollama), and provider APIs — then merges with any `config.yaml` overrides.
 2. The **feature detector** identifies whether the request is a tab completion or a chat/agent interaction.
-3. The **routing engine** selects the primary model (cheapest by default, or a config override).
+3. The **routing engine** selects the cheapest model that meets the task's requirements, or a config override.
 4. The **proxy** forwards the request to the selected backend and streams the response back.
 5. If the primary fails, the **fallback chain** tries remaining models in cost order.
 
