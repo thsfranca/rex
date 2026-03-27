@@ -18,6 +18,11 @@ from app.enrichment.context import EnrichmentContext
 from app.enrichment.pipeline import EnrichmentPipeline
 from app.logging.models import DecisionRecord
 from app.logging.repository import DecisionRepository
+from app.proxy.anthropic import (
+    anthropic_to_openai,
+    extract_anthropic_api_key,
+    openai_response_to_anthropic,
+)
 from app.proxy.streaming import stream_completion
 from app.router.engine import RoutingEngine
 from app.utils import extract_last_user_text
@@ -255,6 +260,84 @@ async def handle_text_completion(
             media_type="text/event-stream",
         )
     return JSONResponse(content=response.model_dump())
+
+
+async def handle_anthropic_messages(
+    body: dict,
+    engine: RoutingEngine,
+    request: Request,
+    adapter: ClientAdapter | None = None,
+    pipeline: EnrichmentPipeline | None = None,
+    repository: DecisionRepository | None = None,
+    embedding_service=None,
+    scheduler=None,
+) -> Response:
+    request_api_key = extract_anthropic_api_key(request)
+    request_model = body.get("model")
+    openai_body = anthropic_to_openai(body)
+
+    active_adapter = adapter or _DEFAULT_ADAPTER
+    normalized = active_adapter.normalize(
+        messages=openai_body.get("messages", []),
+        max_tokens=openai_body.get("max_tokens"),
+        temperature=openai_body.get("temperature"),
+    )
+
+    embedding = None
+    embedding_bytes = None
+    last_user_text = extract_last_user_text(normalized.messages)
+    prompt_hash = _hash_prompt(last_user_text)
+
+    if embedding_service is not None and last_user_text.strip():
+        try:
+            embedding = embedding_service.embed(last_user_text)
+            embedding_bytes = embedding.tobytes()
+        except Exception as e:
+            logger.warning("Embedding failed: %s", e)
+
+    decision = await engine.select_model(
+        messages=normalized.messages,
+        max_tokens=normalized.max_tokens,
+        temperature=normalized.temperature,
+        feature_type=normalized.feature_type,
+        embedding=embedding,
+    )
+
+    if pipeline is not None:
+        enrichment_ctx = EnrichmentContext(
+            messages=list(openai_body.get("messages", [])),
+            category=decision.category,
+            confidence=decision.confidence,
+            feature_type=decision.feature_type,
+        )
+        enrichment_ctx = pipeline.run(enrichment_ctx)
+        openai_body = {**openai_body, "messages": enrichment_ctx.messages}
+
+    start_time = time.perf_counter()
+    response, used_model = await _call_with_fallback(
+        engine, decision.model, openai_body, False, request_api_key
+    )
+    response_time_ms = int((time.perf_counter() - start_time) * 1000)
+    logger.info("Routed to %s (anthropic)", used_model.name)
+
+    if repository is not None:
+        asyncio.create_task(
+            _log_decision(
+                repository,
+                decision,
+                used_model,
+                response_time_ms,
+                response,
+                prompt_hash,
+                embedding_bytes,
+            )
+        )
+
+    if scheduler is not None:
+        asyncio.create_task(scheduler.on_new_decision())
+
+    anthropic_response = openai_response_to_anthropic(response, used_model.name, request_model)
+    return JSONResponse(content=anthropic_response)
 
 
 async def handle_passthrough(request: Request, api_base: str | None) -> Response:

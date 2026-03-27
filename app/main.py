@@ -16,6 +16,7 @@ from app.learning.labeling import LabelModel
 from app.learning.scheduler import RetrainingScheduler
 from app.logging.sqlite import SQLiteDecisionRepository
 from app.proxy.handler import (
+    handle_anthropic_messages,
     handle_chat_completion,
     handle_passthrough,
     handle_text_completion,
@@ -155,6 +156,27 @@ async def chat_completions(request: Request):
         )
     except Exception as e:
         logger.exception("Chat completion failed")
+        return _error_response(502, f"All model backends failed. Last error: {e}", "proxy_error")
+
+
+@app.post("/v1/messages")
+async def anthropic_messages(request: Request):
+    body = await request.json()
+    user_agent = request.headers.get("user-agent")
+    adapter = _get_adapter_registry().get_adapter(user_agent)
+    try:
+        return await handle_anthropic_messages(
+            body,
+            _get_engine(),
+            request,
+            adapter,
+            _get_pipeline(),
+            repository=_repository,
+            embedding_service=_embedding_service,
+            scheduler=_scheduler,
+        )
+    except Exception as e:
+        logger.exception("Anthropic messages failed")
         return _error_response(502, f"All model backends failed. Last error: {e}", "proxy_error")
 
 

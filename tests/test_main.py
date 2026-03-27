@@ -174,6 +174,75 @@ class TestResetEndpoint:
         assert response.status_code == 503
 
 
+class TestAnthropicMessagesEndpoint:
+    @patch("app.proxy.handler.litellm")
+    def test_returns_anthropic_format(self, mock_litellm):
+        from unittest.mock import MagicMock
+
+        choice = MagicMock()
+        choice.message.content = "Hello!"
+        choice.finish_reason = "stop"
+        fake_response = MagicMock()
+        fake_response.choices = [choice]
+        fake_response.usage = MagicMock(prompt_tokens=10, completion_tokens=5)
+        mock_litellm.acompletion = AsyncMock(return_value=fake_response)
+
+        response = client.post(
+            "/v1/messages",
+            json={
+                "model": "claude-3-sonnet",
+                "max_tokens": 1024,
+                "messages": [{"role": "user", "content": "Hello"}],
+            },
+            headers={"x-api-key": "sk-ant-test"},
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["type"] == "message"
+        assert data["role"] == "assistant"
+        assert data["content"][0]["type"] == "text"
+        assert data["stop_reason"] == "end_turn"
+
+    @patch("app.proxy.handler.litellm")
+    def test_returns_502_on_failure(self, mock_litellm):
+        mock_litellm.acompletion = AsyncMock(side_effect=Exception("backend down"))
+        response = client.post(
+            "/v1/messages",
+            json={
+                "model": "claude-3-sonnet",
+                "max_tokens": 1024,
+                "messages": [{"role": "user", "content": "hello"}],
+            },
+        )
+        assert response.status_code == 502
+        assert "error" in response.json()
+
+    @patch("app.proxy.handler.litellm")
+    def test_passes_x_api_key_header(self, mock_litellm):
+        from unittest.mock import MagicMock
+
+        choice = MagicMock()
+        choice.message.content = "Hi"
+        choice.finish_reason = "stop"
+        fake_response = MagicMock()
+        fake_response.choices = [choice]
+        fake_response.usage = MagicMock(prompt_tokens=5, completion_tokens=3)
+        mock_litellm.acompletion = AsyncMock(return_value=fake_response)
+
+        response = client.post(
+            "/v1/messages",
+            json={
+                "model": "claude-3-sonnet",
+                "max_tokens": 1024,
+                "messages": [{"role": "user", "content": "hi"}],
+            },
+            headers={"x-api-key": "sk-ant-from-header"},
+        )
+        assert response.status_code == 200
+        call_kwargs = mock_litellm.acompletion.call_args.kwargs
+        assert call_kwargs["api_key"] == "sk-ant-from-header"
+
+
 class TestPassthroughEndpoint:
     def test_unknown_path_without_api_base(self):
         import app.main as main_module
