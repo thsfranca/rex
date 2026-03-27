@@ -3,8 +3,9 @@ from __future__ import annotations
 import pytest
 
 from app.config import ModelConfig
+from app.router.categories import TaskCategory
 from app.router.detector import FeatureType
-from app.router.engine import RoutingEngine
+from app.router.engine import RoutingDecision, RoutingEngine
 from app.router.registry import ModelRegistry
 
 
@@ -29,8 +30,8 @@ class TestSelectModel:
         engine = _make_engine([cheap, expensive])
 
         messages = [{"role": "user", "content": "hello"}]
-        selected = engine.select_model(messages)
-        assert selected.name == "cheap/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "cheap/model"
 
     def test_routes_to_explicit_primary(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
@@ -38,8 +39,8 @@ class TestSelectModel:
         engine = _make_engine([cheap, expensive], primary_model="expensive/model")
 
         messages = [{"role": "user", "content": "hello"}]
-        selected = engine.select_model(messages)
-        assert selected.name == "expensive/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "expensive/model"
 
     def test_auto_selects_local_over_cloud(self):
         cloud = _make_model(name="cloud/model", cost_per_1k_input=0.001)
@@ -47,16 +48,16 @@ class TestSelectModel:
         engine = _make_engine([cloud, local])
 
         messages = [{"role": "user", "content": "hello"}]
-        selected = engine.select_model(messages)
-        assert selected.name == "local/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "local/model"
 
     def test_single_model(self):
         model = _make_model(name="only/model")
         engine = _make_engine([model])
 
         messages = [{"role": "user", "content": "hello"}]
-        selected = engine.select_model(messages)
-        assert selected.name == "only/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "only/model"
 
     def test_uses_provided_feature_type(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
@@ -68,8 +69,8 @@ class TestSelectModel:
             {"role": "assistant", "content": "..."},
             {"role": "user", "content": "Show me an example"},
         ]
-        selected = engine.select_model(messages, feature_type=FeatureType.COMPLETION)
-        assert selected.name == "cheap/model"
+        decision = engine.select_model(messages, feature_type=FeatureType.COMPLETION)
+        assert decision.model.name == "cheap/model"
 
     def test_feature_type_none_falls_back_to_detection(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
@@ -80,8 +81,20 @@ class TestSelectModel:
             {"role": "assistant", "content": "..."},
             {"role": "user", "content": "More details"},
         ]
-        selected = engine.select_model(messages, feature_type=None)
-        assert selected.name == "cheap/model"
+        decision = engine.select_model(messages, feature_type=None)
+        assert decision.model.name == "cheap/model"
+
+    def test_returns_routing_decision(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        engine = _make_engine([cheap])
+
+        messages = [{"role": "user", "content": "hello"}]
+        decision = engine.select_model(messages)
+        assert isinstance(decision, RoutingDecision)
+        assert decision.model.name == "cheap/model"
+        assert isinstance(decision.category, TaskCategory)
+        assert isinstance(decision.confidence, float)
+        assert isinstance(decision.feature_type, FeatureType)
 
 
 class TestTaskAwareRouting:
@@ -99,8 +112,10 @@ class TestTaskAwareRouting:
         engine = _make_engine([cheap, large])
 
         messages = [{"role": "user", "content": "x"}]
-        selected = engine.select_model(messages, max_tokens=100, temperature=0.0)
-        assert selected.name == "cheap/model"
+        decision = engine.select_model(messages, max_tokens=100, temperature=0.0)
+        assert decision.model.name == "cheap/model"
+        assert decision.category == TaskCategory.COMPLETION
+        assert decision.feature_type == FeatureType.COMPLETION
 
     def test_refactoring_upgrades_when_primary_too_small(self):
         small = _make_model(
@@ -118,8 +133,9 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Please refactor this entire module"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "large/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "large/model"
+        assert decision.category == TaskCategory.REFACTORING
 
     def test_refactoring_stays_on_primary_when_it_qualifies(self):
         large_cheap = _make_model(
@@ -137,8 +153,8 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Refactor this module"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "large_cheap/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "large_cheap/model"
 
     def test_code_review_upgrades_when_primary_too_small(self):
         small = _make_model(
@@ -158,8 +174,8 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Review this code for issues"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "large/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "large/model"
 
     def test_migration_upgrades_from_local_to_cloud(self):
         local = _make_model(
@@ -177,8 +193,8 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Migrate this from Python 2 to Python 3"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "cloud/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "cloud/model"
 
     def test_debugging_stays_on_primary_when_it_supports_reasoning(self):
         cheap = _make_model(
@@ -196,8 +212,8 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Fix this error in my code"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "cheap/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "cheap/model"
 
     def test_debugging_upgrades_when_primary_lacks_reasoning(self):
         cheap = _make_model(
@@ -215,8 +231,8 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Fix this error in my code"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "reasoning/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "reasoning/model"
 
     def test_optimization_upgrades_when_primary_lacks_reasoning(self):
         cheap = _make_model(
@@ -234,8 +250,8 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Optimize this function for performance"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "reasoning/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "reasoning/model"
 
     def test_code_review_upgrades_for_reasoning_and_context(self):
         small_no_reason = _make_model(
@@ -255,8 +271,8 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Review this code for issues"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "large_reasoning/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "large_reasoning/model"
 
     def test_falls_back_to_primary_when_no_model_meets_requirements(self):
         small = _make_model(
@@ -269,8 +285,8 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Refactor this entire codebase"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "small/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "small/model"
 
     def test_picks_cheapest_among_qualifying_when_primary_unfit(self):
         small = _make_model(
@@ -293,8 +309,8 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Write tests for this service"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "large_cheap/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "large_cheap/model"
 
     def test_general_task_stays_on_primary(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
@@ -304,8 +320,8 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Tell me a joke"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "cheap/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "cheap/model"
 
     def test_explicit_primary_respected_when_it_meets_requirements(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
@@ -319,8 +335,8 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Refactor this module"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "expensive/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "expensive/model"
 
     def test_explicit_primary_respected_for_reasoning_task(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
@@ -334,8 +350,24 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Debug this crash"},
         ]
-        selected = engine.select_model(messages)
-        assert selected.name == "expensive/model"
+        decision = engine.select_model(messages)
+        assert decision.model.name == "expensive/model"
+
+    def test_decision_includes_category_and_confidence(self):
+        cheap = _make_model(
+            name="cheap/model",
+            cost_per_1k_input=0.001,
+            supports_reasoning=True,
+        )
+        engine = _make_engine([cheap])
+
+        messages = [
+            {"role": "user", "content": "Fix this error in my code"},
+        ]
+        decision = engine.select_model(messages)
+        assert decision.category == TaskCategory.DEBUGGING
+        assert decision.confidence > 0.0
+        assert decision.feature_type == FeatureType.CHAT
 
 
 class TestPrimary:
