@@ -8,7 +8,6 @@ import numpy as np
 from app.learning.centroids import CentroidClassifier
 from app.learning.clustering import cluster_embeddings
 from app.learning.labeling import LabelModel
-from app.learning.outcomes import OutcomeTracker
 from app.learning.trainer import map_clusters_to_categories, train_classifier
 from app.logging.repository import DecisionRepository
 from app.router.ml_classifier import MLClassifier
@@ -41,7 +40,6 @@ class RetrainingScheduler:
         self._running = False
         self._promoted = False
         self._centroid_classifier: CentroidClassifier | None = None
-        self._outcome_tracker = OutcomeTracker()
 
     @property
     def is_promoted(self) -> bool:
@@ -118,19 +116,5 @@ class RetrainingScheduler:
                 )
             else:
                 logger.info("ML classifier trained but label model not yet converged")
-
-        recent = await self._repository.get_recent(limit=count)
-        categories = {r.category for r in recent}
-        for cat in categories:
-            metrics = self._outcome_tracker.evaluate(cat, recent)
-            if metrics is not None:
-                logger.info(
-                    "Outcomes for %s: fallback=%.2f, error=%.2f, latency=%.0fms, reask=%.2f",
-                    cat,
-                    metrics.fallback_rate,
-                    metrics.error_rate,
-                    metrics.average_latency_ms,
-                    metrics.reask_rate,
-                )
 
         self._last_trained_count = count

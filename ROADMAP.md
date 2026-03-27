@@ -94,7 +94,21 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] ML classifier module: logistic regression inference, integration into the classifier chain, model persistence
 - [x] ML classifier training: train on cluster-derived + weakly-supervised labels, automatic retraining as usage patterns evolve
 - [x] Automatic promotion: ML classifier replaces heuristics as primary when silhouette score > 0.5 and label model converges; heuristics demote to labeling functions only
-- [x] Per-category outcome tracking (fallback triggers, error rate, latency, re-ask rate)
+
+---
+
+## Phase 5.1 — Confidence-Based Model Escalation
+
+**Goal**: Route uncertain requests to more capable models based on classification confidence. Extends the classifier chain so that low confidence triggers not just classifier escalation but also model escalation.
+
+**Deliverables**:
+- [ ] Confidence-based model escalation: when confidence remains below threshold after the full classifier chain, select the next more capable model in cost order instead of the cheapest
+- [ ] `escalated` flag on routing decisions for observability in the decision log
+- [ ] Remove outcome tracker (`outcomes.py`) — per-request escalation replaces retroactive outcome-based category promotion
+
+**Design**: See [ARCHITECTURE.md — Confidence-Based Model Escalation](ARCHITECTURE.md#confidence-based-model-escalation-planned) for the full design rationale and flow diagram.
+
+**Research basis**: [Confidence-Driven LLM Router](https://arxiv.org/abs/2502.11021) (Zhang et al., 2025) — uncertainty-based routing outperforms accuracy-based and preference-based routing.
 
 ---
 
