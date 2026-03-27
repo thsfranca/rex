@@ -139,7 +139,7 @@ async def handle_passthrough(request: Request, api_base: str | None) -> Response
             content={
                 "error": {
                     "message": (
-                        "Passthrough not available:" " no api_base configured for default model"
+                        "Passthrough not available:" " no api_base configured for primary model"
                     ),
                     "type": "proxy_error",
                     "code": 501,
