@@ -1,34 +1,15 @@
-server:
-  host: "0.0.0.0"
-  port: 8000
+# Rex config — entirely optional.
+# Rex discovers models automatically from environment variables and local runtimes.
+# Use this file only to override defaults or add models Rex can't discover.
 
-models:
-  - name: "openai/gpt-4o"
-    provider: "openai"
-    context_window: 128000
-    cost_per_1k_input: 0.005
-    cost_per_1k_output: 0.015
-    strengths:
-      - debugging
-      - refactoring
-      - code_review
-      - generation
-    max_latency_ms: 2000
-    is_local: false
-    api_key: "sk-your-key-here"
+# server:
+#   host: "0.0.0.0"
+#   port: 9000
 
-  - name: "ollama/llama3"
-    provider: "ollama"
-    context_window: 8192
-    cost_per_1k_input: 0
-    cost_per_1k_output: 0
-    strengths:
-      - completion
-      - explanation
-    max_latency_ms: 100
-    is_local: true
-    api_base: "http://localhost:11434"
+# models:
+#   - name: "my-company/custom-model"
+#     api_base: "https://internal.company.com/v1"
+#     api_key: "sk-..."
 
-routing:
-  completion_model: "ollama/llama3"
-  default_model: "openai/gpt-4o"
+# routing:
+#   primary_model: "ollama/llama3"
