@@ -7,13 +7,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.config import Settings, load_config
+from app.discovery.registry_builder import build_registry
 from app.proxy.handler import (
     handle_chat_completion,
     handle_passthrough,
     handle_text_completion,
 )
 from app.router.engine import RoutingEngine
-from app.router.registry import ModelRegistry
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -26,8 +26,7 @@ _settings: Settings | None = None
 async def lifespan(app: FastAPI):
     global _engine, _settings
     config = load_config("config.yaml")
-    _settings = config if config is not None else Settings()
-    registry = ModelRegistry(_settings.models)
+    registry, _settings = await build_registry(config)
     primary_model = _settings.routing.primary_model
     _engine = RoutingEngine(registry, primary_model)
     logger.info(
