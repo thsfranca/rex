@@ -42,8 +42,7 @@ class Settings(BaseModel):
             ref = getattr(self.routing, field)
             if ref not in model_names:
                 raise ValueError(
-                    f"Model '{ref}' referenced in routing.{field} "
-                    f"but not defined in models"
+                    f"Model '{ref}' referenced in routing.{field} " f"but not defined in models"
                 )
         return self
 
