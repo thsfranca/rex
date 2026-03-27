@@ -52,7 +52,7 @@ flowchart LR
 | Automated labeling | Weak supervision | Heuristic rules act as noisy labeling functions; a probabilistic label model aggregates their votes into clean training labels without manual annotation ([Ratner et al., 2016](https://arxiv.org/abs/1605.07723); [Ratner et al., 2017](https://arxiv.org/abs/1711.10160)) |
 | Model discovery | Automatic from environment variables | Rex scans for known API keys (e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`), queries each provider's `/v1/models` endpoint, and probes local runtimes (Ollama at `localhost:11434`); zero configuration required |
 | Model metadata | LiteLLM built-in database | `litellm.get_model_info()` provides context window, pricing, and capabilities for known models; no manual metadata needed |
-| Config format | Optional YAML overrides | Config file is not required; when present, it adds or overrides discovered models |
+| Config format | Optional YAML overrides | Config file is not required; when present, it adds models and overrides routing defaults |
 | Client detection | User-Agent header → adapter | Rex selects the adapter based on the client's User-Agent header; new tools supported by adding an adapter |
 | API compatibility | Full OpenAI, transparent proxy | Rex routes known endpoints and passes through everything else to the default backend; never blocks unknown endpoints |
 | Error handling | Graceful degradation | Every failure falls back to a simpler path; classification failure → default model; all models fail → error to client |

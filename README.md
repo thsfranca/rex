@@ -1,6 +1,8 @@
 # Rex
 
-An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud), automatically selecting the best model for each coding task.
+> This project only exists because I'm too lazy to pick the best model myself.
+
+An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud), automatically selecting the cheapest model for each coding task.
 
 - Works with any tool that supports a custom OpenAI API base URL (Cursor, Claude Code, Continue, Aider, etc.).
 - Each user runs their own Rex instance locally — all data, embeddings, and trained classifiers stay on the user's machine.
@@ -8,27 +10,27 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 ## Key Features
 
-- **Zero-config**: Rex discovers available models automatically from environment variables and local runtimes — no config file needed.
-- **Smart routing**: Classifies each prompt by task type (debugging, refactoring, code generation, etc.) and routes to the best-suited model.
-- **Hybrid classification**: Combines fast keyword heuristics, a local ML classifier, and an LLM-as-Judge fallback for accurate task detection.
-- **Self-improving**: A learning pipeline trains the classifier automatically from usage data — no manual labeling required.
+- **Cost-first routing**: All tasks start on the cheapest model. Rex auto-selects the primary model by cost (local first, then cheapest cloud).
+- **Smart routing** (planned): Classifies each prompt by task type (debugging, refactoring, code generation, etc.) and routes to the cheapest model that meets the task's needs.
+- **Measurable routing criteria**: Routes based on cost, context window, and LiteLLM capability flags (`supports_reasoning`, `supports_function_calling`, etc.) — no manually curated "strengths" list.
+- **Hybrid classification** (planned): Combines fast keyword heuristics, a local ML classifier, and an LLM-as-Judge fallback for accurate task detection.
+- **Self-improving** (planned): A learning pipeline trains the classifier automatically from usage data — no manual labeling required.
 - **Local-first**: All data, embeddings, and models run on the user's machine. Nothing leaves without explicit cloud API configuration.
-- **Cost-first**: All tasks start on the cheapest model. Rex tracks actual cost per request via LiteLLM's built-in pricing database — no manual cost configuration needed.
-- **Fallback chains**: If the primary model fails, Rex escalates to the next model up the cost ladder. The learning pipeline permanently promotes task categories that consistently need more capable models.
+- **Fallback chains**: If the primary model fails, Rex tries the next model in cost order.
 
 ## How It Works
 
-1. The **client adapter** normalizes the incoming request from the AI coding tool into a common format.
-2. The **task classifier** identifies what kind of coding task the prompt represents (completion, debugging, refactoring, etc.).
-3. The **routing engine** selects the best model from the registry based on the task category and model capabilities.
+1. Rex loads model backends from the config file (auto-discovery from environment variables is planned).
+2. The **feature detector** identifies whether the request is a tab completion or a chat/agent interaction.
+3. The **routing engine** selects the primary model (cheapest by default, or a config override).
 4. The **proxy** forwards the request to the selected backend and streams the response back.
-5. The **learning pipeline** stores query embeddings and classifier decisions, retraining the ML model in the background.
+5. If the primary fails, the **fallback chain** tries remaining models in cost order.
 
 For full system diagrams and design decisions, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Current Status
 
-Rex has completed **Phase 0 — Proxy + Basic Routing**. The proxy accepts requests, detects feature type (completion vs. chat), routes to the appropriate model, and falls back on failure.
+Rex has completed **Phase 0 — Proxy + Basic Routing**. The proxy accepts requests, detects feature type (completion vs. chat), routes to the primary model, and falls back on failure.
 
 - See [ROADMAP.md](ROADMAP.md) for the phased delivery plan (Phase 0 through Phase 4).
 - See [ARCHITECTURE.md](ARCHITECTURE.md) for system design, routing strategy, and the learning pipeline.
@@ -53,23 +55,20 @@ Rex has completed **Phase 0 — Proxy + Basic Routing**. The proxy accepts reque
 app/
   main.py                # FastAPI app entry point
   config.py              # Pydantic settings model + optional YAML loader
-  discovery/
-    providers.py         # Detects available providers from env vars
-    models.py            # Queries provider APIs for available models
-    metadata.py          # Enriches models with LiteLLM metadata
   router/
     detector.py          # Feature detection (completion vs. chat)
-    engine.py            # Routing engine (detector -> model selection + fallback)
-    registry.py          # Model registry
+    engine.py            # Routing engine (primary selection + fallback)
+    registry.py          # Model registry (lookups, cost sorting)
   proxy/
     handler.py           # OpenAI-compatible request handler
     streaming.py         # SSE streaming response logic
-config.yaml.example     # Example configuration (optional overrides)
+config.yaml.example     # Example configuration (optional)
 pyproject.toml           # Project dependencies (uv)
 tests/                   # pytest test suite
 ```
 
 Future phases will add:
+- `app/discovery/` — auto-detect providers from env vars, query provider APIs, enrich with LiteLLM metadata
 - `app/adapters/` — client adapter interface (Cursor, Claude Code, etc.)
 - `app/router/classifier.py` — heuristic task classifier
 - `app/router/ml_classifier.py` — trained ML classifier
@@ -97,9 +96,9 @@ The script installs dependencies and shows how to start Rex.
    ```bash
    uv sync
    ```
-3. Set at least one provider API key:
+3. Copy the example config and add your model backends:
    ```bash
-   export OPENAI_API_KEY="sk-..."
+   cp config.yaml.example config.yaml
    ```
 4. Start the Rex proxy:
    ```bash
@@ -107,7 +106,7 @@ The script installs dependencies and shows how to start Rex.
    ```
 5. Point your AI coding tool's base URL to `http://localhost:8000/v1`.
 
-Rex discovers available models automatically from environment variables and local runtimes. No config file needed. See `config.yaml.example` for optional overrides.
+See `config.yaml.example` for configuration options. Rex auto-selects the cheapest model as primary when `routing.primary_model` is not set.
 
 ## Documentation
 
