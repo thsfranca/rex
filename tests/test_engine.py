@@ -38,7 +38,7 @@ class TestSelectModel:
     async def test_routes_to_primary_model(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
         expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
-        engine = _make_engine([cheap, expensive])
+        engine = _make_engine([cheap, expensive], confidence_threshold=0.0)
 
         messages = [{"role": "user", "content": "hello"}]
         decision = await engine.select_model(messages)
@@ -58,7 +58,7 @@ class TestSelectModel:
     async def test_auto_selects_local_over_cloud(self):
         cloud = _make_model(name="cloud/model", cost_per_1k_input=0.001)
         local = _make_model(name="local/model", is_local=True, cost_per_1k_input=0.0)
-        engine = _make_engine([cloud, local])
+        engine = _make_engine([cloud, local], confidence_threshold=0.0)
 
         messages = [{"role": "user", "content": "hello"}]
         decision = await engine.select_model(messages)
@@ -366,10 +366,10 @@ class TestTaskAwareRouting:
         assert decision.model.name == "large_cheap/model"
 
     @pytest.mark.asyncio
-    async def test_general_task_stays_on_primary(self):
+    async def test_general_task_stays_on_primary_when_confident(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
         expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
-        engine = _make_engine([cheap, expensive])
+        engine = _make_engine([cheap, expensive], confidence_threshold=0.0)
 
         messages = [
             {"role": "user", "content": "Tell me a joke"},
@@ -425,6 +425,115 @@ class TestTaskAwareRouting:
         assert decision.category == TaskCategory.DEBUGGING
         assert decision.confidence > 0.0
         assert decision.feature_type == FeatureType.CHAT
+
+
+class TestConfidenceBasedEscalation:
+    @pytest.mark.asyncio
+    async def test_low_confidence_escalates_to_next_model(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        mid = _make_model(name="mid/model", cost_per_1k_input=0.01)
+        expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
+        engine = _make_engine([cheap, mid, expensive], confidence_threshold=0.9)
+
+        messages = [{"role": "user", "content": "hello world"}]
+        decision = await engine.select_model(messages)
+        assert decision.model.name == "mid/model"
+        assert decision.escalated is True
+
+    @pytest.mark.asyncio
+    async def test_high_confidence_does_not_escalate(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
+        engine = _make_engine([cheap, expensive], confidence_threshold=0.0)
+
+        messages = [{"role": "user", "content": "hello world"}]
+        decision = await engine.select_model(messages)
+        assert decision.model.name == "cheap/model"
+        assert decision.escalated is False
+
+    @pytest.mark.asyncio
+    async def test_escalation_with_single_model_uses_it(self):
+        only = _make_model(name="only/model", cost_per_1k_input=0.001)
+        engine = _make_engine([only], confidence_threshold=0.9)
+
+        messages = [{"role": "user", "content": "hello world"}]
+        decision = await engine.select_model(messages)
+        assert decision.model.name == "only/model"
+        assert decision.escalated is False
+
+    @pytest.mark.asyncio
+    async def test_escalation_respects_requirements(self):
+        small = _make_model(
+            name="small/model",
+            cost_per_1k_input=0.001,
+            max_context_window=8000,
+            supports_reasoning=True,
+        )
+        mid = _make_model(
+            name="mid/model",
+            cost_per_1k_input=0.01,
+            max_context_window=64000,
+            supports_reasoning=True,
+        )
+        large = _make_model(
+            name="large/model",
+            cost_per_1k_input=0.03,
+            max_context_window=128000,
+            supports_reasoning=True,
+        )
+        engine = _make_engine([small, mid, large], confidence_threshold=0.9)
+
+        messages = [
+            {"role": "user", "content": "Refactor this entire codebase"},
+        ]
+        decision = await engine.select_model(messages)
+        assert decision.model.name == "large/model"
+        assert decision.escalated is True
+
+    @pytest.mark.asyncio
+    async def test_completion_never_escalates(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
+        engine = _make_engine([cheap, expensive], confidence_threshold=0.9)
+
+        messages = [{"role": "user", "content": "x"}]
+        decision = await engine.select_model(messages, max_tokens=50, temperature=0.0)
+        assert decision.model.name == "cheap/model"
+        assert decision.escalated is False
+        assert decision.category == TaskCategory.COMPLETION
+
+    @pytest.mark.asyncio
+    async def test_escalation_flag_false_when_confident(self):
+        cheap = _make_model(
+            name="cheap/model",
+            cost_per_1k_input=0.001,
+            supports_reasoning=True,
+        )
+        expensive = _make_model(
+            name="expensive/model",
+            cost_per_1k_input=0.03,
+            supports_reasoning=True,
+        )
+        engine = _make_engine([cheap, expensive], confidence_threshold=0.5)
+
+        messages = [
+            {"role": "user", "content": "Fix this error in my code"},
+        ]
+        decision = await engine.select_model(messages)
+        assert decision.model.name == "cheap/model"
+        assert decision.escalated is False
+
+    @pytest.mark.asyncio
+    async def test_escalation_skips_cheapest_picks_second(self):
+        a = _make_model(name="a/model", cost_per_1k_input=0.001)
+        b = _make_model(name="b/model", cost_per_1k_input=0.005)
+        c = _make_model(name="c/model", cost_per_1k_input=0.01)
+        engine = _make_engine([a, b, c], confidence_threshold=0.9)
+
+        messages = [{"role": "user", "content": "Tell me about distributed systems"}]
+        decision = await engine.select_model(messages)
+        assert decision.model.name == "b/model"
+        assert decision.escalated is True
 
 
 class TestPrimary:

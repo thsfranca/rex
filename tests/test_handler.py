@@ -26,9 +26,10 @@ def _make_model(**overrides) -> ModelConfig:
 def _make_engine(
     models: list[ModelConfig],
     primary_model: str | None = None,
+    confidence_threshold: float = 0.0,
 ) -> RoutingEngine:
     registry = ModelRegistry(models)
-    return RoutingEngine(registry, primary_model)
+    return RoutingEngine(registry, primary_model, confidence_threshold=confidence_threshold)
 
 
 class FakeResponse:
