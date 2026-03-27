@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.adapters.registry import AdapterRegistry
 from app.config import Settings, load_config
 from app.discovery.registry_builder import build_registry
 from app.proxy.handler import (
@@ -20,15 +21,17 @@ logger = logging.getLogger(__name__)
 
 _engine: RoutingEngine | None = None
 _settings: Settings | None = None
+_adapter_registry: AdapterRegistry | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _engine, _settings
+    global _engine, _settings, _adapter_registry
     config = load_config("config.yaml")
     registry, _settings = await build_registry(config)
     primary_model = _settings.routing.primary_model
     _engine = RoutingEngine(registry, primary_model)
+    _adapter_registry = AdapterRegistry()
     logger.info(
         "Rex started with %d models, primary: %s",
         len(registry.get_all()),
@@ -44,6 +47,12 @@ def _get_engine() -> RoutingEngine:
     if _engine is None:
         raise RuntimeError("RoutingEngine not initialized")
     return _engine
+
+
+def _get_adapter_registry() -> AdapterRegistry:
+    if _adapter_registry is None:
+        raise RuntimeError("AdapterRegistry not initialized")
+    return _adapter_registry
 
 
 def _get_settings() -> Settings:
@@ -63,8 +72,10 @@ def _error_response(status_code: int, message: str, error_type: str) -> JSONResp
 async def chat_completions(request: Request):
     body = await request.json()
     authorization = request.headers.get("authorization")
+    user_agent = request.headers.get("user-agent")
+    adapter = _get_adapter_registry().get_adapter(user_agent)
     try:
-        return await handle_chat_completion(body, _get_engine(), authorization)
+        return await handle_chat_completion(body, _get_engine(), authorization, adapter)
     except Exception as e:
         logger.exception("Chat completion failed")
         return _error_response(502, f"All model backends failed. Last error: {e}", "proxy_error")

@@ -6,9 +6,13 @@ import litellm
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 
+from app.adapters.base import ClientAdapter
+from app.adapters.default import DefaultAdapter
 from app.config import ModelConfig
 from app.proxy.streaming import stream_completion
 from app.router.engine import RoutingEngine
+
+_DEFAULT_ADAPTER = DefaultAdapter()
 
 logger = logging.getLogger(__name__)
 
@@ -83,15 +87,26 @@ async def _call_with_fallback(
 
 
 async def handle_chat_completion(
-    body: dict, engine: RoutingEngine, authorization: str | None = None
+    body: dict,
+    engine: RoutingEngine,
+    authorization: str | None = None,
+    adapter: ClientAdapter | None = None,
 ) -> Response:
     stream = body.get("stream", False)
     request_api_key = _extract_bearer_token(authorization)
 
-    selected = engine.select_model(
+    active_adapter = adapter or _DEFAULT_ADAPTER
+    normalized = active_adapter.normalize(
         messages=body.get("messages", []),
         max_tokens=body.get("max_tokens"),
         temperature=body.get("temperature"),
+    )
+
+    selected = engine.select_model(
+        messages=normalized.messages,
+        max_tokens=normalized.max_tokens,
+        temperature=normalized.temperature,
+        feature_type=normalized.feature_type,
     )
 
     response, used_model = await _call_with_fallback(
