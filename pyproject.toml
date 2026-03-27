@@ -13,6 +13,9 @@ dependencies = [
     "scikit-learn>=1.8.0",
 ]
 
+[project.scripts]
+rex = "app.cli:main"
+
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
