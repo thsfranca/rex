@@ -137,7 +137,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] `rex stop` shuts down a running Rex instance gracefully
 - [x] `rex reset` clears all learning data with an interactive confirmation prompt (skippable with `--yes`)
 - [x] CLI runs Rex as a background process that any AI tool can connect to via `http://localhost:8000/v1`
-- [x] Config-first model registry: when `models` is defined in `config.yaml`, Rex uses that list as the primary model source
+- [x] Config-first model registry: when `models` is defined in `~/.rex/config.yaml`, Rex uses that list as the primary model source
 - [x] Auto-discovery supplements config-defined models only — adds models not already listed in config
 - [x] Without a config file, auto-discovery works as it does today (no behavior change)
 

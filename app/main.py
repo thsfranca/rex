@@ -40,7 +40,7 @@ _scheduler: RetrainingScheduler | None = None
 async def lifespan(app: FastAPI):
     global _engine, _settings, _adapter_registry, _pipeline
     global _repository, _embedding_service, _scheduler
-    config = load_config("config.yaml")
+    config = load_config()
     registry, _settings = await build_registry(config)
     primary_model = _settings.routing.primary_model
 

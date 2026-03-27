@@ -1,4 +1,5 @@
 # Rex config — entirely optional.
+# Copy this file to ~/.rex/config.yaml to use it.
 # Rex discovers models automatically from environment variables and local runtimes.
 # Use this file only to override defaults or add models Rex can't discover.
 

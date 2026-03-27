@@ -5,6 +5,8 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel
 
+DEFAULT_CONFIG_PATH = Path("~/.rex/config.yaml").expanduser()
+
 
 class ServerConfig(BaseModel):
     host: str = "0.0.0.0"
@@ -54,8 +56,8 @@ class Settings(BaseModel):
     learning: LearningConfig = LearningConfig()
 
 
-def load_config(path: str | Path) -> Settings | None:
-    config_path = Path(path)
+def load_config(path: str | Path | None = None) -> Settings | None:
+    config_path = Path(path) if path is not None else DEFAULT_CONFIG_PATH
     if not config_path.exists():
         return None
 
