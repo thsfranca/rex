@@ -5,16 +5,7 @@ from app.router.registry import ModelRegistry
 
 
 def _make_model(**overrides) -> ModelConfig:
-    defaults = {
-        "name": "test/model",
-        "provider": "test",
-        "context_window": 4096,
-        "cost_per_1k_input": 0.001,
-        "cost_per_1k_output": 0.002,
-        "strengths": ["general"],
-        "max_latency_ms": 500,
-        "is_local": False,
-    }
+    defaults = {"name": "test/model"}
     defaults.update(overrides)
     return ModelConfig(**defaults)
 
@@ -34,15 +25,6 @@ class TestModelRegistry:
         registry = ModelRegistry(models)
         assert len(registry.get_all()) == 2
 
-    def test_get_by_strength(self):
-        fast = _make_model(name="fast", strengths=["completion"])
-        smart = _make_model(name="smart", strengths=["debugging", "generation"])
-        registry = ModelRegistry([fast, smart])
-
-        assert registry.get_by_strength("completion") == [fast]
-        assert registry.get_by_strength("debugging") == [smart]
-        assert registry.get_by_strength("nonexistent") == []
-
     def test_names(self):
         models = [_make_model(name="a"), _make_model(name="b")]
         registry = ModelRegistry(models)
@@ -53,3 +35,32 @@ class TestModelRegistry:
         assert registry.get_all() == []
         assert registry.names() == []
         assert registry.get_by_name("anything") is None
+
+
+class TestSortedByCost:
+    def test_local_models_first(self):
+        cloud = _make_model(name="cloud", cost_per_1k_input=0.01, is_local=False)
+        local = _make_model(name="local", cost_per_1k_input=0.0, is_local=True)
+        registry = ModelRegistry([cloud, local])
+
+        sorted_models = registry.sorted_by_cost()
+        assert sorted_models[0].name == "local"
+        assert sorted_models[1].name == "cloud"
+
+    def test_cheaper_cloud_before_expensive_cloud(self):
+        expensive = _make_model(name="expensive", cost_per_1k_input=0.03)
+        cheap = _make_model(name="cheap", cost_per_1k_input=0.001)
+        registry = ModelRegistry([expensive, cheap])
+
+        sorted_models = registry.sorted_by_cost()
+        assert sorted_models[0].name == "cheap"
+        assert sorted_models[1].name == "expensive"
+
+    def test_empty_registry_returns_empty(self):
+        registry = ModelRegistry([])
+        assert registry.sorted_by_cost() == []
+
+    def test_single_model(self):
+        model = _make_model(name="only")
+        registry = ModelRegistry([model])
+        assert registry.sorted_by_cost() == [model]

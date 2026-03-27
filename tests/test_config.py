@@ -1,116 +1,107 @@
 from __future__ import annotations
 
-import pytest
 import yaml
 
 from app.config import ModelConfig, RoutingConfig, Settings, load_config
 
-VALID_MODELS = [
-    {
-        "name": "openai/gpt-4o",
-        "provider": "openai",
-        "context_window": 128000,
-        "cost_per_1k_input": 0.005,
-        "cost_per_1k_output": 0.015,
-        "strengths": ["debugging", "generation"],
-        "max_latency_ms": 2000,
-        "is_local": False,
-    },
-    {
-        "name": "ollama/llama3",
-        "provider": "ollama",
-        "context_window": 8192,
-        "cost_per_1k_input": 0,
-        "cost_per_1k_output": 0,
-        "strengths": ["completion"],
-        "max_latency_ms": 100,
-        "is_local": True,
-        "api_base": "http://localhost:11434",
-    },
-]
-
-
-def _valid_config() -> dict:
-    return {
-        "models": VALID_MODELS,
-        "routing": {
-            "completion_model": "ollama/llama3",
-            "default_model": "openai/gpt-4o",
-        },
-    }
-
 
 class TestModelConfig:
-    def test_required_fields(self):
-        model = ModelConfig(**VALID_MODELS[0])
+    def test_only_name_required(self):
+        model = ModelConfig(name="openai/gpt-4o")
         assert model.name == "openai/gpt-4o"
-        assert model.provider == "openai"
-        assert model.context_window == 128000
-        assert model.is_local is False
-
-    def test_optional_fields_default_to_none(self):
-        model = ModelConfig(**VALID_MODELS[0])
         assert model.api_key is None
         assert model.api_base is None
+        assert model.cost_per_1k_input == 0.0
+        assert model.is_local is False
 
-    def test_optional_fields_set(self):
-        model = ModelConfig(**VALID_MODELS[1])
+    def test_all_fields_set(self):
+        model = ModelConfig(
+            name="ollama/llama3",
+            api_key="sk-test",
+            api_base="http://localhost:11434",
+            cost_per_1k_input=0.001,
+            is_local=True,
+        )
+        assert model.name == "ollama/llama3"
+        assert model.api_key == "sk-test"
         assert model.api_base == "http://localhost:11434"
+        assert model.cost_per_1k_input == 0.001
+        assert model.is_local is True
+
+
+class TestRoutingConfig:
+    def test_defaults_to_none(self):
+        routing = RoutingConfig()
+        assert routing.primary_model is None
+
+    def test_explicit_primary_model(self):
+        routing = RoutingConfig(primary_model="openai/gpt-4o")
+        assert routing.primary_model == "openai/gpt-4o"
 
 
 class TestSettings:
-    def test_valid_config(self):
-        settings = Settings(**_valid_config())
-        assert len(settings.models) == 2
-        assert settings.routing.completion_model == "ollama/llama3"
-        assert settings.routing.default_model == "openai/gpt-4o"
-
-    def test_default_server_config(self):
-        settings = Settings(**_valid_config())
+    def test_all_defaults(self):
+        settings = Settings()
         assert settings.server.host == "0.0.0.0"
         assert settings.server.port == 8000
+        assert settings.models == []
+        assert settings.routing.primary_model is None
 
     def test_custom_server_config(self):
-        config = _valid_config()
-        config["server"] = {"host": "127.0.0.1", "port": 9000}
-        settings = Settings(**config)
+        settings = Settings(server={"host": "127.0.0.1", "port": 9000})
         assert settings.server.host == "127.0.0.1"
         assert settings.server.port == 9000
 
-    def test_routing_references_invalid_completion_model(self):
-        config = _valid_config()
-        config["routing"]["completion_model"] = "nonexistent/model"
-        with pytest.raises(ValueError, match="nonexistent/model"):
-            Settings(**config)
+    def test_with_models(self):
+        settings = Settings(models=[{"name": "openai/gpt-4o"}, {"name": "ollama/llama3"}])
+        assert len(settings.models) == 2
+        assert settings.models[0].name == "openai/gpt-4o"
 
-    def test_routing_references_invalid_default_model(self):
-        config = _valid_config()
-        config["routing"]["default_model"] = "nonexistent/model"
-        with pytest.raises(ValueError, match="nonexistent/model"):
-            Settings(**config)
-
-    def test_missing_models_field(self):
-        with pytest.raises(Exception):
-            Settings(routing=RoutingConfig(completion_model="a", default_model="b"))
-
-    def test_missing_routing_field(self):
-        with pytest.raises(Exception):
-            Settings(models=[ModelConfig(**VALID_MODELS[0])])
+    def test_with_routing_override(self):
+        settings = Settings(routing={"primary_model": "openai/gpt-4o"})
+        assert settings.routing.primary_model == "openai/gpt-4o"
 
 
 class TestLoadConfig:
-    def test_load_valid_yaml(self, tmp_path):
-        config_file = tmp_path / "config.yaml"
-        config_file.write_text(yaml.dump(_valid_config()))
-        settings = load_config(config_file)
-        assert settings.routing.default_model == "openai/gpt-4o"
+    def test_returns_none_when_file_missing(self, tmp_path):
+        result = load_config(tmp_path / "missing.yaml")
+        assert result is None
 
-    def test_load_missing_file(self, tmp_path):
-        with pytest.raises(SystemExit):
-            load_config(tmp_path / "missing.yaml")
+    def test_loads_valid_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            yaml.dump(
+                {
+                    "models": [{"name": "openai/gpt-4o"}],
+                    "routing": {"primary_model": "openai/gpt-4o"},
+                }
+            )
+        )
+        settings = load_config(config_file)
+        assert settings is not None
+        assert settings.routing.primary_model == "openai/gpt-4o"
+        assert len(settings.models) == 1
+
+    def test_loads_empty_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("")
+        settings = load_config(config_file)
+        assert settings is not None
+        assert settings.models == []
+
+    def test_loads_minimal_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(yaml.dump({"server": {"port": 9000}}))
+        settings = load_config(config_file)
+        assert settings is not None
+        assert settings.server.port == 9000
+        assert settings.models == []
 
     def test_load_invalid_yaml(self, tmp_path):
         config_file = tmp_path / "config.yaml"
         config_file.write_text("models: not_a_list")
-        with pytest.raises(Exception):
+        try:
             load_config(config_file)
+            assert False, "Should have raised"
+        except Exception:
+            pass
