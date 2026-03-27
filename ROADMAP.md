@@ -52,30 +52,16 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ---
 
-## Phase 3 — Learning Pipeline + Visibility
+## Phase 3 — Learning Pipeline + ML Classifier
 
-**Goal**: Train the ML classifier automatically from accumulated data using unsupervised clustering and weak supervision.
+**Goal**: Train a personalized ML classifier automatically from accumulated data using unsupervised clustering and weak supervision. The classifier replaces heuristics as the primary router once it reaches quality thresholds.
 
 **Deliverables**:
 - [ ] Unsupervised K-means clustering on stored query embeddings with [silhouette score](https://doi.org/10.1016/0377-0427(87)90125-7) for optimal cluster count (Rousseeuw, 1987)
 - [ ] Periodic re-clustering as query volume grows (~every 100 new queries)
 - [ ] Weak supervision label model: heuristic rules as noisy labeling functions, probabilistic aggregation of votes ([Ratner et al., 2017](https://arxiv.org/abs/1711.10160))
-- [ ] ML classifier training: logistic regression on cluster-derived + weakly-supervised labels, automatic retraining
+- [ ] ML classifier module: logistic regression inference, integration into the classifier chain, model persistence
+- [ ] ML classifier training: train on cluster-derived + weakly-supervised labels, automatic retraining as usage patterns evolve
+- [ ] Automatic promotion: ML classifier replaces heuristics as primary when silhouette score > 0.5 and label model converges; heuristics demote to labeling functions only
 - [ ] Per-category outcome tracking (fallback triggers, error rate, latency, re-ask rate)
 - [ ] Upward migration: promote categories with persistent poor outcomes to more capable models
-
----
-
-## Phase 4 — Personalized ML Classifier
-
-**Goal**: The ML classifier, trained automatically by the learning pipeline, becomes the primary router — personalized to each user's coding patterns.
-
-This phase activates automatically when:
-- Clustering silhouette score crosses the quality threshold (>0.5)
-- Weak supervision label model converges on rule reliability scores
-
-**Deliverables**:
-- [ ] The ML classifier replaces heuristics as primary in the classifier chain
-- [ ] Heuristics demote to labeling functions only (feed the learning pipeline, no longer route directly)
-- [ ] The router promotes task categories to more capable models based on accumulated outcome data
-- [ ] The learning pipeline retrains continuously as usage patterns evolve
