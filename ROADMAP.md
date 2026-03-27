@@ -6,6 +6,8 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ## Phase 0 — Proxy + Basic Routing
 
+> Detailed spec: [docs/specs/phase-0-proxy-basic-routing.md](docs/specs/phase-0-proxy-basic-routing.md)
+
 **Goal**: An OpenAI-compatible proxy that routes requests across multiple model backends based on feature detection.
 
 **Deliverables**:
@@ -35,6 +37,8 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 ---
 
 ## Phase 2 — Enrichment Pipeline
+
+> Detailed spec: [docs/specs/enrichment-pipeline.md](docs/specs/enrichment-pipeline.md)
 
 **Goal**: A pluggable pipeline that transforms requests after routing but before the model call. The first enricher injects task decomposition instructions for complex tasks, replicating structured step-by-step execution across all models.
 
