@@ -247,7 +247,7 @@ flowchart TD
 
 ## Training Reset
 
-The `POST /v1/reset` endpoint clears all accumulated learning data and returns Rex to a fresh state. The reset covers:
+Reset is available through both the API (`POST /v1/reset`) and the CLI (`rex reset`). The CLI command asks for confirmation before proceeding — skippable with `--yes`. Both paths clear all accumulated learning data and return Rex to a fresh state. The reset covers:
 
 | Component | What gets cleared |
 |---|---|
