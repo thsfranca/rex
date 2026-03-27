@@ -30,6 +30,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] Structural analysis (stack trace detection)
 - [x] Confidence scoring: each signal contributes a weighted score, highest-scoring category wins
 - [x] Task-aware routing: categories route to the cheapest model that meets their requirements (context window, cloud, capabilities)
+- [ ] `supports_reasoning` routing criterion: add to `ModelConfig`, `TaskRequirements`, and enrich from LiteLLM metadata; require for debugging, optimization, and code review categories
 - [ ] Structural analysis (code block ratio, prompt length)
 - [ ] Client adapter interface: normalize tool-specific request patterns (Cursor, Claude Code, etc.) into a common format for the classifier
 
