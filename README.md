@@ -17,6 +17,8 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 - **LLM-as-Judge fallback**: When heuristic classification confidence is low, Rex calls a small local LLM to reclassify the task. The judge only triggers for chat/agent requests — never for tab completions. If the judge fails, Rex falls back to heuristics.
 - **Decision logging**: Every routing decision is logged to SQLite with timestamps, prompt hash, category, confidence, selected/used model, response time, token counts, cost, and rule votes — providing full routing observability.
 - **Semantic classification**: When `sentence-transformers` is installed, Rex embeds every query and uses nearest-centroid classification with pre-seeded exemplar queries to improve routing accuracy from the first request.
+- **Learning pipeline**: Background re-training runs K-means clustering, weak supervision, and logistic regression on accumulated data. When the ML classifier reaches quality thresholds (silhouette > 0.5, label model converged), it automatically replaces heuristics as the primary classifier.
+- **Outcome tracking**: Per-category metrics (fallback rate, error rate, latency, re-ask rate) detect categories where cheap models consistently fail. Flagged categories are promoted to more capable models.
 - **Transparent passthrough**: Unknown endpoints are forwarded to the primary model's backend — Rex never blocks an endpoint it doesn't handle.
 - **Optional YAML config**: Add custom models, override routing, or enable enrichments via `config.yaml`.
 
@@ -71,6 +73,12 @@ app/
   learning/
     embeddings.py        # Sentence transformer embedding service
     centroids.py         # Centroid classifier with synthetic exemplars
+    clustering.py        # K-means clustering + silhouette score
+    labeling.py          # Weak supervision label model
+    trainer.py           # ML classifier training pipeline
+    scheduler.py         # Re-training scheduler
+    outcomes.py          # Per-category outcome tracking
+    migrations.py        # Upward migration logic
   logging/
     models.py            # DecisionRecord dataclass
     repository.py        # DecisionRepository protocol
@@ -81,6 +89,7 @@ app/
     detector.py          # Feature detection (completion vs. chat)
     engine.py            # Routing engine (task-aware selection + fallback)
     llm_judge.py         # LLM-as-Judge fallback classifier
+    ml_classifier.py     # Trained ML classifier (logistic regression)
     registry.py          # Model registry (lookups, cost sorting, filtering)
   proxy/
     handler.py           # OpenAI-compatible request handler

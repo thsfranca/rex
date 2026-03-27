@@ -254,6 +254,12 @@ app/
   learning/
     embeddings.py        # Sentence transformer embedding service
     centroids.py         # Centroid classifier with synthetic exemplars
+    clustering.py        # K-means clustering + silhouette score
+    labeling.py          # Weak supervision label model
+    trainer.py           # ML classifier training pipeline
+    scheduler.py         # Re-training scheduler
+    outcomes.py          # Per-category outcome tracking
+    migrations.py        # Upward migration logic
   logging/
     models.py            # DecisionRecord dataclass
     repository.py        # DecisionRepository protocol
@@ -264,6 +270,7 @@ app/
     detector.py          # Feature detection (completion vs. chat)
     engine.py            # Routing engine (task-aware selection + fallback)
     llm_judge.py         # LLM-as-Judge fallback classifier
+    ml_classifier.py     # Trained ML classifier (logistic regression)
     registry.py          # Model registry (lookups, cost sorting, filtering)
   proxy/
     handler.py           # OpenAI-compatible request handler
@@ -273,7 +280,4 @@ pyproject.toml           # Project dependencies (uv)
 tests/                   # pytest test suite
 ```
 
-Future phases will add:
-- `app/router/ml_classifier.py` — trained ML classifier
-- `app/learning/clustering.py` — K-means clustering and weak supervision
-- `app/learning/ml_classifier.py` — logistic regression classifier training
+All learning pipeline modules are implemented: clustering, weak supervision, ML classifier training, re-training scheduler, outcome tracking, and upward migration.
