@@ -178,5 +178,16 @@ class SQLiteDecisionRepository:
     async def get_embeddings(self) -> list[tuple[str, bytes]]:
         return await asyncio.to_thread(self._get_embeddings_sync)
 
+    def _clear_all_sync(self) -> None:
+        conn = self._get_connection()
+        try:
+            conn.execute("DELETE FROM decisions")
+            conn.commit()
+        finally:
+            conn.close()
+
     async def get_rule_votes(self) -> dict[str, dict[str, float]]:
         return await asyncio.to_thread(self._get_rule_votes_sync)
+
+    async def clear_all(self) -> None:
+        await asyncio.to_thread(self._clear_all_sync)
