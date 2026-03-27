@@ -167,16 +167,15 @@ The enrichment pipeline transforms requests after routing but before the model c
 
 The first enricher. When enabled, it detects complex tasks and injects a system-level instruction telling the model to break the task into numbered steps and work through them one at a time.
 
-**Complexity detection** uses signals already available after classification:
+**Complexity detection** uses the task category from classification:
 
 | Signal | How it indicates complexity |
 |---|---|
 | Task category | `generation`, `refactoring`, `migration`, `code_review`, `test_generation` are inherently multi-step |
-| Prompt length | Longer prompts tend to describe multi-concern tasks |
 
 - The enricher appends to the existing system message — it never replaces it.
 - Simple tasks (`explanation`, `documentation`, `completion`, `general`) skip enrichment entirely.
-- Rex decides complexity, not the model. The classifier output and request signals are already available at zero cost.
+- Rex decides complexity, not the model. The classifier output is already available at zero cost.
 
 ## Learning Pipeline
 
