@@ -102,7 +102,7 @@ class ModelConfig(BaseModel):
 
 ### YAML Overrides
 
-- Config is optional. When `config.yaml` exists, the loader parses it into a `Settings` object.
+- Config is optional. When `~/.rex/config.yaml` exists, the loader parses it into a `Settings` object.
 - Manual `models` entries in the YAML override discovered models by name (last write wins).
 - If no models are discovered and none are configured, Rex exits with an error at startup.
 
@@ -414,7 +414,7 @@ Rex follows a graceful degradation strategy:
 
 ### Manual Override
 
-7. Create a `config.yaml` with a manual model entry and `routing.primary_model`.
+7. Create `~/.rex/config.yaml` with a manual model entry and `routing.primary_model`.
 8. Start Rex and verify the configured model appears and is selected as primary.
 
 ### Streaming

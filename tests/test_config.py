@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import yaml
 
 from app.config import (
+    DEFAULT_CONFIG_PATH,
     EnrichmentsConfig,
     LLMJudgeConfig,
     ModelConfig,
@@ -129,6 +132,11 @@ class TestSettings:
         settings = Settings(models=[{"name": "openai/gpt-4o"}])
         assert settings.llm_judge.enabled is False
         assert settings.llm_judge.model is None
+
+
+class TestDefaultConfigPath:
+    def test_points_to_home_rex_directory(self):
+        assert DEFAULT_CONFIG_PATH == Path.home() / ".rex" / "config.yaml"
 
 
 class TestLoadConfig:

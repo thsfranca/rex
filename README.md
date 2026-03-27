@@ -9,7 +9,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 ## Features
 
-- **Zero-config model discovery**: Rex detects available providers from environment variables and local runtimes (Ollama), queries their APIs for available models, and enriches each model with metadata (cost, context window) from LiteLLM — no config file needed.
+- **Config-first model registry**: Define your models in `~/.rex/config.yaml`. Rex supplements the config with auto-discovered providers (environment variables, Ollama) and enriches each model with metadata (cost, context window) from LiteLLM.
 - **Task-aware routing**: Rex classifies each request (debugging, refactoring, code review, etc.) and picks the cheapest model that meets the task's requirements (context window, capabilities). Tasks with no special needs stay on the primary (cheapest) model.
 - **Fallback chains**: If the selected model fails, Rex tries the next model in cost order.
 - **SSE streaming**: Full Server-Sent Events streaming support for chat completions.
@@ -19,11 +19,11 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 - **Semantic classification**: When `sentence-transformers` is installed, Rex embeds every query and uses nearest-centroid classification with pre-seeded exemplar queries to improve routing accuracy from the first request.
 - **Learning pipeline**: Background re-training runs K-means clustering, weak supervision, and logistic regression on accumulated data. When the ML classifier reaches quality thresholds (silhouette > 0.5, label model converged), it automatically replaces heuristics as the primary classifier.
 - **Transparent passthrough**: Unknown endpoints are forwarded to the primary model's backend — Rex never blocks an endpoint it doesn't handle.
-- **Optional YAML config**: Add custom models, override routing, or enable enrichments via `config.yaml`.
+- **Auto-discovery**: When no config exists, Rex falls back to scanning environment variables and local runtimes to find models automatically.
 
 ## How It Works
 
-1. On startup, Rex **discovers** available models from environment variables (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.), local runtimes (Ollama), and provider APIs — enriches each with metadata (cost, context window, capabilities) and merges with any `config.yaml` overrides.
+1. On startup, Rex loads models from `~/.rex/config.yaml`, then supplements with auto-discovered providers (environment variables, Ollama, provider APIs) — enriches each with metadata (cost, context window, capabilities) from LiteLLM.
 2. Rex sorts models by cost (local first, then cheapest cloud) and selects the **primary model**.
 3. For each request, the **classifier** identifies the task type (debugging, refactoring, code review, etc.) and the **router** picks the cheapest model that meets the task's requirements. If the primary already qualifies, it stays on primary. When heuristic confidence is low, the **centroid classifier** uses semantic similarity, then the **LLM judge** reclassifies using a small local model.
 4. For complex tasks (generation, refactoring, migration, code review, test generation), the **enrichment pipeline** injects task decomposition instructions into the request before the model call. Each enricher is opt-in via config.
@@ -49,7 +49,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 | API framework | FastAPI |
 | Model backends | LiteLLM (100+ providers) |
 | HTTP client | httpx (passthrough requests) |
-| Configuration | Optional YAML overrides |
+| Configuration | YAML (`~/.rex/config.yaml`) |
 
 ## Project Structure
 
@@ -119,17 +119,19 @@ The script installs dependencies and shows how to start Rex.
    ```bash
    uv sync
    ```
-3. Set at least one provider API key:
+3. Create your config (copy the example as a starting point):
    ```bash
-   export OPENAI_API_KEY="sk-..."
+   mkdir -p ~/.rex
+   cp config.yaml.example ~/.rex/config.yaml
    ```
-4. Start Rex:
+4. Edit `~/.rex/config.yaml` to add your models and API keys.
+5. Start Rex:
    ```bash
    rex start
    ```
-5. Point your AI coding tool's base URL to `http://localhost:8000/v1`.
+6. Point your AI coding tool's base URL to `http://localhost:8000/v1`.
 
-Rex discovers available models automatically from environment variables and local runtimes. No config file needed. See `config.yaml.example` for optional overrides.
+Without a config file, Rex falls back to auto-discovery from environment variables and local runtimes.
 
 ### CLI
 

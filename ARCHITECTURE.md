@@ -36,7 +36,7 @@ flowchart LR
     LearningPipeline --> MLClassifier
 ```
 
-- **Model Discovery** loads models from `config.yaml` as the primary source, then supplements with auto-discovered providers (environment variables, provider APIs, Ollama). Each model is enriched with metadata from LiteLLM's built-in database.
+- **Model Discovery** loads models from `~/.rex/config.yaml` as the primary source, then supplements with auto-discovered providers (environment variables, provider APIs, Ollama). Each model is enriched with metadata from LiteLLM's built-in database.
 - The **Client Adapter** normalizes tool-specific request patterns into a common format for the classifier.
 - Each supported tool (Cursor, Claude Code, etc.) has its own adapter that detects features like tab completion vs. chat.
 - The **Learning Pipeline** runs in the background, consuming query embeddings and heuristic votes to train the ML classifier automatically.
@@ -52,7 +52,7 @@ flowchart LR
 | Query embeddings | Sentence Transformer ([all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)) | ~80MB local model, ~10ms per query on CPU, zero API cost; produces vectors for clustering and classification ([Reimers & Gurevych, 2019](https://arxiv.org/abs/1908.10084); [Wang et al., 2020](https://arxiv.org/abs/2002.10957)) |
 | Category discovery | Unsupervised K-means clustering | Automatically discovers task categories from query embeddings without labels; [silhouette score](https://doi.org/10.1016/0377-0427(87)90125-7) selects optimal cluster count (Rousseeuw, 1987) |
 | Automated labeling | Weak supervision | Heuristic rules act as noisy labeling functions; a probabilistic label model aggregates their votes into clean training labels without manual annotation ([Ratner et al., 2016](https://arxiv.org/abs/1605.07723); [Ratner et al., 2017](https://arxiv.org/abs/1711.10160)) |
-| Model discovery | Config-first, auto-discovery supplements | When `config.yaml` defines a `models` list, Rex uses it as the primary source. Auto-discovery fills in models not already listed. Without a config file, Rex falls back to full auto-discovery (scan env vars, query provider APIs, probe Ollama) |
+| Model discovery | Config-first, auto-discovery supplements | When `~/.rex/config.yaml` defines a `models` list, Rex uses it as the primary source. Auto-discovery fills in models not already listed. Without a config file, Rex falls back to full auto-discovery (scan env vars, query provider APIs, probe Ollama) |
 | Model metadata | LiteLLM built-in database | `litellm.get_model_info()` provides context window, pricing, and capability flags for known models; no manual metadata needed |
 | Routing criteria | Cost + context window + capability flags | All routing signals come from measurable model properties — no manually curated "strengths" list |
 | Config format | Optional YAML overrides | Config file is not required; when present, it adds models and overrides routing defaults |
