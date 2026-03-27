@@ -18,6 +18,23 @@ def _resolve_config_providers(
 ) -> list[DetectedProvider]:
     resolved = []
     for p in config_providers:
+        api_base = p.api_base
+        if api_base is None and p.api_base_env:
+            api_base = os.environ.get(p.api_base_env)
+            if api_base is None:
+                logger.warning(
+                    "Provider %s: env var %s not set, skipping",
+                    p.prefix,
+                    p.api_base_env,
+                )
+                continue
+        if api_base is None:
+            logger.warning(
+                "Provider %s: no api_base or api_base_env set, skipping",
+                p.prefix,
+            )
+            continue
+
         api_key = p.api_key
         if api_key is None and p.api_key_env:
             api_key = os.environ.get(p.api_key_env)
@@ -28,7 +45,7 @@ def _resolve_config_providers(
                     p.api_key_env,
                 )
                 continue
-        resolved.append(DetectedProvider(prefix=p.prefix, api_key=api_key, api_base=p.api_base))
+        resolved.append(DetectedProvider(prefix=p.prefix, api_key=api_key, api_base=api_base))
     return resolved
 
 

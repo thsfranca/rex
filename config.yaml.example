@@ -12,7 +12,7 @@
 #     api_base: "https://litellm-proxy.company.com/anthropic"
 #     api_key_env: "ANTHROPIC_AUTH_TOKEN"
 #   - prefix: "openai"
-#     api_base: "https://litellm-proxy.company.com/openai"
+#     api_base_env: "OPENAI_PROXY_URL"
 #     api_key: "sk-..."
 
 # models:

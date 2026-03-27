@@ -27,7 +27,8 @@ class ModelConfig(BaseModel):
 
 class ProviderConfig(BaseModel):
     prefix: str
-    api_base: str
+    api_base: str | None = None
+    api_base_env: str | None = None
     api_key: str | None = None
     api_key_env: str | None = None
 
