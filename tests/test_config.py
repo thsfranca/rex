@@ -184,6 +184,21 @@ class TestLoadConfig:
         assert settings.llm_judge.model == "ollama/llama3"
         assert settings.llm_judge.confidence_threshold == 0.5
 
+    def test_loads_learning_config_from_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            yaml.dump({"learning": {"db_path": "/tmp/test.db", "embeddings_model": "custom-model"}})
+        )
+        settings = load_config(config_file)
+        assert settings is not None
+        assert settings.learning.db_path == "/tmp/test.db"
+        assert settings.learning.embeddings_model == "custom-model"
+
+    def test_learning_config_defaults(self):
+        settings = Settings()
+        assert settings.learning.db_path == "~/.rex/decisions.db"
+        assert settings.learning.embeddings_model == "all-MiniLM-L6-v2"
+
     def test_load_invalid_yaml(self, tmp_path):
         config_file = tmp_path / "config.yaml"
         config_file.write_text("models: not_a_list")

@@ -15,6 +15,8 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 - **SSE streaming**: Full Server-Sent Events streaming support for chat completions.
 - **Enrichment pipeline**: Rex transforms complex requests (generation, refactoring, migration, code review, test generation) by injecting task decomposition instructions before the model call. Each enricher is opt-in via config.
 - **LLM-as-Judge fallback**: When heuristic classification confidence is low, Rex calls a small local LLM to reclassify the task. The judge only triggers for chat/agent requests — never for tab completions. If the judge fails, Rex falls back to heuristics.
+- **Decision logging**: Every routing decision is logged to SQLite with timestamps, prompt hash, category, confidence, selected/used model, response time, token counts, cost, and rule votes — providing full routing observability.
+- **Semantic classification**: When `sentence-transformers` is installed, Rex embeds every query and uses nearest-centroid classification with pre-seeded exemplar queries to improve routing accuracy from the first request.
 - **Transparent passthrough**: Unknown endpoints are forwarded to the primary model's backend — Rex never blocks an endpoint it doesn't handle.
 - **Optional YAML config**: Add custom models, override routing, or enable enrichments via `config.yaml`.
 
@@ -22,9 +24,10 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 1. On startup, Rex **discovers** available models from environment variables (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.), local runtimes (Ollama), and provider APIs — enriches each with metadata (cost, context window, capabilities) and merges with any `config.yaml` overrides.
 2. Rex sorts models by cost (local first, then cheapest cloud) and selects the **primary model**.
-3. For each request, the **classifier** identifies the task type (debugging, refactoring, code review, etc.) and the **router** picks the cheapest model that meets the task's requirements. If the primary already qualifies, it stays on primary. When heuristic confidence is low, the **LLM judge** reclassifies using a small local model.
+3. For each request, the **classifier** identifies the task type (debugging, refactoring, code review, etc.) and the **router** picks the cheapest model that meets the task's requirements. If the primary already qualifies, it stays on primary. When heuristic confidence is low, the **centroid classifier** uses semantic similarity, then the **LLM judge** reclassifies using a small local model.
 4. For complex tasks (generation, refactoring, migration, code review, test generation), the **enrichment pipeline** injects task decomposition instructions into the request before the model call. Each enricher is opt-in via config.
 5. If the selected model fails, the **fallback chain** tries remaining models in cost order.
+6. Every routing decision is **logged** to SQLite with response metrics and embeddings for future learning.
 
 ## API
 
@@ -65,6 +68,13 @@ app/
     context.py           # EnrichmentContext dataclass
     pipeline.py          # Enricher protocol and pipeline runner
     task_decomposition.py # Task decomposition enricher
+  learning/
+    embeddings.py        # Sentence transformer embedding service
+    centroids.py         # Centroid classifier with synthetic exemplars
+  logging/
+    models.py            # DecisionRecord dataclass
+    repository.py        # DecisionRepository protocol
+    sqlite.py            # SQLite implementation of decision repository
   router/
     categories.py        # Task categories and routing requirements
     classifier.py        # Heuristic task classifier (keyword + structural)

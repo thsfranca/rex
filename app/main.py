@@ -10,6 +10,9 @@ from app.adapters.registry import AdapterRegistry
 from app.config import Settings, load_config
 from app.discovery.registry_builder import build_registry
 from app.enrichment.pipeline import EnrichmentPipeline, build_pipeline
+from app.learning.centroids import CentroidClassifier, build_centroids
+from app.learning.embeddings import try_load_embedding_service
+from app.logging.sqlite import SQLiteDecisionRepository
 from app.proxy.handler import (
     handle_chat_completion,
     handle_passthrough,
@@ -25,11 +28,14 @@ _engine: RoutingEngine | None = None
 _settings: Settings | None = None
 _adapter_registry: AdapterRegistry | None = None
 _pipeline: EnrichmentPipeline | None = None
+_repository: SQLiteDecisionRepository | None = None
+_embedding_service = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _engine, _settings, _adapter_registry, _pipeline
+    global _repository, _embedding_service
     config = load_config("config.yaml")
     registry, _settings = await build_registry(config)
     primary_model = _settings.routing.primary_model
@@ -47,11 +53,25 @@ async def lifespan(app: FastAPI):
         else:
             logger.warning("LLM judge enabled but no model available, disabling")
 
+    _repository = SQLiteDecisionRepository(db_path=_settings.learning.db_path)
+    logger.info("Decision logging enabled, db: %s", _settings.learning.db_path)
+
+    _embedding_service = try_load_embedding_service(_settings.learning.embeddings_model)
+    centroid_classifier = None
+    if _embedding_service is not None:
+        logger.info("Embedding service loaded: %s", _settings.learning.embeddings_model)
+        centroids = build_centroids(_embedding_service)
+        centroid_classifier = CentroidClassifier(centroids)
+        logger.info("Centroid classifier initialized with %d categories", len(centroids))
+    else:
+        logger.info("Embedding service not available, centroid classifier disabled")
+
     _engine = RoutingEngine(
         registry,
         primary_model,
         judge=judge,
         confidence_threshold=_settings.llm_judge.confidence_threshold,
+        centroid_classifier=centroid_classifier,
     )
     _adapter_registry = AdapterRegistry()
     _pipeline = build_pipeline(_settings)
@@ -105,7 +125,13 @@ async def chat_completions(request: Request):
     adapter = _get_adapter_registry().get_adapter(user_agent)
     try:
         return await handle_chat_completion(
-            body, _get_engine(), authorization, adapter, _get_pipeline()
+            body,
+            _get_engine(),
+            authorization,
+            adapter,
+            _get_pipeline(),
+            repository=_repository,
+            embedding_service=_embedding_service,
         )
     except Exception as e:
         logger.exception("Chat completion failed")
