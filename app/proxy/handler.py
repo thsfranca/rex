@@ -22,6 +22,7 @@ from app.proxy.anthropic import (
     anthropic_to_openai,
     extract_anthropic_api_key,
     openai_response_to_anthropic,
+    stream_anthropic_response,
 )
 from app.proxy.streaming import stream_completion
 from app.router.engine import RoutingEngine
@@ -272,6 +273,7 @@ async def handle_anthropic_messages(
     embedding_service=None,
     scheduler=None,
 ) -> Response:
+    stream = body.get("stream", False)
     request_api_key = extract_anthropic_api_key(request)
     request_model = body.get("model")
     openai_body = anthropic_to_openai(body)
@@ -315,7 +317,7 @@ async def handle_anthropic_messages(
 
     start_time = time.perf_counter()
     response, used_model = await _call_with_fallback(
-        engine, decision.model, openai_body, False, request_api_key
+        engine, decision.model, openai_body, stream, request_api_key
     )
     response_time_ms = int((time.perf_counter() - start_time) * 1000)
     logger.info("Routed to %s (anthropic)", used_model.name)
@@ -335,6 +337,12 @@ async def handle_anthropic_messages(
 
     if scheduler is not None:
         asyncio.create_task(scheduler.on_new_decision())
+
+    if stream:
+        return StreamingResponse(
+            stream_anthropic_response(response, used_model.name, request_model),
+            media_type="text/event-stream",
+        )
 
     anthropic_response = openai_response_to_anthropic(response, used_model.name, request_model)
     return JSONResponse(content=anthropic_response)

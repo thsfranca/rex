@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import uuid
+from collections.abc import AsyncIterator
 
 from fastapi import Request
 
@@ -92,3 +94,88 @@ def openai_response_to_anthropic(
             "output_tokens": output_tokens,
         },
     }
+
+
+def _sse_event(event_type: str, data: dict) -> str:
+    return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
+
+
+async def stream_anthropic_response(
+    response,
+    model_name: str,
+    request_model: str | None = None,
+) -> AsyncIterator[str]:
+    msg_id = f"msg_{uuid.uuid4().hex[:24]}"
+    model = request_model or model_name
+
+    yield _sse_event(
+        "message_start",
+        {
+            "type": "message_start",
+            "message": {
+                "id": msg_id,
+                "type": "message",
+                "role": "assistant",
+                "content": [],
+                "model": model,
+                "stop_reason": None,
+                "stop_sequence": None,
+                "usage": {"input_tokens": 0, "output_tokens": 0},
+            },
+        },
+    )
+
+    yield _sse_event(
+        "content_block_start",
+        {
+            "type": "content_block_start",
+            "index": 0,
+            "content_block": {"type": "text", "text": ""},
+        },
+    )
+
+    yield _sse_event("ping", {"type": "ping"})
+
+    output_tokens = 0
+    finish_reason = None
+
+    async for chunk in response:
+        delta_content = None
+        if chunk.choices:
+            delta = chunk.choices[0].delta
+            if hasattr(delta, "content") and delta.content:
+                delta_content = delta.content
+            if chunk.choices[0].finish_reason:
+                finish_reason = chunk.choices[0].finish_reason
+
+        if hasattr(chunk, "usage") and chunk.usage:
+            if hasattr(chunk.usage, "completion_tokens") and chunk.usage.completion_tokens:
+                output_tokens = chunk.usage.completion_tokens
+
+        if delta_content:
+            output_tokens += 1
+            yield _sse_event(
+                "content_block_delta",
+                {
+                    "type": "content_block_delta",
+                    "index": 0,
+                    "delta": {"type": "text_delta", "text": delta_content},
+                },
+            )
+
+    yield _sse_event(
+        "content_block_stop",
+        {"type": "content_block_stop", "index": 0},
+    )
+
+    stop_reason = _STOP_REASON_MAP.get(finish_reason, "end_turn")
+    yield _sse_event(
+        "message_delta",
+        {
+            "type": "message_delta",
+            "delta": {"stop_reason": stop_reason, "stop_sequence": None},
+            "usage": {"output_tokens": output_tokens},
+        },
+    )
+
+    yield _sse_event("message_stop", {"type": "message_stop"})
