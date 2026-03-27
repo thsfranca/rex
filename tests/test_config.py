@@ -13,6 +13,9 @@ class TestModelConfig:
         assert model.api_base is None
         assert model.cost_per_1k_input == 0.0
         assert model.is_local is False
+        assert model.max_context_window is None
+        assert model.supports_function_calling is False
+        assert model.supports_vision is False
 
     def test_all_fields_set(self):
         model = ModelConfig(
@@ -21,12 +24,18 @@ class TestModelConfig:
             api_base="http://localhost:11434",
             cost_per_1k_input=0.001,
             is_local=True,
+            max_context_window=128000,
+            supports_function_calling=True,
+            supports_vision=True,
         )
         assert model.name == "ollama/llama3"
         assert model.api_key == "sk-test"
         assert model.api_base == "http://localhost:11434"
         assert model.cost_per_1k_input == 0.001
         assert model.is_local is True
+        assert model.max_context_window == 128000
+        assert model.supports_function_calling is True
+        assert model.supports_vision is True
 
 
 class TestRoutingConfig:
