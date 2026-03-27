@@ -50,8 +50,8 @@ class TestComplexCategories:
     def test_explanation_is_not_complex(self):
         assert TaskCategory.EXPLANATION not in COMPLEX_CATEGORIES
 
-    def test_documentation_is_not_complex(self):
-        assert TaskCategory.DOCUMENTATION not in COMPLEX_CATEGORIES
+    def test_documentation_is_complex(self):
+        assert TaskCategory.DOCUMENTATION in COMPLEX_CATEGORIES
 
     def test_general_is_not_complex(self):
         assert TaskCategory.GENERAL not in COMPLEX_CATEGORIES
@@ -94,7 +94,6 @@ class TestTaskDecompositionEnricher:
             TaskCategory.DEBUGGING,
             TaskCategory.OPTIMIZATION,
             TaskCategory.EXPLANATION,
-            TaskCategory.DOCUMENTATION,
             TaskCategory.GENERAL,
         ]
         for category in simple_categories:
