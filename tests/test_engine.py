@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from app.config import ModelConfig
 from app.router.categories import TaskCategory
 from app.router.detector import FeatureType
 from app.router.engine import RoutingDecision, RoutingEngine
+from app.router.llm_judge import LLMJudge
 from app.router.registry import ModelRegistry
 
 
@@ -18,48 +22,55 @@ def _make_model(**overrides) -> ModelConfig:
 def _make_engine(
     models: list[ModelConfig],
     primary_model: str | None = None,
+    judge: LLMJudge | None = None,
+    confidence_threshold: float = 0.5,
 ) -> RoutingEngine:
     registry = ModelRegistry(models)
-    return RoutingEngine(registry, primary_model)
+    return RoutingEngine(registry, primary_model, judge, confidence_threshold)
 
 
 class TestSelectModel:
-    def test_routes_to_primary_model(self):
+    @pytest.mark.asyncio
+    async def test_routes_to_primary_model(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
         expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
         engine = _make_engine([cheap, expensive])
 
         messages = [{"role": "user", "content": "hello"}]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "cheap/model"
 
-    def test_routes_to_explicit_primary(self):
+    @pytest.mark.asyncio
+    async def test_routes_to_explicit_primary(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
         expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
         engine = _make_engine([cheap, expensive], primary_model="expensive/model")
 
         messages = [{"role": "user", "content": "hello"}]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "expensive/model"
 
-    def test_auto_selects_local_over_cloud(self):
+    @pytest.mark.asyncio
+    async def test_auto_selects_local_over_cloud(self):
         cloud = _make_model(name="cloud/model", cost_per_1k_input=0.001)
         local = _make_model(name="local/model", is_local=True, cost_per_1k_input=0.0)
         engine = _make_engine([cloud, local])
 
         messages = [{"role": "user", "content": "hello"}]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "local/model"
 
-    def test_single_model(self):
+    @pytest.mark.asyncio
+    async def test_single_model(self):
         model = _make_model(name="only/model")
         engine = _make_engine([model])
 
         messages = [{"role": "user", "content": "hello"}]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "only/model"
 
-    def test_uses_provided_feature_type(self):
+    @pytest.mark.asyncio
+    async def test_uses_provided_feature_type(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
         expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
         engine = _make_engine([cheap, expensive])
@@ -69,10 +80,11 @@ class TestSelectModel:
             {"role": "assistant", "content": "..."},
             {"role": "user", "content": "Show me an example"},
         ]
-        decision = engine.select_model(messages, feature_type=FeatureType.COMPLETION)
+        decision = await engine.select_model(messages, feature_type=FeatureType.COMPLETION)
         assert decision.model.name == "cheap/model"
 
-    def test_feature_type_none_falls_back_to_detection(self):
+    @pytest.mark.asyncio
+    async def test_feature_type_none_falls_back_to_detection(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
         engine = _make_engine([cheap])
 
@@ -81,15 +93,16 @@ class TestSelectModel:
             {"role": "assistant", "content": "..."},
             {"role": "user", "content": "More details"},
         ]
-        decision = engine.select_model(messages, feature_type=None)
+        decision = await engine.select_model(messages, feature_type=None)
         assert decision.model.name == "cheap/model"
 
-    def test_returns_routing_decision(self):
+    @pytest.mark.asyncio
+    async def test_returns_routing_decision(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
         engine = _make_engine([cheap])
 
         messages = [{"role": "user", "content": "hello"}]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert isinstance(decision, RoutingDecision)
         assert decision.model.name == "cheap/model"
         assert isinstance(decision.category, TaskCategory)
@@ -98,7 +111,8 @@ class TestSelectModel:
 
 
 class TestTaskAwareRouting:
-    def test_completion_always_routes_to_primary(self):
+    @pytest.mark.asyncio
+    async def test_completion_always_routes_to_primary(self):
         cheap = _make_model(
             name="cheap/model",
             cost_per_1k_input=0.001,
@@ -112,12 +126,13 @@ class TestTaskAwareRouting:
         engine = _make_engine([cheap, large])
 
         messages = [{"role": "user", "content": "x"}]
-        decision = engine.select_model(messages, max_tokens=100, temperature=0.0)
+        decision = await engine.select_model(messages, max_tokens=100, temperature=0.0)
         assert decision.model.name == "cheap/model"
         assert decision.category == TaskCategory.COMPLETION
         assert decision.feature_type == FeatureType.COMPLETION
 
-    def test_refactoring_upgrades_when_primary_too_small(self):
+    @pytest.mark.asyncio
+    async def test_refactoring_upgrades_when_primary_too_small(self):
         small = _make_model(
             name="small/model",
             cost_per_1k_input=0.001,
@@ -133,11 +148,12 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Please refactor this entire module"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "large/model"
         assert decision.category == TaskCategory.REFACTORING
 
-    def test_refactoring_stays_on_primary_when_it_qualifies(self):
+    @pytest.mark.asyncio
+    async def test_refactoring_stays_on_primary_when_it_qualifies(self):
         large_cheap = _make_model(
             name="large_cheap/model",
             cost_per_1k_input=0.001,
@@ -153,10 +169,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Refactor this module"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "large_cheap/model"
 
-    def test_code_review_upgrades_when_primary_too_small(self):
+    @pytest.mark.asyncio
+    async def test_code_review_upgrades_when_primary_too_small(self):
         small = _make_model(
             name="small/model",
             cost_per_1k_input=0.001,
@@ -174,10 +191,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Review this code for issues"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "large/model"
 
-    def test_migration_upgrades_from_local_to_cloud(self):
+    @pytest.mark.asyncio
+    async def test_migration_upgrades_from_local_to_cloud(self):
         local = _make_model(
             name="local/model",
             cost_per_1k_input=0.0,
@@ -193,10 +211,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Migrate this from Python 2 to Python 3"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "cloud/model"
 
-    def test_debugging_stays_on_primary_when_it_supports_reasoning(self):
+    @pytest.mark.asyncio
+    async def test_debugging_stays_on_primary_when_it_supports_reasoning(self):
         cheap = _make_model(
             name="cheap/model",
             cost_per_1k_input=0.001,
@@ -212,10 +231,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Fix this error in my code"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "cheap/model"
 
-    def test_debugging_upgrades_when_primary_lacks_reasoning(self):
+    @pytest.mark.asyncio
+    async def test_debugging_upgrades_when_primary_lacks_reasoning(self):
         cheap = _make_model(
             name="cheap/model",
             cost_per_1k_input=0.001,
@@ -231,10 +251,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Fix this error in my code"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "reasoning/model"
 
-    def test_optimization_upgrades_when_primary_lacks_reasoning(self):
+    @pytest.mark.asyncio
+    async def test_optimization_upgrades_when_primary_lacks_reasoning(self):
         cheap = _make_model(
             name="cheap/model",
             cost_per_1k_input=0.001,
@@ -250,10 +271,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Optimize this function for performance"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "reasoning/model"
 
-    def test_code_review_upgrades_for_reasoning_and_context(self):
+    @pytest.mark.asyncio
+    async def test_code_review_upgrades_for_reasoning_and_context(self):
         small_no_reason = _make_model(
             name="small/model",
             cost_per_1k_input=0.001,
@@ -271,10 +293,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Review this code for issues"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "large_reasoning/model"
 
-    def test_falls_back_to_primary_when_no_model_meets_requirements(self):
+    @pytest.mark.asyncio
+    async def test_falls_back_to_primary_when_no_model_meets_requirements(self):
         small = _make_model(
             name="small/model",
             cost_per_1k_input=0.001,
@@ -285,10 +308,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Refactor this entire codebase"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "small/model"
 
-    def test_picks_cheapest_among_qualifying_when_primary_unfit(self):
+    @pytest.mark.asyncio
+    async def test_picks_cheapest_among_qualifying_when_primary_unfit(self):
         small = _make_model(
             name="small/model",
             cost_per_1k_input=0.001,
@@ -309,10 +333,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Write tests for this service"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "large_cheap/model"
 
-    def test_general_task_stays_on_primary(self):
+    @pytest.mark.asyncio
+    async def test_general_task_stays_on_primary(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
         expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
         engine = _make_engine([cheap, expensive])
@@ -320,10 +345,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Tell me a joke"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "cheap/model"
 
-    def test_explicit_primary_respected_when_it_meets_requirements(self):
+    @pytest.mark.asyncio
+    async def test_explicit_primary_respected_when_it_meets_requirements(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
         expensive = _make_model(
             name="expensive/model",
@@ -335,10 +361,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Refactor this module"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "expensive/model"
 
-    def test_explicit_primary_respected_for_reasoning_task(self):
+    @pytest.mark.asyncio
+    async def test_explicit_primary_respected_for_reasoning_task(self):
         cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
         expensive = _make_model(
             name="expensive/model",
@@ -350,10 +377,11 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Debug this crash"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.model.name == "expensive/model"
 
-    def test_decision_includes_category_and_confidence(self):
+    @pytest.mark.asyncio
+    async def test_decision_includes_category_and_confidence(self):
         cheap = _make_model(
             name="cheap/model",
             cost_per_1k_input=0.001,
@@ -364,7 +392,7 @@ class TestTaskAwareRouting:
         messages = [
             {"role": "user", "content": "Fix this error in my code"},
         ]
-        decision = engine.select_model(messages)
+        decision = await engine.select_model(messages)
         assert decision.category == TaskCategory.DEBUGGING
         assert decision.confidence > 0.0
         assert decision.feature_type == FeatureType.CHAT
@@ -421,3 +449,85 @@ class TestFallbackOrder:
         fallbacks = engine.fallback_order(local)
         names = [f.name for f in fallbacks]
         assert names == ["cloud", "cloud2"]
+
+
+class TestLLMJudgeIntegration:
+    @pytest.mark.asyncio
+    @patch("app.router.llm_judge.litellm")
+    async def test_judge_triggers_on_low_confidence(self, mock_litellm):
+        mock_response = MagicMock()
+        mock_response.choices = [
+            MagicMock(message=MagicMock(content=json.dumps({"category": "debugging"})))
+        ]
+        mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001, supports_reasoning=True)
+        judge = LLMJudge(model="ollama/llama3")
+        engine = _make_engine([cheap], judge=judge, confidence_threshold=0.9)
+
+        messages = [{"role": "user", "content": "Can you help me with this code?"}]
+        decision = await engine.select_model(messages)
+
+        mock_litellm.acompletion.assert_called_once()
+        assert decision.category == TaskCategory.DEBUGGING
+
+    @pytest.mark.asyncio
+    async def test_judge_skips_when_confidence_above_threshold(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001, supports_reasoning=True)
+        judge = LLMJudge(model="ollama/llama3")
+        engine = _make_engine([cheap], judge=judge, confidence_threshold=0.1)
+
+        messages = [{"role": "user", "content": "Fix this error in my code"}]
+        decision = await engine.select_model(messages)
+        assert decision.category == TaskCategory.DEBUGGING
+
+    @pytest.mark.asyncio
+    async def test_judge_skips_for_completions(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        judge = LLMJudge(model="ollama/llama3")
+        engine = _make_engine([cheap], judge=judge, confidence_threshold=0.9)
+
+        messages = [{"role": "user", "content": "x"}]
+        decision = await engine.select_model(messages, max_tokens=50, temperature=0.0)
+        assert decision.category == TaskCategory.COMPLETION
+
+    @pytest.mark.asyncio
+    @patch("app.router.llm_judge.litellm")
+    async def test_judge_failure_falls_back_to_heuristics(self, mock_litellm):
+        mock_litellm.acompletion = AsyncMock(side_effect=Exception("connection failed"))
+
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        judge = LLMJudge(model="ollama/llama3")
+        engine = _make_engine([cheap], judge=judge, confidence_threshold=0.9)
+
+        messages = [{"role": "user", "content": "Can you help me with this code?"}]
+        decision = await engine.select_model(messages)
+        assert decision.model.name == "cheap/model"
+
+    @pytest.mark.asyncio
+    async def test_no_judge_uses_heuristics_only(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001, supports_reasoning=True)
+        engine = _make_engine([cheap])
+
+        messages = [{"role": "user", "content": "Fix this error in my code"}]
+        decision = await engine.select_model(messages)
+        assert decision.category == TaskCategory.DEBUGGING
+
+    @pytest.mark.asyncio
+    @patch("app.router.llm_judge.litellm")
+    async def test_judge_result_routes_to_correct_model(self, mock_litellm):
+        mock_response = MagicMock()
+        mock_response.choices = [
+            MagicMock(message=MagicMock(content=json.dumps({"category": "refactoring"})))
+        ]
+        mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+
+        small = _make_model(name="small/model", cost_per_1k_input=0.001, max_context_window=8000)
+        large = _make_model(name="large/model", cost_per_1k_input=0.01, max_context_window=128000)
+        judge = LLMJudge(model="ollama/llama3")
+        engine = _make_engine([small, large], judge=judge, confidence_threshold=0.9)
+
+        messages = [{"role": "user", "content": "Can you help me with this code?"}]
+        decision = await engine.select_model(messages)
+        assert decision.category == TaskCategory.REFACTORING
+        assert decision.model.name == "large/model"
