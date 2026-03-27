@@ -14,6 +14,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 - **Fallback chains**: If the selected model fails, Rex tries the next model in cost order.
 - **SSE streaming**: Full Server-Sent Events streaming support for chat completions.
 - **Enrichment pipeline**: Rex transforms complex requests (generation, refactoring, migration, code review, test generation) by injecting task decomposition instructions before the model call. Each enricher is opt-in via config.
+- **LLM-as-Judge fallback**: When heuristic classification confidence is low, Rex calls a small local LLM to reclassify the task. The judge only triggers for chat/agent requests — never for tab completions. If the judge fails, Rex falls back to heuristics.
 - **Transparent passthrough**: Unknown endpoints are forwarded to the primary model's backend — Rex never blocks an endpoint it doesn't handle.
 - **Optional YAML config**: Add custom models, override routing, or enable enrichments via `config.yaml`.
 
@@ -21,7 +22,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 
 1. On startup, Rex **discovers** available models from environment variables (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.), local runtimes (Ollama), and provider APIs — enriches each with metadata (cost, context window, capabilities) and merges with any `config.yaml` overrides.
 2. Rex sorts models by cost (local first, then cheapest cloud) and selects the **primary model**.
-3. For each request, the **classifier** identifies the task type (debugging, refactoring, code review, etc.) and the **router** picks the cheapest model that meets the task's requirements. If the primary already qualifies, it stays on primary.
+3. For each request, the **classifier** identifies the task type (debugging, refactoring, code review, etc.) and the **router** picks the cheapest model that meets the task's requirements. If the primary already qualifies, it stays on primary. When heuristic confidence is low, the **LLM judge** reclassifies using a small local model.
 4. For complex tasks (generation, refactoring, migration, code review, test generation), the **enrichment pipeline** injects task decomposition instructions into the request before the model call. Each enricher is opt-in via config.
 5. If the selected model fails, the **fallback chain** tries remaining models in cost order.
 
@@ -69,6 +70,7 @@ app/
     classifier.py        # Heuristic task classifier (keyword + structural)
     detector.py          # Feature detection (completion vs. chat)
     engine.py            # Routing engine (task-aware selection + fallback)
+    llm_judge.py         # LLM-as-Judge fallback classifier
     registry.py          # Model registry (lookups, cost sorting, filtering)
   proxy/
     handler.py           # OpenAI-compatible request handler

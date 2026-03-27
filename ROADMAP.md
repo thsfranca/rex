@@ -6,8 +6,6 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ## Phase 0 — Proxy + Basic Routing
 
-> Detailed spec: [docs/specs/phase-0-proxy-basic-routing.md](docs/specs/phase-0-proxy-basic-routing.md)
-
 **Goal**: An OpenAI-compatible proxy that routes requests across multiple model backends based on feature detection.
 
 **Deliverables**:
@@ -38,8 +36,6 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ## Phase 2 — Enrichment Pipeline
 
-> Detailed spec: [docs/specs/enrichment-pipeline.md](docs/specs/enrichment-pipeline.md)
-
 **Goal**: A pluggable pipeline that transforms requests after routing but before the model call. The first enricher injects task decomposition instructions for complex tasks, replicating structured step-by-step execution across all models.
 
 **Deliverables**:
@@ -58,11 +54,11 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 **Goal**: Use a small local LLM to classify the task when heuristic confidence is low ([Zheng et al., 2023](https://arxiv.org/abs/2306.05685)).
 
 **Deliverables**:
-- [ ] Confidence threshold: below this, trigger the judge instead of routing on low-confidence heuristics
-- [ ] Small local model integration via LiteLLM
-- [ ] Classification meta-prompt that returns structured JSON (`category`, `confidence`, `complexity`, `min_context_window`)
-- [ ] JSON mode parsing of judge response
-- [ ] Latency guard: only triggered for chat/agent paths, never for completions
+- [x] Confidence threshold: below this, trigger the judge instead of routing on low-confidence heuristics
+- [x] Small local model integration via LiteLLM (auto-selects cheapest local model when none configured)
+- [x] Classification meta-prompt that returns structured JSON (`category`, `min_context_window`)
+- [x] JSON mode parsing of judge response with category validation
+- [x] Latency guard: only triggered for chat/agent paths, never for completions
 
 ---
 
