@@ -282,6 +282,42 @@ class TestClassificationResult:
         except AttributeError:
             pass
 
+    def test_scores_default_to_empty_dict(self):
+        result = ClassificationResult(category=TaskCategory.GENERAL, confidence=0.5)
+        assert result.scores == {}
+
+    def test_scores_preserved(self):
+        scores = {TaskCategory.DEBUGGING: 0.8, TaskCategory.REFACTORING: 0.3}
+        result = ClassificationResult(
+            category=TaskCategory.DEBUGGING, confidence=0.8, scores=scores
+        )
+        assert result.scores == scores
+
+
+class TestScoresField:
+    def test_classify_returns_scores_for_matching_categories(self):
+        messages = [{"role": "user", "content": "Fix this error in my code"}]
+        result = classify(messages)
+        assert result.category == TaskCategory.DEBUGGING
+        assert TaskCategory.DEBUGGING in result.scores
+        assert result.scores[TaskCategory.DEBUGGING] > 0
+
+    def test_classify_returns_empty_scores_for_general(self):
+        messages = [{"role": "user", "content": "hello world"}]
+        result = classify(messages)
+        assert result.category == TaskCategory.GENERAL
+        assert result.scores == {}
+
+    def test_classify_returns_empty_scores_for_empty_message(self):
+        messages = [{"role": "user", "content": ""}]
+        result = classify(messages)
+        assert result.scores == {}
+
+    def test_classify_returns_multiple_scores_when_ambiguous(self):
+        messages = [{"role": "user", "content": "Fix this error and create a test"}]
+        result = classify(messages)
+        assert len(result.scores) >= 2
+
 
 class TestPriorityResolution:
     def test_debugging_wins_over_generation_when_both_match(self):
