@@ -38,6 +38,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 | `POST /v1/completions` | Legacy completions |
 | `GET /v1/models` | Lists all discovered models |
 | `GET /health` | Proxy status |
+| `POST /v1/reset` | Clears all learning data and trained models, restores fresh state |
 | `/{path}` | Transparent passthrough to the primary model's backend |
 
 ## Tech Stack

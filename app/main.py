@@ -86,6 +86,7 @@ async def lifespan(app: FastAPI):
         label_model=LabelModel(),
         ml_classifier=ml_classifier,
         engine=_engine,
+        embedding_service=_embedding_service,
         recluster_interval=_settings.learning.recluster_interval,
         max_k=_settings.learning.max_k,
         promotion_threshold=_settings.learning.promotion_silhouette_threshold,
@@ -189,6 +190,14 @@ async def list_models():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.post("/v1/reset")
+async def reset_learning():
+    if _scheduler is None:
+        return _error_response(503, "Scheduler not initialized", "service_unavailable")
+    await _scheduler.reset()
+    return JSONResponse(content={"status": "ok", "message": "All learning data cleared"})
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
