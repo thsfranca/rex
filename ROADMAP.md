@@ -64,6 +64,8 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ## Phase 4 — Decision Logging + Embedding Pipeline
 
+> Detailed spec: [docs/specs/phase-4-decision-logging-embeddings.md](docs/specs/phase-4-decision-logging-embeddings.md)
+
 **Goal**: Build the data collection infrastructure that feeds the learning pipeline. Decision logging provides routing observability, and sentence transformer embeddings enable semantic classification from the first query.
 
 **Deliverables**:
@@ -74,6 +76,8 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 ---
 
 ## Phase 5 — Learning Pipeline + ML Classifier
+
+> Detailed spec: [docs/specs/phase-5-learning-pipeline-ml-classifier.md](docs/specs/phase-5-learning-pipeline-ml-classifier.md)
 
 **Goal**: Train a personalized ML classifier from accumulated data using unsupervised clustering and weak supervision. The classifier replaces heuristics as the primary router once it reaches quality thresholds.
 
