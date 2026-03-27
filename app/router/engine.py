@@ -1,14 +1,23 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 from app.config import ModelConfig
-from app.router.categories import TaskRequirements, get_requirements
+from app.router.categories import TaskCategory, TaskRequirements, get_requirements
 from app.router.classifier import classify
 from app.router.detector import FeatureType, detect_feature
 from app.router.registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class RoutingDecision:
+    model: ModelConfig
+    category: TaskCategory
+    confidence: float
+    feature_type: FeatureType
 
 
 class RoutingEngine:
@@ -56,17 +65,27 @@ class RoutingEngine:
         max_tokens: int | None = None,
         temperature: float | None = None,
         feature_type: FeatureType | None = None,
-    ) -> ModelConfig:
+    ) -> RoutingDecision:
         feature = feature_type or detect_feature(messages, max_tokens, temperature)
 
         if feature == FeatureType.COMPLETION:
-            return self._primary
+            return RoutingDecision(
+                model=self._primary,
+                category=TaskCategory.COMPLETION,
+                confidence=1.0,
+                feature_type=feature,
+            )
 
         result = classify(messages)
         requirements = get_requirements(result.category)
 
         if self._model_meets_requirements(self._primary, requirements):
-            return self._primary
+            return RoutingDecision(
+                model=self._primary,
+                category=result.category,
+                confidence=result.confidence,
+                feature_type=feature,
+            )
 
         candidates = self._registry.filter_by_requirements(requirements)
         if candidates:
@@ -78,13 +97,23 @@ class RoutingEngine:
                 candidates[0].name,
                 self._primary.name,
             )
-            return candidates[0]
+            return RoutingDecision(
+                model=candidates[0],
+                category=result.category,
+                confidence=result.confidence,
+                feature_type=feature,
+            )
 
         logger.info(
             "Task classified as %s but no model meets requirements, " "falling back to primary",
             result.category.value,
         )
-        return self._primary
+        return RoutingDecision(
+            model=self._primary,
+            category=result.category,
+            confidence=result.confidence,
+            feature_type=feature,
+        )
 
     def fallback_order(self, primary: ModelConfig) -> list[ModelConfig]:
         by_cost = self._registry.sorted_by_cost()

@@ -102,7 +102,7 @@ async def handle_chat_completion(
         temperature=body.get("temperature"),
     )
 
-    selected = engine.select_model(
+    decision = engine.select_model(
         messages=normalized.messages,
         max_tokens=normalized.max_tokens,
         temperature=normalized.temperature,
@@ -110,7 +110,7 @@ async def handle_chat_completion(
     )
 
     response, used_model = await _call_with_fallback(
-        engine, selected, body, stream, request_api_key
+        engine, decision.model, body, stream, request_api_key
     )
     logger.info("Routed to %s", used_model.name)
 
@@ -128,14 +128,14 @@ async def handle_text_completion(
     stream = body.get("stream", False)
     request_api_key = _extract_bearer_token(authorization)
 
-    selected = engine.select_model(
+    decision = engine.select_model(
         messages=body.get("messages", []),
         max_tokens=body.get("max_tokens"),
         temperature=body.get("temperature"),
     )
 
     response, used_model = await _call_with_fallback(
-        engine, selected, body, stream, request_api_key
+        engine, decision.model, body, stream, request_api_key
     )
     logger.info("Routed text completion to %s", used_model.name)
 
