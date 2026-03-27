@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from app.router.categories import TaskCategory
-from app.router.classifier import ClassificationResult, classify, _extract_last_user_message
+from app.router.classifier import (
+    ClassificationResult,
+    classify,
+    _extract_last_user_message,
+    _code_block_ratio,
+)
 
 
 class TestExtractLastUserMessage:
@@ -175,6 +180,97 @@ class TestClassifyGeneral:
     def test_no_messages(self):
         result = classify([])
         assert result.category == TaskCategory.GENERAL
+
+
+class TestCodeBlockRatio:
+    def test_no_code_blocks(self):
+        assert _code_block_ratio("just plain text") == 0.0
+
+    def test_empty_text(self):
+        assert _code_block_ratio("") == 0.0
+
+    def test_all_code(self):
+        text = "```python\nprint('hello')\n```"
+        assert _code_block_ratio(text) == 1.0
+
+    def test_mixed_content(self):
+        text = "some text ```code``` more text"
+        ratio = _code_block_ratio(text)
+        assert 0.0 < ratio < 1.0
+
+    def test_multiple_code_blocks(self):
+        text = "text ```block1``` middle ```block2``` end"
+        ratio = _code_block_ratio(text)
+        assert ratio > 0.0
+
+
+class TestStructuralAnalysis:
+    def test_code_blocks_boost_debugging_confidence(self):
+        without_code = [
+            {"role": "user", "content": "Fix this error in my code"},
+        ]
+        with_code = [
+            {
+                "role": "user",
+                "content": (
+                    "Fix this error:\n"
+                    "```python\n"
+                    "def foo():\n"
+                    "    return bar()\n"
+                    "```\n"
+                    "err"
+                ),
+            },
+        ]
+        result_without = classify(without_code)
+        result_with = classify(with_code)
+        assert result_without.category == TaskCategory.DEBUGGING
+        assert result_with.category == TaskCategory.DEBUGGING
+        assert result_with.confidence >= result_without.confidence
+
+    def test_long_prompt_boosts_refactoring_confidence(self):
+        short_prompt = [
+            {"role": "user", "content": "Refactor this function"},
+        ]
+        long_prompt = [
+            {
+                "role": "user",
+                "content": "Refactor this function " + "x " * 300,
+            },
+        ]
+        result_short = classify(short_prompt)
+        result_long = classify(long_prompt)
+        assert result_short.category == TaskCategory.REFACTORING
+        assert result_long.category == TaskCategory.REFACTORING
+        assert result_long.confidence > result_short.confidence
+
+    def test_code_block_does_not_boost_non_code_categories(self):
+        messages = [
+            {
+                "role": "user",
+                "content": (
+                    "Explain this concept:\n" "```python\n" "x = [i for i in range(10)]\n" "```"
+                ),
+            },
+        ]
+        result = classify(messages)
+        assert result.category == TaskCategory.EXPLANATION
+        assert result.confidence <= 0.7
+
+    def test_long_prompt_does_not_boost_explanation(self):
+        messages = [
+            {
+                "role": "user",
+                "content": "Explain how this works " + "x " * 300,
+            },
+        ]
+        result = classify(messages)
+        assert result.category == TaskCategory.EXPLANATION
+        base_messages = [
+            {"role": "user", "content": "Explain how this works"},
+        ]
+        base_result = classify(base_messages)
+        assert result.confidence == base_result.confidence
 
 
 class TestClassificationResult:
