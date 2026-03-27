@@ -216,9 +216,11 @@ app/
     metadata.py          # Enriches models with LiteLLM metadata
     registry_builder.py  # Orchestrates discovery and builds the model registry
   router/
+    categories.py        # Task categories and routing requirements
+    classifier.py        # Heuristic task classifier (keyword + structural)
     detector.py          # Feature detection (completion vs. chat)
-    engine.py            # Routing engine (primary selection + fallback)
-    registry.py          # Model registry (lookups, cost sorting)
+    engine.py            # Routing engine (task-aware selection + fallback)
+    registry.py          # Model registry (lookups, cost sorting, filtering)
   proxy/
     handler.py           # OpenAI-compatible request handler
     streaming.py         # SSE streaming response logic
@@ -229,7 +231,6 @@ tests/                   # pytest test suite
 
 Future phases will add:
 - `app/adapters/` — client adapter interface (Cursor, Claude Code, etc.)
-- `app/router/classifier.py` — heuristic task classifier
 - `app/router/ml_classifier.py` — trained ML classifier
 - `app/router/llm_judge.py` — LLM-as-Judge fallback
 - `app/learning/` — embedding pipeline, clustering, weak supervision
