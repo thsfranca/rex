@@ -44,12 +44,17 @@ class TestDecisionRecord:
         record = _make_record()
         assert record.fallback_triggered is False
 
+    def test_escalated_defaults_to_false(self):
+        record = _make_record()
+        assert record.escalated is False
+
     def test_all_fields_set(self):
         record = _make_record(
             input_tokens=100,
             output_tokens=200,
             cost=0.005,
             fallback_triggered=True,
+            escalated=True,
             rule_votes={"debugging": 0.8, "refactoring": 0.2},
             embedding=b"\x00\x01\x02",
         )
@@ -57,6 +62,7 @@ class TestDecisionRecord:
         assert record.output_tokens == 200
         assert record.cost == 0.005
         assert record.fallback_triggered is True
+        assert record.escalated is True
         assert record.rule_votes == {"debugging": 0.8, "refactoring": 0.2}
         assert record.embedding == b"\x00\x01\x02"
 
@@ -165,3 +171,67 @@ class TestSQLiteDecisionRepository:
         by_hash = {r.prompt_hash: r for r in results}
         assert by_hash["abc123"].fallback_triggered is False
         assert by_hash["fb"].fallback_triggered is True
+
+    async def test_escalated_roundtrip(self, repo):
+        await repo.save(_make_record(escalated=False))
+        await repo.save(_make_record(escalated=True, prompt_hash="esc"))
+
+        results = await repo.get_recent(limit=10)
+        by_hash = {r.prompt_hash: r for r in results}
+        assert by_hash["abc123"].escalated is False
+        assert by_hash["esc"].escalated is True
+
+    async def test_migrates_existing_db_without_escalated_column(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "legacy.db")
+            import sqlite3
+
+            conn = sqlite3.connect(db_path)
+            conn.execute("""
+                CREATE TABLE decisions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp TEXT NOT NULL,
+                    prompt_hash TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    confidence REAL NOT NULL,
+                    feature_type TEXT NOT NULL,
+                    selected_model TEXT NOT NULL,
+                    used_model TEXT NOT NULL,
+                    response_time_ms INTEGER NOT NULL,
+                    input_tokens INTEGER,
+                    output_tokens INTEGER,
+                    cost REAL,
+                    fallback_triggered INTEGER NOT NULL DEFAULT 0,
+                    rule_votes TEXT,
+                    embedding BLOB
+                )
+                """)
+            conn.execute(
+                """
+                INSERT INTO decisions (
+                    timestamp, prompt_hash, category, confidence, feature_type,
+                    selected_model, used_model, response_time_ms, fallback_triggered
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    "2026-03-27T12:00:00",
+                    "legacy_hash",
+                    "debugging",
+                    0.8,
+                    "chat",
+                    "model-a",
+                    "model-a",
+                    100,
+                    0,
+                ),
+            )
+            conn.commit()
+            conn.close()
+
+            repo = SQLiteDecisionRepository(db_path=db_path)
+            await repo.save(_make_record(prompt_hash="new_hash", escalated=True))
+
+            results = await repo.get_recent(limit=10)
+            by_hash = {r.prompt_hash: r for r in results}
+            assert by_hash["legacy_hash"].escalated is False
+            assert by_hash["new_hash"].escalated is True

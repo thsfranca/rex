@@ -142,6 +142,7 @@ async def _log_decision(
             output_tokens=output_tokens,
             cost=cost,
             fallback_triggered=decision.model.name != used_model.name,
+            escalated=decision.escalated,
             rule_votes=rule_votes,
             embedding=embedding_bytes,
         )

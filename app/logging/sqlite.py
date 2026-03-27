@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS decisions (
     output_tokens INTEGER,
     cost REAL,
     fallback_triggered INTEGER NOT NULL DEFAULT 0,
+    escalated INTEGER NOT NULL DEFAULT 0,
     rule_votes TEXT,
     embedding BLOB
 );
@@ -31,6 +32,10 @@ CREATE TABLE IF NOT EXISTS decisions (
 _CREATE_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_decisions_timestamp ON decisions(timestamp);",
     "CREATE INDEX IF NOT EXISTS idx_decisions_category ON decisions(category);",
+]
+
+_MIGRATIONS = [
+    "ALTER TABLE decisions ADD COLUMN escalated INTEGER NOT NULL DEFAULT 0;",
 ]
 
 
@@ -47,9 +52,18 @@ class SQLiteDecisionRepository:
             conn.execute(_CREATE_TABLE)
             for idx_sql in _CREATE_INDEXES:
                 conn.execute(idx_sql)
+            self._run_migrations(conn)
             conn.commit()
             self._initialized = True
         return conn
+
+    @staticmethod
+    def _run_migrations(conn: sqlite3.Connection) -> None:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(decisions)").fetchall()}
+        for migration in _MIGRATIONS:
+            col_name = migration.split("ADD COLUMN ")[1].split(" ")[0]
+            if col_name not in columns:
+                conn.execute(migration)
 
     def _save_sync(self, record: DecisionRecord) -> None:
         conn = self._get_connection()
@@ -60,8 +74,8 @@ class SQLiteDecisionRepository:
                     timestamp, prompt_hash, category, confidence, feature_type,
                     selected_model, used_model, response_time_ms,
                     input_tokens, output_tokens, cost,
-                    fallback_triggered, rule_votes, embedding
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    fallback_triggered, escalated, rule_votes, embedding
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record.timestamp.isoformat(),
@@ -76,6 +90,7 @@ class SQLiteDecisionRepository:
                     record.output_tokens,
                     record.cost,
                     int(record.fallback_triggered),
+                    int(record.escalated),
                     json.dumps(record.rule_votes) if record.rule_votes is not None else None,
                     record.embedding,
                 ),
@@ -131,6 +146,7 @@ class SQLiteDecisionRepository:
             output_tokens=row["output_tokens"],
             cost=row["cost"],
             fallback_triggered=bool(row["fallback_triggered"]),
+            escalated=bool(row["escalated"]),
             rule_votes=rule_votes,
             embedding=row["embedding"],
         )

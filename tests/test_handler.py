@@ -218,6 +218,27 @@ class TestDecisionLogging:
 
         assert isinstance(response, JSONResponse)
 
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_logs_escalated_flag(self, mock_litellm):
+        mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
+        mock_litellm.completion_cost.return_value = 0.0
+
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
+        engine = _make_engine([cheap, expensive], confidence_threshold=0.9)
+
+        repository = MagicMock()
+        repository.save = AsyncMock()
+
+        body = {"messages": [{"role": "user", "content": "hello"}]}
+        await handle_chat_completion(body, engine, repository=repository)
+        await asyncio.sleep(0.05)
+
+        repository.save.assert_called_once()
+        record = repository.save.call_args[0][0]
+        assert record.escalated is True
+
     def test_hash_prompt_deterministic(self):
         assert _hash_prompt("test") == _hash_prompt("test")
         assert _hash_prompt("test") != _hash_prompt("other")
