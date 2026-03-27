@@ -95,7 +95,6 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] ML classifier training: train on cluster-derived + weakly-supervised labels, automatic retraining as usage patterns evolve
 - [x] Automatic promotion: ML classifier replaces heuristics as primary when silhouette score > 0.5 and label model converges; heuristics demote to labeling functions only
 - [x] Per-category outcome tracking (fallback triggers, error rate, latency, re-ask rate)
-- [x] Upward migration: promote categories with persistent poor outcomes to more capable models
 
 ---
 
