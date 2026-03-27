@@ -86,13 +86,19 @@ class TestCategoryRequirements:
         req = get_requirements(TaskCategory.TEST_GENERATION)
         assert req.min_context_window == 16_000
 
+    def test_documentation_needs_medium_context(self):
+        req = get_requirements(TaskCategory.DOCUMENTATION)
+        assert req.min_context_window == 16_000
+
     def test_generation_needs_medium_context(self):
         req = get_requirements(TaskCategory.GENERATION)
         assert req.min_context_window == 16_000
 
-    def test_migration_needs_cloud(self):
+    def test_migration_needs_reasoning_and_large_context(self):
         req = get_requirements(TaskCategory.MIGRATION)
-        assert req.needs_cloud is True
+        assert req.needs_reasoning is True
+        assert req.min_context_window == 32_000
+        assert req.needs_cloud is False
 
     def test_completion_has_no_special_requirements(self):
         req = get_requirements(TaskCategory.COMPLETION)

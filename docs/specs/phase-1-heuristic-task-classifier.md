@@ -51,24 +51,41 @@ class TaskCategory(str, Enum):
 
 ## Routing Requirements
 
-Each category maps to a static set of routing requirements:
+Each category maps to a static set of routing requirements. The engine uses these requirements to filter the model registry and select the cheapest model that qualifies.
 
-| Category | `min_context_window` | `needs_reasoning` | `needs_cloud` |
-|---|---|---|---|
-| `completion` | — | — | — |
-| `debugging` | — | yes | — |
-| `refactoring` | 32,000 | — | — |
-| `optimization` | — | yes | — |
-| `test_generation` | 16,000 | — | — |
-| `explanation` | — | — | — |
-| `documentation` | — | — | — |
-| `code_review` | 32,000 | yes | — |
-| `generation` | 16,000 | — | — |
-| `migration` | — | — | yes |
-| `general` | — | — | — |
+| Category | `min_context_window` | `needs_reasoning` |
+|---|---|---|
+| `completion` | — | — |
+| `debugging` | — | yes |
+| `refactoring` | 32,000 | — |
+| `optimization` | — | yes |
+| `test_generation` | 16,000 | — |
+| `explanation` | — | — |
+| `documentation` | 16,000 | — |
+| `code_review` | 32,000 | yes |
+| `generation` | 16,000 | — |
+| `migration` | 32,000 | yes |
+| `general` | — | — |
 
-- `needs_function_calling` exists in `TaskRequirements` but no category sets it to `True`.
-- The routing engine uses these requirements to filter the model registry and select the cheapest model that qualifies.
+- `needs_function_calling` and `needs_cloud` exist in `TaskRequirements` but no category currently sets them to `True`.
+
+### Rationale
+
+Each requirement targets capabilities that a model must have to avoid near-certain failure on the task. Requirements are the minimum bar — if a model fails despite meeting them, the fallback chain escalates.
+
+| Category | Requirements | Why |
+|---|---|---|
+| `completion` | none | Tab completion is short code insertion. Any model handles it. |
+| `debugging` | `needs_reasoning` | Debugging requires tracing control flow, correlating error messages with code logic, and understanding side effects. Non-reasoning models frequently miss root causes. Code reasoning complexity (execution traces, control flow) is a top differentiator between model tiers ([CodeGlance, 2026](https://arxiv.org/abs/2602.13962)). |
+| `refactoring` | `min_context_window=32k` | Refactoring requires visibility into class hierarchies, call sites, and dependencies across files. A model that can only see a fraction of the affected code produces incomplete or inconsistent changes. |
+| `optimization` | `needs_reasoning` | Performance optimization requires analyzing algorithmic complexity, memory patterns, and profiling data. Even reasoning models achieve only 4.8% accuracy generating code under specific complexity constraints ([BigO(Bench), 2025](https://arxiv.org/abs/2503.15242)). Non-reasoning models perform substantially worse. |
+| `test_generation` | `min_context_window=16k` | Tests need to see the implementation being tested, existing test patterns, and fixtures. 16k context covers most single-module test scenarios. |
+| `explanation` | none | Explanation ranges from trivial ("what does `len()` do?") to complex. The cheap-first strategy with fallback escalation handles this range — simple explanations stay cheap, complex ones escalate on failure. |
+| `documentation` | `min_context_window=16k` | Writing documentation requires seeing the code being documented — function signatures, class hierarchies, module structure. Small models generate good function-level docstrings, but file-level documentation quality drops significantly without sufficient context ([comparative analysis of LLMs for code documentation, 2024](https://arxiv.org/abs/2312.10349)). 16k covers function-level and most file-level documentation scenarios. |
+| `code_review` | `min_context_window=32k`, `needs_reasoning` | Review requires seeing a large diff (context) and reasoning about correctness, security, and edge cases. Both requirements are necessary — context alone is insufficient without the ability to reason about what the code does. |
+| `generation` | `min_context_window=16k` | Code generation from descriptions needs surrounding codebase context (imports, types, APIs) to produce code that fits the project. |
+| `migration` | `min_context_window=32k`, `needs_reasoning` | Migration requires reasoning about API differences, mapping deprecated patterns to new ones, and handling breaking changes. It also requires large context to see enough of the codebase for consistent migration. [CodeMEnv (2025)](https://arxiv.org/abs/2506.00894) shows that model capability (reasoning ability) — not deployment location (cloud vs local) — determines migration success. [Google's migration study (2025)](https://arxiv.org/abs/2504.09691) confirms the same at enterprise scale. |
+| `general` | none | Catch-all fallback. Cheap-first with escalation on failure. |
 
 ### TaskRequirements
 

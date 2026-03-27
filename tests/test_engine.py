@@ -199,24 +199,49 @@ class TestTaskAwareRouting:
         assert decision.model.name == "large/model"
 
     @pytest.mark.asyncio
-    async def test_migration_upgrades_from_local_to_cloud(self):
-        local = _make_model(
-            name="local/model",
-            cost_per_1k_input=0.0,
-            is_local=True,
+    async def test_migration_upgrades_when_primary_lacks_reasoning_or_context(self):
+        small = _make_model(
+            name="small/model",
+            cost_per_1k_input=0.001,
+            max_context_window=8000,
+            supports_reasoning=False,
         )
-        cloud = _make_model(
-            name="cloud/model",
+        capable = _make_model(
+            name="capable/model",
             cost_per_1k_input=0.01,
-            is_local=False,
+            max_context_window=128000,
+            supports_reasoning=True,
         )
-        engine = _make_engine([local, cloud])
+        engine = _make_engine([small, capable])
 
         messages = [
             {"role": "user", "content": "Migrate this from Python 2 to Python 3"},
         ]
         decision = await engine.select_model(messages)
-        assert decision.model.name == "cloud/model"
+        assert decision.model.name == "capable/model"
+
+    @pytest.mark.asyncio
+    async def test_migration_stays_on_primary_when_it_qualifies(self):
+        capable_cheap = _make_model(
+            name="capable_cheap/model",
+            cost_per_1k_input=0.001,
+            max_context_window=64000,
+            supports_reasoning=True,
+            is_local=True,
+        )
+        capable_expensive = _make_model(
+            name="capable_expensive/model",
+            cost_per_1k_input=0.03,
+            max_context_window=128000,
+            supports_reasoning=True,
+        )
+        engine = _make_engine([capable_cheap, capable_expensive])
+
+        messages = [
+            {"role": "user", "content": "Migrate this from Python 2 to Python 3"},
+        ]
+        decision = await engine.select_model(messages)
+        assert decision.model.name == "capable_cheap/model"
 
     @pytest.mark.asyncio
     async def test_debugging_stays_on_primary_when_it_supports_reasoning(self):

@@ -78,10 +78,10 @@ The heuristic classifier uses these predefined categories as a starting point:
 | **optimization** | "faster", "performance", "optimize", "memory", "efficient" | `supports_reasoning`, cheapest among matches |
 | **test_generation** | "write tests", "add test", "spec", "coverage" | Context window ≥ 16K, cheapest among matches |
 | **explanation** | "explain", "what does", "how does", "why" | Cheapest model |
-| **documentation** | "document", "docstring", "README", "API docs" | Cheapest model |
+| **documentation** | "document", "docstring", "README", "API docs" | Context window ≥ 16K, cheapest among matches |
 | **code_review** | "review", "is this correct", "what's wrong", "security" | Context window ≥ 32K, `supports_reasoning`, cheapest among matches |
 | **generation** | Writing new code from description | Context window ≥ 16K, cheapest among matches |
-| **migration** | "upgrade", "migrate", "convert to", "update from" | Cloud model (`is_local` = false), cheapest among matches |
+| **migration** | "upgrade", "migrate", "convert to", "update from" | Context window ≥ 32K, `supports_reasoning`, cheapest among matches |
 | **general** | Fallback when nothing else matches | Primary model |
 
 All routing criteria come from measurable model properties — cost, context window, capability flags from LiteLLM, and `is_local`. Rex never uses a manually curated "strengths" list.

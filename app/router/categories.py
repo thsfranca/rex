@@ -33,10 +33,10 @@ CATEGORY_REQUIREMENTS: dict[TaskCategory, TaskRequirements] = {
     TaskCategory.OPTIMIZATION: TaskRequirements(needs_reasoning=True),
     TaskCategory.TEST_GENERATION: TaskRequirements(min_context_window=16_000),
     TaskCategory.EXPLANATION: TaskRequirements(),
-    TaskCategory.DOCUMENTATION: TaskRequirements(),
+    TaskCategory.DOCUMENTATION: TaskRequirements(min_context_window=16_000),
     TaskCategory.CODE_REVIEW: TaskRequirements(min_context_window=32_000, needs_reasoning=True),
     TaskCategory.GENERATION: TaskRequirements(min_context_window=16_000),
-    TaskCategory.MIGRATION: TaskRequirements(needs_cloud=True),
+    TaskCategory.MIGRATION: TaskRequirements(needs_reasoning=True, min_context_window=32_000),
     TaskCategory.GENERAL: TaskRequirements(),
 }
 
