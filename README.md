@@ -48,6 +48,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 ```
 app/
   main.py                # FastAPI app entry point
+  cli.py                 # CLI entry point (`rex` command)
   config.py              # Pydantic settings model + optional YAML loader
   discovery/
     providers.py         # Detects available providers from env vars
@@ -68,35 +69,32 @@ tests/                   # pytest test suite
 
 ## Getting Started
 
-### Quick Setup
-
-```bash
-./setup.sh
-```
-
-The script installs dependencies and shows how to start Rex.
-
-### Manual Setup
-
 1. Install [uv](https://docs.astral.sh/uv/):
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
    ```
-2. Install dependencies:
+2. Clone and install:
    ```bash
+   git clone https://github.com/thsfranca/rex.git && cd rex
    uv sync
    ```
 3. Set at least one provider API key:
    ```bash
    export OPENAI_API_KEY="sk-..."
    ```
-4. Start the Rex proxy:
+4. Start Rex:
    ```bash
-   uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+   uv run rex
    ```
 5. Point your AI coding tool's base URL to `http://localhost:8000/v1`.
 
 Rex discovers available models automatically from environment variables and local runtimes. No config file needed. See `config.yaml.example` for optional overrides.
+
+### CLI options
+
+```
+rex --host 127.0.0.1 --port 9000 --config path/to/config.yaml
+```
 
 ## Documentation
 

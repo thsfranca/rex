@@ -277,6 +277,7 @@ Phase 0 creates only the files needed for a working proxy with basic routing:
 ```
 app/
   main.py              # FastAPI app, lifespan, endpoint definitions
+  cli.py               # CLI entry point (`rex` command)
   config.py            # Pydantic Settings model, YAML loader
   discovery/
     providers.py       # Detects available providers from env vars

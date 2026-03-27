@@ -209,6 +209,7 @@ flowchart TD
 ```
 app/
   main.py                # FastAPI app entry point
+  cli.py                 # CLI entry point (`rex` command)
   config.py              # Pydantic settings model + optional YAML loader
   discovery/
     providers.py         # Detects available providers from env vars
