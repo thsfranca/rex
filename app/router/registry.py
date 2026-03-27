@@ -13,8 +13,11 @@ class ModelRegistry:
     def get_all(self) -> list[ModelConfig]:
         return list(self._models.values())
 
-    def get_by_strength(self, category: str) -> list[ModelConfig]:
-        return [m for m in self._models.values() if category in m.strengths]
+    def sorted_by_cost(self) -> list[ModelConfig]:
+        return sorted(
+            self._models.values(),
+            key=lambda m: (not m.is_local, m.cost_per_1k_input),
+        )
 
     def names(self) -> list[str]:
         return list(self._models.keys())

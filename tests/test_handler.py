@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from app.config import ModelConfig, RoutingConfig
+from app.config import ModelConfig
 from app.proxy.handler import (
     _extract_bearer_token,
     handle_chat_completion,
@@ -16,28 +16,17 @@ from app.router.registry import ModelRegistry
 
 
 def _make_model(**overrides) -> ModelConfig:
-    defaults = {
-        "name": "test/model",
-        "provider": "test",
-        "context_window": 4096,
-        "cost_per_1k_input": 0.001,
-        "cost_per_1k_output": 0.002,
-        "strengths": ["general"],
-        "max_latency_ms": 500,
-        "is_local": False,
-    }
+    defaults = {"name": "test/model"}
     defaults.update(overrides)
     return ModelConfig(**defaults)
 
 
 def _make_engine(
     models: list[ModelConfig],
-    completion_model: str,
-    default_model: str,
+    primary_model: str | None = None,
 ) -> RoutingEngine:
     registry = ModelRegistry(models)
-    routing = RoutingConfig(completion_model=completion_model, default_model=default_model)
-    return RoutingEngine(registry, routing)
+    return RoutingEngine(registry, primary_model)
 
 
 class FakeResponse:
@@ -51,7 +40,7 @@ class TestHandleChatCompletion:
     async def test_non_streaming_returns_json(self, mock_litellm):
         mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
         model = _make_model(name="test/model")
-        engine = _make_engine([model], "test/model", "test/model")
+        engine = _make_engine([model])
 
         body = {"messages": [{"role": "user", "content": "hello"}]}
         response = await handle_chat_completion(body, engine)
@@ -64,7 +53,7 @@ class TestHandleChatCompletion:
     async def test_streaming_returns_sse(self, mock_litellm):
         mock_litellm.acompletion = AsyncMock(return_value=MagicMock())
         model = _make_model(name="test/model")
-        engine = _make_engine([model], "test/model", "test/model")
+        engine = _make_engine([model])
 
         body = {"messages": [{"role": "user", "content": "hello"}], "stream": True}
         response = await handle_chat_completion(body, engine)
@@ -77,7 +66,7 @@ class TestHandleChatCompletion:
     async def test_passes_litellm_params(self, mock_litellm):
         mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
         model = _make_model(name="test/model", api_key="sk-test", api_base="http://local:8080")
-        engine = _make_engine([model], "test/model", "test/model")
+        engine = _make_engine([model])
 
         body = {
             "messages": [{"role": "user", "content": "hello"}],
@@ -99,9 +88,9 @@ class TestHandleChatCompletion:
         mock_litellm.acompletion = AsyncMock(
             side_effect=[Exception("primary failed"), FakeResponse()]
         )
-        primary = _make_model(name="primary/model")
-        fallback = _make_model(name="fallback/model")
-        engine = _make_engine([primary, fallback], "primary/model", "fallback/model")
+        primary = _make_model(name="primary/model", cost_per_1k_input=0.001)
+        fallback = _make_model(name="fallback/model", cost_per_1k_input=0.01)
+        engine = _make_engine([primary, fallback])
 
         body = {"messages": [{"role": "user", "content": "hello"}]}
         response = await handle_chat_completion(body, engine)
@@ -114,7 +103,7 @@ class TestHandleChatCompletion:
     async def test_all_models_fail_raises(self, mock_litellm):
         mock_litellm.acompletion = AsyncMock(side_effect=Exception("all failed"))
         model = _make_model(name="only/model")
-        engine = _make_engine([model], "only/model", "only/model")
+        engine = _make_engine([model])
 
         body = {"messages": [{"role": "user", "content": "hello"}]}
         with pytest.raises(Exception, match="all failed"):
@@ -125,7 +114,7 @@ class TestHandleChatCompletion:
     async def test_uses_request_api_key_when_config_has_none(self, mock_litellm):
         mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
         model = _make_model(name="test/model", api_key=None)
-        engine = _make_engine([model], "test/model", "test/model")
+        engine = _make_engine([model])
 
         body = {"messages": [{"role": "user", "content": "hello"}]}
         await handle_chat_completion(body, engine, authorization="Bearer sk-from-client")
@@ -138,7 +127,7 @@ class TestHandleChatCompletion:
     async def test_config_api_key_overrides_request_key(self, mock_litellm):
         mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
         model = _make_model(name="test/model", api_key="sk-from-config")
-        engine = _make_engine([model], "test/model", "test/model")
+        engine = _make_engine([model])
 
         body = {"messages": [{"role": "user", "content": "hello"}]}
         await handle_chat_completion(body, engine, authorization="Bearer sk-from-client")
@@ -151,7 +140,7 @@ class TestHandleChatCompletion:
     async def test_no_api_key_anywhere(self, mock_litellm):
         mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
         model = _make_model(name="test/model", api_key=None)
-        engine = _make_engine([model], "test/model", "test/model")
+        engine = _make_engine([model])
 
         body = {"messages": [{"role": "user", "content": "hello"}]}
         await handle_chat_completion(body, engine)
@@ -174,24 +163,24 @@ class TestExtractBearerToken:
 class TestHandleTextCompletion:
     @pytest.mark.asyncio
     @patch("app.proxy.handler.litellm")
-    async def test_routes_to_completion_model(self, mock_litellm):
+    async def test_routes_to_primary_model(self, mock_litellm):
         mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
-        fast = _make_model(name="fast/model")
-        strong = _make_model(name="strong/model")
-        engine = _make_engine([fast, strong], "fast/model", "strong/model")
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
+        engine = _make_engine([cheap, expensive])
 
         body = {"messages": [{"role": "user", "content": "complete this"}]}
         await handle_text_completion(body, engine)
 
         call_kwargs = mock_litellm.acompletion.call_args.kwargs
-        assert call_kwargs["model"] == "fast/model"
+        assert call_kwargs["model"] == "cheap/model"
 
     @pytest.mark.asyncio
     @patch("app.proxy.handler.litellm")
     async def test_uses_request_api_key(self, mock_litellm):
         mock_litellm.acompletion = AsyncMock(return_value=FakeResponse())
-        fast = _make_model(name="fast/model", api_key=None)
-        engine = _make_engine([fast], "fast/model", "fast/model")
+        model = _make_model(name="test/model", api_key=None)
+        engine = _make_engine([model])
 
         body = {"messages": [{"role": "user", "content": "complete this"}]}
         await handle_text_completion(body, engine, authorization="Bearer sk-req")

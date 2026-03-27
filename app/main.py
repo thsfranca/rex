@@ -25,14 +25,15 @@ _settings: Settings | None = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _engine, _settings
-    _settings = load_config("config.yaml")
+    config = load_config("config.yaml")
+    _settings = config if config is not None else Settings()
     registry = ModelRegistry(_settings.models)
-    _engine = RoutingEngine(registry, _settings.routing)
+    primary_model = _settings.routing.primary_model
+    _engine = RoutingEngine(registry, primary_model)
     logger.info(
-        "Rex started with %d models, routing completions to %s, default to %s",
+        "Rex started with %d models, primary: %s",
         len(registry.get_all()),
-        _settings.routing.completion_model,
-        _settings.routing.default_model,
+        _engine.primary.name,
     )
     yield
 
@@ -106,10 +107,6 @@ async def health():
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def passthrough(request: Request, path: str):
-    settings = _get_settings()
-    default_model = next(
-        (m for m in settings.models if m.name == settings.routing.default_model),
-        None,
-    )
-    api_base = default_model.api_base if default_model else None
+    engine = _get_engine()
+    api_base = engine.primary.api_base
     return await handle_passthrough(request, api_base)

@@ -2,17 +2,33 @@ from __future__ import annotations
 
 import logging
 
-from app.config import ModelConfig, RoutingConfig
-from app.router.detector import FeatureType, detect_feature
+from app.config import ModelConfig
+from app.router.detector import detect_feature
 from app.router.registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
 
 
 class RoutingEngine:
-    def __init__(self, registry: ModelRegistry, routing_config: RoutingConfig) -> None:
+    def __init__(self, registry: ModelRegistry, primary_model: str | None = None) -> None:
         self._registry = registry
-        self._routing_config = routing_config
+        self._primary = self._resolve_primary(primary_model)
+
+    def _resolve_primary(self, override: str | None) -> ModelConfig:
+        if override:
+            model = self._registry.get_by_name(override)
+            if model is None:
+                raise ValueError(f"Primary model '{override}' not found in registry")
+            return model
+
+        by_cost = self._registry.sorted_by_cost()
+        if not by_cost:
+            raise ValueError("No models available in registry")
+        return by_cost[0]
+
+    @property
+    def primary(self) -> ModelConfig:
+        return self._primary
 
     def select_model(
         self,
@@ -20,27 +36,9 @@ class RoutingEngine:
         max_tokens: int | None = None,
         temperature: float | None = None,
     ) -> ModelConfig:
-        feature = detect_feature(messages, max_tokens, temperature)
-        if feature == FeatureType.COMPLETION:
-            model_name = self._routing_config.completion_model
-        else:
-            model_name = self._routing_config.default_model
-
-        model = self._registry.get_by_name(model_name)
-        if model is None:
-            raise ValueError(f"Configured model '{model_name}' not found in registry")
-        return model
+        detect_feature(messages, max_tokens, temperature)
+        return self._primary
 
     def fallback_order(self, primary: ModelConfig) -> list[ModelConfig]:
-        candidates = []
-        default_name = self._routing_config.default_model
-        if primary.name != default_name:
-            default_model = self._registry.get_by_name(default_name)
-            if default_model is not None:
-                candidates.append(default_model)
-
-        for model in self._registry.get_all():
-            if model.name != primary.name and model not in candidates:
-                candidates.append(model)
-
-        return candidates
+        by_cost = self._registry.sorted_by_cost()
+        return [m for m in by_cost if m.name != primary.name]
