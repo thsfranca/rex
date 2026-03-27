@@ -16,3 +16,8 @@
 
 # enrichments:
 #   task_decomposition: true
+
+# llm_judge:
+#   enabled: true
+#   model: "ollama/llama3"
+#   confidence_threshold: 0.5
