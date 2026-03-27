@@ -88,6 +88,22 @@ class TestChatCompletionsEndpoint:
         assert "error" in response.json()
         assert response.json()["error"]["type"] == "proxy_error"
 
+    @patch("app.proxy.handler.litellm")
+    def test_passes_authorization_header_as_api_key(self, mock_litellm):
+        class FakeResp:
+            def model_dump(self):
+                return {"id": "r", "choices": []}
+
+        mock_litellm.acompletion = AsyncMock(return_value=FakeResp())
+        response = client.post(
+            "/v1/chat/completions",
+            json={"messages": [{"role": "user", "content": "hi"}]},
+            headers={"Authorization": "Bearer sk-from-header"},
+        )
+        assert response.status_code == 200
+        call_kwargs = mock_litellm.acompletion.call_args.kwargs
+        assert call_kwargs["api_key"] == "sk-from-header"
+
 
 class TestPassthroughEndpoint:
     def test_unknown_path_without_api_base(self):
