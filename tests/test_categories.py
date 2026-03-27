@@ -36,16 +36,19 @@ class TestTaskRequirements:
         req = TaskRequirements()
         assert req.min_context_window is None
         assert req.needs_function_calling is False
+        assert req.needs_reasoning is False
         assert req.needs_cloud is False
 
     def test_custom_values(self):
         req = TaskRequirements(
             min_context_window=32_000,
             needs_function_calling=True,
+            needs_reasoning=True,
             needs_cloud=True,
         )
         assert req.min_context_window == 32_000
         assert req.needs_function_calling is True
+        assert req.needs_reasoning is True
         assert req.needs_cloud is True
 
     def test_is_frozen(self):
@@ -66,9 +69,18 @@ class TestCategoryRequirements:
         req = get_requirements(TaskCategory.REFACTORING)
         assert req.min_context_window == 32_000
 
-    def test_code_review_needs_large_context(self):
+    def test_debugging_needs_reasoning(self):
+        req = get_requirements(TaskCategory.DEBUGGING)
+        assert req.needs_reasoning is True
+
+    def test_optimization_needs_reasoning(self):
+        req = get_requirements(TaskCategory.OPTIMIZATION)
+        assert req.needs_reasoning is True
+
+    def test_code_review_needs_large_context_and_reasoning(self):
         req = get_requirements(TaskCategory.CODE_REVIEW)
         assert req.min_context_window == 32_000
+        assert req.needs_reasoning is True
 
     def test_test_generation_needs_medium_context(self):
         req = get_requirements(TaskCategory.TEST_GENERATION)
@@ -86,10 +98,12 @@ class TestCategoryRequirements:
         req = get_requirements(TaskCategory.COMPLETION)
         assert req.min_context_window is None
         assert req.needs_function_calling is False
+        assert req.needs_reasoning is False
         assert req.needs_cloud is False
 
     def test_general_has_no_special_requirements(self):
         req = get_requirements(TaskCategory.GENERAL)
         assert req.min_context_window is None
         assert req.needs_function_calling is False
+        assert req.needs_reasoning is False
         assert req.needs_cloud is False

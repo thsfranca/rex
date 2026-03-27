@@ -42,6 +42,9 @@ class RoutingEngine:
         if requirements.needs_function_calling:
             if not model.supports_function_calling:
                 return False
+        if requirements.needs_reasoning:
+            if not model.supports_reasoning:
+                return False
         if requirements.needs_cloud:
             if model.is_local:
                 return False

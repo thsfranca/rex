@@ -16,6 +16,7 @@ class TestEnrichModel:
                 "output_cost_per_token": 0.000015,
                 "max_tokens": 128000,
                 "supports_function_calling": True,
+                "supports_reasoning": True,
                 "supports_vision": True,
             }
             model = enrich_model("openai/gpt-4o", provider)
@@ -26,6 +27,7 @@ class TestEnrichModel:
         assert model.is_local is False
         assert model.max_context_window == 128000
         assert model.supports_function_calling is True
+        assert model.supports_reasoning is True
         assert model.supports_vision is True
 
     def test_defaults_when_litellm_has_no_info(self):
@@ -40,6 +42,7 @@ class TestEnrichModel:
         assert model.is_local is False
         assert model.max_context_window is None
         assert model.supports_function_calling is False
+        assert model.supports_reasoning is False
         assert model.supports_vision is False
 
     def test_local_model_keeps_is_local(self):
@@ -105,10 +108,12 @@ class TestEnrichModel:
                 "input_cost_per_token": 0.000001,
                 "max_tokens": 64000,
                 "supports_function_calling": True,
+                "supports_reasoning": False,
                 "supports_vision": False,
             }
             model = enrich_model("openai/gpt-4o", provider)
 
         assert model.max_context_window == 64000
         assert model.supports_function_calling is True
+        assert model.supports_reasoning is False
         assert model.supports_vision is False
