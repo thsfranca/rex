@@ -52,7 +52,9 @@ class TestBuildRegistry:
     @patch("app.discovery.registry_builder.detect_providers")
     @patch("app.discovery.registry_builder.list_models_for_provider")
     @patch("app.discovery.registry_builder.enrich_model")
-    async def test_config_overrides_discovered_model(self, mock_enrich, mock_list, mock_detect):
+    async def test_config_takes_priority_over_discovered_model(
+        self, mock_enrich, mock_list, mock_detect
+    ):
         mock_detect.return_value = [DetectedProvider(prefix="openai", api_key="sk-env")]
         mock_list.side_effect = _mock_list_models({"openai": ["openai/gpt-4o"]})
         mock_enrich.side_effect = _mock_enrich
@@ -64,6 +66,24 @@ class TestBuildRegistry:
 
         model = registry.get_by_name("openai/gpt-4o")
         assert model.api_key == "sk-override"
+
+    @pytest.mark.asyncio
+    @patch("app.discovery.registry_builder.detect_providers")
+    @patch("app.discovery.registry_builder.list_models_for_provider")
+    @patch("app.discovery.registry_builder.enrich_model")
+    async def test_discovery_does_not_enrich_config_defined_models(
+        self, mock_enrich, mock_list, mock_detect
+    ):
+        mock_detect.return_value = [DetectedProvider(prefix="openai", api_key="sk-env")]
+        mock_list.side_effect = _mock_list_models({"openai": ["openai/gpt-4o"]})
+        mock_enrich.side_effect = _mock_enrich
+
+        config_model = ModelConfig(name="openai/gpt-4o", api_key="sk-config")
+        config = Settings(models=[config_model])
+
+        await build_registry(config)
+
+        mock_enrich.assert_not_called()
 
     @pytest.mark.asyncio
     @patch("app.discovery.registry_builder.detect_providers")
