@@ -2,7 +2,7 @@
 
 For a project overview and getting started guide, see [README.md](README.md). For the delivery plan, see [ROADMAP.md](ROADMAP.md).
 
-An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud), automatically selecting the best model for each coding task.
+An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud), automatically selecting the cheapest model for each coding task.
 
 - Compatible with any tool that supports a custom OpenAI API base URL (Cursor, Claude Code, Continue, Aider, etc.).
 - Each user runs their own Rex instance locally — all data, embeddings, and trained classifiers stay on the user's machine.
@@ -51,11 +51,12 @@ flowchart LR
 | Category discovery | Unsupervised K-means clustering | Automatically discovers task categories from query embeddings without labels; [silhouette score](https://doi.org/10.1016/0377-0427(87)90125-7) selects optimal cluster count (Rousseeuw, 1987) |
 | Automated labeling | Weak supervision | Heuristic rules act as noisy labeling functions; a probabilistic label model aggregates their votes into clean training labels without manual annotation ([Ratner et al., 2016](https://arxiv.org/abs/1605.07723); [Ratner et al., 2017](https://arxiv.org/abs/1711.10160)) |
 | Model discovery | Automatic from environment variables | Rex scans for known API keys (e.g. `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`), queries each provider's `/v1/models` endpoint, and probes local runtimes (Ollama at `localhost:11434`); zero configuration required |
-| Model metadata | LiteLLM built-in database | `litellm.get_model_info()` provides context window, pricing, and capabilities for known models; no manual metadata needed |
+| Model metadata | LiteLLM built-in database | `litellm.get_model_info()` provides context window, pricing, and capability flags for known models; no manual metadata needed |
+| Routing criteria | Cost + context window + capability flags | All routing signals come from measurable model properties — no manually curated "strengths" list |
 | Config format | Optional YAML overrides | Config file is not required; when present, it adds models and overrides routing defaults |
 | Client detection | User-Agent header → adapter | Rex selects the adapter based on the client's User-Agent header; new tools supported by adding an adapter |
-| API compatibility | Full OpenAI, transparent proxy | Rex routes known endpoints and passes through everything else to the default backend; never blocks unknown endpoints |
-| Error handling | Graceful degradation | Every failure falls back to a simpler path; classification failure → default model; all models fail → error to client |
+| API compatibility | Full OpenAI, transparent proxy | Rex routes known endpoints and passes through everything else to the primary model's backend; never blocks unknown endpoints |
+| Error handling | Graceful degradation | Every failure falls back to a simpler path; classification failure → primary model; all models fail → error to client |
 | Logging storage | Repository pattern | Core logic decoupled from storage; SQLite as default implementation, swappable without touching routing code |
 | Deployment model | Per-user local instance | All data stays on the user's machine; each instance learns independently from its own usage |
 | Default storage | SQLite | Zero-dependency, single-file, good enough for single user |
@@ -65,22 +66,23 @@ flowchart LR
 
 The heuristic classifier uses these predefined categories as a starting point:
 
-| Category | Signals |
-|---|---|
-| **completion** | Short prompt, code context, single-turn |
-| **debugging** | Stack traces, "error", "fix", "bug", "crash" |
-| **refactoring** | "refactor", "clean up", "simplify", "restructure" |
-| **optimization** | "faster", "performance", "optimize", "memory", "efficient" |
-| **test_generation** | "write tests", "add test", "spec", "coverage" |
-| **explanation** | "explain", "what does", "how does", "why" |
-| **documentation** | "document", "docstring", "README", "API docs" |
-| **code_review** | "review", "is this correct", "what's wrong", "security" |
-| **generation** | Writing new code from description |
-| **migration** | "upgrade", "migrate", "convert to", "update from" |
-| **general** | Fallback when nothing else matches |
+| Category | Signals | Routing Criteria |
+|---|---|---|
+| **completion** | Short prompt, code context, single-turn | Cheapest model, lowest latency |
+| **debugging** | Stack traces, "error", "fix", "bug", "crash" | `supports_reasoning`, cheapest among matches |
+| **refactoring** | "refactor", "clean up", "simplify", "restructure" | Context window ≥ 32K, cheapest among matches |
+| **optimization** | "faster", "performance", "optimize", "memory", "efficient" | `supports_reasoning`, cheapest among matches |
+| **test_generation** | "write tests", "add test", "spec", "coverage" | Context window ≥ 16K, cheapest among matches |
+| **explanation** | "explain", "what does", "how does", "why" | Cheapest model |
+| **documentation** | "document", "docstring", "README", "API docs" | Cheapest model |
+| **code_review** | "review", "is this correct", "what's wrong", "security" | Context window ≥ 32K, `supports_reasoning`, cheapest among matches |
+| **generation** | Writing new code from description | Context window ≥ 16K, cheapest among matches |
+| **migration** | "upgrade", "migrate", "convert to", "update from" | Cloud model (`is_local` = false), cheapest among matches |
+| **general** | Fallback when nothing else matches | Primary model |
 
-- Rex does not prescribe which model serves each category — it learns this from usage.
-- All categories start on the cheapest model. The learning pipeline tracks outcomes and promotes categories to more capable models when needed (see [Upward Migration](#upward-migration)).
+All routing criteria come from measurable model properties — cost, context window, capability flags from LiteLLM, and `is_local`. Rex never uses a manually curated "strengths" list.
+
+- All categories start on the cheapest model that meets the criteria. The learning pipeline tracks outcomes and promotes categories to different models when needed (see [Upward Migration](#upward-migration)).
 - Once clustering produces a silhouette score above the quality threshold (>0.5), unsupervised clustering takes over.
 - The learning pipeline discovers the user's actual task categories from their real usage patterns.
 - Discovered categories may differ from the predefined ones — they reflect how the individual user actually works.
@@ -95,9 +97,9 @@ Rex exposes a fully OpenAI-compatible API as a transparent proxy:
 - **Handled directly**:
   - `GET /v1/models` — returns models from Rex's registry
   - `GET /health` — returns proxy status
-- **Transparent passthrough** — Rex forwards to the default backend without routing:
+- **Transparent passthrough** — Rex forwards to the primary model's backend without routing:
   - `/v1/embeddings`, `/v1/audio/*`, `/v1/images/*`, `/v1/files`, `/v1/moderations`, and any other endpoint
-  - Rex never blocks an unknown endpoint — it passes it through to the default model backend
+  - Rex never blocks an unknown endpoint — it passes it through to the primary model's backend
 
 ## Routing Strategy
 
@@ -105,7 +107,7 @@ Rex exposes a fully OpenAI-compatible API as a transparent proxy:
 flowchart TD
     Request[Incoming Request] --> ClientAdapter[Client Adapter]
     ClientAdapter --> EndpointCheck{Routed Endpoint?}
-    EndpointCheck -->|No| Passthrough[Forward to default backend]
+    EndpointCheck -->|No| Passthrough[Forward to primary backend]
     EndpointCheck -->|Yes| FeatureDetect{Feature Detection}
     FeatureDetect -->|Completion| FastPath[Cheapest model]
     FeatureDetect -->|Chat / Agent| ClassifierChain{Classifier Chain}
@@ -208,35 +210,23 @@ flowchart TD
 app/
   main.py                # FastAPI app entry point
   config.py              # Pydantic settings model + optional YAML loader
-  discovery/
-    providers.py         # Detects available providers from env vars
-    models.py            # Queries provider APIs for available models
-    metadata.py          # Enriches models with LiteLLM metadata
-  adapters/
-    base.py              # Client adapter interface
-    cursor.py            # Cursor-specific request normalization
-    generic.py           # Fallback adapter for unknown clients
   router/
     detector.py          # Feature detection (completion vs. chat)
-    classifier.py        # Heuristic task classifier
-    ml_classifier.py     # Trained ML classifier
-    llm_judge.py         # LLM-as-Judge fallback
-    engine.py            # Routing engine (classifier -> model selection)
-    registry.py          # Model registry
-  learning/
-    embedder.py          # Sentence transformer query embedding
-    seeds.py             # Synthetic exemplar queries per category
-    clustering.py        # K-means unsupervised category discovery
-    weak_supervision.py  # Noisy label aggregation from heuristic rules
-    trainer.py           # ML classifier training orchestration
+    engine.py            # Routing engine (primary selection + fallback)
+    registry.py          # Model registry (lookups, cost sorting)
   proxy/
     handler.py           # OpenAI-compatible request handler
     streaming.py         # SSE streaming response logic
-  logging/
-    base.py              # Storage interface
-    sqlite_store.py      # SQLite implementation
-    cli.py               # CLI for stats and export
-config.yaml.example     # Example configuration (optional overrides)
+config.yaml.example     # Example configuration (optional)
 pyproject.toml           # Project dependencies (uv)
 tests/                   # pytest test suite
 ```
+
+Future phases will add:
+- `app/discovery/` — auto-detect providers from env vars, query provider APIs, enrich with LiteLLM metadata
+- `app/adapters/` — client adapter interface (Cursor, Claude Code, etc.)
+- `app/router/classifier.py` — heuristic task classifier
+- `app/router/ml_classifier.py` — trained ML classifier
+- `app/router/llm_judge.py` — LLM-as-Judge fallback
+- `app/learning/` — embedding pipeline, clustering, weak supervision
+- `app/logging/` — decision logging with storage interface
