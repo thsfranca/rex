@@ -58,3 +58,9 @@ class MLClassifier:
 
     def is_trained(self) -> bool:
         return self._model is not None
+
+    def clear(self) -> None:
+        self._model = None
+        self._categories = []
+        if self._model_path.exists():
+            self._model_path.unlink()
