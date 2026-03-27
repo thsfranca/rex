@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass, field
 
 from app.router.categories import TaskCategory
+from app.utils import extract_last_user_text
 
 _KEYWORD_PATTERNS: dict[TaskCategory, list[re.Pattern]] = {
     TaskCategory.DEBUGGING: [
@@ -116,17 +117,6 @@ class ClassificationResult:
     scores: dict[TaskCategory, float] = field(default_factory=dict)
 
 
-def _extract_last_user_message(messages: list[dict]) -> str:
-    for msg in reversed(messages):
-        if msg.get("role") == "user":
-            content = msg.get("content", "")
-            if isinstance(content, str):
-                return content
-            if isinstance(content, list):
-                return " ".join(part.get("text", "") for part in content if isinstance(part, dict))
-    return ""
-
-
 def _has_stack_trace(text: str) -> bool:
     return bool(_STACK_TRACE_PATTERN.search(text))
 
@@ -145,7 +135,7 @@ def _count_keyword_matches(text: str, category: TaskCategory) -> int:
 
 
 def classify(messages: list[dict]) -> ClassificationResult:
-    text = _extract_last_user_message(messages)
+    text = extract_last_user_text(messages)
 
     if not text.strip():
         return ClassificationResult(category=TaskCategory.GENERAL, confidence=0.0)

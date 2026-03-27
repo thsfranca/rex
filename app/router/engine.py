@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from app.config import ModelConfig
 from app.learning.centroids import CentroidClassifier
-from app.router.categories import TaskCategory, TaskRequirements, get_requirements
+from app.router.categories import TaskCategory, get_requirements
 from app.router.classifier import ClassificationResult, classify
 from app.router.detector import FeatureType, detect_feature
 from app.router.llm_judge import LLMJudge
@@ -65,23 +65,9 @@ class RoutingEngine:
     def primary(self) -> ModelConfig:
         return self._primary
 
-    def _model_meets_requirements(self, model: ModelConfig, requirements: TaskRequirements) -> bool:
-        if requirements.min_context_window is not None:
-            if (
-                model.max_context_window is None
-                or model.max_context_window < requirements.min_context_window
-            ):
-                return False
-        if requirements.needs_function_calling:
-            if not model.supports_function_calling:
-                return False
-        if requirements.needs_reasoning:
-            if not model.supports_reasoning:
-                return False
-        if requirements.needs_cloud:
-            if model.is_local:
-                return False
-        return True
+    @property
+    def registry(self) -> ModelRegistry:
+        return self._registry
 
     async def select_model(
         self,
@@ -141,7 +127,7 @@ class RoutingEngine:
 
         requirements = get_requirements(result.category)
 
-        if self._model_meets_requirements(self._primary, requirements):
+        if self._registry.meets_requirements(self._primary, requirements):
             return RoutingDecision(
                 model=self._primary,
                 category=result.category,

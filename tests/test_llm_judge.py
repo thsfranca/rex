@@ -10,7 +10,6 @@ from app.router.llm_judge import (
     JUDGE_SYSTEM_PROMPT,
     JudgeResult,
     LLMJudge,
-    _extract_last_user_message,
     _parse_judge_response,
 )
 
@@ -19,12 +18,6 @@ class TestJudgeResult:
     def test_defaults(self):
         result = JudgeResult(category=TaskCategory.DEBUGGING)
         assert result.category == TaskCategory.DEBUGGING
-        assert result.min_context_window is None
-
-    def test_with_context_window(self):
-        result = JudgeResult(category=TaskCategory.REFACTORING, min_context_window=32000)
-        assert result.category == TaskCategory.REFACTORING
-        assert result.min_context_window == 32000
 
     def test_is_frozen(self):
         result = JudgeResult(category=TaskCategory.DEBUGGING)
@@ -32,50 +25,12 @@ class TestJudgeResult:
             result.category = TaskCategory.GENERAL
 
 
-class TestExtractLastUserMessage:
-    def test_returns_last_user_content(self):
-        messages = [
-            {"role": "system", "content": "system"},
-            {"role": "user", "content": "first"},
-            {"role": "assistant", "content": "reply"},
-            {"role": "user", "content": "second"},
-        ]
-        assert _extract_last_user_message(messages) == "second"
-
-    def test_returns_empty_for_no_user_messages(self):
-        messages = [{"role": "system", "content": "system"}]
-        assert _extract_last_user_message(messages) == ""
-
-    def test_returns_empty_for_empty_list(self):
-        assert _extract_last_user_message([]) == ""
-
-    def test_handles_multipart_content(self):
-        messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "hello"},
-                    {"type": "text", "text": "world"},
-                ],
-            }
-        ]
-        assert _extract_last_user_message(messages) == "hello world"
-
-
 class TestParseJudgeResponse:
     def test_valid_response(self):
-        content = json.dumps({"category": "debugging", "min_context_window": None})
+        content = json.dumps({"category": "debugging"})
         result = _parse_judge_response(content)
         assert result is not None
         assert result.category == TaskCategory.DEBUGGING
-        assert result.min_context_window is None
-
-    def test_valid_response_with_context_window(self):
-        content = json.dumps({"category": "refactoring", "min_context_window": 32000})
-        result = _parse_judge_response(content)
-        assert result is not None
-        assert result.category == TaskCategory.REFACTORING
-        assert result.min_context_window == 32000
 
     def test_invalid_json(self):
         result = _parse_judge_response("not json")
@@ -87,7 +42,7 @@ class TestParseJudgeResponse:
         assert result is None
 
     def test_missing_category(self):
-        content = json.dumps({"min_context_window": 16000})
+        content = json.dumps({"other": "data"})
         result = _parse_judge_response(content)
         assert result is None
 
@@ -97,12 +52,6 @@ class TestParseJudgeResponse:
             result = _parse_judge_response(content)
             assert result is not None
             assert result.category == category
-
-    def test_non_numeric_context_window_ignored(self):
-        content = json.dumps({"category": "debugging", "min_context_window": "large"})
-        result = _parse_judge_response(content)
-        assert result is not None
-        assert result.min_context_window is None
 
     def test_none_content(self):
         result = _parse_judge_response(None)

@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from app.learning.centroids import CentroidClassifier
 from app.learning.clustering import cluster_embeddings
 from app.learning.labeling import LabelModel
-from app.learning.trainer import train_classifier
-from app.logging.sqlite import SQLiteDecisionRepository
+from app.learning.outcomes import OutcomeTracker
+from app.learning.trainer import map_clusters_to_categories, train_classifier
+from app.logging.repository import DecisionRepository
 from app.router.ml_classifier import MLClassifier
+
+if TYPE_CHECKING:
+    from app.router.engine import RoutingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +22,10 @@ logger = logging.getLogger(__name__)
 class RetrainingScheduler:
     def __init__(
         self,
-        repository: SQLiteDecisionRepository,
+        repository: DecisionRepository,
         label_model: LabelModel,
         ml_classifier: MLClassifier,
+        engine: RoutingEngine | None = None,
         recluster_interval: int = 100,
         max_k: int = 20,
         promotion_threshold: float = 0.5,
@@ -27,6 +33,7 @@ class RetrainingScheduler:
         self._repository = repository
         self._label_model = label_model
         self._ml_classifier = ml_classifier
+        self._engine = engine
         self._recluster_interval = recluster_interval
         self._max_k = max_k
         self._promotion_threshold = promotion_threshold
@@ -34,6 +41,7 @@ class RetrainingScheduler:
         self._running = False
         self._promoted = False
         self._centroid_classifier: CentroidClassifier | None = None
+        self._outcome_tracker = OutcomeTracker()
 
     @property
     def is_promoted(self) -> bool:
@@ -77,14 +85,15 @@ class RetrainingScheduler:
             cluster_result.silhouette,
         )
 
-        from app.learning.trainer import map_clusters_to_categories
-
         rule_votes = await self._repository.get_rule_votes()
         cluster_to_cat = map_clusters_to_categories(cluster_result, rule_votes)
         mapped_centroids = {
             cluster_to_cat[cid]: centroid for cid, centroid in cluster_result.centroids.items()
         }
         self._centroid_classifier = CentroidClassifier(mapped_centroids)
+
+        if self._engine is not None:
+            self._engine.set_centroid_classifier(self._centroid_classifier)
 
         all_votes = list(rule_votes.values())
         self._label_model.fit(all_votes)
@@ -101,11 +110,27 @@ class RetrainingScheduler:
         if trained and cluster_result.silhouette > self._promotion_threshold:
             if self._label_model.is_converged():
                 self._promoted = True
+                if self._engine is not None:
+                    self._engine.set_ml_promoted(True)
                 logger.info(
                     "ML classifier promoted (silhouette=%.3f, label model converged)",
                     cluster_result.silhouette,
                 )
             else:
                 logger.info("ML classifier trained but label model not yet converged")
+
+        recent = await self._repository.get_recent(limit=count)
+        categories = {r.category for r in recent}
+        for cat in categories:
+            metrics = self._outcome_tracker.evaluate(cat, recent)
+            if metrics is not None:
+                logger.info(
+                    "Outcomes for %s: fallback=%.2f, error=%.2f, latency=%.0fms, reask=%.2f",
+                    cat,
+                    metrics.fallback_rate,
+                    metrics.error_rate,
+                    metrics.average_latency_ms,
+                    metrics.reask_rate,
+                )
 
         self._last_trained_count = count

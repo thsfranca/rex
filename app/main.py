@@ -85,6 +85,7 @@ async def lifespan(app: FastAPI):
         repository=_repository,
         label_model=LabelModel(),
         ml_classifier=ml_classifier,
+        engine=_engine,
         recluster_interval=_settings.learning.recluster_interval,
         max_k=_settings.learning.max_k,
         promotion_threshold=_settings.learning.promotion_silhouette_threshold,
@@ -170,7 +171,7 @@ async def text_completions(request: Request):
 @app.get("/v1/models")
 async def list_models():
     engine = _get_engine()
-    models = engine._registry.get_all()
+    models = engine.registry.get_all()
     return {
         "object": "list",
         "data": [

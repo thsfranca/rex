@@ -20,25 +20,24 @@ class ModelRegistry:
             key=lambda m: (not m.is_local, m.cost_per_1k_input),
         )
 
+    @staticmethod
+    def meets_requirements(model: ModelConfig, requirements: TaskRequirements) -> bool:
+        if requirements.min_context_window is not None:
+            if (
+                model.max_context_window is None
+                or model.max_context_window < requirements.min_context_window
+            ):
+                return False
+        if requirements.needs_function_calling and not model.supports_function_calling:
+            return False
+        if requirements.needs_reasoning and not model.supports_reasoning:
+            return False
+        if requirements.needs_cloud and model.is_local:
+            return False
+        return True
+
     def filter_by_requirements(self, requirements: TaskRequirements) -> list[ModelConfig]:
-        candidates = []
-        for m in self._models.values():
-            if requirements.min_context_window is not None:
-                if (
-                    m.max_context_window is None
-                    or m.max_context_window < requirements.min_context_window
-                ):
-                    continue
-            if requirements.needs_function_calling:
-                if not m.supports_function_calling:
-                    continue
-            if requirements.needs_reasoning:
-                if not m.supports_reasoning:
-                    continue
-            if requirements.needs_cloud:
-                if m.is_local:
-                    continue
-            candidates.append(m)
+        candidates = [m for m in self._models.values() if self.meets_requirements(m, requirements)]
         return sorted(
             candidates,
             key=lambda m: (not m.is_local, m.cost_per_1k_input),
