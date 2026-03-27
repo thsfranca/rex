@@ -61,19 +61,16 @@ The first enricher. When enabled, it detects complex tasks and injects a system-
 
 ### Complexity Detection
 
-The enricher uses signals already available after classification to decide whether a task is complex:
+The enricher uses the task category from classification to decide whether a task is complex:
 
 | Signal | Condition | Rationale |
 |---|---|---|
 | Feature type | `CHAT` only | Tab completions never need decomposition |
 | Task category | `generation`, `refactoring`, `migration`, `code_review`, `test_generation` | These categories are inherently multi-step |
-| Prompt length | > 500 characters | Longer prompts tend to describe multi-concern tasks |
 
-The enricher skips tasks that do not meet any of the following:
-- The task category is in the complex set (`generation`, `refactoring`, `migration`, `code_review`, `test_generation`).
-- The prompt length exceeds the threshold (500 characters).
+The enricher skips tasks whose category is not in the complex set.
 
-Simple categories (`completion`, `explanation`, `documentation`, `general`, `debugging`, `optimization`) skip enrichment regardless of prompt length.
+Simple categories (`completion`, `explanation`, `documentation`, `general`, `debugging`, `optimization`) skip enrichment.
 
 ### Injected Instruction
 
