@@ -86,7 +86,7 @@ The heuristic classifier uses these predefined categories as a starting point:
 
 All routing criteria come from measurable model properties — cost, context window, capability flags from LiteLLM, and `is_local`. Rex never uses a manually curated "strengths" list.
 
-- All categories start on the cheapest model that meets the criteria. The learning pipeline tracks outcomes and promotes categories to different models when needed (see [Upward Migration](#upward-migration)).
+- All categories start on the cheapest model that meets the criteria. The fallback chain handles individual failures in real time.
 - Once clustering produces a silhouette score above the quality threshold (>0.5), unsupervised clustering takes over.
 - The learning pipeline discovers the user's actual task categories from their real usage patterns.
 - Discovered categories may differ from the predefined ones — they reflect how the individual user actually works.
@@ -143,15 +143,6 @@ flowchart TD
    - Runs locally, <50ms inference.
 3. **LLM judge**: A small local LLM classifies the task when the above are uncertain ([Zheng et al., 2023](https://arxiv.org/abs/2306.05685)).
    - Only triggered for chat/agent requests where 200-500ms extra latency is acceptable.
-
-### Upward Migration
-
-Rex optimizes for cost. Every task category starts on the cheapest model. The learning pipeline tracks outcomes per category and promotes categories to more capable models when needed.
-
-- The fallback chain handles individual failures in real time — if the cheap model fails, Rex escalates to the next model immediately.
-- The learning pipeline spots patterns: if a category consistently triggers fallbacks, Rex permanently promotes it to a more capable model, avoiding repeated fallback latency.
-- Promotion is data-driven — Rex only moves a category up when it observes a persistent pattern of poor outcomes, not on a single failure.
-- Outcome signals: fallback triggers, user re-asks, error rate, response latency patterns.
 
 ## Enrichment Pipeline
 
@@ -259,7 +250,6 @@ app/
     trainer.py           # ML classifier training pipeline
     scheduler.py         # Re-training scheduler
     outcomes.py          # Per-category outcome tracking
-    migrations.py        # Upward migration logic
   logging/
     models.py            # DecisionRecord dataclass
     repository.py        # DecisionRepository protocol
@@ -280,4 +270,4 @@ pyproject.toml           # Project dependencies (uv)
 tests/                   # pytest test suite
 ```
 
-All learning pipeline modules are implemented: clustering, weak supervision, ML classifier training, re-training scheduler, outcome tracking, and upward migration.
+All learning pipeline modules are implemented: clustering, weak supervision, ML classifier training, re-training scheduler, and outcome tracking.

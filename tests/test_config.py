@@ -201,7 +201,6 @@ class TestLoadConfig:
         assert settings.learning.recluster_interval == 100
         assert settings.learning.max_k == 20
         assert settings.learning.promotion_silhouette_threshold == 0.5
-        assert settings.learning.migration_window == 50
 
     def test_loads_learning_pipeline_config_from_yaml(self, tmp_path):
         config_file = tmp_path / "config.yaml"
@@ -212,7 +211,6 @@ class TestLoadConfig:
                         "recluster_interval": 200,
                         "max_k": 30,
                         "promotion_silhouette_threshold": 0.6,
-                        "migration_window": 100,
                     }
                 }
             )
@@ -222,7 +220,6 @@ class TestLoadConfig:
         assert settings.learning.recluster_interval == 200
         assert settings.learning.max_k == 30
         assert settings.learning.promotion_silhouette_threshold == 0.6
-        assert settings.learning.migration_window == 100
 
     def test_load_invalid_yaml(self, tmp_path):
         config_file = tmp_path / "config.yaml"

@@ -43,7 +43,6 @@ class LearningConfig(BaseModel):
     recluster_interval: int = 100
     max_k: int = 20
     promotion_silhouette_threshold: float = 0.5
-    migration_window: int = 50
 
 
 class Settings(BaseModel):

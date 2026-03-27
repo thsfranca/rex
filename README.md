@@ -18,7 +18,7 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 - **Decision logging**: Every routing decision is logged to SQLite with timestamps, prompt hash, category, confidence, selected/used model, response time, token counts, cost, and rule votes — providing full routing observability.
 - **Semantic classification**: When `sentence-transformers` is installed, Rex embeds every query and uses nearest-centroid classification with pre-seeded exemplar queries to improve routing accuracy from the first request.
 - **Learning pipeline**: Background re-training runs K-means clustering, weak supervision, and logistic regression on accumulated data. When the ML classifier reaches quality thresholds (silhouette > 0.5, label model converged), it automatically replaces heuristics as the primary classifier.
-- **Outcome tracking**: Per-category metrics (fallback rate, error rate, latency, re-ask rate) detect categories where cheap models consistently fail. Flagged categories are promoted to more capable models.
+- **Outcome tracking**: Per-category metrics (fallback rate, error rate, latency, re-ask rate) provide observability into routing quality per task category.
 - **Transparent passthrough**: Unknown endpoints are forwarded to the primary model's backend — Rex never blocks an endpoint it doesn't handle.
 - **Optional YAML config**: Add custom models, override routing, or enable enrichments via `config.yaml`.
 
@@ -78,7 +78,6 @@ app/
     trainer.py           # ML classifier training pipeline
     scheduler.py         # Re-training scheduler
     outcomes.py          # Per-category outcome tracking
-    migrations.py        # Upward migration logic
   logging/
     models.py            # DecisionRecord dataclass
     repository.py        # DecisionRepository protocol
