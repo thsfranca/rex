@@ -12,6 +12,8 @@ from app.discovery.registry_builder import build_registry
 from app.enrichment.pipeline import EnrichmentPipeline, build_pipeline
 from app.learning.centroids import CentroidClassifier, build_centroids
 from app.learning.embeddings import try_load_embedding_service
+from app.learning.labeling import LabelModel
+from app.learning.scheduler import RetrainingScheduler
 from app.logging.sqlite import SQLiteDecisionRepository
 from app.proxy.handler import (
     handle_chat_completion,
@@ -20,6 +22,7 @@ from app.proxy.handler import (
 )
 from app.router.engine import RoutingEngine
 from app.router.llm_judge import LLMJudge
+from app.router.ml_classifier import MLClassifier
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -30,12 +33,13 @@ _adapter_registry: AdapterRegistry | None = None
 _pipeline: EnrichmentPipeline | None = None
 _repository: SQLiteDecisionRepository | None = None
 _embedding_service = None
+_scheduler: RetrainingScheduler | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _engine, _settings, _adapter_registry, _pipeline
-    global _repository, _embedding_service
+    global _repository, _embedding_service, _scheduler
     config = load_config("config.yaml")
     registry, _settings = await build_registry(config)
     primary_model = _settings.routing.primary_model
@@ -66,13 +70,26 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Embedding service not available, centroid classifier disabled")
 
+    ml_classifier = MLClassifier()
+
     _engine = RoutingEngine(
         registry,
         primary_model,
         judge=judge,
         confidence_threshold=_settings.llm_judge.confidence_threshold,
         centroid_classifier=centroid_classifier,
+        ml_classifier=ml_classifier,
     )
+
+    _scheduler = RetrainingScheduler(
+        repository=_repository,
+        label_model=LabelModel(),
+        ml_classifier=ml_classifier,
+        recluster_interval=_settings.learning.recluster_interval,
+        max_k=_settings.learning.max_k,
+        promotion_threshold=_settings.learning.promotion_silhouette_threshold,
+    )
+
     _adapter_registry = AdapterRegistry()
     _pipeline = build_pipeline(_settings)
     logger.info(
@@ -132,6 +149,7 @@ async def chat_completions(request: Request):
             _get_pipeline(),
             repository=_repository,
             embedding_service=_embedding_service,
+            scheduler=_scheduler,
         )
     except Exception as e:
         logger.exception("Chat completion failed")
