@@ -13,8 +13,9 @@ An OpenAI-compatible proxy that sits between AI-powered coding tools and multipl
 - **Task-aware routing**: Rex classifies each request (debugging, refactoring, code review, etc.) and picks the cheapest model that meets the task's requirements (context window, capabilities). Tasks with no special needs stay on the primary (cheapest) model.
 - **Fallback chains**: If the selected model fails, Rex tries the next model in cost order.
 - **SSE streaming**: Full Server-Sent Events streaming support for chat completions.
+- **Enrichment pipeline**: Rex transforms complex requests (generation, refactoring, migration, code review, test generation) by injecting task decomposition instructions before the model call. Each enricher is opt-in via config.
 - **Transparent passthrough**: Unknown endpoints are forwarded to the primary model's backend — Rex never blocks an endpoint it doesn't handle.
-- **Optional YAML config**: Add custom models or override the auto-selected primary model via `config.yaml`.
+- **Optional YAML config**: Add custom models, override routing, or enable enrichments via `config.yaml`.
 
 ## How It Works
 
@@ -58,6 +59,10 @@ app/
     models.py            # Queries provider APIs for available models
     metadata.py          # Enriches models with LiteLLM metadata
     registry_builder.py  # Orchestrates discovery and builds the model registry
+  enrichment/
+    context.py           # EnrichmentContext dataclass
+    pipeline.py          # Enricher protocol and pipeline runner
+    task_decomposition.py # Task decomposition enricher
   router/
     categories.py        # Task categories and routing requirements
     classifier.py        # Heuristic task classifier (keyword + structural)

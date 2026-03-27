@@ -43,11 +43,11 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 **Goal**: A pluggable pipeline that transforms requests after routing but before the model call. The first enricher injects task decomposition instructions for complex tasks, replicating structured step-by-step execution across all models.
 
 **Deliverables**:
-- [ ] Enricher interface: receives request (messages, model, task category), returns modified request
-- [ ] Enrichment pipeline runner: executes enabled enrichers in sequence, no-op when none are enabled
-- [ ] Task decomposition enricher: detects complex tasks via classifier output and prompt signals, injects system-level decomposition instruction
-- [ ] Config extension: `enrichments.task_decomposition` opt-in toggle (default: off)
-- [ ] Skip logic: pipeline only applies to `chat` requests, never to `completion` (tab completions)
+- [x] Enricher interface: receives request (messages, model, task category), returns modified request
+- [x] Enrichment pipeline runner: executes enabled enrichers in sequence, no-op when none are enabled
+- [x] Task decomposition enricher: detects complex tasks via classifier output and prompt signals, injects system-level decomposition instruction
+- [x] Config extension: `enrichments.task_decomposition` opt-in toggle (default: off)
+- [x] Skip logic: pipeline only applies to `chat` requests, never to `completion` (tab completions)
 
 ---
 

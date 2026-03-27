@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from app.enrichment.context import EnrichmentContext
+
+if TYPE_CHECKING:
+    from app.config import Settings
 
 logger = logging.getLogger(__name__)
 
@@ -26,3 +29,12 @@ class EnrichmentPipeline:
                     type(enricher).__name__,
                 )
         return context
+
+
+def build_pipeline(settings: Settings) -> EnrichmentPipeline:
+    from app.enrichment.task_decomposition import TaskDecompositionEnricher
+
+    enrichers: list[Enricher] = []
+    if settings.enrichments.task_decomposition:
+        enrichers.append(TaskDecompositionEnricher())
+    return EnrichmentPipeline(enrichers)

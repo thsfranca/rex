@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.adapters.registry import AdapterRegistry
 from app.config import ModelConfig, Settings
+from app.enrichment.pipeline import EnrichmentPipeline
 from app.main import app
 from app.router.engine import RoutingEngine
 from app.router.registry import ModelRegistry
@@ -33,6 +34,7 @@ def _setup_app():
     main_module._engine = RoutingEngine(registry)
     main_module._settings = Settings(models=models)
     main_module._adapter_registry = AdapterRegistry()
+    main_module._pipeline = EnrichmentPipeline([])
 
 
 @pytest.fixture(autouse=True)
@@ -44,6 +46,7 @@ def setup_test_app():
     main_module._engine = None
     main_module._settings = None
     main_module._adapter_registry = None
+    main_module._pipeline = None
 
 
 client = TestClient(app, raise_server_exceptions=False)
