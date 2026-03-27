@@ -60,7 +60,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 **Deliverables**:
 - [ ] Confidence threshold: below this, trigger the judge instead of routing on low-confidence heuristics
 - [ ] Small local model integration via LiteLLM
-- [ ] Classification meta-prompt that returns structured JSON (`category`, `min_context_window`)
+- [ ] Classification meta-prompt that returns structured JSON (`category`, `confidence`, `complexity`, `min_context_window`)
 - [ ] JSON mode parsing of judge response
 - [ ] Latency guard: only triggered for chat/agent paths, never for completions
 
