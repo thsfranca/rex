@@ -2,7 +2,7 @@
 
 For a project overview and getting started guide, see [README.md](README.md). For the delivery plan, see [ROADMAP.md](ROADMAP.md).
 
-An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud), automatically selecting the cheapest model for each coding task.
+An OpenAI-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud). Rex identifies what each coding task needs and routes it to the cheapest model that fits.
 
 - Compatible with any tool that supports a custom OpenAI API base URL (Cursor, Claude Code, Continue, Aider, etc.).
 - Each user runs their own Rex instance locally — all data, embeddings, and trained classifiers stay on the user's machine.
