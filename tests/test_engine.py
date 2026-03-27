@@ -1,109 +1,111 @@
 from __future__ import annotations
 
-from app.config import ModelConfig, RoutingConfig
+import pytest
+
+from app.config import ModelConfig
 from app.router.engine import RoutingEngine
 from app.router.registry import ModelRegistry
 
 
 def _make_model(**overrides) -> ModelConfig:
-    defaults = {
-        "name": "test/model",
-        "provider": "test",
-        "context_window": 4096,
-        "cost_per_1k_input": 0.001,
-        "cost_per_1k_output": 0.002,
-        "strengths": ["general"],
-        "max_latency_ms": 500,
-        "is_local": False,
-    }
+    defaults = {"name": "test/model"}
     defaults.update(overrides)
     return ModelConfig(**defaults)
 
 
 def _make_engine(
     models: list[ModelConfig],
-    completion_model: str,
-    default_model: str,
+    primary_model: str | None = None,
 ) -> RoutingEngine:
     registry = ModelRegistry(models)
-    routing = RoutingConfig(completion_model=completion_model, default_model=default_model)
-    return RoutingEngine(registry, routing)
+    return RoutingEngine(registry, primary_model)
 
 
 class TestSelectModel:
-    def test_short_single_turn_routes_to_completion_model(self):
-        fast = _make_model(name="fast/model", max_latency_ms=50)
-        strong = _make_model(name="strong/model", max_latency_ms=2000)
-        engine = _make_engine([fast, strong], "fast/model", "strong/model")
+    def test_routes_to_primary_model(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
+        engine = _make_engine([cheap, expensive])
 
-        messages = [{"role": "user", "content": "def hello"}]
-        selected = engine.select_model(messages, max_tokens=50, temperature=0)
-        assert selected.name == "fast/model"
-
-    def test_multi_turn_routes_to_default_model(self):
-        fast = _make_model(name="fast/model")
-        strong = _make_model(name="strong/model")
-        engine = _make_engine([fast, strong], "fast/model", "strong/model")
-
-        messages = [
-            {"role": "system", "content": "You are a helpful assistant"},
-            {"role": "user", "content": "Explain async"},
-            {"role": "assistant", "content": "..."},
-            {"role": "user", "content": "Show example"},
-        ]
+        messages = [{"role": "user", "content": "hello"}]
         selected = engine.select_model(messages)
-        assert selected.name == "strong/model"
+        assert selected.name == "cheap/model"
 
-    def test_same_model_for_both_routes(self):
+    def test_routes_to_explicit_primary(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
+        engine = _make_engine([cheap, expensive], primary_model="expensive/model")
+
+        messages = [{"role": "user", "content": "hello"}]
+        selected = engine.select_model(messages)
+        assert selected.name == "expensive/model"
+
+    def test_auto_selects_local_over_cloud(self):
+        cloud = _make_model(name="cloud/model", cost_per_1k_input=0.001)
+        local = _make_model(name="local/model", is_local=True, cost_per_1k_input=0.0)
+        engine = _make_engine([cloud, local])
+
+        messages = [{"role": "user", "content": "hello"}]
+        selected = engine.select_model(messages)
+        assert selected.name == "local/model"
+
+    def test_single_model(self):
         model = _make_model(name="only/model")
-        engine = _make_engine([model], "only/model", "only/model")
+        engine = _make_engine([model])
 
-        messages = [{"role": "user", "content": "short"}]
-        selected = engine.select_model(messages, max_tokens=10, temperature=0)
+        messages = [{"role": "user", "content": "hello"}]
+        selected = engine.select_model(messages)
         assert selected.name == "only/model"
 
 
-class TestFallbackOrder:
-    def test_fallback_starts_with_default_when_primary_differs(self):
-        fast = _make_model(name="fast/model")
-        strong = _make_model(name="strong/model")
-        other = _make_model(name="other/model")
-        engine = _make_engine([fast, strong, other], "fast/model", "strong/model")
+class TestPrimary:
+    def test_primary_property(self):
+        model = _make_model(name="primary/model")
+        engine = _make_engine([model])
+        assert engine.primary.name == "primary/model"
 
-        fallbacks = engine.fallback_order(fast)
-        assert fallbacks[0].name == "strong/model"
-        assert _make_model(name="other/model").name in [f.name for f in fallbacks]
+    def test_invalid_primary_raises(self):
+        model = _make_model(name="real/model")
+        with pytest.raises(ValueError, match="not found"):
+            _make_engine([model], primary_model="nonexistent/model")
+
+    def test_empty_registry_raises(self):
+        with pytest.raises(ValueError, match="No models available"):
+            _make_engine([])
+
+
+class TestFallbackOrder:
+    def test_fallback_orders_by_cost(self):
+        cheap = _make_model(name="cheap", cost_per_1k_input=0.001)
+        mid = _make_model(name="mid", cost_per_1k_input=0.01)
+        expensive = _make_model(name="expensive", cost_per_1k_input=0.03)
+        engine = _make_engine([expensive, cheap, mid])
+
+        fallbacks = engine.fallback_order(cheap)
+        names = [f.name for f in fallbacks]
+        assert names == ["mid", "expensive"]
 
     def test_fallback_excludes_primary(self):
-        fast = _make_model(name="fast/model")
-        strong = _make_model(name="strong/model")
-        engine = _make_engine([fast, strong], "fast/model", "strong/model")
+        a = _make_model(name="a", cost_per_1k_input=0.001)
+        b = _make_model(name="b", cost_per_1k_input=0.01)
+        engine = _make_engine([a, b])
 
-        fallbacks = engine.fallback_order(fast)
-        assert all(f.name != "fast/model" for f in fallbacks)
-
-    def test_fallback_when_primary_is_default(self):
-        fast = _make_model(name="fast/model")
-        strong = _make_model(name="strong/model")
-        engine = _make_engine([fast, strong], "fast/model", "strong/model")
-
-        fallbacks = engine.fallback_order(strong)
-        assert len(fallbacks) == 1
-        assert fallbacks[0].name == "fast/model"
+        fallbacks = engine.fallback_order(a)
+        assert all(f.name != "a" for f in fallbacks)
 
     def test_fallback_single_model_returns_empty(self):
         model = _make_model(name="only/model")
-        engine = _make_engine([model], "only/model", "only/model")
+        engine = _make_engine([model])
 
         fallbacks = engine.fallback_order(model)
         assert fallbacks == []
 
-    def test_fallback_no_duplicates(self):
-        fast = _make_model(name="fast/model")
-        strong = _make_model(name="strong/model")
-        third = _make_model(name="third/model")
-        engine = _make_engine([fast, strong, third], "fast/model", "strong/model")
+    def test_fallback_local_before_cloud(self):
+        cloud_cheap = _make_model(name="cloud", cost_per_1k_input=0.001, is_local=False)
+        local = _make_model(name="local", cost_per_1k_input=0.0, is_local=True)
+        cloud_expensive = _make_model(name="cloud2", cost_per_1k_input=0.03, is_local=False)
+        engine = _make_engine([cloud_expensive, cloud_cheap, local])
 
-        fallbacks = engine.fallback_order(fast)
+        fallbacks = engine.fallback_order(local)
         names = [f.name for f in fallbacks]
-        assert len(names) == len(set(names))
+        assert names == ["cloud", "cloud2"]

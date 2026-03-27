@@ -113,10 +113,11 @@ async def handle_text_completion(
     stream = body.get("stream", False)
     request_api_key = _extract_bearer_token(authorization)
 
-    completion_model_name = engine._routing_config.completion_model
-    selected = engine._registry.get_by_name(completion_model_name)
-    if selected is None:
-        raise ValueError(f"Completion model '{completion_model_name}' not found in registry")
+    selected = engine.select_model(
+        messages=body.get("messages", []),
+        max_tokens=body.get("max_tokens"),
+        temperature=body.get("temperature"),
+    )
 
     response, used_model = await _call_with_fallback(
         engine, selected, body, stream, request_api_key

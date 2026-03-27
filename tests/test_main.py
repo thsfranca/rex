@@ -5,23 +5,14 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config import ModelConfig, RoutingConfig, Settings
+from app.config import ModelConfig, Settings
 from app.main import app
 from app.router.engine import RoutingEngine
 from app.router.registry import ModelRegistry
 
 
 def _make_model(**overrides) -> ModelConfig:
-    defaults = {
-        "name": "test/model",
-        "provider": "test",
-        "context_window": 4096,
-        "cost_per_1k_input": 0,
-        "cost_per_1k_output": 0,
-        "strengths": ["general"],
-        "max_latency_ms": 500,
-        "is_local": True,
-    }
+    defaults = {"name": "test/model"}
     defaults.update(overrides)
     return ModelConfig(**defaults)
 
@@ -29,13 +20,17 @@ def _make_model(**overrides) -> ModelConfig:
 def _setup_app():
     import app.main as main_module
 
-    fast = _make_model(name="fast/model", api_base="http://localhost:11434")
-    strong = _make_model(name="strong/model")
+    fast = _make_model(
+        name="fast/model",
+        api_base="http://localhost:11434",
+        is_local=True,
+        cost_per_1k_input=0.0,
+    )
+    strong = _make_model(name="strong/model", cost_per_1k_input=0.01)
     models = [fast, strong]
     registry = ModelRegistry(models)
-    routing = RoutingConfig(completion_model="fast/model", default_model="strong/model")
-    main_module._engine = RoutingEngine(registry, routing)
-    main_module._settings = Settings(models=models, routing=routing)
+    main_module._engine = RoutingEngine(registry)
+    main_module._settings = Settings(models=models)
 
 
 @pytest.fixture(autouse=True)
@@ -109,11 +104,10 @@ class TestPassthroughEndpoint:
     def test_unknown_path_without_api_base(self):
         import app.main as main_module
 
-        strong = _make_model(name="strong/model", api_base=None)
-        registry = ModelRegistry([strong])
-        routing = RoutingConfig(completion_model="strong/model", default_model="strong/model")
-        main_module._engine = RoutingEngine(registry, routing)
-        main_module._settings = Settings(models=[strong], routing=routing)
+        model = _make_model(name="model", api_base=None)
+        registry = ModelRegistry([model])
+        main_module._engine = RoutingEngine(registry)
+        main_module._settings = Settings(models=[model])
 
         response = client.get("/v1/embeddings")
         assert response.status_code == 501
