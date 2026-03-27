@@ -1,15 +1,35 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 
-from app.config import ModelConfig, Settings
+from app.config import ModelConfig, ProviderConfig, Settings
 from app.discovery.metadata import enrich_model
 from app.discovery.models import list_models_for_provider
-from app.discovery.providers import KNOWN_PROVIDERS, detect_providers
+from app.discovery.providers import KNOWN_PROVIDERS, DetectedProvider, detect_providers
 from app.router.registry import ModelRegistry
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_config_providers(
+    config_providers: list[ProviderConfig],
+) -> list[DetectedProvider]:
+    resolved = []
+    for p in config_providers:
+        api_key = p.api_key
+        if api_key is None and p.api_key_env:
+            api_key = os.environ.get(p.api_key_env)
+            if api_key is None:
+                logger.warning(
+                    "Provider %s: env var %s not set, skipping",
+                    p.prefix,
+                    p.api_key_env,
+                )
+                continue
+        resolved.append(DetectedProvider(prefix=p.prefix, api_key=api_key, api_base=p.api_base))
+    return resolved
 
 
 async def build_registry(config: Settings | None) -> tuple[ModelRegistry, Settings]:
@@ -25,10 +45,23 @@ async def build_registry(config: Settings | None) -> tuple[ModelRegistry, Settin
     if config_names:
         logger.info("Config defines %d model(s): %s", len(config_names), ", ".join(config_names))
 
-    providers = await detect_providers()
+    config_provider_list = _resolve_config_providers(settings.providers)
+    config_prefixes = {p.prefix for p in config_provider_list}
+
+    if config_provider_list:
+        logger.info(
+            "Config defines %d provider(s): %s",
+            len(config_provider_list),
+            ", ".join(config_prefixes),
+        )
+
+    auto_providers = await detect_providers()
+    auto_providers = [p for p in auto_providers if p.prefix not in config_prefixes]
+
+    all_providers = config_provider_list + auto_providers
 
     supplemented = 0
-    for provider in providers:
+    for provider in all_providers:
         model_names = await list_models_for_provider(provider)
         for name in model_names:
             if name not in registry:
@@ -36,8 +69,8 @@ async def build_registry(config: Settings | None) -> tuple[ModelRegistry, Settin
                 supplemented += 1
         logger.info("Discovered %d models from %s", len(model_names), provider.prefix)
 
-    if config_names and supplemented > 0:
-        logger.info("Auto-discovery supplemented %d additional model(s)", supplemented)
+    if (config_names or config_provider_list) and supplemented > 0:
+        logger.info("Discovery found %d model(s)", supplemented)
 
     if not registry:
         env_vars = ", ".join(sorted(KNOWN_PROVIDERS.keys()))
