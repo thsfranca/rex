@@ -13,3 +13,6 @@
 
 # routing:
 #   primary_model: "ollama/llama3"
+
+# enrichments:
+#   task_decomposition: true
