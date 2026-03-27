@@ -15,6 +15,7 @@ def enrich_model(model_name: str, provider: DetectedProvider) -> ModelConfig:
     is_local = provider.is_local
     max_context_window = None
     supports_function_calling = False
+    supports_reasoning = False
     supports_vision = False
 
     try:
@@ -23,6 +24,7 @@ def enrich_model(model_name: str, provider: DetectedProvider) -> ModelConfig:
         cost = input_cost * 1000
         max_context_window = info.get("max_input_tokens") or info.get("max_tokens")
         supports_function_calling = bool(info.get("supports_function_calling"))
+        supports_reasoning = bool(info.get("supports_reasoning"))
         supports_vision = bool(info.get("supports_vision"))
     except Exception:
         logger.debug("No LiteLLM metadata for %s, using defaults", model_name)
@@ -35,5 +37,6 @@ def enrich_model(model_name: str, provider: DetectedProvider) -> ModelConfig:
         is_local=is_local,
         max_context_window=max_context_window,
         supports_function_calling=supports_function_calling,
+        supports_reasoning=supports_reasoning,
         supports_vision=supports_vision,
     )

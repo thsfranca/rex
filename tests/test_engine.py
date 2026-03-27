@@ -119,11 +119,13 @@ class TestTaskAwareRouting:
             name="small/model",
             cost_per_1k_input=0.001,
             max_context_window=8000,
+            supports_reasoning=True,
         )
         large = _make_model(
             name="large/model",
             cost_per_1k_input=0.01,
             max_context_window=128000,
+            supports_reasoning=True,
         )
         engine = _make_engine([small, large])
 
@@ -152,9 +154,17 @@ class TestTaskAwareRouting:
         selected = engine.select_model(messages)
         assert selected.name == "cloud/model"
 
-    def test_debugging_stays_on_primary(self):
-        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
-        expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
+    def test_debugging_stays_on_primary_when_it_supports_reasoning(self):
+        cheap = _make_model(
+            name="cheap/model",
+            cost_per_1k_input=0.001,
+            supports_reasoning=True,
+        )
+        expensive = _make_model(
+            name="expensive/model",
+            cost_per_1k_input=0.03,
+            supports_reasoning=True,
+        )
         engine = _make_engine([cheap, expensive])
 
         messages = [
@@ -162,6 +172,65 @@ class TestTaskAwareRouting:
         ]
         selected = engine.select_model(messages)
         assert selected.name == "cheap/model"
+
+    def test_debugging_upgrades_when_primary_lacks_reasoning(self):
+        cheap = _make_model(
+            name="cheap/model",
+            cost_per_1k_input=0.001,
+            supports_reasoning=False,
+        )
+        reasoning = _make_model(
+            name="reasoning/model",
+            cost_per_1k_input=0.01,
+            supports_reasoning=True,
+        )
+        engine = _make_engine([cheap, reasoning])
+
+        messages = [
+            {"role": "user", "content": "Fix this error in my code"},
+        ]
+        selected = engine.select_model(messages)
+        assert selected.name == "reasoning/model"
+
+    def test_optimization_upgrades_when_primary_lacks_reasoning(self):
+        cheap = _make_model(
+            name="cheap/model",
+            cost_per_1k_input=0.001,
+            supports_reasoning=False,
+        )
+        reasoning = _make_model(
+            name="reasoning/model",
+            cost_per_1k_input=0.01,
+            supports_reasoning=True,
+        )
+        engine = _make_engine([cheap, reasoning])
+
+        messages = [
+            {"role": "user", "content": "Optimize this function for performance"},
+        ]
+        selected = engine.select_model(messages)
+        assert selected.name == "reasoning/model"
+
+    def test_code_review_upgrades_for_reasoning_and_context(self):
+        small_no_reason = _make_model(
+            name="small/model",
+            cost_per_1k_input=0.001,
+            max_context_window=8000,
+            supports_reasoning=False,
+        )
+        large_reasoning = _make_model(
+            name="large_reasoning/model",
+            cost_per_1k_input=0.01,
+            max_context_window=128000,
+            supports_reasoning=True,
+        )
+        engine = _make_engine([small_no_reason, large_reasoning])
+
+        messages = [
+            {"role": "user", "content": "Review this code for issues"},
+        ]
+        selected = engine.select_model(messages)
+        assert selected.name == "large_reasoning/model"
 
     def test_falls_back_to_primary_when_no_model_meets_requirements(self):
         small = _make_model(
@@ -223,6 +292,21 @@ class TestTaskAwareRouting:
 
         messages = [
             {"role": "user", "content": "Refactor this module"},
+        ]
+        selected = engine.select_model(messages)
+        assert selected.name == "expensive/model"
+
+    def test_explicit_primary_respected_for_reasoning_task(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        expensive = _make_model(
+            name="expensive/model",
+            cost_per_1k_input=0.03,
+            supports_reasoning=True,
+        )
+        engine = _make_engine([cheap, expensive], primary_model="expensive/model")
+
+        messages = [
+            {"role": "user", "content": "Debug this crash"},
         ]
         selected = engine.select_model(messages)
         assert selected.name == "expensive/model"
