@@ -39,14 +39,17 @@ async def _list_openai_compatible(endpoint: str, api_key: str, prefix: str) -> l
         return []
 
 
-async def _list_anthropic_models(api_key: str) -> list[str]:
+async def _list_anthropic_models(
+    api_key: str, api_base: str = "https://api.anthropic.com"
+) -> list[str]:
     headers = {
         "x-api-key": api_key,
         "anthropic-version": "2023-06-01",
     }
+    url = f"{api_base.rstrip('/')}/v1/models"
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get("https://api.anthropic.com/v1/models", headers=headers)
+            response = await client.get(url, headers=headers)
             if response.status_code != 200:
                 logger.warning(
                     "Failed to list Anthropic models: HTTP %d",
@@ -99,12 +102,19 @@ async def list_models_for_provider(provider: DetectedProvider) -> list[str]:
         return await _list_ollama_models(provider.api_base or "http://localhost:11434")
 
     if provider.prefix == "anthropic":
-        return await _list_anthropic_models(provider.api_key)
+        return await _list_anthropic_models(
+            provider.api_key,
+            api_base=provider.api_base or "https://api.anthropic.com",
+        )
 
     if provider.prefix == "gemini":
         return await _list_gemini_models(provider.api_key)
 
-    endpoint = CLOUD_MODELS_ENDPOINTS.get(provider.prefix)
+    if provider.api_base:
+        endpoint = f"{provider.api_base.rstrip('/')}/v1/models"
+    else:
+        endpoint = CLOUD_MODELS_ENDPOINTS.get(provider.prefix)
+
     if endpoint and provider.api_key:
         return await _list_openai_compatible(endpoint, provider.api_key, provider.prefix)
 
