@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.router.categories import TaskCategory
 
@@ -113,6 +113,7 @@ _LONG_CONTEXT_CATEGORIES = frozenset(
 class ClassificationResult:
     category: TaskCategory
     confidence: float
+    scores: dict[TaskCategory, float] = field(default_factory=dict)
 
 
 def _extract_last_user_message(messages: list[dict]) -> str:
@@ -172,7 +173,7 @@ def classify(messages: list[dict]) -> ClassificationResult:
                 scores[cat] += 0.1
 
     if not scores:
-        return ClassificationResult(category=TaskCategory.GENERAL, confidence=0.2)
+        return ClassificationResult(category=TaskCategory.GENERAL, confidence=0.2, scores={})
 
     best_category = max(
         scores,
@@ -181,4 +182,5 @@ def classify(messages: list[dict]) -> ClassificationResult:
     return ClassificationResult(
         category=best_category,
         confidence=min(scores[best_category], 1.0),
+        scores=dict(scores),
     )
