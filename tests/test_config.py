@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import yaml
 
-from app.config import EnrichmentsConfig, ModelConfig, RoutingConfig, Settings, load_config
+from app.config import (
+    EnrichmentsConfig,
+    LLMJudgeConfig,
+    ModelConfig,
+    RoutingConfig,
+    Settings,
+    load_config,
+)
 
 
 class TestModelConfig:
@@ -61,6 +68,23 @@ class TestEnrichmentsConfig:
         assert enrichments.task_decomposition is True
 
 
+class TestLLMJudgeConfig:
+    def test_defaults_to_disabled(self):
+        judge = LLMJudgeConfig()
+        assert judge.enabled is False
+        assert judge.model is None
+        assert judge.confidence_threshold == 0.5
+
+    def test_enable_with_model(self):
+        judge = LLMJudgeConfig(enabled=True, model="ollama/llama3")
+        assert judge.enabled is True
+        assert judge.model == "ollama/llama3"
+
+    def test_custom_threshold(self):
+        judge = LLMJudgeConfig(confidence_threshold=0.3)
+        assert judge.confidence_threshold == 0.3
+
+
 class TestSettings:
     def test_all_defaults(self):
         settings = Settings()
@@ -69,6 +93,7 @@ class TestSettings:
         assert settings.models == []
         assert settings.routing.primary_model is None
         assert settings.enrichments.task_decomposition is False
+        assert settings.llm_judge.enabled is False
 
     def test_custom_server_config(self):
         settings = Settings(server={"host": "127.0.0.1", "port": 9000})
@@ -91,6 +116,19 @@ class TestSettings:
     def test_enrichments_omitted_defaults_to_disabled(self):
         settings = Settings(models=[{"name": "openai/gpt-4o"}])
         assert settings.enrichments.task_decomposition is False
+
+    def test_with_llm_judge(self):
+        settings = Settings(
+            llm_judge={"enabled": True, "model": "ollama/llama3", "confidence_threshold": 0.4}
+        )
+        assert settings.llm_judge.enabled is True
+        assert settings.llm_judge.model == "ollama/llama3"
+        assert settings.llm_judge.confidence_threshold == 0.4
+
+    def test_llm_judge_omitted_defaults_to_disabled(self):
+        settings = Settings(models=[{"name": "openai/gpt-4o"}])
+        assert settings.llm_judge.enabled is False
+        assert settings.llm_judge.model is None
 
 
 class TestLoadConfig:
@@ -134,6 +172,17 @@ class TestLoadConfig:
         settings = load_config(config_file)
         assert settings is not None
         assert settings.enrichments.task_decomposition is True
+
+    def test_loads_llm_judge_from_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            yaml.dump({"llm_judge": {"enabled": True, "model": "ollama/llama3"}})
+        )
+        settings = load_config(config_file)
+        assert settings is not None
+        assert settings.llm_judge.enabled is True
+        assert settings.llm_judge.model == "ollama/llama3"
+        assert settings.llm_judge.confidence_threshold == 0.5
 
     def test_load_invalid_yaml(self, tmp_path):
         config_file = tmp_path / "config.yaml"

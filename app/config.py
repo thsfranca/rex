@@ -31,11 +31,18 @@ class EnrichmentsConfig(BaseModel):
     task_decomposition: bool = False
 
 
+class LLMJudgeConfig(BaseModel):
+    enabled: bool = False
+    model: str | None = None
+    confidence_threshold: float = 0.5
+
+
 class Settings(BaseModel):
     server: ServerConfig = ServerConfig()
     models: list[ModelConfig] = []
     routing: RoutingConfig = RoutingConfig()
     enrichments: EnrichmentsConfig = EnrichmentsConfig()
+    llm_judge: LLMJudgeConfig = LLMJudgeConfig()
 
 
 def load_config(path: str | Path) -> Settings | None:
