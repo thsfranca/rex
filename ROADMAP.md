@@ -160,6 +160,22 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ---
 
+## Phase 5.5 — Remote Provider Discovery
+
+**Goal**: Support remote LiteLLM proxies and custom API endpoints as configurable providers. Rex probes their model list endpoints at startup and merges discovered models with local and manually configured models.
+
+**Deliverables**:
+- [x] `ProviderConfig` in config schema: `prefix`, `api_base`, `api_key` (direct value), `api_key_env` (environment variable name)
+- [x] `providers` list in `Settings` (defaults to empty)
+- [x] Resolve config providers into `DetectedProvider` at startup, resolving API key from direct value or environment variable
+- [x] Config providers override auto-discovered providers with the same prefix (e.g., configuring an Anthropic proxy replaces direct Anthropic API discovery)
+- [x] Model listing accepts custom `api_base` for Anthropic and OpenAI-compatible providers
+- [x] Skip config providers when their `api_key_env` references an unset environment variable (with warning log)
+
+**Design**: Config providers get resolved into `DetectedProvider` objects during startup. The registry builder merges three sources: config providers, auto-discovered cloud providers (excluding prefixes already defined in config), and auto-discovered local providers (Ollama). This allows users behind corporate LiteLLM proxies to route through their proxy while keeping local model discovery working.
+
+---
+
 ## Phase 6 — Observability Dashboard (optional)
 
 **Goal**: Give users a visual dashboard to explore routing decisions, cost breakdown, model usage, and reliability — without adding UI maintenance burden to Rex. Users install and run the dashboard only if they want it.

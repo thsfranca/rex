@@ -7,6 +7,14 @@
 #   host: "0.0.0.0"
 #   port: 9000
 
+# providers:
+#   - prefix: "anthropic"
+#     api_base: "https://litellm-proxy.company.com/anthropic"
+#     api_key_env: "ANTHROPIC_AUTH_TOKEN"
+#   - prefix: "openai"
+#     api_base: "https://litellm-proxy.company.com/openai"
+#     api_key: "sk-..."
+
 # models:
 #   - name: "my-company/custom-model"
 #     api_base: "https://internal.company.com/v1"
