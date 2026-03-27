@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from app.learning.centroids import CentroidClassifier
+from app.learning.centroids import CentroidClassifier, build_centroids
 from app.learning.clustering import cluster_embeddings
 from app.learning.labeling import LabelModel
 from app.learning.trainer import map_clusters_to_categories, train_classifier
@@ -25,6 +25,7 @@ class RetrainingScheduler:
         label_model: LabelModel,
         ml_classifier: MLClassifier,
         engine: RoutingEngine | None = None,
+        embedding_service=None,
         recluster_interval: int = 100,
         max_k: int = 20,
         promotion_threshold: float = 0.5,
@@ -33,6 +34,7 @@ class RetrainingScheduler:
         self._label_model = label_model
         self._ml_classifier = ml_classifier
         self._engine = engine
+        self._embedding_service = embedding_service
         self._recluster_interval = recluster_interval
         self._max_k = max_k
         self._promotion_threshold = promotion_threshold
@@ -48,6 +50,25 @@ class RetrainingScheduler:
     @property
     def centroid_classifier(self) -> CentroidClassifier | None:
         return self._centroid_classifier
+
+    async def reset(self) -> None:
+        await self._repository.clear_all()
+        self._ml_classifier.clear()
+        self._label_model = LabelModel()
+        self._last_trained_count = 0
+        self._promoted = False
+
+        cold_start_centroids: CentroidClassifier | None = None
+        if self._embedding_service is not None:
+            centroids = build_centroids(self._embedding_service)
+            cold_start_centroids = CentroidClassifier(centroids)
+
+        self._centroid_classifier = cold_start_centroids
+        if self._engine is not None:
+            self._engine.set_ml_promoted(False)
+            self._engine.set_centroid_classifier(cold_start_centroids)
+
+        logger.info("Training reset complete — all learning data cleared")
 
     async def on_new_decision(self) -> None:
         if self._running:
