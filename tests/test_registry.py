@@ -111,6 +111,23 @@ class TestFilterByRequirements:
         result = registry.filter_by_requirements(req)
         assert [m.name for m in result] == ["has_fc"]
 
+    def test_filters_by_reasoning(self):
+        no_reason = _make_model(
+            name="no_reason",
+            supports_reasoning=False,
+            cost_per_1k_input=0.001,
+        )
+        has_reason = _make_model(
+            name="has_reason",
+            supports_reasoning=True,
+            cost_per_1k_input=0.01,
+        )
+        registry = ModelRegistry([no_reason, has_reason])
+
+        req = TaskRequirements(needs_reasoning=True)
+        result = registry.filter_by_requirements(req)
+        assert [m.name for m in result] == ["has_reason"]
+
     def test_filters_by_cloud_requirement(self):
         local = _make_model(name="local", is_local=True, cost_per_1k_input=0.0)
         cloud = _make_model(name="cloud", is_local=False, cost_per_1k_input=0.01)

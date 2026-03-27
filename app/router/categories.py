@@ -22,18 +22,19 @@ class TaskCategory(str, Enum):
 class TaskRequirements:
     min_context_window: int | None = None
     needs_function_calling: bool = False
+    needs_reasoning: bool = False
     needs_cloud: bool = False
 
 
 CATEGORY_REQUIREMENTS: dict[TaskCategory, TaskRequirements] = {
     TaskCategory.COMPLETION: TaskRequirements(),
-    TaskCategory.DEBUGGING: TaskRequirements(),
+    TaskCategory.DEBUGGING: TaskRequirements(needs_reasoning=True),
     TaskCategory.REFACTORING: TaskRequirements(min_context_window=32_000),
-    TaskCategory.OPTIMIZATION: TaskRequirements(),
+    TaskCategory.OPTIMIZATION: TaskRequirements(needs_reasoning=True),
     TaskCategory.TEST_GENERATION: TaskRequirements(min_context_window=16_000),
     TaskCategory.EXPLANATION: TaskRequirements(),
     TaskCategory.DOCUMENTATION: TaskRequirements(),
-    TaskCategory.CODE_REVIEW: TaskRequirements(min_context_window=32_000),
+    TaskCategory.CODE_REVIEW: TaskRequirements(min_context_window=32_000, needs_reasoning=True),
     TaskCategory.GENERATION: TaskRequirements(min_context_window=16_000),
     TaskCategory.MIGRATION: TaskRequirements(needs_cloud=True),
     TaskCategory.GENERAL: TaskRequirements(),

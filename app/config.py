@@ -19,6 +19,7 @@ class ModelConfig(BaseModel):
     is_local: bool = False
     max_context_window: int | None = None
     supports_function_calling: bool = False
+    supports_reasoning: bool = False
     supports_vision: bool = False
 
 

@@ -32,6 +32,9 @@ class ModelRegistry:
             if requirements.needs_function_calling:
                 if not m.supports_function_calling:
                     continue
+            if requirements.needs_reasoning:
+                if not m.supports_reasoning:
+                    continue
             if requirements.needs_cloud:
                 if m.is_local:
                     continue

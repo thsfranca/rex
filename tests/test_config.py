@@ -15,6 +15,7 @@ class TestModelConfig:
         assert model.is_local is False
         assert model.max_context_window is None
         assert model.supports_function_calling is False
+        assert model.supports_reasoning is False
         assert model.supports_vision is False
 
     def test_all_fields_set(self):
@@ -26,6 +27,7 @@ class TestModelConfig:
             is_local=True,
             max_context_window=128000,
             supports_function_calling=True,
+            supports_reasoning=True,
             supports_vision=True,
         )
         assert model.name == "ollama/llama3"
@@ -35,6 +37,7 @@ class TestModelConfig:
         assert model.is_local is True
         assert model.max_context_window == 128000
         assert model.supports_function_calling is True
+        assert model.supports_reasoning is True
         assert model.supports_vision is True
 
 
