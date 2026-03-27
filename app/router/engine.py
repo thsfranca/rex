@@ -22,6 +22,7 @@ class RoutingDecision:
     confidence: float
     feature_type: FeatureType
     scores: dict[TaskCategory, float] | None = None
+    escalated: bool = False
 
 
 class RoutingEngine:
@@ -126,44 +127,60 @@ class RoutingEngine:
                     )
 
         requirements = get_requirements(result.category)
+        scores = result.scores if result.scores else None
+        escalated = False
 
-        if self._registry.meets_requirements(self._primary, requirements):
-            return RoutingDecision(
-                model=self._primary,
-                category=result.category,
-                confidence=result.confidence,
-                feature_type=feature,
-                scores=result.scores if result.scores else None,
-            )
+        if result.confidence >= self._confidence_threshold:
+            if self._registry.meets_requirements(self._primary, requirements):
+                selected = self._primary
+            else:
+                candidates = self._registry.filter_by_requirements(requirements)
+                if candidates:
+                    selected = candidates[0]
+                    logger.info(
+                        "Task classified as %s (confidence=%.2f), "
+                        "routing to %s (primary %s does not meet requirements)",
+                        result.category.value,
+                        result.confidence,
+                        selected.name,
+                        self._primary.name,
+                    )
+                else:
+                    selected = self._primary
+                    logger.info(
+                        "Task classified as %s but no model meets requirements, "
+                        "falling back to primary",
+                        result.category.value,
+                    )
+        else:
+            candidates = self._registry.filter_by_requirements(requirements)
+            if len(candidates) > 1:
+                selected = candidates[1]
+                escalated = True
+                logger.info(
+                    "Low confidence (%.2f) for %s, escalating model from %s to %s",
+                    result.confidence,
+                    result.category.value,
+                    candidates[0].name,
+                    selected.name,
+                )
+            elif candidates:
+                selected = candidates[0]
+            else:
+                selected = self._primary
+                logger.info(
+                    "Task classified as %s but no model meets requirements, "
+                    "falling back to primary",
+                    result.category.value,
+                )
 
-        candidates = self._registry.filter_by_requirements(requirements)
-        if candidates:
-            logger.info(
-                "Task classified as %s (confidence=%.2f), "
-                "routing to %s (primary %s does not meet requirements)",
-                result.category.value,
-                result.confidence,
-                candidates[0].name,
-                self._primary.name,
-            )
-            return RoutingDecision(
-                model=candidates[0],
-                category=result.category,
-                confidence=result.confidence,
-                feature_type=feature,
-                scores=result.scores if result.scores else None,
-            )
-
-        logger.info(
-            "Task classified as %s but no model meets requirements, " "falling back to primary",
-            result.category.value,
-        )
         return RoutingDecision(
-            model=self._primary,
+            model=selected,
             category=result.category,
             confidence=result.confidence,
             feature_type=feature,
-            scores=result.scores if result.scores else None,
+            scores=scores,
+            escalated=escalated,
         )
 
     def fallback_order(self, primary: ModelConfig) -> list[ModelConfig]:
