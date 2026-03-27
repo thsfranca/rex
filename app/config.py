@@ -17,6 +17,9 @@ class ModelConfig(BaseModel):
     api_base: str | None = None
     cost_per_1k_input: float = 0.0
     is_local: bool = False
+    max_context_window: int | None = None
+    supports_function_calling: bool = False
+    supports_vision: bool = False
 
 
 class RoutingConfig(BaseModel):
