@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import yaml
 
-from app.config import ModelConfig, RoutingConfig, Settings, load_config
+from app.config import EnrichmentsConfig, ModelConfig, RoutingConfig, Settings, load_config
 
 
 class TestModelConfig:
@@ -51,6 +51,16 @@ class TestRoutingConfig:
         assert routing.primary_model == "openai/gpt-4o"
 
 
+class TestEnrichmentsConfig:
+    def test_defaults_to_disabled(self):
+        enrichments = EnrichmentsConfig()
+        assert enrichments.task_decomposition is False
+
+    def test_enable_task_decomposition(self):
+        enrichments = EnrichmentsConfig(task_decomposition=True)
+        assert enrichments.task_decomposition is True
+
+
 class TestSettings:
     def test_all_defaults(self):
         settings = Settings()
@@ -58,6 +68,7 @@ class TestSettings:
         assert settings.server.port == 8000
         assert settings.models == []
         assert settings.routing.primary_model is None
+        assert settings.enrichments.task_decomposition is False
 
     def test_custom_server_config(self):
         settings = Settings(server={"host": "127.0.0.1", "port": 9000})
@@ -72,6 +83,14 @@ class TestSettings:
     def test_with_routing_override(self):
         settings = Settings(routing={"primary_model": "openai/gpt-4o"})
         assert settings.routing.primary_model == "openai/gpt-4o"
+
+    def test_with_enrichments(self):
+        settings = Settings(enrichments={"task_decomposition": True})
+        assert settings.enrichments.task_decomposition is True
+
+    def test_enrichments_omitted_defaults_to_disabled(self):
+        settings = Settings(models=[{"name": "openai/gpt-4o"}])
+        assert settings.enrichments.task_decomposition is False
 
 
 class TestLoadConfig:
@@ -108,6 +127,13 @@ class TestLoadConfig:
         assert settings is not None
         assert settings.server.port == 9000
         assert settings.models == []
+
+    def test_loads_enrichments_from_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(yaml.dump({"enrichments": {"task_decomposition": True}}))
+        settings = load_config(config_file)
+        assert settings is not None
+        assert settings.enrichments.task_decomposition is True
 
     def test_load_invalid_yaml(self, tmp_path):
         config_file = tmp_path / "config.yaml"
