@@ -25,6 +25,13 @@ class ModelConfig(BaseModel):
     supports_vision: bool = False
 
 
+class ProviderConfig(BaseModel):
+    prefix: str
+    api_base: str
+    api_key: str | None = None
+    api_key_env: str | None = None
+
+
 class RoutingConfig(BaseModel):
     primary_model: str | None = None
 
@@ -50,6 +57,7 @@ class LearningConfig(BaseModel):
 class Settings(BaseModel):
     server: ServerConfig = ServerConfig()
     models: list[ModelConfig] = []
+    providers: list[ProviderConfig] = []
     routing: RoutingConfig = RoutingConfig()
     enrichments: EnrichmentsConfig = EnrichmentsConfig()
     llm_judge: LLMJudgeConfig = LLMJudgeConfig()

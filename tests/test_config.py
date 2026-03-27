@@ -9,6 +9,7 @@ from app.config import (
     EnrichmentsConfig,
     LLMJudgeConfig,
     ModelConfig,
+    ProviderConfig,
     RoutingConfig,
     Settings,
     load_config,
@@ -49,6 +50,45 @@ class TestModelConfig:
         assert model.supports_function_calling is True
         assert model.supports_reasoning is True
         assert model.supports_vision is True
+
+
+class TestProviderConfig:
+    def test_requires_prefix_and_api_base(self):
+        provider = ProviderConfig(prefix="anthropic", api_base="https://proxy.example.com")
+        assert provider.prefix == "anthropic"
+        assert provider.api_base == "https://proxy.example.com"
+        assert provider.api_key is None
+        assert provider.api_key_env is None
+
+    def test_with_direct_api_key(self):
+        provider = ProviderConfig(
+            prefix="anthropic",
+            api_base="https://proxy.example.com",
+            api_key="sk-test",
+        )
+        assert provider.api_key == "sk-test"
+        assert provider.api_key_env is None
+
+    def test_with_api_key_env(self):
+        provider = ProviderConfig(
+            prefix="anthropic",
+            api_base="https://proxy.example.com",
+            api_key_env="ANTHROPIC_AUTH_TOKEN",
+        )
+        assert provider.api_key is None
+        assert provider.api_key_env == "ANTHROPIC_AUTH_TOKEN"
+
+    def test_all_fields_set(self):
+        provider = ProviderConfig(
+            prefix="openai",
+            api_base="https://proxy.example.com/openai",
+            api_key="sk-direct",
+            api_key_env="OPENAI_PROXY_KEY",
+        )
+        assert provider.prefix == "openai"
+        assert provider.api_base == "https://proxy.example.com/openai"
+        assert provider.api_key == "sk-direct"
+        assert provider.api_key_env == "OPENAI_PROXY_KEY"
 
 
 class TestRoutingConfig:
@@ -94,6 +134,7 @@ class TestSettings:
         assert settings.server.host == "0.0.0.0"
         assert settings.server.port == 8000
         assert settings.models == []
+        assert settings.providers == []
         assert settings.routing.primary_model is None
         assert settings.enrichments.task_decomposition is False
         assert settings.llm_judge.enabled is False
@@ -132,6 +173,21 @@ class TestSettings:
         settings = Settings(models=[{"name": "openai/gpt-4o"}])
         assert settings.llm_judge.enabled is False
         assert settings.llm_judge.model is None
+
+    def test_with_providers(self):
+        settings = Settings(
+            providers=[
+                {"prefix": "anthropic", "api_base": "https://proxy.example.com"},
+                {"prefix": "openai", "api_base": "https://proxy.example.com/openai"},
+            ]
+        )
+        assert len(settings.providers) == 2
+        assert settings.providers[0].prefix == "anthropic"
+        assert settings.providers[1].prefix == "openai"
+
+    def test_providers_omitted_defaults_to_empty(self):
+        settings = Settings(models=[{"name": "openai/gpt-4o"}])
+        assert settings.providers == []
 
 
 class TestDefaultConfigPath:
@@ -228,6 +284,49 @@ class TestLoadConfig:
         assert settings.learning.recluster_interval == 200
         assert settings.learning.max_k == 30
         assert settings.learning.promotion_silhouette_threshold == 0.6
+
+    def test_loads_providers_from_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            yaml.dump(
+                {
+                    "providers": [
+                        {
+                            "prefix": "anthropic",
+                            "api_base": "https://proxy.example.com/anthropic",
+                            "api_key_env": "ANTHROPIC_AUTH_TOKEN",
+                        }
+                    ]
+                }
+            )
+        )
+        settings = load_config(config_file)
+        assert settings is not None
+        assert len(settings.providers) == 1
+        assert settings.providers[0].prefix == "anthropic"
+        assert settings.providers[0].api_base == "https://proxy.example.com/anthropic"
+        assert settings.providers[0].api_key_env == "ANTHROPIC_AUTH_TOKEN"
+
+    def test_loads_providers_with_direct_api_key_from_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            yaml.dump(
+                {
+                    "providers": [
+                        {
+                            "prefix": "openai",
+                            "api_base": "https://proxy.example.com/openai",
+                            "api_key": "sk-proxy-key",
+                        }
+                    ]
+                }
+            )
+        )
+        settings = load_config(config_file)
+        assert settings is not None
+        assert len(settings.providers) == 1
+        assert settings.providers[0].api_key == "sk-proxy-key"
+        assert settings.providers[0].api_key_env is None
 
     def test_load_invalid_yaml(self, tmp_path):
         config_file = tmp_path / "config.yaml"
