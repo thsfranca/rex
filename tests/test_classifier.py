@@ -4,9 +4,9 @@ from app.router.categories import TaskCategory
 from app.router.classifier import (
     ClassificationResult,
     classify,
-    _extract_last_user_message,
     _code_block_ratio,
 )
+from app.utils import extract_last_user_text
 
 
 class TestExtractLastUserMessage:
@@ -17,14 +17,14 @@ class TestExtractLastUserMessage:
             {"role": "assistant", "content": "response"},
             {"role": "user", "content": "second question"},
         ]
-        assert _extract_last_user_message(messages) == "second question"
+        assert extract_last_user_text(messages) == "second question"
 
     def test_returns_empty_for_no_user_messages(self):
         messages = [{"role": "system", "content": "You are helpful"}]
-        assert _extract_last_user_message(messages) == ""
+        assert extract_last_user_text(messages) == ""
 
     def test_returns_empty_for_empty_list(self):
-        assert _extract_last_user_message([]) == ""
+        assert extract_last_user_text([]) == ""
 
     def test_handles_multipart_content(self):
         messages = [
@@ -36,7 +36,7 @@ class TestExtractLastUserMessage:
                 ],
             }
         ]
-        assert "explain this" in _extract_last_user_message(messages)
+        assert "explain this" in extract_last_user_text(messages)
 
 
 class TestClassifyDebugging:

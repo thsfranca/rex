@@ -6,6 +6,7 @@ import logging
 import time
 from datetime import datetime, timezone
 
+import httpx
 import litellm
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -19,29 +20,32 @@ from app.logging.models import DecisionRecord
 from app.logging.repository import DecisionRepository
 from app.proxy.streaming import stream_completion
 from app.router.engine import RoutingEngine
+from app.utils import extract_last_user_text
 
 _DEFAULT_ADAPTER = DefaultAdapter()
 
 logger = logging.getLogger(__name__)
 
-LITELLM_PASSTHROUGH_PARAMS = [
-    "messages",
-    "temperature",
-    "max_tokens",
-    "top_p",
-    "n",
-    "stop",
-    "presence_penalty",
-    "frequency_penalty",
-    "logit_bias",
-    "user",
-    "functions",
-    "function_call",
-    "tools",
-    "tool_choice",
-    "response_format",
-    "seed",
-]
+LITELLM_PASSTHROUGH_PARAMS = frozenset(
+    {
+        "messages",
+        "temperature",
+        "max_tokens",
+        "top_p",
+        "n",
+        "stop",
+        "presence_penalty",
+        "frequency_penalty",
+        "logit_bias",
+        "user",
+        "functions",
+        "function_call",
+        "tools",
+        "tool_choice",
+        "response_format",
+        "seed",
+    }
+)
 
 
 def _extract_bearer_token(authorization: str | None) -> str | None:
@@ -96,17 +100,6 @@ async def _call_with_fallback(
 
 def _hash_prompt(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
-
-
-def _extract_last_user_text(messages: list[dict]) -> str:
-    for msg in reversed(messages):
-        if msg.get("role") == "user":
-            content = msg.get("content", "")
-            if isinstance(content, str):
-                return content
-            if isinstance(content, list):
-                return " ".join(part.get("text", "") for part in content if isinstance(part, dict))
-    return ""
 
 
 async def _log_decision(
@@ -179,7 +172,7 @@ async def handle_chat_completion(
 
     embedding = None
     embedding_bytes = None
-    last_user_text = _extract_last_user_text(normalized.messages)
+    last_user_text = extract_last_user_text(normalized.messages)
     prompt_hash = _hash_prompt(last_user_text)
 
     if embedding_service is not None and last_user_text.strip():
@@ -277,8 +270,6 @@ async def handle_passthrough(request: Request, api_base: str | None) -> Response
                 }
             },
         )
-
-    import httpx
 
     path = request.url.path
     async with httpx.AsyncClient(base_url=api_base) as client:

@@ -4,11 +4,14 @@ from datetime import datetime, timezone
 import numpy as np
 import pytest
 
+from app.config import ModelConfig
 from app.learning.labeling import LabelModel
 from app.learning.scheduler import RetrainingScheduler
 from app.logging.models import DecisionRecord
 from app.logging.sqlite import SQLiteDecisionRepository
+from app.router.engine import RoutingEngine
 from app.router.ml_classifier import MLClassifier
+from app.router.registry import ModelRegistry
 
 
 def _make_embedding(dim=384):
@@ -111,3 +114,42 @@ class TestRetrainingScheduler:
             ml_classifier=ml,
         )
         assert not scheduler.is_promoted
+
+    @pytest.mark.asyncio
+    async def test_centroid_propagated_to_engine(self, tmp_path):
+        repo = SQLiteDecisionRepository(db_path=str(tmp_path / "test.db"))
+        ml = MLClassifier(model_path=str(tmp_path / "model.joblib"))
+        model = ModelConfig(name="test/model")
+        registry = ModelRegistry([model])
+        engine = RoutingEngine(registry)
+        scheduler = RetrainingScheduler(
+            repository=repo,
+            label_model=LabelModel(),
+            ml_classifier=ml,
+            engine=engine,
+            recluster_interval=5,
+            max_k=3,
+        )
+
+        rng = np.random.RandomState(42)
+        for i in range(30):
+            emb = rng.randn(10).astype(np.float32)
+            if i < 15:
+                emb += 5
+                votes = {"debugging": 0.9}
+            else:
+                emb -= 5
+                votes = {"refactoring": 0.8}
+
+            record = _make_record(
+                prompt_hash=f"h{i}",
+                embedding=emb.tobytes(),
+                rule_votes=votes,
+                category="debugging" if i < 15 else "refactoring",
+            )
+            await repo.save(record)
+
+        await scheduler.on_new_decision()
+
+        if scheduler.centroid_classifier is not None:
+            assert engine._centroid_classifier is scheduler.centroid_classifier

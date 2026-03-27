@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import litellm
 
 from app.router.categories import TaskCategory
+from app.utils import extract_last_user_text
 
 logger = logging.getLogger(__name__)
 
@@ -17,9 +18,7 @@ JUDGE_SYSTEM_PROMPT = (
     "Analyze the user's message and classify it into exactly one category.\n\n"
     "Valid categories: " + ", ".join(sorted(_VALID_CATEGORIES)) + "\n\n"
     "Respond with a JSON object containing:\n"
-    '- "category": one of the valid categories listed above\n'
-    '- "min_context_window": minimum context window needed in tokens '
-    "(null if no special requirement)\n\n"
+    '- "category": one of the valid categories listed above\n\n'
     "Respond ONLY with the JSON object, no other text."
 )
 
@@ -27,18 +26,6 @@ JUDGE_SYSTEM_PROMPT = (
 @dataclass(frozen=True)
 class JudgeResult:
     category: TaskCategory
-    min_context_window: int | None = None
-
-
-def _extract_last_user_message(messages: list[dict]) -> str:
-    for msg in reversed(messages):
-        if msg.get("role") == "user":
-            content = msg.get("content", "")
-            if isinstance(content, str):
-                return content
-            if isinstance(content, list):
-                return " ".join(part.get("text", "") for part in content if isinstance(part, dict))
-    return ""
 
 
 def _parse_judge_response(content: str) -> JudgeResult | None:
@@ -53,17 +40,7 @@ def _parse_judge_response(content: str) -> JudgeResult | None:
         logger.warning("LLM judge returned invalid category: %s", category_str)
         return None
 
-    min_ctx = data.get("min_context_window")
-    if min_ctx is not None:
-        try:
-            min_ctx = int(min_ctx)
-        except (ValueError, TypeError):
-            min_ctx = None
-
-    return JudgeResult(
-        category=TaskCategory(category_str),
-        min_context_window=min_ctx,
-    )
+    return JudgeResult(category=TaskCategory(category_str))
 
 
 class LLMJudge:
@@ -75,7 +52,7 @@ class LLMJudge:
         return self._model
 
     async def classify(self, messages: list[dict]) -> JudgeResult | None:
-        user_text = _extract_last_user_message(messages)
+        user_text = extract_last_user_text(messages)
         if not user_text.strip():
             return None
 

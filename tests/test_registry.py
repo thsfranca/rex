@@ -170,6 +170,40 @@ class TestFilterByRequirements:
         result = registry.filter_by_requirements(req)
         assert result == []
 
+    def test_meets_requirements_passes(self):
+        model = _make_model(
+            name="capable",
+            max_context_window=128000,
+            supports_reasoning=True,
+            supports_function_calling=True,
+            is_local=False,
+        )
+        registry = ModelRegistry([model])
+        req = TaskRequirements(
+            min_context_window=32_000,
+            needs_reasoning=True,
+            needs_function_calling=True,
+        )
+        assert registry.meets_requirements(model, req) is True
+
+    def test_meets_requirements_fails_context_window(self):
+        model = _make_model(name="small", max_context_window=8000)
+        registry = ModelRegistry([model])
+        req = TaskRequirements(min_context_window=32_000)
+        assert registry.meets_requirements(model, req) is False
+
+    def test_meets_requirements_fails_reasoning(self):
+        model = _make_model(name="basic", supports_reasoning=False)
+        registry = ModelRegistry([model])
+        req = TaskRequirements(needs_reasoning=True)
+        assert registry.meets_requirements(model, req) is False
+
+    def test_meets_requirements_fails_cloud(self):
+        model = _make_model(name="local", is_local=True)
+        registry = ModelRegistry([model])
+        req = TaskRequirements(needs_cloud=True)
+        assert registry.meets_requirements(model, req) is False
+
     def test_results_sorted_by_cost(self):
         expensive = _make_model(
             name="expensive",
