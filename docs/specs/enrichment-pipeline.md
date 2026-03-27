@@ -213,11 +213,10 @@ tests/
 
 ### enrichment/task_decomposition.py
 
-- `COMPLEX_CATEGORIES` frozenset: `generation`, `refactoring`, `migration`, `code_review`, `test_generation`.
-- `PROMPT_LENGTH_THRESHOLD` constant: `500`.
+- `COMPLEX_CATEGORIES` frozenset: `generation`, `refactoring`, `migration`, `code_review`, `test_generation`, `documentation`.
 - `DECOMPOSITION_INSTRUCTION` constant: the instruction text to inject.
 - `TaskDecompositionEnricher` class implementing the `Enricher` protocol.
-- `_is_complex(context) -> bool`: checks category membership and prompt length.
+- `_is_complex(context) -> bool`: checks feature type is `CHAT` and category is in `COMPLEX_CATEGORIES`.
 - `enrich(context) -> context`: if complex, appends instruction to system message; otherwise returns unchanged.
 
 ### router/engine.py (modified)

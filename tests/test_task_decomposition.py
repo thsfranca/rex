@@ -4,7 +4,6 @@ from app.enrichment.context import EnrichmentContext
 from app.enrichment.task_decomposition import (
     COMPLEX_CATEGORIES,
     DECOMPOSITION_INSTRUCTION,
-    PROMPT_LENGTH_THRESHOLD,
     TaskDecompositionEnricher,
 )
 from app.router.categories import TaskCategory
@@ -58,11 +57,6 @@ class TestComplexCategories:
 
     def test_optimization_is_not_complex(self):
         assert TaskCategory.OPTIMIZATION not in COMPLEX_CATEGORIES
-
-
-class TestPromptLengthThreshold:
-    def test_threshold_is_500(self):
-        assert PROMPT_LENGTH_THRESHOLD == 500
 
 
 class TestTaskDecompositionEnricher:
