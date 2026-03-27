@@ -101,6 +101,8 @@ Rex exposes a fully OpenAI-compatible API as a transparent proxy:
 - **Handled directly**:
   - `GET /v1/models` — returns models from Rex's registry
   - `GET /health` — returns proxy status
+- **Management**:
+  - `POST /v1/reset` — clears all learning data and trained models, restores Rex to its initial state
 - **Transparent passthrough** — Rex forwards to the primary model's backend without routing:
   - `/v1/embeddings`, `/v1/audio/*`, `/v1/images/*`, `/v1/files`, `/v1/moderations`, and any other endpoint
   - Rex never blocks an unknown endpoint — it passes it through to the primary model's backend
@@ -242,6 +244,23 @@ flowchart TD
    - The model produces clean probabilistic labels without any ground-truth labels ([Ratner et al., 2017](https://arxiv.org/abs/1711.10160)).
 3. **Training**: A lightweight classifier (logistic regression) trains on the cluster-derived and weakly-supervised labels.
    - Once trained, it replaces heuristics as the primary classifier in the chain.
+
+## Training Reset
+
+The `POST /v1/reset` endpoint clears all accumulated learning data and returns Rex to a fresh state. The reset covers:
+
+| Component | What gets cleared |
+|---|---|
+| **SQLite database** | All rows from the `decisions` table (routing history, embeddings, rule votes) |
+| **ML classifier file** | Deletes `~/.rex/ml_classifier.joblib` and clears in-memory model |
+| **Retraining scheduler** | Resets training counter, promotion status, and label model |
+| **Routing engine** | Demotes ML classifier, restores cold-start centroid classifier from synthetic exemplars |
+
+After reset:
+- Heuristics resume as the primary classifier.
+- The cold-start centroid classifier provides semantic fallback from the first query.
+- The learning pipeline begins accumulating data from scratch.
+- The system behaves exactly as it does on a fresh start.
 
 ## Project Structure
 
