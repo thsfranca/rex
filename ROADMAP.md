@@ -135,6 +135,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 **Deliverables**:
 - [ ] CLI entry point: install Rex globally (e.g., `uv tool install rex`), run with `rex start` or `rex`
 - [ ] `rex stop` shuts down a running Rex instance gracefully
+- [ ] `rex reset` clears all learning data with an interactive confirmation prompt (skippable with `--yes`)
 - [ ] CLI runs Rex as a background process that any AI tool can connect to via `http://localhost:8000/v1`
 - [ ] Config-first model registry: when `models` is defined in `config.yaml`, Rex uses that list as the primary model source
 - [ ] Auto-discovery supplements config-defined models only — adds models not already listed in config
