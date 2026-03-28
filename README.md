@@ -109,15 +109,24 @@ tests/                   # pytest test suite
 
 ### Quick Setup
 
+From the repo root:
+
 ```bash
-./setup.sh
+make
 ```
 
-The script installs dependencies, creates TLS material under `~/.rex/tls/` (uses [mkcert](https://github.com/FiloSottile/mkcert) when installed, otherwise OpenSSL self-signed), and starts Rex with **`rex start`** over **HTTPS** so tools like Claude Code can negotiate **HTTP/2**. Pass **`./setup.sh --no-start`** to only sync and prepare certs without launching Rex.
+**`make`** (same as **`make all`** / **`make run`**) runs **`make setup`** then **`make start`**: dependencies and TLS under **`~/.rex/tls/`** ([mkcert](https://github.com/FiloSottile/mkcert) when installed, otherwise OpenSSL self-signed), then **one** background start over **HTTPS** (HTTP/2 via TLS). **`./setup.sh` does not start Rex**; only **`make start`** (or **`./start-rex.sh`**) does.
 
-After setup, you can start Rex anytime with **`./start-rex.sh`** (HTTPS using `~/.rex/tls/`, same as above). Use **`./start-rex.sh --http`** for cleartext HTTP. **`./start-rex.sh --help`** lists options.
+| Command | What it does |
+| --- | --- |
+| **`make setup`** | Dependencies + TLS only; does not start Rex |
+| **`make start`** | Start Rex in the background (HTTPS by default) |
+| **`make start ARGS=--http`** | Start over cleartext HTTP |
+| **`make stop`** | Stop a Rex instance started via **`make start`** |
+| **`make serve`** | Foreground HTTPS on **`https://127.0.0.1:8000`** (logs in the terminal) |
+| **`make serve-http`** | Foreground HTTP on **`0.0.0.0:8000`** |
 
-From the repo root, **`make`** or **`make all`** runs **`./setup.sh --no-start`** then **`./start-rex.sh`**. **`make setup`** and **`make start`** run each step alone; **`make start ARGS=--http`** passes flags through. **`make stop`** runs **`uv run rex stop`**. **`make serve`** runs Hypercorn in the foreground on **HTTPS** at **`https://127.0.0.1:8000`** using **`~/.rex/tls/`** (same as **`./start-rex.sh`**, so **HTTP/2** via TLS); run **`make setup`** first if certs are missing. **`make serve-http`** runs cleartext HTTP on **`0.0.0.0:8000`** when you do not need TLS.
+**`./setup.sh`** and **`./start-rex.sh`** are the underlying scripts; **`make`** targets call them so you do not need to remember script flags.
 
 ### Manual Setup
 

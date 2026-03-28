@@ -34,7 +34,7 @@ while [[ $# -gt 0 ]]; do
       echo "Usage: $0 [--http|--no-tls] [--host ADDR] [--port N]"
       echo ""
       echo "  Default: HTTPS on 127.0.0.1:8000 with ~/.rex/tls/localhost.pem and localhost-key.pem"
-      echo "           (create them with ./setup.sh --no-start if missing)."
+      echo "           (create them with make setup or ./setup.sh if missing)."
       echo "  --http:  cleartext HTTP; default bind 0.0.0.0 (override with --host)."
       exit 0
       ;;
@@ -50,7 +50,7 @@ if [[ "$USE_TLS" -eq 1 ]]; then
   REX_TLS_DIR="${HOME}/.rex/tls"
   CERT_PEM="${REX_TLS_DIR}/localhost.pem"
   KEY_PEM="${REX_TLS_DIR}/localhost-key.pem"
-  [[ -f "$CERT_PEM" && -f "$KEY_PEM" ]] || error "missing TLS files. Run: ./setup.sh --no-start"
+  [[ -f "$CERT_PEM" && -f "$KEY_PEM" ]] || error "missing TLS files. Run: make setup"
   exec uv run rex start --host "$HOST" --port "$PORT" --certfile "$CERT_PEM" --keyfile "$KEY_PEM"
 else
   exec uv run rex start --host "$HOST" --port "$PORT"
