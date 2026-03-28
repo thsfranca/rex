@@ -135,7 +135,8 @@ The script installs dependencies and shows how to start Rex.
    ```bash
    rex start
    ```
-6. Point your AI coding tool's base URL to `http://localhost:8000/v1`.
+   `rex start` runs Hypercorn (HTTP/2 capable: cleartext uses h2c upgrade; add `--certfile` and `--keyfile` for HTTPS and HTTP/2 via TLS). For `rex reset` after a TLS start, pass `--tls`.
+6. Point your AI coding tool's base URL to `http://localhost:8000/v1` (or `https://...` if you use TLS).
 
 Without a config file, Rex falls back to auto-discovery from environment variables and local runtimes.
 
@@ -149,8 +150,10 @@ Install Rex globally with `uv tool install rex`, then use:
 | `rex stop` | Shut down a running Rex instance |
 | `rex reset` | Clear all learning data (asks for confirmation) |
 | `rex reset --yes` | Clear all learning data without confirmation |
+| `rex reset --tls` | Same as reset, but use `https://` (after `rex start` with TLS) |
+| `rex start --certfile … --keyfile …` | Serve HTTPS (HTTP/2 via ALPN with compatible clients) |
 
-Rex runs as a background process that any AI tool can connect to via `http://localhost:8000/v1`.
+Rex runs as a background process that any AI tool can connect to via `http://localhost:8000/v1` unless you configure TLS.
 
 ## Documentation
 
