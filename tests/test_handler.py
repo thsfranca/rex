@@ -10,6 +10,7 @@ from app.config import ModelConfig
 from app.proxy.handler import (
     _extract_bearer_token,
     _hash_prompt,
+    _resolve_timeout,
     handle_chat_completion,
     handle_text_completion,
 )
@@ -271,3 +272,98 @@ class TestHandleTextCompletion:
 
         call_kwargs = mock_litellm.acompletion.call_args.kwargs
         assert call_kwargs["api_key"] == "sk-req"
+
+
+class TestResolveTimeout:
+    def test_uses_model_timeout_when_set(self):
+        model = _make_model(timeout=30)
+        assert _resolve_timeout(model, 600) == 30
+
+    def test_falls_back_to_server_timeout(self):
+        model = _make_model()
+        assert _resolve_timeout(model, 300) == 300
+
+    def test_model_timeout_overrides_server(self):
+        model = _make_model(timeout=60)
+        assert _resolve_timeout(model, 300) == 60
+
+
+class TestTimeoutBehavior:
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_timeout_raises_on_single_model(self, mock_litellm):
+        async def slow_completion(**kwargs):
+            await asyncio.sleep(10)
+
+        mock_litellm.acompletion = slow_completion
+        model = _make_model(name="slow/model")
+        engine = _make_engine([model])
+
+        body = {"messages": [{"role": "user", "content": "hello"}]}
+        with pytest.raises(asyncio.TimeoutError):
+            await handle_chat_completion(body, engine, server_timeout=0.05)
+
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_timeout_falls_back_to_next_model(self, mock_litellm):
+        call_count = 0
+
+        async def selective_completion(**kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                await asyncio.sleep(10)
+            return FakeResponse()
+
+        mock_litellm.acompletion = selective_completion
+        slow = _make_model(name="slow/model", cost_per_1k_input=0.001, timeout=0.05)
+        fast = _make_model(name="fast/model", cost_per_1k_input=0.01)
+        engine = _make_engine([slow, fast])
+
+        body = {"messages": [{"role": "user", "content": "hello"}]}
+        response = await handle_chat_completion(body, engine, server_timeout=600)
+
+        assert isinstance(response, JSONResponse)
+        assert call_count == 2
+
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_per_model_timeout_overrides_server_default(self, mock_litellm):
+        async def slow_completion(**kwargs):
+            await asyncio.sleep(10)
+
+        mock_litellm.acompletion = slow_completion
+        model = _make_model(name="local/model", timeout=0.05)
+        engine = _make_engine([model])
+
+        body = {"messages": [{"role": "user", "content": "hello"}]}
+        with pytest.raises(asyncio.TimeoutError):
+            await handle_chat_completion(body, engine, server_timeout=9999)
+
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_streaming_uses_stream_timeout(self, mock_litellm):
+        async def slow_completion(**kwargs):
+            await asyncio.sleep(10)
+
+        mock_litellm.acompletion = slow_completion
+        model = _make_model(name="slow/model")
+        engine = _make_engine([model])
+
+        body = {"messages": [{"role": "user", "content": "hello"}], "stream": True}
+        with pytest.raises(asyncio.TimeoutError):
+            await handle_chat_completion(body, engine, server_timeout=9999, stream_timeout=0.05)
+
+    @pytest.mark.asyncio
+    @patch("app.proxy.handler.litellm")
+    async def test_text_completion_timeout(self, mock_litellm):
+        async def slow_completion(**kwargs):
+            await asyncio.sleep(10)
+
+        mock_litellm.acompletion = slow_completion
+        model = _make_model(name="slow/model")
+        engine = _make_engine([model])
+
+        body = {"messages": [{"role": "user", "content": "complete this"}]}
+        with pytest.raises(asyncio.TimeoutError):
+            await handle_text_completion(body, engine, server_timeout=0.05)

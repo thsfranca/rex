@@ -21,6 +21,7 @@ An OpenAI- and Anthropic-compatible proxy that sits between AI-powered coding to
 - **Semantic classification**: When `sentence-transformers` is installed, Rex embeds every query and uses nearest-centroid classification with pre-seeded exemplar queries to improve routing accuracy from the first request.
 - **Learning pipeline**: Background re-training runs K-means clustering, weak supervision, and logistic regression on accumulated data. When the ML classifier reaches quality thresholds (silhouette > 0.5, label model converged), it automatically replaces heuristics as the primary classifier.
 - **Message and tool format sanitization**: Rex normalizes mixed-format payloads before forwarding. Some clients (e.g., Cursor) send Anthropic-style content blocks (`tool_result`, `tool_use`) and tool definitions through the OpenAI endpoint — Rex converts these to valid OpenAI format automatically.
+- **Request timeouts**: Configurable timeout for model calls (`server.timeout`, default 600s) with per-model overrides (`ModelConfig.timeout`). Timed-out models fall back to the next in the chain. Returns HTTP 504 when all models time out.
 - **Transparent passthrough**: Unknown endpoints are forwarded to the primary model's backend — Rex never blocks an endpoint it doesn't handle.
 - **Auto-discovery**: When no config exists, Rex falls back to scanning environment variables and local runtimes to find models automatically.
 

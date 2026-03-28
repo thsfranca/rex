@@ -231,8 +231,10 @@ The first enricher. When enabled, it detects complex tasks and injects a system-
 Rex proxies requests to model backends via LiteLLM's `acompletion`. The request lifecycle determines how long Rex waits, what happens on timeout, and whether the upstream backend stops generating.
 
 **Timeout enforcement**:
-- A configurable timeout wraps each `acompletion` call via `asyncio.wait_for`.
-- When the timeout fires, Rex cancels the coroutine and closes the upstream HTTP connection.
+- `_call_with_fallback` wraps each `litellm.acompletion` call via `asyncio.wait_for` with a resolved timeout.
+- **Resolution order**: per-model `ModelConfig.timeout` (when set) overrides the global `ServerConfig.timeout` (default: 600 seconds).
+- When the timeout fires, Rex cancels the coroutine, closes the upstream HTTP connection, and falls back to the next model in the chain. If all models time out, the handler returns **HTTP 504** (Gateway Timeout).
+- Streaming requests use `ServerConfig.stream_timeout` (default: 600 seconds) instead of `ServerConfig.timeout`.
 - Per-model timeout overrides allow shorter limits for local models (where runaway generation wastes personal hardware) and longer limits for cloud APIs.
 - A separate `stream_timeout` caps total wall-clock time for streaming responses.
 

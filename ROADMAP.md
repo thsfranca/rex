@@ -203,11 +203,11 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 **Goal**: Bound how long Rex waits for model responses, propagate cancellation to upstream backends, and optimize resource usage on personal machines running local models.
 
 **Deliverables**:
-- [ ] Configurable request timeout: global default timeout for `litellm.acompletion` calls, applied via `asyncio.wait_for` so the proxy stops waiting and tears down the upstream HTTP connection
-- [ ] Per-model timeout override: allow `timeout` on individual model entries in `~/.rex/config.yaml` (local models may need shorter timeouts than cloud APIs)
+- [x] Configurable request timeout: global default timeout for `litellm.acompletion` calls, applied via `asyncio.wait_for` so the proxy stops waiting and tears down the upstream HTTP connection
+- [x] Per-model timeout override: allow `timeout` on individual model entries in `~/.rex/config.yaml` (local models may need shorter timeouts than cloud APIs)
 - [ ] Streaming wall-clock limit: cap total stream duration so a runaway generation cannot hold resources indefinitely
 - [ ] Client disconnect propagation: detect when the downstream client closes the connection and cancel the in-flight upstream request (streaming and non-streaming paths)
-- [ ] Config extension: `timeout` under `server` (global default, seconds), `timeout` per model entry, `stream_timeout` for streaming-specific limit
+- [x] Config extension: `timeout` under `server` (global default, seconds), `timeout` per model entry, `stream_timeout` for streaming-specific limit
 - [ ] Documentation: recommended Ollama environment variables for personal machines (`OLLAMA_NUM_PARALLEL`, `OLLAMA_MAX_LOADED_MODELS`, `OLLAMA_KEEP_ALIVE`, `OLLAMA_CONTEXT_LENGTH`, `OLLAMA_FLASH_ATTENTION`, `OLLAMA_KV_CACHE_TYPE`)
 
 **Design**:
