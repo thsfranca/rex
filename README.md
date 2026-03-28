@@ -21,7 +21,8 @@ An OpenAI- and Anthropic-compatible proxy that sits between AI-powered coding to
 - **Semantic classification**: When `sentence-transformers` is installed, Rex embeds every query and uses nearest-centroid classification with pre-seeded exemplar queries to improve routing accuracy from the first request.
 - **Learning pipeline**: Background re-training runs K-means clustering, weak supervision, and logistic regression on accumulated data. When the ML classifier reaches quality thresholds (silhouette > 0.5, label model converged), it automatically replaces heuristics as the primary classifier.
 - **Message and tool format sanitization**: Rex normalizes mixed-format payloads before forwarding. Some clients (e.g., Cursor) send Anthropic-style content blocks (`tool_result`, `tool_use`) and tool definitions through the OpenAI endpoint — Rex converts these to valid OpenAI format automatically.
-- **Request timeouts**: Configurable timeout for model calls (`server.timeout`, default 600s) with per-model overrides (`ModelConfig.timeout`). Timed-out models fall back to the next in the chain. Returns HTTP 504 when all models time out.
+- **Request timeouts**: Configurable timeout for model calls (`server.timeout`, default 600s) with per-model overrides (`ModelConfig.timeout`). Timed-out models fall back to the next in the chain. Returns HTTP 504 when all models time out. A separate `stream_timeout` caps total wall-clock time for streaming responses.
+- **Client disconnect propagation**: Rex detects when the downstream client closes the connection and cancels the in-flight upstream request. For streaming, the ASGI server cancels the response generator automatically. For non-streaming, Rex monitors for disconnects and cancels the pending model call.
 - **Transparent passthrough**: Unknown endpoints are forwarded to the primary model's backend — Rex never blocks an endpoint it doesn't handle.
 - **Auto-discovery**: When no config exists, Rex falls back to scanning environment variables and local runtimes to find models automatically.
 
@@ -169,6 +170,31 @@ Install Rex globally with `uv tool install rex`, then use:
 | `rex reset --yes` | Clear all learning data without confirmation |
 | `rex start --host 127.0.0.1` | Bind to a specific host |
 | `rex start --port 9000` | Use a custom port |
+
+## Local Model Resource Management
+
+Rex routes to local models (Ollama) by default when they are the cheapest option. On personal machines, a single runaway generation can pin GPU and RAM. These Ollama environment variables shape steady-state resource usage:
+
+| Variable | Recommended | Effect |
+|---|---|---|
+| `OLLAMA_NUM_PARALLEL` | `1` | Limits concurrent requests per model. Memory scales with parallel × context. |
+| `OLLAMA_MAX_LOADED_MODELS` | `1`–`2` | Caps how many models stay loaded in GPU/RAM simultaneously. |
+| `OLLAMA_KEEP_ALIVE` | `5m` or `0` | Controls how long a model stays in memory after its last request. Set to `0` to unload immediately after each request. |
+| `OLLAMA_CONTEXT_LENGTH` | `4096`–`8192` | Smaller default context reduces KV cache memory and per-token compute. |
+| `OLLAMA_FLASH_ATTENTION` | `1` | Reduces memory usage at large context sizes. |
+| `OLLAMA_KV_CACHE_TYPE` | `q8_0` | Quantize the KV cache for lower memory at some precision cost. `q4_0` saves more but loses more precision. |
+
+Set these before starting Ollama:
+
+```bash
+export OLLAMA_NUM_PARALLEL=1
+export OLLAMA_MAX_LOADED_MODELS=1
+export OLLAMA_FLASH_ATTENTION=1
+```
+
+- `max_tokens` in the request is the only knob that **always** bounds worst-case compute, regardless of cancel semantics.
+- Streaming is preferred for long answers — mid-flight abort lets the backend see the connection die and stop generating.
+- Rex's per-model `timeout` config works well with local models — set shorter timeouts (e.g., 60s) to avoid tying up GPU on slow generations.
 
 ## Documentation
 

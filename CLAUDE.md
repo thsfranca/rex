@@ -303,6 +303,6 @@ All dependencies are declared in `pyproject.toml`. Add new deps there, then run 
 
 **Debugging routing decisions?** → `logging/sqlite.py`, `router/engine.py`
 
-**Changing timeout behavior?** → `config.py` (`ServerConfig.timeout`, `ModelConfig.timeout`), `proxy/handler.py` (`_resolve_timeout`, `_call_with_fallback`)
+**Changing timeout behavior?** → `config.py` (`ServerConfig.timeout`, `ModelConfig.timeout`), `proxy/handler.py` (`_resolve_timeout`, `_call_with_fallback`), `main.py` (`_with_disconnect_guard`)
 
 **Adding a new client adapter?** → `adapters/default.py`, `adapters/registry.py`
