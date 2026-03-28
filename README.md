@@ -115,6 +115,10 @@ tests/                   # pytest test suite
 
 The script installs dependencies, creates TLS material under `~/.rex/tls/` (uses [mkcert](https://github.com/FiloSottile/mkcert) when installed, otherwise OpenSSL self-signed), and starts Rex with **`rex start`** over **HTTPS** so tools like Claude Code can negotiate **HTTP/2**. Pass **`./setup.sh --no-start`** to only sync and prepare certs without launching Rex.
 
+After setup, you can start Rex anytime with **`./start-rex.sh`** (HTTPS using `~/.rex/tls/`, same as above). Use **`./start-rex.sh --http`** for cleartext HTTP. **`./start-rex.sh --help`** lists options.
+
+From the repo root, **`make`** or **`make all`** runs **`./setup.sh --no-start`** then **`./start-rex.sh`**. **`make setup`** and **`make start`** run each step alone; **`make start ARGS=--http`** passes flags through.
+
 ### Manual Setup
 
 1. Install [uv](https://docs.astral.sh/uv/):
