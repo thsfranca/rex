@@ -25,6 +25,9 @@ dev = [
     "flake8>=7.0.0",
 ]
 
+[tool.uv]
+package = true
+
 [[tool.uv.index]]
 url = "https://pypi.org/simple/"
 default = true
