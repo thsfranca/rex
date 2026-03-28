@@ -11,6 +11,88 @@ def extract_anthropic_api_key(request: Request) -> str | None:
     return request.headers.get("x-api-key")
 
 
+def _convert_anthropic_tool(tool: dict) -> dict:
+    return {
+        "type": "function",
+        "function": {
+            "name": tool.get("name", ""),
+            "description": tool.get("description", ""),
+            "parameters": tool.get("input_schema", {}),
+        },
+    }
+
+
+def _convert_anthropic_tool_choice(tool_choice: dict) -> str | dict:
+    choice_type = tool_choice.get("type", "auto")
+    if choice_type == "auto":
+        return "auto"
+    if choice_type == "any":
+        return "required"
+    if choice_type == "tool":
+        return {"type": "function", "function": {"name": tool_choice.get("name", "")}}
+    return "auto"
+
+
+def _convert_anthropic_message(role: str, content: list) -> list[dict]:
+    text_parts: list[str] = []
+    tool_calls: list[dict] = []
+    tool_results: list[dict] = []
+
+    for block in content:
+        if not isinstance(block, dict):
+            continue
+
+        block_type = block.get("type")
+
+        if block_type == "text":
+            text = block.get("text", "")
+            if text:
+                text_parts.append(text)
+
+        elif block_type == "tool_use":
+            tool_calls.append(
+                {
+                    "id": block.get("id", ""),
+                    "type": "function",
+                    "function": {
+                        "name": block.get("name", ""),
+                        "arguments": json.dumps(block.get("input", {})),
+                    },
+                }
+            )
+
+        elif block_type == "tool_result":
+            result_content = block.get("content", "")
+            if isinstance(result_content, list):
+                result_content = "\n".join(
+                    b.get("text", "") for b in result_content if isinstance(b, dict)
+                )
+            tool_results.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": block.get("tool_use_id", ""),
+                    "content": str(result_content),
+                }
+            )
+
+    output: list[dict] = []
+
+    if tool_calls:
+        assistant_msg: dict = {"role": role}
+        assistant_msg["content"] = "\n".join(text_parts) if text_parts else None
+        assistant_msg["tool_calls"] = tool_calls
+        output.append(assistant_msg)
+    elif text_parts:
+        output.append({"role": role, "content": "\n".join(text_parts)})
+
+    output.extend(tool_results)
+
+    if not output:
+        output.append({"role": role, "content": ""})
+
+    return output
+
+
 def anthropic_to_openai(body: dict) -> dict:
     openai_body: dict = {}
 
@@ -29,22 +111,23 @@ def anthropic_to_openai(body: dict) -> dict:
                 messages.append({"role": "system", "content": "\n".join(text_parts)})
 
     for msg in body.get("messages", []):
-        openai_msg: dict = {"role": msg["role"]}
         content = msg.get("content")
         if isinstance(content, str):
-            openai_msg["content"] = content
+            messages.append({"role": msg["role"], "content": content})
         elif isinstance(content, list):
-            text_parts = [
-                block.get("text", "")
-                for block in content
-                if isinstance(block, dict) and block.get("type") == "text"
-            ]
-            openai_msg["content"] = "\n".join(text_parts) if text_parts else ""
+            messages.extend(_convert_anthropic_message(msg["role"], content))
         else:
-            openai_msg["content"] = ""
-        messages.append(openai_msg)
+            messages.append({"role": msg["role"], "content": ""})
 
     openai_body["messages"] = messages
+
+    tools = body.get("tools")
+    if tools:
+        openai_body["tools"] = [_convert_anthropic_tool(t) for t in tools]
+
+    tool_choice = body.get("tool_choice")
+    if tool_choice:
+        openai_body["tool_choice"] = _convert_anthropic_tool_choice(tool_choice)
 
     if "max_tokens" in body:
         openai_body["max_tokens"] = body["max_tokens"]
@@ -61,6 +144,7 @@ def anthropic_to_openai(body: dict) -> dict:
 _STOP_REASON_MAP = {
     "stop": "end_turn",
     "length": "max_tokens",
+    "tool_calls": "tool_use",
 }
 
 
@@ -68,9 +152,33 @@ def openai_response_to_anthropic(
     response, model_name: str, request_model: str | None = None
 ) -> dict:
     choice = response.choices[0] if response.choices else None
-    text = ""
-    if choice and choice.message and choice.message.content:
-        text = choice.message.content
+
+    content_blocks: list[dict] = []
+
+    if choice and choice.message:
+        if choice.message.content:
+            content_blocks.append({"type": "text", "text": choice.message.content})
+
+        if hasattr(choice.message, "tool_calls") and choice.message.tool_calls:
+            for tc in choice.message.tool_calls:
+                tool_input: dict = {}
+                if hasattr(tc, "function") and tc.function:
+                    try:
+                        tool_input = json.loads(tc.function.arguments)
+                    except (json.JSONDecodeError, TypeError):
+                        tool_input = {}
+
+                content_blocks.append(
+                    {
+                        "type": "tool_use",
+                        "id": tc.id,
+                        "name": tc.function.name if hasattr(tc, "function") and tc.function else "",
+                        "input": tool_input,
+                    }
+                )
+
+    if not content_blocks:
+        content_blocks.append({"type": "text", "text": ""})
 
     finish_reason = choice.finish_reason if choice else None
     stop_reason = _STOP_REASON_MAP.get(finish_reason, "end_turn")
@@ -85,7 +193,7 @@ def openai_response_to_anthropic(
         "id": f"msg_{uuid.uuid4().hex[:24]}",
         "type": "message",
         "role": "assistant",
-        "content": [{"type": "text", "text": text}],
+        "content": content_blocks,
         "model": request_model or model_name,
         "stop_reason": stop_reason,
         "stop_sequence": None,
@@ -138,13 +246,19 @@ async def stream_anthropic_response(
 
     output_tokens = 0
     finish_reason = None
+    text_block_closed = False
+    tool_block_indices: dict[int, int] = {}
+    next_block_index = 1
 
     async for chunk in response:
         delta_content = None
+        delta_tool_calls = None
         if chunk.choices:
             delta = chunk.choices[0].delta
             if hasattr(delta, "content") and delta.content:
                 delta_content = delta.content
+            if hasattr(delta, "tool_calls") and delta.tool_calls:
+                delta_tool_calls = delta.tool_calls
             if chunk.choices[0].finish_reason:
                 finish_reason = chunk.choices[0].finish_reason
 
@@ -163,10 +277,69 @@ async def stream_anthropic_response(
                 },
             )
 
-    yield _sse_event(
-        "content_block_stop",
-        {"type": "content_block_stop", "index": 0},
-    )
+        if delta_tool_calls:
+            if not text_block_closed:
+                yield _sse_event(
+                    "content_block_stop",
+                    {"type": "content_block_stop", "index": 0},
+                )
+                text_block_closed = True
+
+            for tc in delta_tool_calls:
+                tc_idx = tc.index if hasattr(tc, "index") else 0
+
+                if tc_idx not in tool_block_indices:
+                    block_idx = next_block_index
+                    tool_block_indices[tc_idx] = block_idx
+                    next_block_index += 1
+
+                    tc_id = getattr(tc, "id", None) or ""
+                    tc_name = ""
+                    if hasattr(tc, "function") and tc.function:
+                        tc_name = getattr(tc.function, "name", None) or ""
+
+                    yield _sse_event(
+                        "content_block_start",
+                        {
+                            "type": "content_block_start",
+                            "index": block_idx,
+                            "content_block": {
+                                "type": "tool_use",
+                                "id": tc_id,
+                                "name": tc_name,
+                                "input": {},
+                            },
+                        },
+                    )
+
+                block_idx = tool_block_indices[tc_idx]
+                if hasattr(tc, "function") and tc.function:
+                    args = getattr(tc.function, "arguments", None)
+                    if args:
+                        yield _sse_event(
+                            "content_block_delta",
+                            {
+                                "type": "content_block_delta",
+                                "index": block_idx,
+                                "delta": {
+                                    "type": "input_json_delta",
+                                    "partial_json": args,
+                                },
+                            },
+                        )
+
+    if not text_block_closed:
+        yield _sse_event(
+            "content_block_stop",
+            {"type": "content_block_stop", "index": 0},
+        )
+
+    for tc_idx in sorted(tool_block_indices.keys()):
+        block_idx = tool_block_indices[tc_idx]
+        yield _sse_event(
+            "content_block_stop",
+            {"type": "content_block_stop", "index": block_idx},
+        )
 
     stop_reason = _STOP_REASON_MAP.get(finish_reason, "end_turn")
     yield _sse_event(

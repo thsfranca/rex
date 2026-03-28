@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock
 
 from app.proxy.anthropic import (
@@ -167,6 +168,203 @@ class TestAnthropicToOpenai:
         result = anthropic_to_openai(body)
         assert result["messages"][0]["content"] == "Hello"
 
+    def test_converts_tools_to_openai_format(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "tools": [
+                {
+                    "name": "bash",
+                    "description": "Run a bash command",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {"command": {"type": "string"}},
+                        "required": ["command"],
+                    },
+                }
+            ],
+            "messages": [{"role": "user", "content": "List files"}],
+        }
+        result = anthropic_to_openai(body)
+        assert len(result["tools"]) == 1
+        tool = result["tools"][0]
+        assert tool["type"] == "function"
+        assert tool["function"]["name"] == "bash"
+        assert tool["function"]["description"] == "Run a bash command"
+        assert tool["function"]["parameters"]["required"] == ["command"]
+
+    def test_converts_tool_choice_auto(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "tool_choice": {"type": "auto"},
+            "tools": [{"name": "bash", "description": "", "input_schema": {}}],
+            "messages": [{"role": "user", "content": "Hi"}],
+        }
+        result = anthropic_to_openai(body)
+        assert result["tool_choice"] == "auto"
+
+    def test_converts_tool_choice_any(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "tool_choice": {"type": "any"},
+            "tools": [{"name": "bash", "description": "", "input_schema": {}}],
+            "messages": [{"role": "user", "content": "Hi"}],
+        }
+        result = anthropic_to_openai(body)
+        assert result["tool_choice"] == "required"
+
+    def test_converts_tool_choice_specific_tool(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "tool_choice": {"type": "tool", "name": "bash"},
+            "tools": [{"name": "bash", "description": "", "input_schema": {}}],
+            "messages": [{"role": "user", "content": "Hi"}],
+        }
+        result = anthropic_to_openai(body)
+        assert result["tool_choice"] == {
+            "type": "function",
+            "function": {"name": "bash"},
+        }
+
+    def test_converts_assistant_tool_use_to_tool_calls(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "user", "content": "List files"},
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "text", "text": "I'll run ls."},
+                        {
+                            "type": "tool_use",
+                            "id": "toolu_123",
+                            "name": "bash",
+                            "input": {"command": "ls"},
+                        },
+                    ],
+                },
+            ],
+        }
+        result = anthropic_to_openai(body)
+        assistant_msg = result["messages"][1]
+        assert assistant_msg["role"] == "assistant"
+        assert assistant_msg["content"] == "I'll run ls."
+        assert len(assistant_msg["tool_calls"]) == 1
+        tc = assistant_msg["tool_calls"][0]
+        assert tc["id"] == "toolu_123"
+        assert tc["type"] == "function"
+        assert tc["function"]["name"] == "bash"
+        assert json.loads(tc["function"]["arguments"]) == {"command": "ls"}
+
+    def test_converts_tool_result_to_tool_message(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "toolu_123",
+                            "content": "file1.txt\nfile2.txt",
+                        }
+                    ],
+                },
+            ],
+        }
+        result = anthropic_to_openai(body)
+        tool_msg = result["messages"][0]
+        assert tool_msg["role"] == "tool"
+        assert tool_msg["tool_call_id"] == "toolu_123"
+        assert tool_msg["content"] == "file1.txt\nfile2.txt"
+
+    def test_full_tool_use_conversation(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "tools": [
+                {
+                    "name": "bash",
+                    "description": "Run a command",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {"command": {"type": "string"}},
+                    },
+                }
+            ],
+            "messages": [
+                {"role": "user", "content": "List files"},
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "toolu_1",
+                            "name": "bash",
+                            "input": {"command": "ls"},
+                        },
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "toolu_1",
+                            "content": "README.md\napp/",
+                        }
+                    ],
+                },
+            ],
+        }
+        result = anthropic_to_openai(body)
+        assert result["messages"][0] == {"role": "user", "content": "List files"}
+        assert result["messages"][1]["role"] == "assistant"
+        assert result["messages"][1]["content"] is None
+        assert result["messages"][1]["tool_calls"][0]["function"]["name"] == "bash"
+        assert result["messages"][2]["role"] == "tool"
+        assert result["messages"][2]["tool_call_id"] == "toolu_1"
+        assert result["messages"][2]["content"] == "README.md\napp/"
+        assert len(result["tools"]) == 1
+
+    def test_tool_result_with_content_blocks(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "toolu_1",
+                            "content": [
+                                {"type": "text", "text": "line1"},
+                                {"type": "text", "text": "line2"},
+                            ],
+                        }
+                    ],
+                },
+            ],
+        }
+        result = anthropic_to_openai(body)
+        assert result["messages"][0]["content"] == "line1\nline2"
+
+    def test_no_tools_key_when_absent(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [{"role": "user", "content": "Hi"}],
+        }
+        result = anthropic_to_openai(body)
+        assert "tools" not in result
+        assert "tool_choice" not in result
+
 
 class TestOpenaiResponseToAnthropic:
     def _make_response(
@@ -249,3 +447,67 @@ class TestOpenaiResponseToAnthropic:
         response.usage = None
         result = openai_response_to_anthropic(response, "ollama/llama3")
         assert result["usage"] == {"input_tokens": 0, "output_tokens": 0}
+
+    def test_tool_calls_converted_to_tool_use_blocks(self):
+        tc_func = MagicMock()
+        tc_func.name = "bash"
+        tc_func.arguments = '{"command": "ls"}'
+        tc = MagicMock()
+        tc.id = "call_123"
+        tc.function = tc_func
+
+        choice = MagicMock()
+        choice.message.content = None
+        choice.message.tool_calls = [tc]
+        choice.finish_reason = "tool_calls"
+
+        response = MagicMock()
+        response.choices = [choice]
+        response.usage = MagicMock(prompt_tokens=10, completion_tokens=5)
+
+        result = openai_response_to_anthropic(response, "test/model")
+        assert result["stop_reason"] == "tool_use"
+        assert len(result["content"]) == 1
+        block = result["content"][0]
+        assert block["type"] == "tool_use"
+        assert block["id"] == "call_123"
+        assert block["name"] == "bash"
+        assert block["input"] == {"command": "ls"}
+
+    def test_text_and_tool_calls_together(self):
+        tc_func = MagicMock()
+        tc_func.name = "bash"
+        tc_func.arguments = '{"command": "ls"}'
+        tc = MagicMock()
+        tc.id = "call_456"
+        tc.function = tc_func
+
+        choice = MagicMock()
+        choice.message.content = "I'll run that."
+        choice.message.tool_calls = [tc]
+        choice.finish_reason = "tool_calls"
+
+        response = MagicMock()
+        response.choices = [choice]
+        response.usage = MagicMock(prompt_tokens=10, completion_tokens=5)
+
+        result = openai_response_to_anthropic(response, "test/model")
+        assert len(result["content"]) == 2
+        assert result["content"][0] == {"type": "text", "text": "I'll run that."}
+        assert result["content"][1]["type"] == "tool_use"
+        assert result["content"][1]["name"] == "bash"
+
+    def test_no_tool_calls_returns_text_only(self):
+        choice = MagicMock()
+        choice.message.content = "Hello!"
+        choice.message.tool_calls = None
+        choice.finish_reason = "stop"
+
+        response = MagicMock()
+        response.choices = [choice]
+        response.usage = MagicMock(prompt_tokens=10, completion_tokens=5)
+
+        result = openai_response_to_anthropic(response, "test/model")
+        assert result["stop_reason"] == "end_turn"
+        assert len(result["content"]) == 1
+        assert result["content"][0] == {"type": "text", "text": "Hello!"}
