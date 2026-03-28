@@ -113,7 +113,7 @@ tests/                   # pytest test suite
 ./setup.sh
 ```
 
-The script installs dependencies and shows how to start Rex.
+The script installs dependencies, creates TLS material under `~/.rex/tls/` (uses [mkcert](https://github.com/FiloSottile/mkcert) when installed, otherwise OpenSSL self-signed), and starts Rex with **`rex start`** over **HTTPS** so tools like Claude Code can negotiate **HTTP/2**. Pass **`./setup.sh --no-start`** to only sync and prepare certs without launching Rex.
 
 ### Manual Setup
 
