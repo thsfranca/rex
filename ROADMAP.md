@@ -176,7 +176,28 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ---
 
-## Phase 6 — Observability Dashboard (optional)
+## Phase 6 — Request Timeout + Local Resource Management
+
+**Goal**: Bound how long Rex waits for model responses, propagate cancellation to upstream backends, and optimize resource usage on personal machines running local models.
+
+**Deliverables**:
+- [ ] Configurable request timeout: global default timeout for `litellm.acompletion` calls, applied via `asyncio.wait_for` so the proxy stops waiting and tears down the upstream HTTP connection
+- [ ] Per-model timeout override: allow `timeout` on individual model entries in `~/.rex/config.yaml` (local models may need shorter timeouts than cloud APIs)
+- [ ] Streaming wall-clock limit: cap total stream duration so a runaway generation cannot hold resources indefinitely
+- [ ] Client disconnect propagation: detect when the downstream client closes the connection and cancel the in-flight upstream request (streaming and non-streaming paths)
+- [ ] Config extension: `timeout` under `server` (global default, seconds), `timeout` per model entry, `stream_timeout` for streaming-specific limit
+- [ ] Documentation: recommended Ollama environment variables for personal machines (`OLLAMA_NUM_PARALLEL`, `OLLAMA_MAX_LOADED_MODELS`, `OLLAMA_KEEP_ALIVE`, `OLLAMA_CONTEXT_LENGTH`, `OLLAMA_FLASH_ATTENTION`, `OLLAMA_KV_CACHE_TYPE`)
+
+**Design**:
+- Rex cannot force a remote provider to stop GPU work. It can only close the HTTP connection. For cloud APIs this is best-effort. For local backends (Ollama, llama.cpp server), closing the connection typically stops generation — but behavior depends on the runtime version and offload mode.
+- `max_tokens` remains the only knob that **always** bounds worst-case compute, regardless of cancel semantics.
+- Streaming is preferred for long answers because mid-flight abort is meaningful — the local server sees the connection die and can stop generating.
+- Ollama's server-side knobs (`OLLAMA_NUM_PARALLEL=1`, conservative `OLLAMA_MAX_LOADED_MODELS`, short `OLLAMA_KEEP_ALIVE`) shape steady-state load on a personal machine so one bad pattern does not pin GPU/RAM.
+- Ollama uses llama.cpp as its inference engine. llama.cpp server (recent versions) cancels both prompt processing and token generation when the client disconnects ([PR #9679](https://github.com/ggml-org/llama.cpp/pull/9679)). This means Ollama inherits that cancellation behavior, though Ollama's own connection handling layer can affect how reliably the disconnect reaches llama.cpp.
+
+---
+
+## Phase 7 — Observability Dashboard (optional)
 
 **Goal**: Give users a visual dashboard to explore routing decisions, cost breakdown, model usage, and reliability — without adding UI maintenance burden to Rex. Users install and run the dashboard only if they want it.
 
