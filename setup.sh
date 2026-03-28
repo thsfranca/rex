@@ -51,7 +51,7 @@ OPENSSL_EOF
   openssl req -x509 -newkey rsa:2048 -sha256 -days 825 -nodes \
     -keyout "$KEY_PEM" -out "$CERT_PEM" -config "$OPENSSL_CONF"
   rm -f "$OPENSSL_CONF"
-  warn "Self-signed certificate: install mkcert (https://github.com/FiloSottile/mkcert) and re-run this script for a locally trusted cert so Claude Code and browsers accept https://localhost:8000."
+  warn "Self-signed certificate: install mkcert (https://github.com/FiloSottile/mkcert) and re-run this script for a locally trusted cert, or use cleartext HTTP (e.g. make start ARGS=--http) if your client cannot trust this cert."
 fi
 
 echo ""
@@ -63,15 +63,17 @@ echo ""
 echo "  export OPENAI_API_KEY=\"sk-...\""
 echo "  export ANTHROPIC_API_KEY=\"sk-...\""
 echo ""
-echo -e "Start Rex from the repo with ${BOLD}make start${NC} (HTTPS, HTTP/2) or ${BOLD}make serve${NC} (foreground). HTTP: ${BOLD}make start ARGS=--http${NC} or ${BOLD}make serve-http${NC}."
+echo -e "Start Rex from the repo with ${BOLD}make start${NC} (HTTPS) or ${BOLD}make serve${NC} (foreground). HTTP: ${BOLD}make start ARGS=--http${NC} or ${BOLD}make serve-http${NC}."
 echo ""
-echo -e "Point Anthropic clients at ${BOLD}https://localhost:8000${NC} (TLS) or match your bind URL if you change it."
+echo -e "Point clients at Rex's URL (scheme and host must match your start command). See README.md: ${BOLD}Client base URL and TLS${NC}."
 echo ""
 if command -v mkcert &> /dev/null; then
   MKCERT_CA="$(mkcert -CAROOT)/rootCA.pem"
-  echo -e "Claude Code uses Node.js TLS, not only the macOS keychain. Export the mkcert CA in the shell before you run claude (settings.json env is unreliable for TLS):"
+  echo -e "Many editors and CLI tools use Node.js for HTTPS. Trust the mkcert CA in that stack (the OS trust store alone is not always enough):"
   echo ""
   echo -e "  ${BOLD}export NODE_EXTRA_CA_CERTS=\"${MKCERT_CA}\"${NC}"
+  echo ""
+  echo -e "Python clients may use ${BOLD}SSL_CERT_FILE${NC} or ${BOLD}REQUESTS_CA_BUNDLE${NC} with the same PEM. Set variables in the environment that starts your client."
   echo ""
 fi
 echo -e "Stop: ${BOLD}make stop${NC}. Learning reset (with Rex running on HTTPS): ${BOLD}uv run rex reset --yes --tls${NC}"
