@@ -35,7 +35,7 @@ class TaskDecompositionEnricher:
 
         for msg in context.messages:
             if msg.get("role") == "system":
-                msg["content"] = msg.get("content", "") + "\n\n" + DECOMPOSITION_INSTRUCTION
+                msg["content"] = (msg.get("content") or "") + "\n\n" + DECOMPOSITION_INSTRUCTION
                 return context
 
         context.messages.insert(0, {"role": "system", "content": DECOMPOSITION_INSTRUCTION})
