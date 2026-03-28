@@ -24,6 +24,10 @@ from app.proxy.anthropic import (
     openai_response_to_anthropic,
     stream_anthropic_response,
 )
+from app.proxy.completion_normalize import (
+    apply_ollama_completion_text_unwrap,
+    is_ollama_litellm_model,
+)
 from app.proxy.message_sanitizer import sanitize_messages, sanitize_tools
 from app.proxy.streaming import stream_completion
 from app.router.engine import RoutingEngine
@@ -76,6 +80,8 @@ def _build_litellm_params(
 
     for key in LITELLM_PASSTHROUGH_PARAMS:
         if key in body:
+            if key == "response_format" and is_ollama_litellm_model(model_config.name):
+                continue
             params[key] = body[key]
 
     return params
@@ -216,6 +222,7 @@ async def handle_chat_completion(
     response, used_model = await _call_with_fallback(
         engine, decision.model, body, stream, request_api_key
     )
+    apply_ollama_completion_text_unwrap(response, used_model.name)
     response_time_ms = int((time.perf_counter() - start_time) * 1000)
     logger.info("Routed to %s", used_model.name)
 
@@ -258,6 +265,7 @@ async def handle_text_completion(
     response, used_model = await _call_with_fallback(
         engine, decision.model, body, stream, request_api_key
     )
+    apply_ollama_completion_text_unwrap(response, used_model.name)
     logger.info("Routed text completion to %s", used_model.name)
 
     if stream:
@@ -324,6 +332,7 @@ async def handle_anthropic_messages(
     response, used_model = await _call_with_fallback(
         engine, decision.model, openai_body, stream, request_api_key
     )
+    apply_ollama_completion_text_unwrap(response, used_model.name)
     response_time_ms = int((time.perf_counter() - start_time) * 1000)
     logger.info("Routed to %s (anthropic)", used_model.name)
 
