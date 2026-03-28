@@ -105,8 +105,9 @@ app/
 4. **LLM judge** → Small local LLM (only for chat/agent, when confidence is low)
 
 ### Routing Strategy
-- All tasks start on the **cheapest model** that meets the task's requirements
-- **Task requirements** = set of criteria (cost, context window, `supports_reasoning` flag)
+- **Two-tier primary**: Rex resolves two primaries at startup — a completion primary (cheapest model) for tab completions and a chat primary (cheapest with `supports_function_calling=True`) for chat/agent requests
+- **Auto-selection**: the chat primary is auto-selected from LiteLLM metadata; falls back to completion primary when no model qualifies; overridable via `routing.chat_model` in config
+- **Task requirements** = set of criteria (context window, `supports_reasoning` flag) applied on top of the tier primary
 - On failure, escalate to the next more expensive model (fallback chain)
 - **Confidence-based model escalation**: when classification confidence is low after the full chain, jump to a more capable model even if cheaper one technically qualifies
 
@@ -132,6 +133,7 @@ app/
 | Labeling | Weak supervision | Heuristics as noisy functions, label model aggregates |
 | Model metadata | LiteLLM built-in database | No manual config needed for known models |
 | Routing criteria | Cost + context window + capability flags | All signals are measurable, no curated "strengths" |
+| Two-tier primary | Completion primary (cheapest) + chat primary (cheapest with function calling) | Completion needs speed; chat/agent needs capability; auto-selected, overridable via `routing.chat_model` |
 | Config | Optional YAML overrides | Falls back to auto-discovery from env vars |
 | Request timeouts | `asyncio.wait_for` + per-model override | `ServerConfig.timeout` (600s default), `ModelConfig.timeout` overrides per model; timeout → fallback → 504 |
 | Storage | SQLite + repository pattern | Zero dependencies, single-file, easily testable |
@@ -143,7 +145,7 @@ The heuristic classifier recognizes these categories and routes to the cheapest 
 
 | Category | Signals | Requirements |
 |---|---|---|
-| **completion** | Short, tab completion | Cheapest, lowest latency |
+| **completion** | Short, tab completion | Completion primary (cheapest), lowest latency |
 | **debugging** | "error", "fix", "bug", "stack trace" | `supports_reasoning` |
 | **refactoring** | "refactor", "clean", "simplify" | Context window ≥ 32K |
 | **code_review** | "review", "security", "what's wrong" | Context ≥ 32K, `supports_reasoning` |
@@ -153,7 +155,7 @@ The heuristic classifier recognizes these categories and routes to the cheapest 
 | **migration** | "upgrade", "migrate", "convert" | Context ≥ 32K, `supports_reasoning` |
 | **optimization** | "faster", "performance", "memory" | `supports_reasoning` |
 | **explanation** | "explain", "how does", "what is" | Cheapest |
-| **general** | Fallback | Primary model |
+| **general** | Fallback | Chat primary |
 
 ## Testing Patterns
 
@@ -304,5 +306,7 @@ All dependencies are declared in `pyproject.toml`. Add new deps there, then run 
 **Debugging routing decisions?** → `logging/sqlite.py`, `router/engine.py`
 
 **Changing timeout behavior?** → `config.py` (`ServerConfig.timeout`, `ModelConfig.timeout`), `proxy/handler.py` (`_resolve_timeout`, `_call_with_fallback`), `main.py` (`_with_disconnect_guard`)
+
+**Changing two-tier primary routing?** → `config.py` (`RoutingConfig.chat_model`), `router/engine.py` (`_resolve_chat_primary`)
 
 **Adding a new client adapter?** → `adapters/default.py`, `adapters/registry.py`

@@ -55,6 +55,7 @@ flowchart LR
 | Model discovery | Config-first, auto-discovery supplements | When `~/.rex/config.yaml` defines `models` or `providers`, Rex uses them as the primary source. Config providers (remote LiteLLM proxies, custom endpoints) override auto-discovered providers by prefix. Auto-discovery fills in models not already listed. Without a config file, Rex falls back to full auto-discovery (scan env vars, query provider APIs, probe Ollama) |
 | Model metadata | LiteLLM built-in database | `litellm.get_model_info()` provides context window, pricing, and capability flags for known models; no manual metadata needed |
 | Routing criteria | Cost + context window + capability flags | All routing signals come from measurable model properties — no manually curated "strengths" list |
+| Two-tier primary | Separate primaries for completion (cheapest) and chat (cheapest with function calling) | Completion needs speed; chat/agent needs capability. Auto-selected from LiteLLM metadata, overridable via `routing.chat_model` |
 | Context-aware routing | Pre-call token estimation + context-specific fallback | Prevents wasted API calls by checking request size before routing; catches estimation mismatches via `ContextWindowExceededError` as a safety net |
 | Config format | Optional YAML overrides | Config file is not required; when present, it adds models and overrides routing defaults |
 | Client detection | User-Agent header → adapter | Rex selects the adapter based on the client's User-Agent header; new tools supported by adding an adapter |
@@ -74,7 +75,7 @@ The heuristic classifier uses these predefined categories as a starting point:
 
 | Category | Signals | Routing Criteria |
 |---|---|---|
-| **completion** | Short prompt, code context, single-turn | Cheapest model, lowest latency |
+| **completion** | Short prompt, code context, single-turn | Completion primary (cheapest model), lowest latency |
 | **debugging** | Stack traces, "error", "fix", "bug", "crash" | `supports_reasoning`, cheapest among matches |
 | **refactoring** | "refactor", "clean up", "simplify", "restructure" | Context window ≥ 32K, cheapest among matches |
 | **optimization** | "faster", "performance", "optimize", "memory", "efficient" | `supports_reasoning`, cheapest among matches |
@@ -84,7 +85,7 @@ The heuristic classifier uses these predefined categories as a starting point:
 | **code_review** | "review", "is this correct", "what's wrong", "security" | Context window ≥ 32K, `supports_reasoning`, cheapest among matches |
 | **generation** | Writing new code from description | Context window ≥ 16K, cheapest among matches |
 | **migration** | "upgrade", "migrate", "convert to", "update from" | Context window ≥ 32K, `supports_reasoning`, cheapest among matches |
-| **general** | Fallback when nothing else matches | Primary model |
+| **general** | Fallback when nothing else matches | Chat primary |
 
 All routing criteria come from measurable model properties — cost, context window, capability flags from LiteLLM, and `is_local`. Rex never uses a manually curated "strengths" list.
 
@@ -118,14 +119,15 @@ flowchart TD
     ClientAdapter --> EndpointCheck{Routed Endpoint?}
     EndpointCheck -->|No| Passthrough[Forward to primary backend]
     EndpointCheck -->|Yes| FeatureDetect{Feature Detection}
-    FeatureDetect -->|Completion| FastPath[Cheapest model]
-    FeatureDetect -->|Chat / Agent| ClassifierChain{Classifier Chain}
+    FeatureDetect -->|Completion| CompletionPrimary["Completion primary (cheapest model)"]
+    FeatureDetect -->|Chat / Agent| ChatPrimary["Chat primary (cheapest with function calling)"]
+    ChatPrimary --> ClassifierChain{Classifier Chain}
     ClassifierChain -->|heuristics confident| RouteDirectly[Route to assigned model for category]
     ClassifierChain -->|ML model available| MLClassify[ML Classifier]
     ClassifierChain -->|still uncertain| LLMJudge[LLM-as-Judge classification]
     MLClassify --> RouteClassified[Route based on classification]
     LLMJudge --> RouteClassified
-    FastPath --> Fallback{Success?}
+    CompletionPrimary --> Fallback{Success?}
     RouteDirectly --> Enrichment[Enrichment Pipeline]
     RouteClassified --> Enrichment
     Enrichment --> Fallback{Success?}
@@ -136,7 +138,7 @@ flowchart TD
 ```
 
 - **Client adapter**: Normalizes the incoming request from a specific tool into a common format. Detects features (completion vs. chat/agent) based on tool-specific request patterns.
-- **Cheap-first**: All tasks start on the cheapest available model. The fallback chain escalates to more expensive models on failure.
+- **Two-tier primary**: Completion requests go to the cheapest model (fast, low latency). Chat/agent requests start from the cheapest model that supports function calling (capable enough for tool use and complex prompts). See [Two-Tier Primary](#two-tier-primary) below.
 
 **Classifier chain** (the router evaluates in order, stops at the first confident result):
 
@@ -202,6 +204,42 @@ flowchart TD
 **Effective context ratio**: Models advertise generous context limits, but real-world performance degrades 30-40% before the hard limit due to the "lost-in-the-middle" problem ([Zylos Research, 2026](https://zylos.ai/research/2026-01-19-llm-context-management)). The configurable ratio (default: 0.8) applies a safety margin so Rex routes conservatively without requiring manual adjustment of every model's metadata.
 
 **Token estimation accuracy**: `litellm.token_counter()` uses the model's native tokenizer when available, falling back to tiktoken. Estimates may diverge from the provider's actual count for images, tool definitions, or system prompt formatting. The context-specific fallback catches these edge cases as a safety net.
+
+### Two-Tier Primary
+
+Rex resolves two primary models at startup instead of one:
+
+- **Completion primary**: the cheapest model overall (local-first, then by cost). Handles tab completions where speed matters more than capability.
+- **Chat primary**: the cheapest model with `supports_function_calling=True`. Handles chat and agent requests where the model needs to produce structured tool calls and follow complex instructions.
+
+```mermaid
+flowchart TD
+    Startup[Startup] --> SortModels["Sort models by cost (local first)"]
+    SortModels --> CompPrimary["Completion primary = cheapest model"]
+    SortModels --> CheckFC{"Any model with\nsupports_function_calling?"}
+    CheckFC -->|Yes| ChatPrimary["Chat primary = cheapest with function calling"]
+    CheckFC -->|No| FallbackChat["Chat primary = completion primary"]
+    ConfigOverride{"routing.chat_model\nconfigured?"}
+    ConfigOverride -->|Yes| ExplicitChat["Chat primary = configured model"]
+    ConfigOverride -->|No| CheckFC
+```
+
+**Auto-selection logic** (in priority order):
+1. If `routing.chat_model` is set in config, the chat primary uses that model.
+2. Otherwise, the chat primary is the cheapest model where LiteLLM metadata reports `supports_function_calling=True`.
+3. If no model has that flag, the chat primary falls back to the completion primary (backwards compatible — same behavior as today).
+
+**Why `supports_function_calling`**:
+- Agentic clients (Claude Code, Cursor agent mode) send tool definitions in every request. The model must produce structured `tool_calls` responses — small models that lack function calling support output raw JSON text instead.
+- LiteLLM provides this flag for major models (cloud APIs, popular Ollama variants like `qwen2.5-coder:32b`). When LiteLLM has no metadata for a model, the flag defaults to `False`, which is conservative and correct for most small models.
+- `supports_function_calling` is a strong proxy for "capable enough for chat/agent work." Models with function calling support tend to handle complex prompts, multi-step instructions, and long context well.
+
+**How it interacts with existing routing**:
+- Category requirements still apply on top of the chat primary. If a category needs `supports_reasoning` or a minimum context window, the router selects the cheapest model meeting those requirements.
+- Confidence-based escalation still works — low confidence pushes to the next model up from the chat primary, not from the cheapest overall.
+- The fallback chain on failure still iterates models in cost order.
+
+**Research basis**: Every major coding tool uses different models per interaction mode. Cursor uses a custom small MoE model for tab completion (~260ms latency) and user-selected frontier models for chat/agent. Intelligent routing across model tiers reduces inference costs 40-85% while maintaining 90-95% quality ([Zylos Research, 2026](https://zylos.ai/research/2026-01-29-llm-routing-intelligent-model-selection)).
 
 ## Enrichment Pipeline
 
