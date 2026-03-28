@@ -15,8 +15,9 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 
 
-def _get_base_url(port: int) -> str:
-    return f"http://localhost:{port}"
+def _get_base_url(port: int, *, use_tls: bool = False) -> str:
+    scheme = "https" if use_tls else "http"
+    return f"{scheme}://localhost:{port}"
 
 
 def _is_process_running(pid: int) -> bool:
@@ -46,9 +47,9 @@ def _write_pid(pid: int) -> None:
     PID_FILE.write_text(str(pid))
 
 
-def _wait_for_ready(port: int, timeout: float = 10.0) -> bool:
+def _wait_for_ready(port: int, *, use_tls: bool = False, timeout: float = 10.0) -> bool:
     deadline = time.monotonic() + timeout
-    url = f"{_get_base_url(port)}/health"
+    url = f"{_get_base_url(port, use_tls=use_tls)}/health"
     while time.monotonic() < deadline:
         try:
             resp = httpx.get(url, timeout=2.0)
@@ -63,23 +64,33 @@ def _wait_for_ready(port: int, timeout: float = 10.0) -> bool:
 def cmd_start(args: argparse.Namespace) -> None:
     port = args.port
     host = args.host
+    certfile = getattr(args, "certfile", None)
+    keyfile = getattr(args, "keyfile", None)
+
+    if (certfile is None) ^ (keyfile is None):
+        print("error: --certfile and --keyfile must be given together for HTTPS (HTTP/2 via ALPN)")
+        sys.exit(1)
+
+    use_tls = certfile is not None and keyfile is not None
 
     existing_pid = _read_pid()
     if existing_pid is not None:
         print(f"Rex is already running (pid {existing_pid})")
         sys.exit(1)
 
+    cmd = [
+        sys.executable,
+        "-m",
+        "hypercorn",
+        "app.main:app",
+        "--bind",
+        f"{host}:{port}",
+    ]
+    if use_tls:
+        cmd.extend(["--certfile", certfile, "--keyfile", keyfile])
+
     process = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "uvicorn",
-            "app.main:app",
-            "--host",
-            host,
-            "--port",
-            str(port),
-        ],
+        cmd,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         start_new_session=True,
@@ -87,8 +98,9 @@ def cmd_start(args: argparse.Namespace) -> None:
 
     _write_pid(process.pid)
 
-    if _wait_for_ready(port):
-        print(f"Rex started (pid {process.pid}) — listening on http://{host}:{port}/v1")
+    if _wait_for_ready(port, use_tls=use_tls):
+        scheme = "https" if use_tls else "http"
+        print(f"Rex started (pid {process.pid}) — listening on {scheme}://{host}:{port}/v1")
     else:
         print(f"Rex process started (pid {process.pid}) but health check timed out")
         sys.exit(1)
@@ -125,7 +137,8 @@ def cmd_reset(args: argparse.Namespace) -> None:
             sys.exit(0)
 
     port = args.port
-    url = f"{_get_base_url(port)}/v1/reset"
+    use_tls = getattr(args, "tls", False)
+    url = f"{_get_base_url(port, use_tls=use_tls)}/v1/reset"
     try:
         resp = httpx.post(url, timeout=10.0)
         if resp.status_code == 200:
@@ -145,6 +158,18 @@ def main() -> None:
     start_parser = subparsers.add_parser("start", help="Start Rex as a background process")
     start_parser.add_argument("--host", default=DEFAULT_HOST, help="Host to bind to")
     start_parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port to listen on")
+    start_parser.add_argument(
+        "--certfile",
+        default=None,
+        metavar="PATH",
+        help="TLS certificate (requires --keyfile); enables HTTP/2 via ALPN",
+    )
+    start_parser.add_argument(
+        "--keyfile",
+        default=None,
+        metavar="PATH",
+        help="TLS private key (requires --certfile)",
+    )
 
     subparsers.add_parser("stop", help="Stop a running Rex instance")
 
@@ -153,11 +178,23 @@ def main() -> None:
     reset_parser.add_argument(
         "--port", type=int, default=DEFAULT_PORT, help="Port Rex is running on"
     )
+    reset_parser.add_argument(
+        "--tls",
+        action="store_true",
+        help="Use https:// when Rex was started with --certfile and --keyfile",
+    )
 
     args = parser.parse_args()
 
     if args.command is None:
-        cmd_start(argparse.Namespace(host=DEFAULT_HOST, port=DEFAULT_PORT))
+        cmd_start(
+            argparse.Namespace(
+                host=DEFAULT_HOST,
+                port=DEFAULT_PORT,
+                certfile=None,
+                keyfile=None,
+            )
+        )
     elif args.command == "start":
         cmd_start(args)
     elif args.command == "stop":
