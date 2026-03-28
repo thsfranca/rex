@@ -55,17 +55,32 @@ def _write_pid(pid: int) -> None:
     PID_FILE.write_text(str(pid))
 
 
+def _loopback_tls_health_verify(bind_host: str, use_tls: bool) -> bool:
+    if not use_tls:
+        return True
+    return _client_connect_host(bind_host) != "127.0.0.1"
+
+
 def _wait_for_ready(
-    port: int, bind_host: str, *, use_tls: bool = False, timeout: float = 10.0
+    port: int,
+    bind_host: str,
+    *,
+    use_tls: bool = False,
+    timeout: float = 15.0,
+    process: subprocess.Popen | None = None,
 ) -> bool:
     deadline = time.monotonic() + timeout
     url = f"{_client_base_url(port, bind_host, use_tls=use_tls)}/health"
+    per_try = 5.0 if use_tls else 2.0
+    verify = _loopback_tls_health_verify(bind_host, use_tls)
     while time.monotonic() < deadline:
+        if process is not None and process.poll() is not None:
+            return False
         try:
-            resp = httpx.get(url, timeout=2.0)
+            resp = httpx.get(url, timeout=per_try, verify=verify)
             if resp.status_code == 200:
                 return True
-        except httpx.ConnectError:
+        except httpx.TransportError:
             pass
         time.sleep(0.3)
     return False
@@ -108,11 +123,22 @@ def cmd_start(args: argparse.Namespace) -> None:
 
     _write_pid(process.pid)
 
-    if _wait_for_ready(port, host, use_tls=use_tls):
+    if _wait_for_ready(port, host, use_tls=use_tls, process=process):
         scheme = "https" if use_tls else "http"
         print(f"Rex started (pid {process.pid}) — listening on {scheme}://{host}:{port}/v1")
     else:
-        print(f"Rex process started (pid {process.pid}) but health check timed out")
+        code = process.poll()
+        if code is not None:
+            PID_FILE.unlink(missing_ok=True)
+            print(
+                f"Hypercorn exited during startup (exit {code}). "
+                f"Often port {port} is in use. Try: make stop, then lsof -i :{port}"
+            )
+        else:
+            print(
+                f"Rex process started (pid {process.pid}) but health check timed out "
+                f"(HTTPS on a port that already serves plain HTTP can cause this)."
+            )
         sys.exit(1)
 
 

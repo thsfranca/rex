@@ -14,13 +14,6 @@ error() { echo -e "${RED}==>${NC} $1"; exit 1; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-START_REX=1
-for arg in "$@"; do
-  case "$arg" in
-    --no-start) START_REX=0 ;;
-  esac
-done
-
 if ! command -v uv &> /dev/null; then
     error "uv is not installed. Install it with: curl -LsSf https://astral.sh/uv/install.sh | sh"
 fi
@@ -70,26 +63,18 @@ echo ""
 echo "  export OPENAI_API_KEY=\"sk-...\""
 echo "  export ANTHROPIC_API_KEY=\"sk-...\""
 echo ""
-echo -e "Rex is started with ${BOLD}HTTPS${NC} so clients (e.g. Claude Code) can use ${BOLD}HTTP/2 over TLS${NC}."
+echo -e "Start Rex from the repo with ${BOLD}make start${NC} (HTTPS, HTTP/2) or ${BOLD}make serve${NC} (foreground). HTTP: ${BOLD}make start ARGS=--http${NC} or ${BOLD}make serve-http${NC}."
 echo ""
-echo -e "Point Claude Code (or other Anthropic clients) at:"
+echo -e "Point Anthropic clients at ${BOLD}https://localhost:8000${NC} (TLS) or match your bind URL if you change it."
 echo ""
-echo -e "  ${BOLD}export ANTHROPIC_BASE_URL=\"https://localhost:8000\"${NC}"
-echo ""
-echo -e "To start Rex manually later (same TLS paths):"
-echo ""
-echo "  uv run rex start --host 127.0.0.1 --port 8000 --certfile ${CERT_PEM} --keyfile ${KEY_PEM}"
-echo ""
-echo -e "Learning reset over HTTPS: ${BOLD}uv run rex reset --yes --tls${NC}"
+if command -v mkcert &> /dev/null; then
+  MKCERT_CA="$(mkcert -CAROOT)/rootCA.pem"
+  echo -e "Claude Code uses Node.js TLS, not only the macOS keychain. Export the mkcert CA in the shell before you run claude (settings.json env is unreliable for TLS):"
+  echo ""
+  echo -e "  ${BOLD}export NODE_EXTRA_CA_CERTS=\"${MKCERT_CA}\"${NC}"
+  echo ""
+fi
+echo -e "Stop: ${BOLD}make stop${NC}. Learning reset (with Rex running on HTTPS): ${BOLD}uv run rex reset --yes --tls${NC}"
 echo ""
 warn "For optional overrides (custom models, routing), see config.yaml.example."
 echo ""
-
-if [[ "$START_REX" -eq 1 ]]; then
-  info "Starting Rex with HTTPS..."
-  if uv run rex start --host 127.0.0.1 --port 8000 --certfile "$CERT_PEM" --keyfile "$KEY_PEM"; then
-    :
-  else
-    warn "Rex did not start (already running, or health check failed). Stop with: uv run rex stop"
-  fi
-fi

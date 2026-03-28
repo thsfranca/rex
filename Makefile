@@ -7,7 +7,7 @@ REX_KEY := $(REX_TLS_DIR)/localhost-key.pem
 all run: setup start
 
 setup:
-	./setup.sh --no-start
+	./setup.sh
 
 start:
 	./start-rex.sh $(ARGS)
@@ -24,7 +24,7 @@ serve-http:
 
 help:
 	@echo "make, make all, make run  deps + TLS certs, then start Rex (HTTPS via start-rex.sh)"
-	@echo "make setup                ./setup.sh --no-start only"
+	@echo "make setup                ./setup.sh only (deps + TLS; does not start Rex)"
 	@echo "make start                ./start-rex.sh only; pass ARGS= e.g. ARGS=--http"
 	@echo "make stop                 uv run rex stop (instance started via rex start / start-rex.sh)"
 	@echo "make serve                HTTPS Hypercorn on 127.0.0.1:8000 (~/.rex/tls certs; HTTP/2 via TLS; logs to terminal)"
