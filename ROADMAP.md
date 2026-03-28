@@ -156,7 +156,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] Anthropic SSE streaming: convert OpenAI streaming chunks to Anthropic event format (`message_start`, `content_block_start`, `content_block_delta`, `content_block_stop`, `message_delta`, `message_stop`)
 - [x] Echo the client's requested model name in responses while routing to the best model internally
 
-**Design**: Rex translates Anthropic requests to OpenAI format internally, routes through the same engine, and translates the response back. Anthropic-compatible clients set `ANTHROPIC_BASE_URL` to Rex's origin (match `http://` vs `https://` to the running instance; see README.md **Client base URL and TLS**).
+**Design**: Rex translates Anthropic requests to OpenAI format internally, routes through the same engine, and translates the response back. Anthropic-compatible clients set `ANTHROPIC_BASE_URL` to Rex's URL (see README.md **Client base URL**).
 
 ---
 
@@ -205,7 +205,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 **Deliverables**:
 - [x] Configurable request timeout: global default timeout for `litellm.acompletion` calls, applied via `asyncio.wait_for` so the proxy stops waiting and tears down the upstream HTTP connection
 - [x] Per-model timeout override: allow `timeout` on individual model entries in `~/.rex/config.yaml` (local models may need shorter timeouts than cloud APIs)
-- [ ] Streaming wall-clock limit: cap total stream duration so a runaway generation cannot hold resources indefinitely
+- [x] Streaming wall-clock limit: cap total stream duration so a runaway generation cannot hold resources indefinitely
 - [ ] Client disconnect propagation: detect when the downstream client closes the connection and cancel the in-flight upstream request (streaming and non-streaming paths)
 - [x] Config extension: `timeout` under `server` (global default, seconds), `timeout` per model entry, `stream_timeout` for streaming-specific limit
 - [ ] Documentation: recommended Ollama environment variables for personal machines (`OLLAMA_NUM_PARALLEL`, `OLLAMA_MAX_LOADED_MODELS`, `OLLAMA_KEEP_ALIVE`, `OLLAMA_CONTEXT_LENGTH`, `OLLAMA_FLASH_ATTENTION`, `OLLAMA_KV_CACHE_TYPE`)
