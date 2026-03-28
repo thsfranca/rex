@@ -208,7 +208,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] Streaming wall-clock limit: cap total stream duration so a runaway generation cannot hold resources indefinitely
 - [x] Client disconnect propagation: detect when the downstream client closes the connection and cancel the in-flight upstream request (streaming and non-streaming paths)
 - [x] Config extension: `timeout` under `server` (global default, seconds), `timeout` per model entry, `stream_timeout` for streaming-specific limit
-- [ ] Documentation: recommended Ollama environment variables for personal machines (`OLLAMA_NUM_PARALLEL`, `OLLAMA_MAX_LOADED_MODELS`, `OLLAMA_KEEP_ALIVE`, `OLLAMA_CONTEXT_LENGTH`, `OLLAMA_FLASH_ATTENTION`, `OLLAMA_KV_CACHE_TYPE`)
+- [x] Documentation: recommended Ollama environment variables for personal machines (`OLLAMA_NUM_PARALLEL`, `OLLAMA_MAX_LOADED_MODELS`, `OLLAMA_KEEP_ALIVE`, `OLLAMA_CONTEXT_LENGTH`, `OLLAMA_FLASH_ATTENTION`, `OLLAMA_KV_CACHE_TYPE`)
 
 **Design**:
 - Rex cannot force a remote provider to stop GPU work. It can only close the HTTP connection. For cloud APIs this is best-effort. For local backends (Ollama, llama.cpp server), closing the connection typically stops generation — but behavior depends on the runtime version and offload mode.
