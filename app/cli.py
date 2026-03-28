@@ -22,10 +22,9 @@ def _client_connect_host(bind_host: str) -> str:
     return bind_host
 
 
-def _client_base_url(port: int, bind_host: str, *, use_tls: bool = False) -> str:
-    scheme = "https" if use_tls else "http"
+def _client_base_url(port: int, bind_host: str) -> str:
     host = _client_connect_host(bind_host)
-    return f"{scheme}://{host}:{port}"
+    return f"http://{host}:{port}"
 
 
 def _is_process_running(pid: int) -> bool:
@@ -55,29 +54,20 @@ def _write_pid(pid: int) -> None:
     PID_FILE.write_text(str(pid))
 
 
-def _loopback_tls_health_verify(bind_host: str, use_tls: bool) -> bool:
-    if not use_tls:
-        return True
-    return _client_connect_host(bind_host) != "127.0.0.1"
-
-
 def _wait_for_ready(
     port: int,
     bind_host: str,
     *,
-    use_tls: bool = False,
     timeout: float = 15.0,
     process: subprocess.Popen | None = None,
 ) -> bool:
     deadline = time.monotonic() + timeout
-    url = f"{_client_base_url(port, bind_host, use_tls=use_tls)}/health"
-    per_try = 5.0 if use_tls else 2.0
-    verify = _loopback_tls_health_verify(bind_host, use_tls)
+    url = f"{_client_base_url(port, bind_host)}/health"
     while time.monotonic() < deadline:
         if process is not None and process.poll() is not None:
             return False
         try:
-            resp = httpx.get(url, timeout=per_try, verify=verify)
+            resp = httpx.get(url, timeout=2.0)
             if resp.status_code == 200:
                 return True
         except httpx.TransportError:
@@ -89,14 +79,6 @@ def _wait_for_ready(
 def cmd_start(args: argparse.Namespace) -> None:
     port = args.port
     host = args.host
-    certfile = getattr(args, "certfile", None)
-    keyfile = getattr(args, "keyfile", None)
-
-    if (certfile is None) ^ (keyfile is None):
-        print("error: --certfile and --keyfile must be given together for HTTPS")
-        sys.exit(1)
-
-    use_tls = certfile is not None and keyfile is not None
 
     existing_pid = _read_pid()
     if existing_pid is not None:
@@ -113,8 +95,6 @@ def cmd_start(args: argparse.Namespace) -> None:
         "--port",
         str(port),
     ]
-    if use_tls:
-        cmd.extend(["--ssl-certfile", certfile, "--ssl-keyfile", keyfile])
 
     process = subprocess.Popen(
         cmd,
@@ -125,9 +105,8 @@ def cmd_start(args: argparse.Namespace) -> None:
 
     _write_pid(process.pid)
 
-    if _wait_for_ready(port, host, use_tls=use_tls, process=process):
-        scheme = "https" if use_tls else "http"
-        print(f"Rex started (pid {process.pid}) — listening on {scheme}://{host}:{port}/v1")
+    if _wait_for_ready(port, host, process=process):
+        print(f"Rex started (pid {process.pid}) — listening on http://{host}:{port}/v1")
     else:
         code = process.poll()
         if code is not None:
@@ -137,10 +116,7 @@ def cmd_start(args: argparse.Namespace) -> None:
                 f"Often port {port} is in use. Try: make stop, then lsof -i :{port}"
             )
         else:
-            print(
-                f"Rex process started (pid {process.pid}) but health check timed out "
-                f"(HTTPS on a port that already serves plain HTTP can cause this)."
-            )
+            print(f"Rex process started (pid {process.pid}) but health check timed out.")
         sys.exit(1)
 
 
@@ -175,9 +151,8 @@ def cmd_reset(args: argparse.Namespace) -> None:
             sys.exit(0)
 
     port = args.port
-    use_tls = getattr(args, "tls", False)
     reset_host = getattr(args, "host", "127.0.0.1")
-    url = f"{_client_base_url(port, reset_host, use_tls=use_tls)}/v1/reset"
+    url = f"{_client_base_url(port, reset_host)}/v1/reset"
     try:
         resp = httpx.post(url, timeout=10.0)
         if resp.status_code == 200:
@@ -197,18 +172,6 @@ def main() -> None:
     start_parser = subparsers.add_parser("start", help="Start Rex as a background process")
     start_parser.add_argument("--host", default=DEFAULT_HOST, help="Host to bind to")
     start_parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port to listen on")
-    start_parser.add_argument(
-        "--certfile",
-        default=None,
-        metavar="PATH",
-        help="TLS certificate (requires --keyfile)",
-    )
-    start_parser.add_argument(
-        "--keyfile",
-        default=None,
-        metavar="PATH",
-        help="TLS private key (requires --certfile)",
-    )
 
     subparsers.add_parser("stop", help="Stop a running Rex instance")
 
@@ -222,11 +185,6 @@ def main() -> None:
     reset_parser.add_argument(
         "--port", type=int, default=DEFAULT_PORT, help="Port Rex is running on"
     )
-    reset_parser.add_argument(
-        "--tls",
-        action="store_true",
-        help="Use https:// when Rex was started with --certfile and --keyfile",
-    )
 
     args = parser.parse_args()
 
@@ -235,8 +193,6 @@ def main() -> None:
             argparse.Namespace(
                 host=DEFAULT_HOST,
                 port=DEFAULT_PORT,
-                certfile=None,
-                keyfile=None,
             )
         )
     elif args.command == "start":

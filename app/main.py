@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from starlette.responses import Response
 
 from app.adapters.registry import AdapterRegistry
 from app.config import Settings, load_config
@@ -138,6 +139,25 @@ def _error_response(status_code: int, message: str, error_type: str) -> JSONResp
     )
 
 
+async def _with_disconnect_guard(request: Request, coro):
+    task = asyncio.create_task(coro)
+
+    async def _watch_disconnect():
+        while not await request.is_disconnected():
+            await asyncio.sleep(0.5)
+
+    watcher = asyncio.create_task(_watch_disconnect())
+    done, pending = await asyncio.wait({task, watcher}, return_when=asyncio.FIRST_COMPLETED)
+    for p in pending:
+        p.cancel()
+
+    if task in done:
+        return task.result()
+
+    logger.info("Client disconnected, cancelled upstream request")
+    raise asyncio.CancelledError("Client disconnected")
+
+
 async def _handle_chat(request: Request):
     body = await request.json()
     authorization = request.headers.get("authorization")
@@ -145,18 +165,24 @@ async def _handle_chat(request: Request):
     adapter = _get_adapter_registry().get_adapter(user_agent)
     settings = _get_settings()
     try:
-        return await handle_chat_completion(
-            body,
-            _get_engine(),
-            authorization,
-            adapter,
-            _get_pipeline(),
-            repository=_repository,
-            embedding_service=_embedding_service,
-            scheduler=_scheduler,
-            server_timeout=settings.server.timeout,
-            stream_timeout=settings.server.stream_timeout,
+        return await _with_disconnect_guard(
+            request,
+            handle_chat_completion(
+                body,
+                _get_engine(),
+                authorization,
+                adapter,
+                _get_pipeline(),
+                repository=_repository,
+                embedding_service=_embedding_service,
+                scheduler=_scheduler,
+                server_timeout=settings.server.timeout,
+                stream_timeout=settings.server.stream_timeout,
+            ),
         )
+    except asyncio.CancelledError:
+        logger.info("Chat completion cancelled: client disconnected")
+        return Response(status_code=499)
     except asyncio.TimeoutError as e:
         logger.exception("Chat completion timed out")
         return _error_response(504, f"Request timed out: {e}", "timeout_error")
@@ -171,18 +197,24 @@ async def _handle_messages(request: Request):
     adapter = _get_adapter_registry().get_adapter(user_agent)
     settings = _get_settings()
     try:
-        return await handle_anthropic_messages(
-            body,
-            _get_engine(),
+        return await _with_disconnect_guard(
             request,
-            adapter,
-            _get_pipeline(),
-            repository=_repository,
-            embedding_service=_embedding_service,
-            scheduler=_scheduler,
-            server_timeout=settings.server.timeout,
-            stream_timeout=settings.server.stream_timeout,
+            handle_anthropic_messages(
+                body,
+                _get_engine(),
+                request,
+                adapter,
+                _get_pipeline(),
+                repository=_repository,
+                embedding_service=_embedding_service,
+                scheduler=_scheduler,
+                server_timeout=settings.server.timeout,
+                stream_timeout=settings.server.stream_timeout,
+            ),
         )
+    except asyncio.CancelledError:
+        logger.info("Anthropic messages cancelled: client disconnected")
+        return Response(status_code=499)
     except asyncio.TimeoutError as e:
         logger.exception("Anthropic messages timed out")
         return _error_response(504, f"Request timed out: {e}", "timeout_error")
@@ -196,13 +228,19 @@ async def _handle_text(request: Request):
     authorization = request.headers.get("authorization")
     settings = _get_settings()
     try:
-        return await handle_text_completion(
-            body,
-            _get_engine(),
-            authorization,
-            server_timeout=settings.server.timeout,
-            stream_timeout=settings.server.stream_timeout,
+        return await _with_disconnect_guard(
+            request,
+            handle_text_completion(
+                body,
+                _get_engine(),
+                authorization,
+                server_timeout=settings.server.timeout,
+                stream_timeout=settings.server.stream_timeout,
+            ),
         )
+    except asyncio.CancelledError:
+        logger.info("Text completion cancelled: client disconnected")
+        return Response(status_code=499)
     except asyncio.TimeoutError as e:
         logger.exception("Text completion timed out")
         return _error_response(504, f"Request timed out: {e}", "timeout_error")
