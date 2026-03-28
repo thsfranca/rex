@@ -55,6 +55,7 @@ flowchart LR
 | Model discovery | Config-first, auto-discovery supplements | When `~/.rex/config.yaml` defines `models` or `providers`, Rex uses them as the primary source. Config providers (remote LiteLLM proxies, custom endpoints) override auto-discovered providers by prefix. Auto-discovery fills in models not already listed. Without a config file, Rex falls back to full auto-discovery (scan env vars, query provider APIs, probe Ollama) |
 | Model metadata | LiteLLM built-in database | `litellm.get_model_info()` provides context window, pricing, and capability flags for known models; no manual metadata needed |
 | Routing criteria | Cost + context window + capability flags | All routing signals come from measurable model properties — no manually curated "strengths" list |
+| Context-aware routing | Pre-call token estimation + context-specific fallback | Prevents wasted API calls by checking request size before routing; catches estimation mismatches via `ContextWindowExceededError` as a safety net |
 | Config format | Optional YAML overrides | Config file is not required; when present, it adds models and overrides routing defaults |
 | Client detection | User-Agent header → adapter | Rex selects the adapter based on the client's User-Agent header; new tools supported by adding an adapter |
 | API compatibility | Full OpenAI + Anthropic Messages API, transparent proxy | Rex routes known endpoints (OpenAI and Anthropic) and passes through everything else to the primary model's backend; never blocks unknown endpoints |
@@ -168,6 +169,40 @@ This aligns with the Confidence-Driven LLM Router research ([Zhang et al., 2025]
 
 The routing decision carries an `escalated` flag for observability in the decision log.
 
+### Context-Aware Routing
+
+Rex routes requests to models that can fit the input and recovers intelligently when a model rejects a request for exceeding its context window. Two layers work together:
+
+**Pre-call token estimation** (proactive):
+- Before sending a request, Rex estimates the input token count using `litellm.token_counter()`.
+- Rex compares the estimate against the model's effective context window — `max_context_window × effective_context_ratio` (default: 0.8).
+- If the request exceeds the effective window, Rex skips that model and selects the next cheapest model with a large enough window.
+- This prevents wasted latency and API costs from requests guaranteed to fail.
+
+**Context-specific fallback** (reactive):
+- When a model rejects a request with a context window error, LiteLLM raises `ContextWindowExceededError`.
+- Rex catches this error separately from general failures and filters remaining fallback candidates to only models with a larger `max_context_window` than the one that failed.
+- This avoids trying multiple models with the same or smaller context window before reaching one that fits.
+
+```mermaid
+flowchart TD
+    Request[Request with N tokens] --> Estimate["Estimate token count"]
+    Estimate --> FitsCheck{N <= model effective window?}
+    FitsCheck -->|Yes| CallModel[Call model]
+    FitsCheck -->|No| NextModel[Skip to next model with larger window]
+    CallModel --> Success{Success?}
+    Success -->|Yes| Response[Response]
+    Success -->|ContextWindowExceededError| FilterFallbacks["Filter fallbacks: only models with larger window"]
+    Success -->|Other error| GeneralFallback["General fallback: next model in cost order"]
+    NextModel --> CallModel
+    FilterFallbacks --> CallModel
+    GeneralFallback --> CallModel
+```
+
+**Effective context ratio**: Models advertise generous context limits, but real-world performance degrades 30-40% before the hard limit due to the "lost-in-the-middle" problem ([Zylos Research, 2026](https://zylos.ai/research/2026-01-19-llm-context-management)). The configurable ratio (default: 0.8) applies a safety margin so Rex routes conservatively without requiring manual adjustment of every model's metadata.
+
+**Token estimation accuracy**: `litellm.token_counter()` uses the model's native tokenizer when available, falling back to tiktoken. Estimates may diverge from the provider's actual count for images, tool definitions, or system prompt formatting. The context-specific fallback catches these edge cases as a safety net.
+
 ## Enrichment Pipeline
 
 The enrichment pipeline transforms requests after routing but before the model call. Each enricher receives the request (messages, selected model, task category) and returns a modified request.
@@ -196,8 +231,10 @@ The first enricher. When enabled, it detects complex tasks and injects a system-
 Rex proxies requests to model backends via LiteLLM's `acompletion`. The request lifecycle determines how long Rex waits, what happens on timeout, and whether the upstream backend stops generating.
 
 **Timeout enforcement**:
-- A configurable timeout wraps each `acompletion` call via `asyncio.wait_for`.
-- When the timeout fires, Rex cancels the coroutine and closes the upstream HTTP connection.
+- `_call_with_fallback` wraps each `litellm.acompletion` call via `asyncio.wait_for` with a resolved timeout.
+- **Resolution order**: per-model `ModelConfig.timeout` (when set) overrides the global `ServerConfig.timeout` (default: 600 seconds).
+- When the timeout fires, Rex cancels the coroutine, closes the upstream HTTP connection, and falls back to the next model in the chain. If all models time out, the handler returns **HTTP 504** (Gateway Timeout).
+- Streaming requests use `ServerConfig.stream_timeout` (default: 600 seconds) instead of `ServerConfig.timeout`.
 - Per-model timeout overrides allow shorter limits for local models (where runaway generation wastes personal hardware) and longer limits for cloud APIs.
 - A separate `stream_timeout` caps total wall-clock time for streaming responses.
 

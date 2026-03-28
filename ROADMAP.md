@@ -176,16 +176,38 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ---
 
+## Phase 5.6 — Context-Aware Routing
+
+**Goal**: Route requests to models that can actually fit the input, and recover intelligently when a model rejects a request for exceeding its context window.
+
+**Deliverables**:
+- [ ] Pre-call token estimation: before sending a request, estimate the input token count using `litellm.token_counter()` and exclude models whose `max_context_window` cannot fit it
+- [ ] Effective context ratio: apply a configurable safety margin (default: 0.8) to `max_context_window` to account for real-world performance degradation before the hard limit ([Redis, 2026](https://redis.io/blog/context-window-overflow/))
+- [ ] Context-aware model selection in `RoutingEngine.select_model`: after classification picks a model, verify the request fits; if not, select the next cheapest model with a large enough context window
+- [ ] Context-specific fallback in `_call_with_fallback`: catch `litellm.ContextWindowExceededError` separately from general errors and filter remaining fallback candidates to only models with a larger context window than the one that failed
+- [ ] Config extension: `routing.effective_context_ratio` (float, default `0.8`) to control the safety margin applied to advertised context windows
+
+**Design**:
+- The pre-call check prevents wasted latency and API costs from requests guaranteed to fail. LiteLLM provides `litellm.token_counter(model, messages=messages)` for estimation and `litellm.get_max_tokens(model)` for retrieving model limits.
+- The context-specific fallback acts as a safety net for cases where the token count estimate diverges from the provider's actual counting (different tokenizers, images, tool definitions not counted accurately).
+- LiteLLM raises `litellm.ContextWindowExceededError` (a subclass of `BadRequestError`) specifically for context overflow, enabling targeted recovery without treating it as a generic failure.
+- Research shows model performance degrades 30-40% before the advertised context limit due to the "lost-in-the-middle" problem ([Zylos Research, 2026](https://zylos.ai/research/2026-01-19-llm-context-management)). The effective context ratio defaults to 0.8 to route conservatively.
+- Today, `_call_with_fallback` iterates all models in cost order regardless of context window — a request needing 12K tokens might fail on three 8K models before reaching a 32K one. Context-specific fallback skips models that cannot fit the request.
+
+**Design**: See [ARCHITECTURE.md — Context-Aware Routing](ARCHITECTURE.md#context-aware-routing) for the full design rationale and flow diagram.
+
+---
+
 ## Phase 6 — Request Timeout + Local Resource Management
 
 **Goal**: Bound how long Rex waits for model responses, propagate cancellation to upstream backends, and optimize resource usage on personal machines running local models.
 
 **Deliverables**:
-- [ ] Configurable request timeout: global default timeout for `litellm.acompletion` calls, applied via `asyncio.wait_for` so the proxy stops waiting and tears down the upstream HTTP connection
-- [ ] Per-model timeout override: allow `timeout` on individual model entries in `~/.rex/config.yaml` (local models may need shorter timeouts than cloud APIs)
+- [x] Configurable request timeout: global default timeout for `litellm.acompletion` calls, applied via `asyncio.wait_for` so the proxy stops waiting and tears down the upstream HTTP connection
+- [x] Per-model timeout override: allow `timeout` on individual model entries in `~/.rex/config.yaml` (local models may need shorter timeouts than cloud APIs)
 - [ ] Streaming wall-clock limit: cap total stream duration so a runaway generation cannot hold resources indefinitely
 - [ ] Client disconnect propagation: detect when the downstream client closes the connection and cancel the in-flight upstream request (streaming and non-streaming paths)
-- [ ] Config extension: `timeout` under `server` (global default, seconds), `timeout` per model entry, `stream_timeout` for streaming-specific limit
+- [x] Config extension: `timeout` under `server` (global default, seconds), `timeout` per model entry, `stream_timeout` for streaming-specific limit
 - [ ] Documentation: recommended Ollama environment variables for personal machines (`OLLAMA_NUM_PARALLEL`, `OLLAMA_MAX_LOADED_MODELS`, `OLLAMA_KEEP_ALIVE`, `OLLAMA_CONTEXT_LENGTH`, `OLLAMA_FLASH_ATTENTION`, `OLLAMA_KV_CACHE_TYPE`)
 
 **Design**:

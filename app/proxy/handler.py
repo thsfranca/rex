@@ -87,12 +87,19 @@ def _build_litellm_params(
     return params
 
 
+def _resolve_timeout(model: ModelConfig, server_timeout: float) -> float:
+    if model.timeout is not None:
+        return model.timeout
+    return server_timeout
+
+
 async def _call_with_fallback(
     engine: RoutingEngine,
     primary: ModelConfig,
     body: dict,
     stream: bool,
     request_api_key: str | None = None,
+    server_timeout: float = 600,
 ):
     models_to_try = [primary] + engine.fallback_order(primary)
     last_error = None
@@ -102,8 +109,18 @@ async def _call_with_fallback(
             params = _build_litellm_params(body, model, request_api_key)
             if stream:
                 params["stream"] = True
-            response = await litellm.acompletion(**params)
+            timeout = _resolve_timeout(model, server_timeout)
+            response = await asyncio.wait_for(litellm.acompletion(**params), timeout=timeout)
             return response, model
+        except asyncio.TimeoutError:
+            logger.warning(
+                "Model %s timed out after %.1fs",
+                model.name,
+                _resolve_timeout(model, server_timeout),
+            )
+            last_error = asyncio.TimeoutError(
+                f"Model {model.name} timed out after {_resolve_timeout(model, server_timeout)}s"
+            )
         except Exception as e:
             logger.warning("Model %s failed: %s", model.name, e)
             last_error = e
@@ -173,6 +190,8 @@ async def handle_chat_completion(
     repository: DecisionRepository | None = None,
     embedding_service=None,
     scheduler=None,
+    server_timeout: float = 600,
+    stream_timeout: float = 600,
 ) -> Response:
     stream = body.get("stream", False)
     request_api_key = _extract_bearer_token(authorization)
@@ -218,9 +237,16 @@ async def handle_chat_completion(
     if "tools" in body:
         body = {**body, "tools": sanitize_tools(body["tools"])}
 
+    effective_timeout = server_timeout if not stream else stream_timeout
+
     start_time = time.perf_counter()
     response, used_model = await _call_with_fallback(
-        engine, decision.model, body, stream, request_api_key
+        engine,
+        decision.model,
+        body,
+        stream,
+        request_api_key,
+        server_timeout=effective_timeout,
     )
     apply_ollama_completion_text_unwrap(response, used_model.name)
     response_time_ms = int((time.perf_counter() - start_time) * 1000)
@@ -251,7 +277,11 @@ async def handle_chat_completion(
 
 
 async def handle_text_completion(
-    body: dict, engine: RoutingEngine, authorization: str | None = None
+    body: dict,
+    engine: RoutingEngine,
+    authorization: str | None = None,
+    server_timeout: float = 600,
+    stream_timeout: float = 600,
 ) -> Response:
     stream = body.get("stream", False)
     request_api_key = _extract_bearer_token(authorization)
@@ -262,8 +292,15 @@ async def handle_text_completion(
         temperature=body.get("temperature"),
     )
 
+    effective_timeout = server_timeout if not stream else stream_timeout
+
     response, used_model = await _call_with_fallback(
-        engine, decision.model, body, stream, request_api_key
+        engine,
+        decision.model,
+        body,
+        stream,
+        request_api_key,
+        server_timeout=effective_timeout,
     )
     apply_ollama_completion_text_unwrap(response, used_model.name)
     logger.info("Routed text completion to %s", used_model.name)
@@ -285,6 +322,8 @@ async def handle_anthropic_messages(
     repository: DecisionRepository | None = None,
     embedding_service=None,
     scheduler=None,
+    server_timeout: float = 600,
+    stream_timeout: float = 600,
 ) -> Response:
     stream = body.get("stream", False)
     request_api_key = extract_anthropic_api_key(request)
@@ -328,9 +367,16 @@ async def handle_anthropic_messages(
         enrichment_ctx = pipeline.run(enrichment_ctx)
         openai_body = {**openai_body, "messages": enrichment_ctx.messages}
 
+    effective_timeout = server_timeout if not stream else stream_timeout
+
     start_time = time.perf_counter()
     response, used_model = await _call_with_fallback(
-        engine, decision.model, openai_body, stream, request_api_key
+        engine,
+        decision.model,
+        openai_body,
+        stream,
+        request_api_key,
+        server_timeout=effective_timeout,
     )
     apply_ollama_completion_text_unwrap(response, used_model.name)
     response_time_ms = int((time.perf_counter() - start_time) * 1000)
