@@ -306,6 +306,7 @@ app/
   proxy/
     anthropic.py         # Anthropic Messages API translator (request/response/streaming)
     handler.py           # Request handlers (OpenAI + Anthropic)
+    message_sanitizer.py # Converts mixed-format messages (Anthropic content blocks in OpenAI requests) to valid OpenAI format
     streaming.py         # OpenAI SSE streaming response logic
 config.yaml.example     # Example configuration (optional)
 pyproject.toml           # Project dependencies (uv)

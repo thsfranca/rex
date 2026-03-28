@@ -20,6 +20,7 @@ An OpenAI- and Anthropic-compatible proxy that sits between AI-powered coding to
 - **Decision logging**: Every routing decision is logged to SQLite with timestamps, prompt hash, category, confidence, selected/used model, response time, token counts, cost, and rule votes — providing full routing observability.
 - **Semantic classification**: When `sentence-transformers` is installed, Rex embeds every query and uses nearest-centroid classification with pre-seeded exemplar queries to improve routing accuracy from the first request.
 - **Learning pipeline**: Background re-training runs K-means clustering, weak supervision, and logistic regression on accumulated data. When the ML classifier reaches quality thresholds (silhouette > 0.5, label model converged), it automatically replaces heuristics as the primary classifier.
+- **Message format sanitization**: Rex normalizes mixed-format messages before forwarding. Some clients (e.g., Cursor) send Anthropic-style content blocks (`tool_result`, `tool_use`) through the OpenAI endpoint — Rex converts these to valid OpenAI format automatically.
 - **Transparent passthrough**: Unknown endpoints are forwarded to the primary model's backend — Rex never blocks an endpoint it doesn't handle.
 - **Auto-discovery**: When no config exists, Rex falls back to scanning environment variables and local runtimes to find models automatically.
 
@@ -97,6 +98,7 @@ app/
   proxy/
     anthropic.py         # Anthropic Messages API translator (request/response/streaming)
     handler.py           # Request handlers (OpenAI + Anthropic)
+    message_sanitizer.py # Converts mixed-format messages (Anthropic content blocks in OpenAI requests) to valid OpenAI format
     streaming.py         # OpenAI SSE streaming response logic
 config.yaml.example     # Example configuration (optional)
 pyproject.toml           # Project dependencies (uv)
