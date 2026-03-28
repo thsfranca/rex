@@ -34,13 +34,23 @@ def _make_request(api_key: str | None = None) -> MagicMock:
 
 
 class FakeStreamChunk:
-    def __init__(self, content=None, finish_reason=None):
+    def __init__(self, content=None, finish_reason=None, tool_calls=None):
         choice = MagicMock()
         choice.delta = MagicMock()
         choice.delta.content = content
+        choice.delta.tool_calls = tool_calls
         choice.finish_reason = finish_reason
         self.choices = [choice]
         self.usage = None
+
+
+class FakeToolCallDelta:
+    def __init__(self, index=0, tc_id=None, name=None, arguments=None):
+        self.index = index
+        self.id = tc_id
+        self.function = MagicMock()
+        self.function.name = name
+        self.function.arguments = arguments
 
 
 async def _async_iter(items):
@@ -191,6 +201,143 @@ class TestStreamAnthropicResponse:
         deltas = [(t, d) for t, d in parsed if t == "content_block_delta"]
         assert len(deltas) == 1
         assert deltas[0][1]["delta"]["text"] == "Hello"
+
+
+class TestStreamAnthropicToolUse:
+    @pytest.mark.asyncio
+    async def test_tool_call_emits_tool_use_block(self):
+        chunks = [
+            FakeStreamChunk(
+                tool_calls=[FakeToolCallDelta(index=0, tc_id="call_1", name="bash", arguments="")],
+            ),
+            FakeStreamChunk(
+                tool_calls=[FakeToolCallDelta(index=0, arguments='{"command": "ls"}')],
+            ),
+            FakeStreamChunk(finish_reason="tool_calls"),
+        ]
+        events = [e async for e in stream_anthropic_response(_async_iter(chunks), "test/model")]
+        parsed = _parse_sse_events(events)
+
+        block_starts = [(t, d) for t, d in parsed if t == "content_block_start"]
+        assert len(block_starts) == 2
+        assert block_starts[0][1]["content_block"]["type"] == "text"
+        assert block_starts[1][1]["content_block"]["type"] == "tool_use"
+        assert block_starts[1][1]["content_block"]["id"] == "call_1"
+        assert block_starts[1][1]["content_block"]["name"] == "bash"
+
+    @pytest.mark.asyncio
+    async def test_tool_call_emits_input_json_delta(self):
+        chunks = [
+            FakeStreamChunk(
+                tool_calls=[FakeToolCallDelta(index=0, tc_id="call_1", name="bash", arguments="")],
+            ),
+            FakeStreamChunk(
+                tool_calls=[FakeToolCallDelta(index=0, arguments='{"command":')],
+            ),
+            FakeStreamChunk(
+                tool_calls=[FakeToolCallDelta(index=0, arguments=' "ls"}')],
+            ),
+            FakeStreamChunk(finish_reason="tool_calls"),
+        ]
+        events = [e async for e in stream_anthropic_response(_async_iter(chunks), "test/model")]
+        parsed = _parse_sse_events(events)
+
+        json_deltas = [
+            d
+            for t, d in parsed
+            if t == "content_block_delta" and d["delta"]["type"] == "input_json_delta"
+        ]
+        assert len(json_deltas) == 2
+        assert json_deltas[0]["delta"]["partial_json"] == '{"command":'
+        assert json_deltas[1]["delta"]["partial_json"] == ' "ls"}'
+
+    @pytest.mark.asyncio
+    async def test_tool_call_stop_reason_is_tool_use(self):
+        chunks = [
+            FakeStreamChunk(
+                tool_calls=[
+                    FakeToolCallDelta(index=0, tc_id="call_1", name="bash", arguments="{}")
+                ],
+            ),
+            FakeStreamChunk(finish_reason="tool_calls"),
+        ]
+        events = [e async for e in stream_anthropic_response(_async_iter(chunks), "test/model")]
+        parsed = _parse_sse_events(events)
+
+        delta_events = [(t, d) for t, d in parsed if t == "message_delta"]
+        assert delta_events[0][1]["delta"]["stop_reason"] == "tool_use"
+
+    @pytest.mark.asyncio
+    async def test_text_then_tool_call(self):
+        chunks = [
+            FakeStreamChunk(content="I'll run ls."),
+            FakeStreamChunk(
+                tool_calls=[
+                    FakeToolCallDelta(index=0, tc_id="call_1", name="bash", arguments="{}")
+                ],
+            ),
+            FakeStreamChunk(finish_reason="tool_calls"),
+        ]
+        events = [e async for e in stream_anthropic_response(_async_iter(chunks), "test/model")]
+        parsed = _parse_sse_events(events)
+
+        text_deltas = [
+            d
+            for t, d in parsed
+            if t == "content_block_delta" and d["delta"]["type"] == "text_delta"
+        ]
+        assert len(text_deltas) == 1
+        assert text_deltas[0]["delta"]["text"] == "I'll run ls."
+
+        tool_starts = [
+            d
+            for t, d in parsed
+            if t == "content_block_start" and d["content_block"]["type"] == "tool_use"
+        ]
+        assert len(tool_starts) == 1
+
+    @pytest.mark.asyncio
+    async def test_multiple_tool_calls(self):
+        chunks = [
+            FakeStreamChunk(
+                tool_calls=[
+                    FakeToolCallDelta(index=0, tc_id="call_1", name="bash", arguments="{}")
+                ],
+            ),
+            FakeStreamChunk(
+                tool_calls=[
+                    FakeToolCallDelta(index=1, tc_id="call_2", name="read", arguments="{}")
+                ],
+            ),
+            FakeStreamChunk(finish_reason="tool_calls"),
+        ]
+        events = [e async for e in stream_anthropic_response(_async_iter(chunks), "test/model")]
+        parsed = _parse_sse_events(events)
+
+        tool_starts = [
+            d
+            for t, d in parsed
+            if t == "content_block_start" and d["content_block"]["type"] == "tool_use"
+        ]
+        assert len(tool_starts) == 2
+        assert tool_starts[0]["content_block"]["name"] == "bash"
+        assert tool_starts[1]["content_block"]["name"] == "read"
+
+    @pytest.mark.asyncio
+    async def test_tool_call_blocks_are_closed(self):
+        chunks = [
+            FakeStreamChunk(
+                tool_calls=[
+                    FakeToolCallDelta(index=0, tc_id="call_1", name="bash", arguments="{}")
+                ],
+            ),
+            FakeStreamChunk(finish_reason="tool_calls"),
+        ]
+        events = [e async for e in stream_anthropic_response(_async_iter(chunks), "test/model")]
+        parsed = _parse_sse_events(events)
+
+        block_stops = [(t, d) for t, d in parsed if t == "content_block_stop"]
+        assert len(block_stops) == 2
 
 
 class TestHandleAnthropicMessagesStreaming:
