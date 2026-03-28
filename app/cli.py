@@ -93,7 +93,7 @@ def cmd_start(args: argparse.Namespace) -> None:
     keyfile = getattr(args, "keyfile", None)
 
     if (certfile is None) ^ (keyfile is None):
-        print("error: --certfile and --keyfile must be given together for HTTPS (HTTP/2 via ALPN)")
+        print("error: --certfile and --keyfile must be given together for HTTPS")
         sys.exit(1)
 
     use_tls = certfile is not None and keyfile is not None
@@ -106,13 +106,15 @@ def cmd_start(args: argparse.Namespace) -> None:
     cmd = [
         sys.executable,
         "-m",
-        "hypercorn",
+        "uvicorn",
         "app.main:app",
-        "--bind",
-        f"{host}:{port}",
+        "--host",
+        host,
+        "--port",
+        str(port),
     ]
     if use_tls:
-        cmd.extend(["--certfile", certfile, "--keyfile", keyfile])
+        cmd.extend(["--ssl-certfile", certfile, "--ssl-keyfile", keyfile])
 
     process = subprocess.Popen(
         cmd,
@@ -131,7 +133,7 @@ def cmd_start(args: argparse.Namespace) -> None:
         if code is not None:
             PID_FILE.unlink(missing_ok=True)
             print(
-                f"Hypercorn exited during startup (exit {code}). "
+                f"Uvicorn exited during startup (exit {code}). "
                 f"Often port {port} is in use. Try: make stop, then lsof -i :{port}"
             )
         else:
@@ -199,7 +201,7 @@ def main() -> None:
         "--certfile",
         default=None,
         metavar="PATH",
-        help="TLS certificate (requires --keyfile); enables HTTP/2 via ALPN",
+        help="TLS certificate (requires --keyfile)",
     )
     start_parser.add_argument(
         "--keyfile",
