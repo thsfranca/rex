@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,7 +12,7 @@ from app.enrichment.pipeline import EnrichmentPipeline
 from app.learning.labeling import LabelModel
 from app.learning.scheduler import RetrainingScheduler
 from app.logging.sqlite import SQLiteDecisionRepository
-from app.main import app
+from app.main import _with_disconnect_guard, app
 from app.router.engine import RoutingEngine
 from app.router.ml_classifier import MLClassifier
 from app.router.registry import ModelRegistry
@@ -255,3 +256,59 @@ class TestPassthroughEndpoint:
         response = client.get("/v1/embeddings")
         assert response.status_code == 501
         assert "error" in response.json()
+
+
+class TestDisconnectGuard:
+    def _make_request(self, disconnected: bool = False):
+        request = MagicMock()
+        request.is_disconnected = AsyncMock(return_value=disconnected)
+        return request
+
+    @pytest.mark.asyncio
+    async def test_returns_handler_result_when_no_disconnect(self):
+        request = self._make_request(disconnected=False)
+
+        async def handler():
+            return "result"
+
+        result = await _with_disconnect_guard(request, handler())
+        assert result == "result"
+
+    @pytest.mark.asyncio
+    async def test_propagates_handler_exception(self):
+        request = self._make_request(disconnected=False)
+
+        async def handler():
+            raise ValueError("handler error")
+
+        with pytest.raises(ValueError, match="handler error"):
+            await _with_disconnect_guard(request, handler())
+
+    @pytest.mark.asyncio
+    async def test_cancels_handler_on_client_disconnect(self):
+        call_count = 0
+
+        async def is_disconnected():
+            nonlocal call_count
+            call_count += 1
+            return call_count >= 2
+
+        request = MagicMock()
+        request.is_disconnected = is_disconnected
+
+        async def slow_handler():
+            await asyncio.sleep(10)
+            return "should not reach"
+
+        with pytest.raises(asyncio.CancelledError):
+            await _with_disconnect_guard(request, slow_handler())
+
+    @pytest.mark.asyncio
+    async def test_fast_handler_wins_over_disconnect_check(self):
+        request = self._make_request(disconnected=False)
+
+        async def fast_handler():
+            return "fast result"
+
+        result = await _with_disconnect_guard(request, fast_handler())
+        assert result == "fast result"
