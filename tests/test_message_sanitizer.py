@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.proxy.message_sanitizer import sanitize_messages
+from app.proxy.message_sanitizer import sanitize_messages, sanitize_tools
 
 
 class TestSanitizeMessages:
@@ -182,3 +182,73 @@ class TestSanitizeMessages:
         result = sanitize_messages(messages)
         assert len(result) == 1
         assert len(result[0]["tool_calls"]) == 2
+
+
+class TestSanitizeTools:
+    def test_openai_format_tools_unchanged(self):
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "read_file",
+                    "description": "Read a file",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"path": {"type": "string"}},
+                    },
+                },
+            }
+        ]
+        result = sanitize_tools(tools)
+        assert result == tools
+
+    def test_anthropic_format_converted_to_openai(self):
+        tools = [
+            {
+                "name": "read_file",
+                "description": "Read a file",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"path": {"type": "string"}},
+                },
+            }
+        ]
+        result = sanitize_tools(tools)
+        assert len(result) == 1
+        assert result[0]["type"] == "function"
+        assert result[0]["function"]["name"] == "read_file"
+        assert result[0]["function"]["description"] == "Read a file"
+        assert result[0]["function"]["parameters"] == {
+            "type": "object",
+            "properties": {"path": {"type": "string"}},
+        }
+
+    def test_mixed_formats(self):
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "tool_a",
+                    "description": "Already OpenAI",
+                    "parameters": {},
+                },
+            },
+            {
+                "name": "tool_b",
+                "description": "Anthropic format",
+                "input_schema": {"type": "object", "properties": {}},
+            },
+        ]
+        result = sanitize_tools(tools)
+        assert result[0]["function"]["name"] == "tool_a"
+        assert result[1]["type"] == "function"
+        assert result[1]["function"]["name"] == "tool_b"
+
+    def test_empty_tools_list(self):
+        assert sanitize_tools([]) == []
+
+    def test_anthropic_tool_missing_input_schema(self):
+        tools = [{"name": "simple_tool", "description": "No schema"}]
+        result = sanitize_tools(tools)
+        assert result[0]["function"]["name"] == "simple_tool"
+        assert result[0]["function"]["parameters"] == {}

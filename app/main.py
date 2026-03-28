@@ -137,8 +137,7 @@ def _error_response(status_code: int, message: str, error_type: str) -> JSONResp
     )
 
 
-@app.post("/v1/chat/completions")
-async def chat_completions(request: Request):
+async def _handle_chat(request: Request):
     body = await request.json()
     authorization = request.headers.get("authorization")
     user_agent = request.headers.get("user-agent")
@@ -159,8 +158,7 @@ async def chat_completions(request: Request):
         return _error_response(502, f"All model backends failed. Last error: {e}", "proxy_error")
 
 
-@app.post("/v1/messages")
-async def anthropic_messages(request: Request):
+async def _handle_messages(request: Request):
     body = await request.json()
     user_agent = request.headers.get("user-agent")
     adapter = _get_adapter_registry().get_adapter(user_agent)
@@ -180,8 +178,7 @@ async def anthropic_messages(request: Request):
         return _error_response(502, f"All model backends failed. Last error: {e}", "proxy_error")
 
 
-@app.post("/v1/completions")
-async def text_completions(request: Request):
+async def _handle_text(request: Request):
     body = await request.json()
     authorization = request.headers.get("authorization")
     try:
@@ -191,8 +188,7 @@ async def text_completions(request: Request):
         return _error_response(502, f"All model backends failed. Last error: {e}", "proxy_error")
 
 
-@app.get("/v1/models")
-async def list_models():
+async def _handle_models():
     engine = _get_engine()
     models = engine.registry.get_all()
     return {
@@ -209,6 +205,33 @@ async def list_models():
     }
 
 
+async def _handle_reset():
+    if _scheduler is None:
+        return _error_response(503, "Scheduler not initialized", "service_unavailable")
+    await _scheduler.reset()
+    return JSONResponse(content={"status": "ok", "message": "All learning data cleared"})
+
+
+@app.post("/v1/chat/completions")
+async def chat_completions(request: Request):
+    return await _handle_chat(request)
+
+
+@app.post("/v1/messages")
+async def anthropic_messages(request: Request):
+    return await _handle_messages(request)
+
+
+@app.post("/v1/completions")
+async def text_completions(request: Request):
+    return await _handle_text(request)
+
+
+@app.get("/v1/models")
+async def list_models():
+    return await _handle_models()
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -216,10 +239,7 @@ async def health():
 
 @app.post("/v1/reset")
 async def reset_learning():
-    if _scheduler is None:
-        return _error_response(503, "Scheduler not initialized", "service_unavailable")
-    await _scheduler.reset()
-    return JSONResponse(content={"status": "ok", "message": "All learning data cleared"})
+    return await _handle_reset()
 
 
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
