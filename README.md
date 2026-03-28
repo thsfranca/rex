@@ -117,7 +117,7 @@ The script installs dependencies, creates TLS material under `~/.rex/tls/` (uses
 
 After setup, you can start Rex anytime with **`./start-rex.sh`** (HTTPS using `~/.rex/tls/`, same as above). Use **`./start-rex.sh --http`** for cleartext HTTP. **`./start-rex.sh --help`** lists options.
 
-From the repo root, **`make`** or **`make all`** runs **`./setup.sh --no-start`** then **`./start-rex.sh`**. **`make setup`** and **`make start`** run each step alone; **`make start ARGS=--http`** passes flags through. **`make stop`** runs **`uv run rex stop`**. **`make serve`** runs Hypercorn in the foreground with logs on the terminal (same ASGI server as **`rex start`**).
+From the repo root, **`make`** or **`make all`** runs **`./setup.sh --no-start`** then **`./start-rex.sh`**. **`make setup`** and **`make start`** run each step alone; **`make start ARGS=--http`** passes flags through. **`make stop`** runs **`uv run rex stop`**. **`make serve`** runs Hypercorn in the foreground on **HTTPS** at **`https://127.0.0.1:8000`** using **`~/.rex/tls/`** (same as **`./start-rex.sh`**, so **HTTP/2** via TLS); run **`make setup`** first if certs are missing. **`make serve-http`** runs cleartext HTTP on **`0.0.0.0:8000`** when you do not need TLS.
 
 ### Manual Setup
 
