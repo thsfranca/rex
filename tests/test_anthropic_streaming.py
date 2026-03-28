@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -55,6 +56,12 @@ class FakeToolCallDelta:
 
 async def _async_iter(items):
     for item in items:
+        yield item
+
+
+async def _slow_async_iter(items, delay: float):
+    for item in items:
+        await asyncio.sleep(delay)
         yield item
 
 
@@ -361,3 +368,49 @@ class TestHandleAnthropicMessagesStreaming:
 
         assert isinstance(response, StreamingResponse)
         assert response.media_type == "text/event-stream"
+
+
+class TestAnthropicStreamWallClockLimit:
+    @pytest.mark.asyncio
+    async def test_stream_terminates_on_timeout(self):
+        chunks = [FakeStreamChunk(content=f"word{i}") for i in range(100)]
+        events = [
+            e
+            async for e in stream_anthropic_response(
+                _slow_async_iter(chunks, 0.05), "test/model", timeout=0.1
+            )
+        ]
+        parsed = _parse_sse_events(events)
+
+        content_deltas = [d for t, d in parsed if t == "content_block_delta"]
+        assert len(content_deltas) < 100
+
+    @pytest.mark.asyncio
+    async def test_stream_emits_proper_closing_events_on_timeout(self):
+        chunks = [FakeStreamChunk(content=f"word{i}") for i in range(100)]
+        events = [
+            e
+            async for e in stream_anthropic_response(
+                _slow_async_iter(chunks, 0.05), "test/model", timeout=0.1
+            )
+        ]
+        parsed = _parse_sse_events(events)
+
+        event_types = [t for t, _ in parsed]
+        assert event_types[-1] == "message_stop"
+        assert event_types[-2] == "message_delta"
+        assert "content_block_stop" in event_types
+
+    @pytest.mark.asyncio
+    async def test_stream_completes_within_timeout(self):
+        chunks = [FakeStreamChunk(content="Hi", finish_reason="stop")]
+        events = [
+            e
+            async for e in stream_anthropic_response(_async_iter(chunks), "test/model", timeout=10)
+        ]
+        parsed = _parse_sse_events(events)
+
+        event_types = [t for t, _ in parsed]
+        assert "message_start" in event_types
+        assert "message_stop" in event_types
+        assert "content_block_delta" in event_types
