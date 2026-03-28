@@ -5,7 +5,7 @@ import os
 import sys
 
 from app.config import Model, ProviderConfig, Settings
-from app.discovery.metadata import enrich_model
+from app.discovery.metadata import enrich_config_model, enrich_model
 from app.discovery.models import list_models_for_provider
 from app.discovery.providers import KNOWN_PROVIDERS, DetectedProvider, detect_providers
 from app.router.registry import ModelRegistry
@@ -56,7 +56,7 @@ async def build_registry(config: Settings | None) -> tuple[ModelRegistry, Settin
 
     config_names: set[str] = set()
     for manual_model in settings.models:
-        registry[manual_model.name] = Model(**manual_model.model_dump())
+        registry[manual_model.name] = enrich_config_model(manual_model)
         config_names.add(manual_model.name)
 
     if config_names:
