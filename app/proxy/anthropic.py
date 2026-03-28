@@ -33,10 +33,43 @@ def _convert_anthropic_tool_choice(tool_choice: dict) -> str | dict:
     return "auto"
 
 
+def _convert_image_block(block: dict) -> dict | None:
+    source = block.get("source", {})
+    source_type = source.get("type")
+    if source_type == "base64":
+        media_type = source.get("media_type", "image/jpeg")
+        data = source.get("data", "")
+        return {
+            "type": "image_url",
+            "image_url": {"url": f"data:{media_type};base64,{data}"},
+        }
+    if source_type == "url":
+        return {
+            "type": "image_url",
+            "image_url": {"url": source.get("url", "")},
+        }
+    return None
+
+
 def _convert_anthropic_message(role: str, content: list) -> list[dict]:
+    output: list[dict] = []
     text_parts: list[str] = []
+    image_parts: list[dict] = []
     tool_calls: list[dict] = []
-    tool_results: list[dict] = []
+
+    def flush_text_and_images() -> None:
+        if not text_parts and not image_parts:
+            return
+        if image_parts:
+            content_list: list[dict] = []
+            if text_parts:
+                content_list.append({"type": "text", "text": "\n".join(text_parts)})
+            content_list.extend(image_parts)
+            output.append({"role": role, "content": content_list})
+        else:
+            output.append({"role": role, "content": "\n".join(text_parts)})
+        text_parts.clear()
+        image_parts.clear()
 
     for block in content:
         if not isinstance(block, dict):
@@ -48,6 +81,11 @@ def _convert_anthropic_message(role: str, content: list) -> list[dict]:
             text = block.get("text", "")
             if text:
                 text_parts.append(text)
+
+        elif block_type == "image":
+            converted = _convert_image_block(block)
+            if converted:
+                image_parts.append(converted)
 
         elif block_type == "tool_use":
             tool_calls.append(
@@ -62,12 +100,13 @@ def _convert_anthropic_message(role: str, content: list) -> list[dict]:
             )
 
         elif block_type == "tool_result":
+            flush_text_and_images()
             result_content = block.get("content", "")
             if isinstance(result_content, list):
                 result_content = "\n".join(
                     b.get("text", "") for b in result_content if isinstance(b, dict)
                 )
-            tool_results.append(
+            output.append(
                 {
                     "role": "tool",
                     "tool_call_id": block.get("tool_use_id", ""),
@@ -75,17 +114,13 @@ def _convert_anthropic_message(role: str, content: list) -> list[dict]:
                 }
             )
 
-    output: list[dict] = []
-
     if tool_calls:
         assistant_msg: dict = {"role": role}
         assistant_msg["content"] = "\n".join(text_parts) if text_parts else None
         assistant_msg["tool_calls"] = tool_calls
         output.append(assistant_msg)
-    elif text_parts:
-        output.append({"role": role, "content": "\n".join(text_parts)})
-
-    output.extend(tool_results)
+    elif text_parts or image_parts:
+        flush_text_and_images()
 
     if not output:
         output.append({"role": role, "content": ""})

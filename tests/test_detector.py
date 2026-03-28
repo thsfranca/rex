@@ -47,3 +47,29 @@ class TestDetectFeature:
         messages = [{"role": "system", "content": "You are a code assistant"}]
         result = detect_feature(messages)
         assert result == FeatureType.CHAT
+
+    def test_none_content_does_not_crash(self):
+        messages = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": None, "tool_calls": []},
+        ]
+        result = detect_feature(messages)
+        assert result in (FeatureType.CHAT, FeatureType.COMPLETION)
+
+    def test_list_content_measured_by_text_blocks(self):
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "x" * 600},
+                    {"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}},
+                ],
+            }
+        ]
+        result = detect_feature(messages)
+        assert result == FeatureType.CHAT
+
+    def test_missing_content_key_does_not_crash(self):
+        messages = [{"role": "tool", "tool_call_id": "call_1"}]
+        result = detect_feature(messages)
+        assert result in (FeatureType.CHAT, FeatureType.COMPLETION)
