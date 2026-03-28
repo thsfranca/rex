@@ -6,6 +6,8 @@
 # server:
 #   host: "0.0.0.0"
 #   port: 9000
+#   timeout: 300          # Global request timeout in seconds (default: 600)
+#   stream_timeout: 120   # Max wall-clock time for streaming responses (seconds)
 
 # providers:
 #   - prefix: "anthropic"
@@ -19,6 +21,8 @@
 #   - name: "my-company/custom-model"
 #     api_base: "https://internal.company.com/v1"
 #     api_key: "sk-..."
+#   - name: "ollama/llama3"
+#     timeout: 60          # Per-model timeout override (seconds); useful for local models
 
 # routing:
 #   primary_model: "ollama/llama3"
