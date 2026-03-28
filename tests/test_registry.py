@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from app.config import ModelConfig
+from app.config import Model
 from app.router.categories import TaskRequirements
 from app.router.registry import ModelRegistry
 
 
-def _make_model(**overrides) -> ModelConfig:
+def _make_model(**overrides) -> Model:
     defaults = {"name": "test/model"}
     defaults.update(overrides)
-    return ModelConfig(**defaults)
+    return Model(**defaults)
 
 
 class TestModelRegistry:

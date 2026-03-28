@@ -11,7 +11,8 @@ An OpenAI- and Anthropic-compatible proxy that sits between AI-powered coding to
 
 - **Config-first model registry**: Define your models and providers in `~/.rex/config.yaml`. Rex supplements the config with auto-discovered providers (environment variables, Ollama) and enriches each model with metadata (cost, context window) from LiteLLM.
 - **Remote provider discovery**: Configure remote LiteLLM proxies or custom API endpoints as providers. Rex probes their model list endpoints at startup and merges discovered models with local and manually configured models. Auth via direct API key or environment variable reference.
-- **Task-aware routing**: Rex classifies each request (debugging, refactoring, code review, etc.) and picks the cheapest model that meets the task's requirements (context window, capabilities). Tasks with no special needs stay on the primary (cheapest) model.
+- **Two-tier routing**: Completion requests (tab completions) go to the cheapest model for speed. Chat/agent requests start from the cheapest model with function calling support, ensuring agentic clients get a model capable of tool use and complex prompts. Configurable via `routing.chat_model`.
+- **Task-aware routing**: Rex classifies each chat request (debugging, refactoring, code review, etc.) and picks the cheapest model that meets the task's requirements (context window, capabilities) starting from the chat primary.
 - **Fallback chains**: If the selected model fails, Rex tries the next model in cost order.
 - **Anthropic Messages API**: Full support for Anthropic's `POST /v1/messages` endpoint — accepts Anthropic-format requests, routes through Rex's engine, returns Anthropic-format responses. Streaming and non-streaming. Anthropic-compatible clients set `ANTHROPIC_BASE_URL` to Rex's URL.
 - **SSE streaming**: Full Server-Sent Events streaming support for both OpenAI chat completions and Anthropic messages.
@@ -29,7 +30,7 @@ An OpenAI- and Anthropic-compatible proxy that sits between AI-powered coding to
 ## How It Works
 
 1. On startup, Rex loads models and providers from `~/.rex/config.yaml`, probes configured remote providers for available models, then supplements with auto-discovered providers (environment variables, Ollama) — enriches each with metadata (cost, context window, capabilities) from LiteLLM. Config providers override auto-discovered providers with the same prefix.
-2. Rex sorts models by cost (local first, then cheapest cloud) and selects the **primary model**.
+2. Rex sorts models by cost (local first, then cheapest cloud) and selects two primaries: a **completion primary** (cheapest model) for tab completions and a **chat primary** (cheapest model with function calling support) for chat/agent requests. The chat primary is overridable via `routing.chat_model` in config.
 3. For each request, the **classifier** identifies the task type (debugging, refactoring, code review, etc.) and the **router** picks the cheapest model that meets the task's requirements. If the primary already qualifies, it stays on primary. When heuristic confidence is low, the **centroid classifier** uses semantic similarity, then the **LLM judge** reclassifies using a small local model.
 4. For complex tasks (generation, refactoring, migration, code review, test generation), the **enrichment pipeline** injects task decomposition instructions into the request before the model call. Each enricher is opt-in via config.
 5. If the selected model fails, the **fallback chain** tries remaining models in cost order.

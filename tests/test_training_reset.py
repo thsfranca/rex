@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from app.config import ModelConfig
+from app.config import Model
 from app.learning.centroids import CentroidClassifier
 from app.learning.labeling import LabelModel
 from app.learning.scheduler import RetrainingScheduler
@@ -157,7 +157,7 @@ class TestRetrainingSchedulerReset:
     def setup(self, tmp_path):
         repo = SQLiteDecisionRepository(db_path=str(tmp_path / "test.db"))
         ml = MLClassifier(model_path=str(tmp_path / "model.joblib"))
-        model = ModelConfig(name="test/model")
+        model = Model(name="test/model")
         registry = ModelRegistry([model])
         engine = RoutingEngine(registry)
         scheduler = RetrainingScheduler(
@@ -222,7 +222,7 @@ class TestRetrainingSchedulerReset:
     async def test_reset_restores_cold_start_centroids_with_embedding_service(self, tmp_path):
         repo = SQLiteDecisionRepository(db_path=str(tmp_path / "test.db"))
         ml = MLClassifier(model_path=str(tmp_path / "model.joblib"))
-        model = ModelConfig(name="test/model")
+        model = Model(name="test/model")
         registry = ModelRegistry([model])
         engine = RoutingEngine(registry)
 

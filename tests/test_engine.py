@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import numpy as np
 import pytest
 
-from app.config import ModelConfig
+from app.config import Model
 from app.learning.centroids import CentroidClassifier
 from app.router.categories import TaskCategory
 from app.router.classifier import ClassificationResult
@@ -16,21 +16,29 @@ from app.router.llm_judge import LLMJudge
 from app.router.registry import ModelRegistry
 
 
-def _make_model(**overrides) -> ModelConfig:
+def _make_model(**overrides) -> Model:
     defaults = {"name": "test/model"}
     defaults.update(overrides)
-    return ModelConfig(**defaults)
+    return Model(**defaults)
 
 
 def _make_engine(
-    models: list[ModelConfig],
+    models: list[Model],
     primary_model: str | None = None,
     judge: LLMJudge | None = None,
     confidence_threshold: float = 0.5,
     centroid_classifier: CentroidClassifier | None = None,
+    chat_model: str | None = None,
 ) -> RoutingEngine:
     registry = ModelRegistry(models)
-    return RoutingEngine(registry, primary_model, judge, confidence_threshold, centroid_classifier)
+    return RoutingEngine(
+        registry,
+        primary_model,
+        judge,
+        confidence_threshold,
+        centroid_classifier,
+        chat_model=chat_model,
+    )
 
 
 class TestSelectModel:
@@ -746,3 +754,180 @@ class TestCentroidClassifierIntegration:
 
         assert decision.scores is not None
         assert TaskCategory.DEBUGGING in decision.scores
+
+
+class TestTwoTierPrimary:
+    def test_chat_primary_auto_selects_cheapest_with_function_calling(self):
+        small = _make_model(name="small/model", cost_per_1k_input=0.001)
+        mid_fc = _make_model(
+            name="mid/model",
+            cost_per_1k_input=0.01,
+            supports_function_calling=True,
+        )
+        large_fc = _make_model(
+            name="large/model",
+            cost_per_1k_input=0.03,
+            supports_function_calling=True,
+        )
+        engine = _make_engine([small, mid_fc, large_fc])
+        assert engine.primary.name == "small/model"
+        assert engine.chat_primary.name == "mid/model"
+
+    def test_chat_primary_falls_back_to_completion_primary_when_no_fc(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        expensive = _make_model(name="expensive/model", cost_per_1k_input=0.03)
+        engine = _make_engine([cheap, expensive])
+        assert engine.primary.name == "cheap/model"
+        assert engine.chat_primary.name == "cheap/model"
+
+    def test_chat_primary_uses_explicit_override(self):
+        cheap = _make_model(name="cheap/model", cost_per_1k_input=0.001)
+        mid = _make_model(name="mid/model", cost_per_1k_input=0.01)
+        expensive = _make_model(
+            name="expensive/model",
+            cost_per_1k_input=0.03,
+            supports_function_calling=True,
+        )
+        engine = _make_engine([cheap, mid, expensive], chat_model="mid/model")
+        assert engine.chat_primary.name == "mid/model"
+
+    def test_invalid_chat_model_raises(self):
+        model = _make_model(name="real/model")
+        with pytest.raises(ValueError, match="Chat model.*not found"):
+            _make_engine([model], chat_model="nonexistent/model")
+
+    def test_chat_primary_prefers_local_fc_model(self):
+        cloud_fc = _make_model(
+            name="cloud/model",
+            cost_per_1k_input=0.001,
+            supports_function_calling=True,
+        )
+        local_fc = _make_model(
+            name="local/model",
+            cost_per_1k_input=0.0,
+            is_local=True,
+            supports_function_calling=True,
+        )
+        engine = _make_engine([cloud_fc, local_fc])
+        assert engine.chat_primary.name == "local/model"
+
+    @pytest.mark.asyncio
+    async def test_completion_uses_completion_primary(self):
+        small = _make_model(name="small/model", cost_per_1k_input=0.001)
+        large_fc = _make_model(
+            name="large/model",
+            cost_per_1k_input=0.01,
+            supports_function_calling=True,
+        )
+        engine = _make_engine([small, large_fc])
+
+        messages = [{"role": "user", "content": "x"}]
+        decision = await engine.select_model(messages, max_tokens=50, temperature=0.0)
+        assert decision.model.name == "small/model"
+        assert decision.category == TaskCategory.COMPLETION
+
+    @pytest.mark.asyncio
+    async def test_chat_uses_chat_primary(self):
+        small = _make_model(name="small/model", cost_per_1k_input=0.001)
+        large_fc = _make_model(
+            name="large/model",
+            cost_per_1k_input=0.01,
+            supports_function_calling=True,
+        )
+        engine = _make_engine([small, large_fc], confidence_threshold=0.0)
+
+        messages = [{"role": "user", "content": "Tell me about Python"}]
+        decision = await engine.select_model(messages, feature_type=FeatureType.CHAT)
+        assert decision.model.name == "large/model"
+
+    @pytest.mark.asyncio
+    async def test_chat_category_requirements_apply_on_top_of_chat_primary(self):
+        small = _make_model(name="small/model", cost_per_1k_input=0.001)
+        mid_fc = _make_model(
+            name="mid/model",
+            cost_per_1k_input=0.01,
+            supports_function_calling=True,
+            max_context_window=8000,
+        )
+        large_fc = _make_model(
+            name="large/model",
+            cost_per_1k_input=0.03,
+            supports_function_calling=True,
+            max_context_window=128000,
+        )
+        engine = _make_engine([small, mid_fc, large_fc])
+
+        messages = [{"role": "user", "content": "Refactor this entire module"}]
+        decision = await engine.select_model(messages, feature_type=FeatureType.CHAT)
+        assert decision.model.name == "large/model"
+        assert decision.category == TaskCategory.REFACTORING
+
+    @pytest.mark.asyncio
+    async def test_chat_primary_stays_when_it_meets_requirements(self):
+        small = _make_model(name="small/model", cost_per_1k_input=0.001)
+        mid_fc = _make_model(
+            name="mid/model",
+            cost_per_1k_input=0.01,
+            supports_function_calling=True,
+            supports_reasoning=True,
+        )
+        engine = _make_engine([small, mid_fc])
+
+        messages = [{"role": "user", "content": "Fix this error in my code"}]
+        decision = await engine.select_model(messages, feature_type=FeatureType.CHAT)
+        assert decision.model.name == "mid/model"
+        assert decision.category == TaskCategory.DEBUGGING
+
+    @pytest.mark.asyncio
+    async def test_escalation_works_from_chat_primary_tier(self):
+        small = _make_model(name="small/model", cost_per_1k_input=0.001)
+        mid_fc = _make_model(
+            name="mid/model",
+            cost_per_1k_input=0.01,
+            supports_function_calling=True,
+        )
+        large_fc = _make_model(
+            name="large/model",
+            cost_per_1k_input=0.03,
+            supports_function_calling=True,
+        )
+        engine = _make_engine([small, mid_fc, large_fc], confidence_threshold=0.9)
+
+        messages = [{"role": "user", "content": "hello world"}]
+        decision = await engine.select_model(messages, feature_type=FeatureType.CHAT)
+        assert decision.escalated is True
+        assert decision.model.name != "small/model"
+
+    @pytest.mark.asyncio
+    async def test_explicit_chat_model_used_for_chat_requests(self):
+        small = _make_model(name="small/model", cost_per_1k_input=0.001)
+        mid = _make_model(name="mid/model", cost_per_1k_input=0.01)
+        large_fc = _make_model(
+            name="large/model",
+            cost_per_1k_input=0.03,
+            supports_function_calling=True,
+        )
+        engine = _make_engine(
+            [small, mid, large_fc],
+            chat_model="mid/model",
+            confidence_threshold=0.0,
+        )
+
+        messages = [{"role": "user", "content": "Tell me about Python"}]
+        decision = await engine.select_model(messages, feature_type=FeatureType.CHAT)
+        assert decision.model.name == "mid/model"
+
+    @pytest.mark.asyncio
+    async def test_general_category_uses_chat_primary(self):
+        small = _make_model(name="small/model", cost_per_1k_input=0.001)
+        mid_fc = _make_model(
+            name="mid/model",
+            cost_per_1k_input=0.01,
+            supports_function_calling=True,
+        )
+        engine = _make_engine([small, mid_fc], confidence_threshold=0.0)
+
+        messages = [{"role": "user", "content": "Tell me a joke"}]
+        decision = await engine.select_model(messages, feature_type=FeatureType.CHAT)
+        assert decision.model.name == "mid/model"
+        assert decision.category == TaskCategory.GENERAL

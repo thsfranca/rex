@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from app.config import ModelConfig
+from app.config import Model
 from app.learning.centroids import CentroidClassifier
 from app.router.categories import TaskCategory, get_requirements
 from app.router.classifier import ClassificationResult, classify
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class RoutingDecision:
-    model: ModelConfig
+    model: Model
     category: TaskCategory
     confidence: float
     feature_type: FeatureType
@@ -35,9 +35,11 @@ class RoutingEngine:
         centroid_classifier: CentroidClassifier | None = None,
         ml_classifier: MLClassifier | None = None,
         ml_promoted: bool = False,
+        chat_model: str | None = None,
     ) -> None:
         self._registry = registry
         self._primary = self._resolve_primary(primary_model)
+        self._chat_primary = self._resolve_chat_primary(chat_model)
         self._judge = judge
         self._confidence_threshold = confidence_threshold
         self._centroid_classifier = centroid_classifier
@@ -50,7 +52,7 @@ class RoutingEngine:
     def set_centroid_classifier(self, classifier: CentroidClassifier | None) -> None:
         self._centroid_classifier = classifier
 
-    def _resolve_primary(self, override: str | None) -> ModelConfig:
+    def _resolve_primary(self, override: str | None) -> Model:
         if override:
             model = self._registry.get_by_name(override)
             if model is None:
@@ -62,9 +64,27 @@ class RoutingEngine:
             raise ValueError("No models available in registry")
         return by_cost[0]
 
-    @property
-    def primary(self) -> ModelConfig:
+    def _resolve_chat_primary(self, override: str | None) -> Model:
+        if override:
+            model = self._registry.get_by_name(override)
+            if model is None:
+                raise ValueError(f"Chat model '{override}' not found in registry")
+            return model
+
+        by_cost = self._registry.sorted_by_cost()
+        for model in by_cost:
+            if model.supports_function_calling:
+                return model
+
         return self._primary
+
+    @property
+    def primary(self) -> Model:
+        return self._primary
+
+    @property
+    def chat_primary(self) -> Model:
+        return self._chat_primary
 
     @property
     def registry(self) -> ModelRegistry:
@@ -87,6 +107,8 @@ class RoutingEngine:
                 confidence=1.0,
                 feature_type=feature,
             )
+
+        effective_primary = self._chat_primary
 
         if (
             self._ml_promoted
@@ -131,25 +153,25 @@ class RoutingEngine:
         escalated = False
 
         if result.confidence >= self._confidence_threshold:
-            if self._registry.meets_requirements(self._primary, requirements):
-                selected = self._primary
+            if self._registry.meets_requirements(effective_primary, requirements):
+                selected = effective_primary
             else:
                 candidates = self._registry.filter_by_requirements(requirements)
                 if candidates:
                     selected = candidates[0]
                     logger.info(
                         "Task classified as %s (confidence=%.2f), "
-                        "routing to %s (primary %s does not meet requirements)",
+                        "routing to %s (chat primary %s does not meet requirements)",
                         result.category.value,
                         result.confidence,
                         selected.name,
-                        self._primary.name,
+                        effective_primary.name,
                     )
                 else:
-                    selected = self._primary
+                    selected = effective_primary
                     logger.info(
                         "Task classified as %s but no model meets requirements, "
-                        "falling back to primary",
+                        "falling back to chat primary",
                         result.category.value,
                     )
         else:
@@ -167,10 +189,10 @@ class RoutingEngine:
             elif candidates:
                 selected = candidates[0]
             else:
-                selected = self._primary
+                selected = effective_primary
                 logger.info(
                     "Task classified as %s but no model meets requirements, "
-                    "falling back to primary",
+                    "falling back to chat primary",
                     result.category.value,
                 )
 
@@ -183,6 +205,6 @@ class RoutingEngine:
             escalated=escalated,
         )
 
-    def fallback_order(self, primary: ModelConfig) -> list[ModelConfig]:
+    def fallback_order(self, primary: Model) -> list[Model]:
         by_cost = self._registry.sorted_by_cost()
         return [m for m in by_cost if m.name != primary.name]

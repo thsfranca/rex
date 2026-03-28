@@ -7,20 +7,20 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.responses import StreamingResponse
 
-from app.config import ModelConfig
+from app.config import Model
 from app.proxy.anthropic import stream_anthropic_response
 from app.proxy.handler import handle_anthropic_messages
 from app.router.engine import RoutingEngine
 from app.router.registry import ModelRegistry
 
 
-def _make_model(**overrides) -> ModelConfig:
+def _make_model(**overrides) -> Model:
     defaults = {"name": "test/model"}
     defaults.update(overrides)
-    return ModelConfig(**defaults)
+    return Model(**defaults)
 
 
-def _make_engine(models: list[ModelConfig]) -> RoutingEngine:
+def _make_engine(models: list[Model]) -> RoutingEngine:
     registry = ModelRegistry(models)
     return RoutingEngine(registry)
 

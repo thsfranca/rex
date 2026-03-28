@@ -1,7 +1,7 @@
 from litellm import ModelResponse, TextCompletionResponse
 from litellm.types.utils import Choices, Message, TextChoices, Usage
 
-from app.config import ModelConfig
+from app.config import Model
 from app.proxy.completion_normalize import (
     apply_ollama_completion_text_unwrap,
     is_ollama_litellm_model,
@@ -65,7 +65,7 @@ def test_apply_ollama_completion_text_unwrap_legacy_text_choice():
 def test_build_litellm_params_drops_response_format_for_ollama():
     params = _build_litellm_params(
         {"messages": [], "response_format": {"type": "json_object"}},
-        ModelConfig(name="ollama/mistral:latest"),
+        Model(name="ollama/mistral:latest"),
     )
     assert "response_format" not in params
 
@@ -74,6 +74,6 @@ def test_build_litellm_params_keeps_response_format_for_openai():
     rf = {"type": "json_object"}
     params = _build_litellm_params(
         {"messages": [], "response_format": rf},
-        ModelConfig(name="openai/gpt-4o"),
+        Model(name="openai/gpt-4o"),
     )
     assert params.get("response_format") == rf
