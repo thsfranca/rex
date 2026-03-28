@@ -270,7 +270,7 @@ async def handle_chat_completion(
 
     if stream:
         return StreamingResponse(
-            stream_completion(response),
+            stream_completion(response, timeout=stream_timeout),
             media_type="text/event-stream",
         )
     return JSONResponse(content=response.model_dump())
@@ -307,7 +307,7 @@ async def handle_text_completion(
 
     if stream:
         return StreamingResponse(
-            stream_completion(response),
+            stream_completion(response, timeout=stream_timeout),
             media_type="text/event-stream",
         )
     return JSONResponse(content=response.model_dump())
@@ -400,7 +400,9 @@ async def handle_anthropic_messages(
 
     if stream:
         return StreamingResponse(
-            stream_anthropic_response(response, used_model.name, request_model),
+            stream_anthropic_response(
+                response, used_model.name, request_model, timeout=stream_timeout
+            ),
             media_type="text/event-stream",
         )
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from app.proxy.streaming import stream_completion
@@ -15,6 +17,12 @@ class FakeChunk:
 
 async def _async_iter(items):
     for item in items:
+        yield item
+
+
+async def _slow_async_iter(items, delay: float):
+    for item in items:
+        await asyncio.sleep(delay)
         yield item
 
 
@@ -40,3 +48,32 @@ async def test_stream_empty_response():
     results = [line async for line in stream_completion(_async_iter([]))]
 
     assert results == ["data: [DONE]\n\n"]
+
+
+class TestStreamWallClockLimit:
+    @pytest.mark.asyncio
+    async def test_stream_terminates_on_timeout(self):
+        chunks = [FakeChunk(f'{{"id":"{i}"}}') for i in range(100)]
+        results = [
+            line async for line in stream_completion(_slow_async_iter(chunks, 0.05), timeout=0.1)
+        ]
+
+        assert results[-1] == "data: [DONE]\n\n"
+        assert len(results) < 100
+
+    @pytest.mark.asyncio
+    async def test_stream_completes_within_timeout(self):
+        chunks = [FakeChunk('{"id":"1"}'), FakeChunk('{"id":"2"}')]
+        results = [line async for line in stream_completion(_async_iter(chunks), timeout=10)]
+
+        assert len(results) == 3
+        assert results[-1] == "data: [DONE]\n\n"
+
+    @pytest.mark.asyncio
+    async def test_stream_always_ends_with_done_on_timeout(self):
+        chunks = [FakeChunk(f'{{"id":"{i}"}}') for i in range(50)]
+        results = [
+            line async for line in stream_completion(_slow_async_iter(chunks, 0.05), timeout=0.08)
+        ]
+
+        assert results[-1] == "data: [DONE]\n\n"
