@@ -24,6 +24,7 @@ from app.proxy.anthropic import (
     openai_response_to_anthropic,
     stream_anthropic_response,
 )
+from app.proxy.message_sanitizer import sanitize_messages
 from app.proxy.streaming import stream_completion
 from app.router.engine import RoutingEngine
 from app.utils import extract_last_user_text
@@ -206,6 +207,8 @@ async def handle_chat_completion(
         )
         enrichment_ctx = pipeline.run(enrichment_ctx)
         body = {**body, "messages": enrichment_ctx.messages}
+
+    body = {**body, "messages": sanitize_messages(body.get("messages", []))}
 
     start_time = time.perf_counter()
     response, used_model = await _call_with_fallback(
