@@ -15,8 +15,18 @@ def _count_user_messages(messages: list[dict]) -> int:
     return sum(1 for m in messages if m.get("role") == "user")
 
 
+def _content_length(content) -> int:
+    if content is None:
+        return 0
+    if isinstance(content, str):
+        return len(content)
+    if isinstance(content, list):
+        return sum(len(block.get("text", "") or "") for block in content if isinstance(block, dict))
+    return 0
+
+
 def _estimate_prompt_length(messages: list[dict]) -> int:
-    return sum(len(m.get("content", "")) for m in messages)
+    return sum(_content_length(m.get("content")) for m in messages)
 
 
 def detect_feature(

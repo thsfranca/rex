@@ -183,6 +183,95 @@ class TestSanitizeMessages:
         assert len(result) == 1
         assert len(result[0]["tool_calls"]) == 2
 
+    def test_image_block_converted_to_openai_image_url(self):
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "What is this?"},
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": "abc123",
+                        },
+                    },
+                ],
+            }
+        ]
+        result = sanitize_messages(messages)
+        assert len(result) == 1
+        content = result[0]["content"]
+        assert isinstance(content, list)
+        assert content[0] == {"type": "text", "text": "What is this?"}
+        assert content[1] == {
+            "type": "image_url",
+            "image_url": {"url": "data:image/png;base64,abc123"},
+        }
+
+    def test_thinking_blocks_stripped(self):
+        messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "thinking",
+                        "thinking": "reasoning...",
+                        "signature": "sig",
+                    },
+                    {"type": "text", "text": "Answer"},
+                ],
+            }
+        ]
+        result = sanitize_messages(messages)
+        assert len(result) == 1
+        assert result[0]["content"] == "Answer"
+
+    def test_redacted_thinking_blocks_stripped(self):
+        messages = [
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "redacted_thinking", "data": "encrypted"},
+                    {"type": "text", "text": "Result"},
+                ],
+            }
+        ]
+        result = sanitize_messages(messages)
+        assert len(result) == 1
+        assert result[0]["content"] == "Result"
+
+    def test_image_with_tool_result(self):
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Look at this"},
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/jpeg",
+                            "data": "imgdata",
+                        },
+                    },
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "call_1",
+                        "content": "output",
+                    },
+                ],
+            }
+        ]
+        result = sanitize_messages(messages)
+        assert any(
+            isinstance(m.get("content"), list)
+            and any(b.get("type") == "image_url" for b in m["content"])
+            for m in result
+        )
+        assert any(m.get("role") == "tool" for m in result)
+
 
 class TestSanitizeTools:
     def test_openai_format_tools_unchanged(self):

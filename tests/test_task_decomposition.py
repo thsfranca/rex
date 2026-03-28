@@ -144,6 +144,18 @@ class TestTaskDecompositionEnricher:
                 DECOMPOSITION_INSTRUCTION in msg.get("content", "") for msg in result.messages
             ), f"Expected enrichment for {category.value}"
 
+    def test_handles_none_content_in_system_message(self):
+        enricher = TaskDecompositionEnricher()
+        ctx = _make_context(
+            messages=[
+                {"role": "system", "content": None},
+                {"role": "user", "content": "build something"},
+            ],
+            category=TaskCategory.GENERATION,
+        )
+        result = enricher.enrich(ctx)
+        assert DECOMPOSITION_INSTRUCTION in result.messages[0]["content"]
+
     def test_simple_category_with_long_prompt_still_skips(self):
         enricher = TaskDecompositionEnricher()
         long_prompt = "explain " + "x " * 1000
