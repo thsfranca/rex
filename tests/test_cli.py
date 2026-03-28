@@ -9,9 +9,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.cli import (
-    _get_base_url,
+    _client_base_url,
+    _client_connect_host,
     _is_process_running,
     _read_pid,
+    _wait_for_ready,
     _write_pid,
     cmd_reset,
     cmd_start,
@@ -20,10 +22,25 @@ from app.cli import (
 
 
 class TestHelpers:
-    def test_get_base_url(self):
-        assert _get_base_url(8000) == "http://localhost:8000"
-        assert _get_base_url(9000) == "http://localhost:9000"
-        assert _get_base_url(8000, use_tls=True) == "https://localhost:8000"
+    def test_client_connect_host(self):
+        assert _client_connect_host("0.0.0.0") == "127.0.0.1"
+        assert _client_connect_host("localhost") == "127.0.0.1"
+        assert _client_connect_host("127.0.0.1") == "127.0.0.1"
+        assert _client_connect_host("192.168.1.1") == "192.168.1.1"
+
+    def test_client_base_url(self):
+        assert _client_base_url(8000, "127.0.0.1") == "http://127.0.0.1:8000"
+        assert _client_base_url(9000, "127.0.0.1") == "http://127.0.0.1:9000"
+        assert _client_base_url(8000, "127.0.0.1", use_tls=True) == "https://127.0.0.1:8000"
+        assert _client_base_url(8000, "0.0.0.0") == "http://127.0.0.1:8000"
+        assert _client_base_url(8000, "localhost", use_tls=True) == "https://127.0.0.1:8000"
+
+    @patch("app.cli.httpx.get")
+    def test_wait_for_ready_urls_bind_host_for_tls(self, mock_get):
+        mock_get.return_value = MagicMock(status_code=200)
+        assert _wait_for_ready(8000, "127.0.0.1", use_tls=True) is True
+        mock_get.assert_called_once()
+        assert mock_get.call_args[0][0] == "https://127.0.0.1:8000/health"
 
     def test_is_process_running_current_process(self):
         assert _is_process_running(os.getpid()) is True
@@ -173,10 +190,10 @@ class TestCmdReset:
         mock_response.status_code = 200
         mock_post.return_value = mock_response
 
-        args = argparse.Namespace(yes=True, port=8000, tls=False)
+        args = argparse.Namespace(yes=True, host="127.0.0.1", port=8000, tls=False)
         cmd_reset(args)
 
-        mock_post.assert_called_once_with("http://localhost:8000/v1/reset", timeout=10.0)
+        mock_post.assert_called_once_with("http://127.0.0.1:8000/v1/reset", timeout=10.0)
         captured = capsys.readouterr()
         assert "cleared" in captured.out
 
@@ -187,10 +204,10 @@ class TestCmdReset:
         mock_response.status_code = 200
         mock_post.return_value = mock_response
 
-        args = argparse.Namespace(yes=True, port=8000, tls=True)
+        args = argparse.Namespace(yes=True, host="127.0.0.1", port=8000, tls=True)
         cmd_reset(args)
 
-        mock_post.assert_called_once_with("https://localhost:8000/v1/reset", timeout=10.0)
+        mock_post.assert_called_once_with("https://127.0.0.1:8000/v1/reset", timeout=10.0)
 
     @patch("app.cli.httpx.post")
     @patch("builtins.input", return_value="y")
@@ -200,7 +217,7 @@ class TestCmdReset:
         mock_response.status_code = 200
         mock_post.return_value = mock_response
 
-        args = argparse.Namespace(yes=False, port=8000, tls=False)
+        args = argparse.Namespace(yes=False, host="127.0.0.1", port=8000, tls=False)
         cmd_reset(args)
 
         mock_input.assert_called_once()
@@ -209,13 +226,13 @@ class TestCmdReset:
     @patch("builtins.input", return_value="n")
     @patch("app.cli._read_pid", return_value=12345)
     def test_aborts_when_denied(self, mock_read, mock_input, capsys):
-        args = argparse.Namespace(yes=False, port=8000, tls=False)
+        args = argparse.Namespace(yes=False, host="127.0.0.1", port=8000, tls=False)
         with pytest.raises(SystemExit, match="0"):
             cmd_reset(args)
 
     @patch("app.cli._read_pid", return_value=None)
     def test_exits_if_not_running(self, mock_read):
-        args = argparse.Namespace(yes=True, port=8000, tls=False)
+        args = argparse.Namespace(yes=True, host="127.0.0.1", port=8000, tls=False)
         with pytest.raises(SystemExit, match="1"):
             cmd_reset(args)
 
@@ -227,13 +244,13 @@ class TestCmdReset:
         mock_response.text = "Internal error"
         mock_post.return_value = mock_response
 
-        args = argparse.Namespace(yes=True, port=8000, tls=False)
+        args = argparse.Namespace(yes=True, host="127.0.0.1", port=8000, tls=False)
         with pytest.raises(SystemExit, match="1"):
             cmd_reset(args)
 
     @patch("app.cli.httpx.post", side_effect=__import__("httpx").ConnectError("refused"))
     @patch("app.cli._read_pid", return_value=12345)
     def test_exits_on_connection_error(self, mock_read, mock_post):
-        args = argparse.Namespace(yes=True, port=8000, tls=False)
+        args = argparse.Namespace(yes=True, host="127.0.0.1", port=8000, tls=False)
         with pytest.raises(SystemExit, match="1"):
             cmd_reset(args)

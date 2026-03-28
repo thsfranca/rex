@@ -15,9 +15,17 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8000
 
 
-def _get_base_url(port: int, *, use_tls: bool = False) -> str:
+def _client_connect_host(bind_host: str) -> str:
+    normalized = bind_host.strip().lower()
+    if normalized in ("0.0.0.0", "localhost"):
+        return "127.0.0.1"
+    return bind_host
+
+
+def _client_base_url(port: int, bind_host: str, *, use_tls: bool = False) -> str:
     scheme = "https" if use_tls else "http"
-    return f"{scheme}://localhost:{port}"
+    host = _client_connect_host(bind_host)
+    return f"{scheme}://{host}:{port}"
 
 
 def _is_process_running(pid: int) -> bool:
@@ -47,9 +55,11 @@ def _write_pid(pid: int) -> None:
     PID_FILE.write_text(str(pid))
 
 
-def _wait_for_ready(port: int, *, use_tls: bool = False, timeout: float = 10.0) -> bool:
+def _wait_for_ready(
+    port: int, bind_host: str, *, use_tls: bool = False, timeout: float = 10.0
+) -> bool:
     deadline = time.monotonic() + timeout
-    url = f"{_get_base_url(port, use_tls=use_tls)}/health"
+    url = f"{_client_base_url(port, bind_host, use_tls=use_tls)}/health"
     while time.monotonic() < deadline:
         try:
             resp = httpx.get(url, timeout=2.0)
@@ -98,7 +108,7 @@ def cmd_start(args: argparse.Namespace) -> None:
 
     _write_pid(process.pid)
 
-    if _wait_for_ready(port, use_tls=use_tls):
+    if _wait_for_ready(port, host, use_tls=use_tls):
         scheme = "https" if use_tls else "http"
         print(f"Rex started (pid {process.pid}) — listening on {scheme}://{host}:{port}/v1")
     else:
@@ -138,7 +148,8 @@ def cmd_reset(args: argparse.Namespace) -> None:
 
     port = args.port
     use_tls = getattr(args, "tls", False)
-    url = f"{_get_base_url(port, use_tls=use_tls)}/v1/reset"
+    reset_host = getattr(args, "host", "127.0.0.1")
+    url = f"{_client_base_url(port, reset_host, use_tls=use_tls)}/v1/reset"
     try:
         resp = httpx.post(url, timeout=10.0)
         if resp.status_code == 200:
@@ -147,7 +158,7 @@ def cmd_reset(args: argparse.Namespace) -> None:
             print(f"Reset failed: {resp.text}")
             sys.exit(1)
     except httpx.ConnectError:
-        print(f"Could not connect to Rex at localhost:{port}")
+        print(f"Could not connect to Rex at {_client_connect_host(reset_host)}:{port}")
         sys.exit(1)
 
 
@@ -175,6 +186,11 @@ def main() -> None:
 
     reset_parser = subparsers.add_parser("reset", help="Clear all learning data")
     reset_parser.add_argument("--yes", "-y", action="store_true", help="Skip confirmation prompt")
+    reset_parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host Rex is bound to (for the reset request URL)",
+    )
     reset_parser.add_argument(
         "--port", type=int, default=DEFAULT_PORT, help="Port Rex is running on"
     )
