@@ -12,19 +12,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Setup
 ```bash
-make setup   # Dependencies + TLS under ~/.rex/tls/ (uv)
+make setup   # Install dependencies (uv)
 ```
 
 ### Running the Server
 ```bash
-make start              # Background HTTPS (default)
+make start              # Background HTTP on 0.0.0.0:8000
 make stop               # Stop that instance
-make serve              # Foreground HTTPS on 127.0.0.1:8000
-make serve-http         # Foreground HTTP on 0.0.0.0:8000
+make serve              # Foreground HTTP on 127.0.0.1:8000
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000  # optional dev server
 ```
-
-- **HTTPS trust**: Default **`make start`** uses TLS. If a client reports certificate verification errors, use **`make start ARGS=--http`** / **`make serve-http`**, or set **`NODE_EXTRA_CA_CERTS`** to mkcert's **`rootCA.pem`** (see **`setup.sh`** output after **`make setup`**). See **README.md** → **Client base URL and TLS** for tool-agnostic detail.
 
 ### Testing
 ```bash
