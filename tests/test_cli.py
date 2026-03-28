@@ -92,9 +92,11 @@ class TestCmdStart:
         mock_popen.assert_called_once()
         popen_cmd = mock_popen.call_args[0][0]
         assert popen_cmd[0] == sys.executable
-        assert popen_cmd[1:4] == ["-m", "hypercorn", "app.main:app"]
-        assert "--bind" in popen_cmd
-        assert "0.0.0.0:8000" in popen_cmd
+        assert popen_cmd[1:4] == ["-m", "uvicorn", "app.main:app"]
+        assert "--host" in popen_cmd
+        assert "--port" in popen_cmd
+        assert "0.0.0.0" in popen_cmd
+        assert "8000" in popen_cmd
         assert pid_file.read_text() == "12345"
         captured = capsys.readouterr()
         assert "12345" in captured.out
@@ -156,8 +158,8 @@ class TestCmdStart:
             )
             cmd_start(args)
         popen_cmd = mock_popen.call_args[0][0]
-        assert "--certfile" in popen_cmd
-        assert "--keyfile" in popen_cmd
+        assert "--ssl-certfile" in popen_cmd
+        assert "--ssl-keyfile" in popen_cmd
         assert str(cert) in popen_cmd
         assert str(key) in popen_cmd
 

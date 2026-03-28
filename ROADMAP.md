@@ -136,7 +136,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] CLI entry point: install Rex globally (e.g., `uv tool install rex`), run with `rex start` or `rex`
 - [x] `rex stop` shuts down a running Rex instance gracefully
 - [x] `rex reset` clears all learning data with an interactive confirmation prompt (skippable with `--yes`)
-- [x] CLI runs Rex as a background process that any AI tool can connect to via `http://localhost:8000/v1`
+- [x] CLI runs Rex as a background process; clients use the host, port, and scheme from the user's start command (see README.md **Client base URL and TLS**)
 - [x] Config-first model registry: when `models` is defined in `~/.rex/config.yaml`, Rex uses that list as the primary model source
 - [x] Auto-discovery supplements config-defined models only — adds models not already listed in config
 - [x] Without a config file, auto-discovery works as it does today (no behavior change)
@@ -156,7 +156,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] Anthropic SSE streaming: convert OpenAI streaming chunks to Anthropic event format (`message_start`, `content_block_start`, `content_block_delta`, `content_block_stop`, `message_delta`, `message_stop`)
 - [x] Echo the client's requested model name in responses while routing to the best model internally
 
-**Design**: Rex translates Anthropic requests to OpenAI format internally, routes through the same engine, and translates the response back. Anthropic clients (e.g., Claude Code with `ANTHROPIC_BASE_URL=http://localhost:8000`) connect without knowing Rex routes to different backends.
+**Design**: Rex translates Anthropic requests to OpenAI format internally, routes through the same engine, and translates the response back. Anthropic-compatible clients set `ANTHROPIC_BASE_URL` to Rex's origin (match `http://` vs `https://` to the running instance; see README.md **Client base URL and TLS**).
 
 ---
 
