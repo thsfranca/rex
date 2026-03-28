@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import numpy as np
 import pytest
 
-from app.config import ModelConfig
+from app.config import Model
 from app.learning.labeling import LabelModel
 from app.learning.scheduler import RetrainingScheduler
 from app.logging.models import DecisionRecord
@@ -119,7 +119,7 @@ class TestRetrainingScheduler:
     async def test_centroid_propagated_to_engine(self, tmp_path):
         repo = SQLiteDecisionRepository(db_path=str(tmp_path / "test.db"))
         ml = MLClassifier(model_path=str(tmp_path / "model.joblib"))
-        model = ModelConfig(name="test/model")
+        model = Model(name="test/model")
         registry = ModelRegistry([model])
         engine = RoutingEngine(registry)
         scheduler = RetrainingScheduler(

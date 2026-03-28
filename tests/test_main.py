@@ -7,7 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.adapters.registry import AdapterRegistry
-from app.config import ModelConfig, Settings
+from app.config import Model, Settings
 from app.enrichment.pipeline import EnrichmentPipeline
 from app.learning.labeling import LabelModel
 from app.learning.scheduler import RetrainingScheduler
@@ -18,10 +18,10 @@ from app.router.ml_classifier import MLClassifier
 from app.router.registry import ModelRegistry
 
 
-def _make_model(**overrides) -> ModelConfig:
+def _make_model(**overrides) -> Model:
     defaults = {"name": "test/model"}
     defaults.update(overrides)
-    return ModelConfig(**defaults)
+    return Model(**defaults)
 
 
 def _setup_app():
