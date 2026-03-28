@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
-from app.config import ModelConfig
+from app.config import Model
 from app.learning.centroids import CentroidClassifier
 from app.router.categories import TaskCategory, get_requirements
 from app.router.classifier import ClassificationResult, classify
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class RoutingDecision:
-    model: ModelConfig
+    model: Model
     category: TaskCategory
     confidence: float
     feature_type: FeatureType
@@ -52,7 +52,7 @@ class RoutingEngine:
     def set_centroid_classifier(self, classifier: CentroidClassifier | None) -> None:
         self._centroid_classifier = classifier
 
-    def _resolve_primary(self, override: str | None) -> ModelConfig:
+    def _resolve_primary(self, override: str | None) -> Model:
         if override:
             model = self._registry.get_by_name(override)
             if model is None:
@@ -64,7 +64,7 @@ class RoutingEngine:
             raise ValueError("No models available in registry")
         return by_cost[0]
 
-    def _resolve_chat_primary(self, override: str | None) -> ModelConfig:
+    def _resolve_chat_primary(self, override: str | None) -> Model:
         if override:
             model = self._registry.get_by_name(override)
             if model is None:
@@ -79,11 +79,11 @@ class RoutingEngine:
         return self._primary
 
     @property
-    def primary(self) -> ModelConfig:
+    def primary(self) -> Model:
         return self._primary
 
     @property
-    def chat_primary(self) -> ModelConfig:
+    def chat_primary(self) -> Model:
         return self._chat_primary
 
     @property
@@ -205,6 +205,6 @@ class RoutingEngine:
             escalated=escalated,
         )
 
-    def fallback_order(self, primary: ModelConfig) -> list[ModelConfig]:
+    def fallback_order(self, primary: Model) -> list[Model]:
         by_cost = self._registry.sorted_by_cost()
         return [m for m in by_cost if m.name != primary.name]

@@ -22,10 +22,13 @@ class ModelConfig(BaseModel):
     cost_per_1k_input: float = 0.0
     is_local: bool = False
     max_context_window: int | None = None
+    timeout: float | None = None
+
+
+class Model(ModelConfig):
     supports_function_calling: bool = False
     supports_reasoning: bool = False
     supports_vision: bool = False
-    timeout: float | None = None
 
 
 class ProviderConfig(BaseModel):

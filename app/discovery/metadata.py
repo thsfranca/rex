@@ -4,13 +4,13 @@ import logging
 
 import litellm
 
-from app.config import ModelConfig
+from app.config import Model
 from app.discovery.providers import DetectedProvider
 
 logger = logging.getLogger(__name__)
 
 
-def enrich_model(model_name: str, provider: DetectedProvider) -> ModelConfig:
+def enrich_model(model_name: str, provider: DetectedProvider) -> Model:
     cost = 0.0
     is_local = provider.is_local
     max_context_window = None
@@ -29,7 +29,7 @@ def enrich_model(model_name: str, provider: DetectedProvider) -> ModelConfig:
     except Exception:
         logger.debug("No LiteLLM metadata for %s, using defaults", model_name)
 
-    return ModelConfig(
+    return Model(
         name=model_name,
         api_key=provider.api_key,
         api_base=provider.api_base,

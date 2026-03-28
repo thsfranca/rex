@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import numpy as np
 import pytest
 
-from app.config import ModelConfig
+from app.config import Model
 from app.learning.centroids import CentroidClassifier
 from app.router.categories import TaskCategory
 from app.router.classifier import ClassificationResult
@@ -16,14 +16,14 @@ from app.router.llm_judge import LLMJudge
 from app.router.registry import ModelRegistry
 
 
-def _make_model(**overrides) -> ModelConfig:
+def _make_model(**overrides) -> Model:
     defaults = {"name": "test/model"}
     defaults.update(overrides)
-    return ModelConfig(**defaults)
+    return Model(**defaults)
 
 
 def _make_engine(
-    models: list[ModelConfig],
+    models: list[Model],
     primary_model: str | None = None,
     judge: LLMJudge | None = None,
     confidence_threshold: float = 0.5,

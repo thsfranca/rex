@@ -4,7 +4,7 @@ import logging
 import os
 import sys
 
-from app.config import ModelConfig, ProviderConfig, Settings
+from app.config import Model, ProviderConfig, Settings
 from app.discovery.metadata import enrich_model
 from app.discovery.models import list_models_for_provider
 from app.discovery.providers import KNOWN_PROVIDERS, DetectedProvider, detect_providers
@@ -52,11 +52,11 @@ def _resolve_config_providers(
 async def build_registry(config: Settings | None) -> tuple[ModelRegistry, Settings]:
     settings = config if config is not None else Settings()
 
-    registry: dict[str, ModelConfig] = {}
+    registry: dict[str, Model] = {}
 
     config_names: set[str] = set()
     for manual_model in settings.models:
-        registry[manual_model.name] = manual_model
+        registry[manual_model.name] = Model(**manual_model.model_dump())
         config_names.add(manual_model.name)
 
     if config_names:
