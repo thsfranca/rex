@@ -6,19 +6,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.responses import JSONResponse
 
-from app.config import ModelConfig
+from app.config import Model
 from app.proxy.handler import handle_anthropic_messages
 from app.router.engine import RoutingEngine
 from app.router.registry import ModelRegistry
 
 
-def _make_model(**overrides) -> ModelConfig:
+def _make_model(**overrides) -> Model:
     defaults = {"name": "test/model"}
     defaults.update(overrides)
-    return ModelConfig(**defaults)
+    return Model(**defaults)
 
 
-def _make_engine(models: list[ModelConfig], primary_model: str | None = None) -> RoutingEngine:
+def _make_engine(models: list[Model], primary_model: str | None = None) -> RoutingEngine:
     registry = ModelRegistry(models)
     return RoutingEngine(registry, primary_model)
 

@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.adapters.base import ClientAdapter
 from app.adapters.default import DefaultAdapter
-from app.config import ModelConfig
+from app.config import Model
 from app.enrichment.context import EnrichmentContext
 from app.enrichment.pipeline import EnrichmentPipeline
 from app.logging.models import DecisionRecord
@@ -68,7 +68,7 @@ def _extract_bearer_token(authorization: str | None) -> str | None:
 
 
 def _build_litellm_params(
-    body: dict, model_config: ModelConfig, request_api_key: str | None = None
+    body: dict, model_config: Model, request_api_key: str | None = None
 ) -> dict:
     params = {"model": model_config.name}
     if model_config.api_key:
@@ -87,7 +87,7 @@ def _build_litellm_params(
     return params
 
 
-def _resolve_timeout(model: ModelConfig, server_timeout: float) -> float:
+def _resolve_timeout(model: Model, server_timeout: float) -> float:
     if model.timeout is not None:
         return model.timeout
     return server_timeout
@@ -95,7 +95,7 @@ def _resolve_timeout(model: ModelConfig, server_timeout: float) -> float:
 
 async def _call_with_fallback(
     engine: RoutingEngine,
-    primary: ModelConfig,
+    primary: Model,
     body: dict,
     stream: bool,
     request_api_key: str | None = None,
@@ -135,7 +135,7 @@ def _hash_prompt(text: str) -> str:
 async def _log_decision(
     repository: DecisionRepository,
     decision,
-    used_model: ModelConfig,
+    used_model: Model,
     response_time_ms: int,
     response,
     prompt_hash: str,

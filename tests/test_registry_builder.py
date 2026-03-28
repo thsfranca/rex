@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.config import ModelConfig, ProviderConfig, Settings
+from app.config import Model, ModelConfig, ProviderConfig, Settings
 from app.discovery.providers import DetectedProvider
 from app.discovery.registry_builder import _resolve_config_providers, build_registry
 
@@ -21,7 +21,7 @@ def _mock_list_models(model_map):
 
 
 def _mock_enrich(name, provider):
-    return ModelConfig(
+    return Model(
         name=name,
         api_key=provider.api_key,
         api_base=provider.api_base,
