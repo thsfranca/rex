@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
+import time
 import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import Request
+
+logger = logging.getLogger(__name__)
 
 
 def extract_anthropic_api_key(request: Request) -> str | None:
@@ -247,6 +251,7 @@ async def stream_anthropic_response(
     response,
     model_name: str,
     request_model: str | None = None,
+    timeout: float = 600,
 ) -> AsyncIterator[str]:
     msg_id = f"msg_{uuid.uuid4().hex[:24]}"
     model = request_model or model_name
@@ -284,8 +289,12 @@ async def stream_anthropic_response(
     text_block_closed = False
     tool_block_indices: dict[int, int] = {}
     next_block_index = 1
+    deadline = time.perf_counter() + timeout
 
     async for chunk in response:
+        if time.perf_counter() > deadline:
+            logger.warning("Anthropic stream wall-clock limit reached (%.1fs)", timeout)
+            break
         delta_content = None
         delta_tool_calls = None
         if chunk.choices:
