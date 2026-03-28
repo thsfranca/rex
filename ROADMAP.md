@@ -136,7 +136,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] CLI entry point: install Rex globally (e.g., `uv tool install rex`), run with `rex start` or `rex`
 - [x] `rex stop` shuts down a running Rex instance gracefully
 - [x] `rex reset` clears all learning data with an interactive confirmation prompt (skippable with `--yes`)
-- [x] CLI runs Rex as a background process; clients use the host, port, and scheme from the user's start command (see README.md **Client base URL and TLS**)
+- [x] CLI runs Rex as a background process; clients point their API base URL at Rex's address (see README.md **Client base URL**)
 - [x] Config-first model registry: when `models` is defined in `~/.rex/config.yaml`, Rex uses that list as the primary model source
 - [x] Auto-discovery supplements config-defined models only — adds models not already listed in config
 - [x] Without a config file, auto-discovery works as it does today (no behavior change)
@@ -206,7 +206,7 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 - [x] Configurable request timeout: global default timeout for `litellm.acompletion` calls, applied via `asyncio.wait_for` so the proxy stops waiting and tears down the upstream HTTP connection
 - [x] Per-model timeout override: allow `timeout` on individual model entries in `~/.rex/config.yaml` (local models may need shorter timeouts than cloud APIs)
 - [x] Streaming wall-clock limit: cap total stream duration so a runaway generation cannot hold resources indefinitely
-- [ ] Client disconnect propagation: detect when the downstream client closes the connection and cancel the in-flight upstream request (streaming and non-streaming paths)
+- [x] Client disconnect propagation: detect when the downstream client closes the connection and cancel the in-flight upstream request (streaming and non-streaming paths)
 - [x] Config extension: `timeout` under `server` (global default, seconds), `timeout` per model entry, `stream_timeout` for streaming-specific limit
 - [ ] Documentation: recommended Ollama environment variables for personal machines (`OLLAMA_NUM_PARALLEL`, `OLLAMA_MAX_LOADED_MODELS`, `OLLAMA_KEEP_ALIVE`, `OLLAMA_CONTEXT_LENGTH`, `OLLAMA_FLASH_ATTENTION`, `OLLAMA_KV_CACHE_TYPE`)
 
