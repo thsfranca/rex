@@ -11,9 +11,27 @@ from app.config import (
     ModelConfig,
     ProviderConfig,
     RoutingConfig,
+    ServerConfig,
     Settings,
     load_config,
 )
+
+
+class TestServerConfig:
+    def test_defaults(self):
+        server = ServerConfig()
+        assert server.host == "0.0.0.0"
+        assert server.port == 8000
+        assert server.timeout == 600
+        assert server.stream_timeout == 600
+
+    def test_custom_timeout(self):
+        server = ServerConfig(timeout=300)
+        assert server.timeout == 300
+
+    def test_custom_stream_timeout(self):
+        server = ServerConfig(stream_timeout=120)
+        assert server.stream_timeout == 120
 
 
 class TestModelConfig:
@@ -28,6 +46,7 @@ class TestModelConfig:
         assert model.supports_function_calling is False
         assert model.supports_reasoning is False
         assert model.supports_vision is False
+        assert model.timeout is None
 
     def test_all_fields_set(self):
         model = ModelConfig(
@@ -40,6 +59,7 @@ class TestModelConfig:
             supports_function_calling=True,
             supports_reasoning=True,
             supports_vision=True,
+            timeout=60,
         )
         assert model.name == "ollama/llama3"
         assert model.api_key == "sk-test"
@@ -50,6 +70,15 @@ class TestModelConfig:
         assert model.supports_function_calling is True
         assert model.supports_reasoning is True
         assert model.supports_vision is True
+        assert model.timeout == 60
+
+    def test_timeout_defaults_to_none(self):
+        model = ModelConfig(name="test/model")
+        assert model.timeout is None
+
+    def test_timeout_can_be_set(self):
+        model = ModelConfig(name="test/model", timeout=30)
+        assert model.timeout == 30
 
 
 class TestProviderConfig:
@@ -145,6 +174,8 @@ class TestSettings:
         settings = Settings()
         assert settings.server.host == "0.0.0.0"
         assert settings.server.port == 8000
+        assert settings.server.timeout == 600
+        assert settings.server.stream_timeout == 600
         assert settings.models == []
         assert settings.providers == []
         assert settings.routing.primary_model is None
@@ -155,6 +186,11 @@ class TestSettings:
         settings = Settings(server={"host": "127.0.0.1", "port": 9000})
         assert settings.server.host == "127.0.0.1"
         assert settings.server.port == 9000
+
+    def test_custom_server_timeouts(self):
+        settings = Settings(server={"timeout": 300, "stream_timeout": 120})
+        assert settings.server.timeout == 300
+        assert settings.server.stream_timeout == 120
 
     def test_with_models(self):
         settings = Settings(models=[{"name": "openai/gpt-4o"}, {"name": "ollama/llama3"}])
@@ -339,6 +375,31 @@ class TestLoadConfig:
         assert len(settings.providers) == 1
         assert settings.providers[0].api_key == "sk-proxy-key"
         assert settings.providers[0].api_key_env is None
+
+    def test_loads_server_timeouts_from_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(yaml.dump({"server": {"timeout": 300, "stream_timeout": 120}}))
+        settings = load_config(config_file)
+        assert settings is not None
+        assert settings.server.timeout == 300
+        assert settings.server.stream_timeout == 120
+
+    def test_loads_model_timeout_from_yaml(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text(
+            yaml.dump(
+                {
+                    "models": [
+                        {"name": "ollama/llama3", "timeout": 60},
+                        {"name": "openai/gpt-4o"},
+                    ]
+                }
+            )
+        )
+        settings = load_config(config_file)
+        assert settings is not None
+        assert settings.models[0].timeout == 60
+        assert settings.models[1].timeout is None
 
     def test_load_invalid_yaml(self, tmp_path):
         config_file = tmp_path / "config.yaml"

@@ -7,7 +7,7 @@
 #   host: "0.0.0.0"
 #   port: 9000
 #   timeout: 300          # Global request timeout in seconds (default: 600)
-#   stream_timeout: 120   # Max wall-clock time for streaming responses (seconds)
+#   stream_timeout: 120   # Max wall-clock time for streaming responses (default: 600)
 
 # providers:
 #   - prefix: "anthropic"

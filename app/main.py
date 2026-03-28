@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -142,6 +143,7 @@ async def _handle_chat(request: Request):
     authorization = request.headers.get("authorization")
     user_agent = request.headers.get("user-agent")
     adapter = _get_adapter_registry().get_adapter(user_agent)
+    settings = _get_settings()
     try:
         return await handle_chat_completion(
             body,
@@ -152,7 +154,12 @@ async def _handle_chat(request: Request):
             repository=_repository,
             embedding_service=_embedding_service,
             scheduler=_scheduler,
+            server_timeout=settings.server.timeout,
+            stream_timeout=settings.server.stream_timeout,
         )
+    except asyncio.TimeoutError as e:
+        logger.exception("Chat completion timed out")
+        return _error_response(504, f"Request timed out: {e}", "timeout_error")
     except Exception as e:
         logger.exception("Chat completion failed")
         return _error_response(502, f"All model backends failed. Last error: {e}", "proxy_error")
@@ -162,6 +169,7 @@ async def _handle_messages(request: Request):
     body = await request.json()
     user_agent = request.headers.get("user-agent")
     adapter = _get_adapter_registry().get_adapter(user_agent)
+    settings = _get_settings()
     try:
         return await handle_anthropic_messages(
             body,
@@ -172,7 +180,12 @@ async def _handle_messages(request: Request):
             repository=_repository,
             embedding_service=_embedding_service,
             scheduler=_scheduler,
+            server_timeout=settings.server.timeout,
+            stream_timeout=settings.server.stream_timeout,
         )
+    except asyncio.TimeoutError as e:
+        logger.exception("Anthropic messages timed out")
+        return _error_response(504, f"Request timed out: {e}", "timeout_error")
     except Exception as e:
         logger.exception("Anthropic messages failed")
         return _error_response(502, f"All model backends failed. Last error: {e}", "proxy_error")
@@ -181,8 +194,18 @@ async def _handle_messages(request: Request):
 async def _handle_text(request: Request):
     body = await request.json()
     authorization = request.headers.get("authorization")
+    settings = _get_settings()
     try:
-        return await handle_text_completion(body, _get_engine(), authorization)
+        return await handle_text_completion(
+            body,
+            _get_engine(),
+            authorization,
+            server_timeout=settings.server.timeout,
+            stream_timeout=settings.server.stream_timeout,
+        )
+    except asyncio.TimeoutError as e:
+        logger.exception("Text completion timed out")
+        return _error_response(504, f"Request timed out: {e}", "timeout_error")
     except Exception as e:
         logger.exception("Text completion failed")
         return _error_response(502, f"All model backends failed. Last error: {e}", "proxy_error")
