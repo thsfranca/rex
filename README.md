@@ -13,7 +13,7 @@ An OpenAI- and Anthropic-compatible proxy that sits between AI-powered coding to
 - **Remote provider discovery**: Configure remote LiteLLM proxies or custom API endpoints as providers. Rex probes their model list endpoints at startup and merges discovered models with local and manually configured models. Auth via direct API key or environment variable reference.
 - **Task-aware routing**: Rex classifies each request (debugging, refactoring, code review, etc.) and picks the cheapest model that meets the task's requirements (context window, capabilities). Tasks with no special needs stay on the primary (cheapest) model.
 - **Fallback chains**: If the selected model fails, Rex tries the next model in cost order.
-- **Anthropic Messages API**: Full support for Anthropic's `POST /v1/messages` endpoint — accepts Anthropic-format requests, routes through Rex's engine, returns Anthropic-format responses. Streaming and non-streaming. Anthropic-compatible clients set `ANTHROPIC_BASE_URL` to Rex's origin (scheme and host must match how you started Rex; see **Client base URL and TLS** below).
+- **Anthropic Messages API**: Full support for Anthropic's `POST /v1/messages` endpoint — accepts Anthropic-format requests, routes through Rex's engine, returns Anthropic-format responses. Streaming and non-streaming. Anthropic-compatible clients set `ANTHROPIC_BASE_URL` to Rex's URL.
 - **SSE streaming**: Full Server-Sent Events streaming support for both OpenAI chat completions and Anthropic messages.
 - **Enrichment pipeline**: Rex transforms complex requests (generation, refactoring, migration, code review, test generation) by injecting task decomposition instructions before the model call. Each enricher is opt-in via config.
 - **LLM-as-Judge fallback**: When heuristic classification confidence is low, Rex calls a small local LLM to reclassify the task. The judge only triggers for chat/agent requests — never for tab completions. If the judge fails, Rex falls back to heuristics.
@@ -116,29 +116,22 @@ From the repo root:
 make
 ```
 
-**`make`** (same as **`make all`** / **`make run`**) runs **`make setup`** then **`make start`**: dependencies and TLS under **`~/.rex/tls/`** ([mkcert](https://github.com/FiloSottile/mkcert) when installed, otherwise OpenSSL self-signed), then **one** background start over **HTTPS**. **`./setup.sh` does not start Rex**; only **`make start`** (or **`./start-rex.sh`**) does.
+**`make`** (same as **`make all`** / **`make run`**) runs **`make setup`** then **`make start`**: installs dependencies, then starts Rex as a background process on **`http://0.0.0.0:8000`**.
 
 | Command | What it does |
 | --- | --- |
-| **`make setup`** | Dependencies + TLS only; does not start Rex |
-| **`make start`** | Start Rex in the background (HTTPS by default) |
-| **`make start ARGS=--http`** | Start over cleartext HTTP |
+| **`make setup`** | Install dependencies only; does not start Rex |
+| **`make start`** | Start Rex in the background (HTTP on `0.0.0.0:8000`) |
 | **`make stop`** | Stop a Rex instance started via **`make start`** |
-| **`make serve`** | Foreground HTTPS on **`https://127.0.0.1:8000`** (logs in the terminal) |
-| **`make serve-http`** | Foreground HTTP on **`0.0.0.0:8000`** |
+| **`make serve`** | Foreground HTTP on **`127.0.0.1:8000`** (logs in the terminal) |
 
 **`./setup.sh`** and **`./start-rex.sh`** are the underlying scripts; **`make`** targets call them so you do not need to remember script flags.
 
-### Client base URL and TLS
+### Client base URL
 
-- **`make start`** (and **`make`** / **`make run`**) starts Rex with **HTTPS** on **`127.0.0.1:8000`** by default, using files under **`~/.rex/tls/`**.
-- **`rex start`** with no **`--certfile`** / **`--keyfile`** serves **cleartext HTTP** (default bind **`0.0.0.0:8000`**). **`make start ARGS=--http`** and **`make serve-http`** also use cleartext HTTP.
-- Set each tool's API base URL to the **same scheme, host, and port** Rex listens on. Use that product's documented variable or setting (for example OpenAI-style **`OPENAI_BASE_URL`** / **`OPENAI_API_BASE`**, or Anthropic **`ANTHROPIC_BASE_URL`**). Omit or include a path suffix exactly as your tool expects.
-- If the client reports **SSL certificate verification failed** (or similar) against **`https://`**, it does not trust Rex's certificate. Choose one:
-  - **Use HTTP for local-only traffic**: **`make serve-http`**, **`make start ARGS=--http`**, or **`rex start`** without TLS flags; point the client at **`http://`** and the matching host and port.
-  - **Trust Rex's certificate**: Install [mkcert](https://github.com/FiloSottile/mkcert), run your OS-specific CA install step, delete **`~/.rex/tls/localhost.pem`** and **`localhost-key.pem`**, then run **`make setup`** again so Rex gets an mkcert-issued cert.
-  - **Point your runtime at the signing CA**: Many desktop and CLI clients use **Node.js** for HTTPS; set **`NODE_EXTRA_CA_CERTS`** to a PEM file containing the CA (for mkcert, use **`$(mkcert -CAROOT)/rootCA.pem`**). **Python**-based tools often honor **`SSL_CERT_FILE`** or **`REQUESTS_CA_BUNDLE`**. Corporate TLS inspection may require your organization's root CA in those same variables.
-- If **`setup.sh`** generated certs with **OpenSSL** (mkcert was not installed), the cert is **self-signed** and most clients reject it until you switch to mkcert or use HTTP.
+Point each tool's API base URL at Rex's address. Use the product's documented variable or setting (for example OpenAI-style **`OPENAI_BASE_URL`** / **`OPENAI_API_BASE`**, or Anthropic **`ANTHROPIC_BASE_URL`**). Omit or include a path suffix exactly as your tool expects.
+
+When Rex binds **`0.0.0.0`** (the default), use **`http://127.0.0.1:8000`** or **`http://localhost:8000`** from the client.
 
 ### Manual Setup
 
@@ -160,8 +153,7 @@ make
    ```bash
    rex start
    ```
-   `rex start` runs uvicorn; add `--certfile` and `--keyfile` for HTTPS. For `rex reset` after a TLS start, pass `--tls`.
-6. Point your tool's API base URL at Rex's origin (see **Client base URL and TLS**). When Rex binds **`0.0.0.0`**, still use **`http://127.0.0.1:8000`** or **`http://localhost:8000`** from the client. Use **`https://127.0.0.1:8000`** only when Rex serves TLS and the client trusts the cert.
+6. Point your tool's API base URL at `http://127.0.0.1:8000` (or the host/port you chose).
 
 Without a config file, Rex falls back to auto-discovery from environment variables and local runtimes.
 
@@ -175,10 +167,8 @@ Install Rex globally with `uv tool install rex`, then use:
 | `rex stop` | Shut down a running Rex instance |
 | `rex reset` | Clear all learning data (asks for confirmation) |
 | `rex reset --yes` | Clear all learning data without confirmation |
-| `rex reset --tls` | Same as reset, but use `https://` (after `rex start` with TLS) |
-| `rex start --certfile … --keyfile …` | Serve HTTPS |
-
-Background **`make start`** uses **`https://127.0.0.1:8000`** by default; cleartext **`rex start`** (no cert flags) uses **`http://0.0.0.0:8000`**. Match the client's base URL to the running instance (see **Client base URL and TLS**).
+| `rex start --host 127.0.0.1` | Bind to a specific host |
+| `rex start --port 9000` | Use a custom port |
 
 ## Documentation
 
