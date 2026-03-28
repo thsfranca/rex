@@ -219,6 +219,27 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ---
 
+## Phase 6.1 — Two-Tier Primary Model Routing
+
+**Goal**: Route completion and chat requests to different model tiers so that small/fast models handle tab completions while more capable models handle chat and agent workflows.
+
+**Deliverables**:
+- [x] Two-tier primary: the routing engine resolves separate primaries for completion (cheapest model) and chat (cheapest model with `supports_function_calling=True`)
+- [x] Auto-select chat primary: at startup, pick the cheapest model where LiteLLM metadata reports `supports_function_calling=True`; fall back to completion primary when no model qualifies
+- [x] `routing.chat_model` config option: explicit override for the auto-selected chat primary in `~/.rex/config.yaml`
+- [x] Update `RoutingEngine.select_model` to use the chat primary as the starting point for `FeatureType.CHAT` requests, instead of the single primary used today
+
+**Design**:
+- Every major coding tool uses different models for different interaction modes. Cursor uses a custom small MoE model for tab completion and user-selected frontier models for chat. Rex currently uses a single primary (cheapest) for both, so chat/agent requests from tools like Claude Code land on tiny models that can't handle complex prompts or function calling.
+- The two-tier split keeps completion fast and cheap while routing chat to a model capable of tool use, multi-step reasoning, and long context handling.
+- `supports_function_calling` is the auto-selection criterion because it's a strong proxy for "capable enough for chat/agent work" — models that support structured function calling tend to handle complex prompts well. LiteLLM provides this flag for major models (cloud and popular Ollama variants like `qwen2.5-coder:32b`). When LiteLLM has no metadata for a model, the flag defaults to `False`, which is conservative and correct for most small models.
+- Intelligent routing across model tiers reduces inference costs 40-85% while maintaining 90-95% quality compared to always using a frontier model ([Zylos Research, 2026](https://zylos.ai/research/2026-01-29-llm-routing-intelligent-model-selection)).
+- Category requirements still apply on top of the chat primary — if a category needs `supports_reasoning` or a larger context window, the router selects the cheapest model that meets those requirements, starting from the chat primary tier.
+
+**Design**: See [ARCHITECTURE.md — Two-Tier Primary](ARCHITECTURE.md#two-tier-primary) for the full design rationale and flow diagram.
+
+---
+
 ## Phase 7 — Observability Dashboard (optional)
 
 **Goal**: Give users a visual dashboard to explore routing decisions, cost breakdown, model usage, and reliability — without adding UI maintenance burden to Rex. Users install and run the dashboard only if they want it.
