@@ -176,6 +176,26 @@ For system architecture, design decisions, and routing strategy, see [ARCHITECTU
 
 ---
 
+## Phase 6 — Classification Optimization
+
+> Detailed spec: [docs/specs/phase-6-classification-optimization.md](docs/specs/phase-6-classification-optimization.md)
+
+**Goal**: Dramatically reduce classification latency and improve routing accuracy through architectural improvements to the classification chain.
+
+**Overview**: The classification chain currently runs sequentially (heuristics → embedding → centroid → judge), causing 1000+ ms latency when low-confidence results occur. Phase 6 introduces 5 top-tier improvements to reduce latency, improve accuracy, and enable adaptive routing.
+
+**Deliverables**:
+- [ ] **PR 1: Structural Token Detection** — Detect task structure (stack traces, diffs, error messages) before keywords to boost confidence on common patterns (2-3x faster for debugging/diffs)
+- [ ] **PR 2: Parallel Classification Chain** — Run classifiers concurrently, return first confident result to avoid expensive judge inference (5-10x faster for high-confidence)
+- [ ] **PR 3: Performance Tracking Foundation** — Add latency tracking infrastructure to enable adaptive routing
+- [ ] **PR 4: Latency-Weighted Model Selection** — Weight model selection by actual response time per (model, category) pair (10-20% improvement after warmup)
+- [ ] **PR 5: Confidence-Aware Fallback Chain** — Use classification confidence to determine fallback strategy (fewer timeouts, faster recovery)
+- [ ] **PR 6: Hierarchical Exemplar Clustering** (Phase 6.1) — Classify by task complexity within category for better cost/quality tradeoff (20-30% cost improvement)
+
+**Design**: See [docs/specs/phase-6-classification-optimization.md](docs/specs/phase-6-classification-optimization.md) for detailed design, testing strategy, risks, and implementation order.
+
+---
+
 ## Phase 5.6 — Context-Aware Routing
 
 **Goal**: Route requests to models that can actually fit the input, and recover intelligently when a model rejects a request for exceeding its context window.

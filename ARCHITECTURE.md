@@ -15,13 +15,13 @@ flowchart LR
     Client[AI Coding Tool] -->|OpenAI / Anthropic API| Proxy[Rex Proxy]
     Proxy --> Adapter[Client Adapter]
     Adapter --> Classifier{Task Classifier}
-    Classifier -->|fast path| Heuristics[Heuristic Rules]
-    Classifier -->|trained| MLClassifier[ML Classifier]
-    Classifier -->|uncertain| LLMJudge[LLM-as-Judge]
+    Classifier -->|parallel| Heuristics[Heuristic Rules<br/>+ Structural Tokens]
+    Classifier -->|parallel| MLClassifier[ML Classifier]
+    Classifier -->|parallel| LLMJudge[LLM-as-Judge]
     Heuristics --> Router[Routing Engine]
     MLClassifier --> Router
     LLMJudge --> Router
-    Router --> Registry[Model Registry]
+    Router --> Registry[Model Registry<br/>+ Performance Tracker]
     Discovery[Model Discovery] -->|config + auto-discovery| Registry
     Registry --> Enrichment[Enrichment Pipeline]
     Enrichment --> Local[Local Models]
@@ -34,7 +34,16 @@ flowchart LR
     EmbeddingStore --> LearningPipeline[Learning Pipeline]
     Heuristics --> LearningPipeline
     LearningPipeline --> MLClassifier
+    Registry -.->|confidence-aware| Fallback[Fallback Chain]
+    Fallback --> Local
+    Fallback --> Cloud
 ```
+
+**Phase 6 Enhancements** (see [ROADMAP.md — Phase 6](ROADMAP.md#phase-6--classification-optimization)):
+- **Parallel Classifiers**: Heuristics, ML classifier, and judge run concurrently; return first confident result
+- **Structural Tokens**: Pre-scoring of stack traces, diffs, error messages boosts confidence before classifiers run
+- **Performance Tracker**: Tracks response time per (model, category) pair; weights model selection by actual latency
+- **Confidence-Aware Fallback**: Fallback strategy changes based on classification confidence (cost → balanced → capability)
 
 - **Model Discovery** loads models and providers from `~/.rex/config.yaml` as the primary source. Config providers (remote LiteLLM proxies, custom endpoints) are probed for their model lists and override auto-discovered providers with the same prefix. Auto-discovery supplements with additional providers from environment variables and Ollama. Each model is enriched with metadata from LiteLLM's built-in database.
 - The **Client Adapter** normalizes tool-specific request patterns into a common format for the classifier.
