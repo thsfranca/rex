@@ -26,6 +26,7 @@
 
 # routing:
 #   primary_model: "ollama/llama3"
+#   chat_model: "openai/gpt-4o"     # Override auto-selected chat primary (cheapest with function calling)
 
 # enrichments:
 #   task_decomposition: true

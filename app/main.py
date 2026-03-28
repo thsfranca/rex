@@ -82,6 +82,7 @@ async def lifespan(app: FastAPI):
         confidence_threshold=_settings.llm_judge.confidence_threshold,
         centroid_classifier=centroid_classifier,
         ml_classifier=ml_classifier,
+        chat_model=_settings.routing.chat_model,
     )
 
     _scheduler = RetrainingScheduler(
@@ -98,9 +99,10 @@ async def lifespan(app: FastAPI):
     _adapter_registry = AdapterRegistry()
     _pipeline = build_pipeline(_settings)
     logger.info(
-        "Rex started with %d models, primary: %s",
+        "Rex started with %d models, completion primary: %s, chat primary: %s",
         len(registry.get_all()),
         _engine.primary.name,
+        _engine.chat_primary.name,
     )
     yield
 

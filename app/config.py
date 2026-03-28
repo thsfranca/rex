@@ -38,6 +38,7 @@ class ProviderConfig(BaseModel):
 
 class RoutingConfig(BaseModel):
     primary_model: str | None = None
+    chat_model: str | None = None
 
 
 class EnrichmentsConfig(BaseModel):
