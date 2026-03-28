@@ -4,7 +4,7 @@ import logging
 
 import litellm
 
-from app.config import Model
+from app.config import Model, ModelConfig
 from app.discovery.providers import DetectedProvider
 
 logger = logging.getLogger(__name__)
@@ -25,15 +25,16 @@ def _lookup_capabilities(model_name: str) -> dict:
         return {}
 
 
-def enrich_config_model(config_model: "ModelConfig") -> Model:
+def enrich_config_model(config_model: ModelConfig) -> Model:
     caps = _lookup_capabilities(config_model.name)
     base = config_model.model_dump()
-    for key in ("cost_per_1k_input", "max_context_window"):
-        if base.get(key) is None and key in caps:
-            base[key] = caps[key]
-    for key in ("supports_function_calling", "supports_reasoning", "supports_vision"):
-        if key in caps:
-            base[key] = caps[key]
+    if base.get("max_context_window") is None and "max_context_window" in caps:
+        base["max_context_window"] = caps["max_context_window"]
+    if base.get("cost_per_1k_input", 0.0) == 0.0 and caps.get("cost_per_1k_input", 0.0) > 0.0:
+        base["cost_per_1k_input"] = caps["cost_per_1k_input"]
+    base["supports_function_calling"] = caps.get("supports_function_calling", False)
+    base["supports_reasoning"] = caps.get("supports_reasoning", False)
+    base["supports_vision"] = caps.get("supports_vision", False)
     return Model(**base)
 
 
