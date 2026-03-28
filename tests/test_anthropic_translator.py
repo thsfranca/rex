@@ -151,7 +151,149 @@ class TestAnthropicToOpenai:
         result = anthropic_to_openai(body)
         assert "model" not in result
 
-    def test_non_text_content_blocks_ignored(self):
+    def test_image_block_converted_to_openai_image_url(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "What is this?"},
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/png",
+                                "data": "abc123",
+                            },
+                        },
+                    ],
+                }
+            ],
+        }
+        result = anthropic_to_openai(body)
+        content = result["messages"][0]["content"]
+        assert isinstance(content, list)
+        assert content[0] == {"type": "text", "text": "What is this?"}
+        assert content[1] == {
+            "type": "image_url",
+            "image_url": {"url": "data:image/png;base64,abc123"},
+        }
+
+    def test_image_url_source_converted(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Describe"},
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "url",
+                                "url": "https://example.com/img.png",
+                            },
+                        },
+                    ],
+                }
+            ],
+        }
+        result = anthropic_to_openai(body)
+        content = result["messages"][0]["content"]
+        assert isinstance(content, list)
+        assert content[1] == {
+            "type": "image_url",
+            "image_url": {"url": "https://example.com/img.png"},
+        }
+
+    def test_image_only_message(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": "xyz",
+                            },
+                        },
+                    ],
+                }
+            ],
+        }
+        result = anthropic_to_openai(body)
+        content = result["messages"][0]["content"]
+        assert isinstance(content, list)
+        assert len(content) == 1
+        assert content[0]["type"] == "image_url"
+
+    def test_thinking_blocks_stripped(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "thinking",
+                            "thinking": "Let me reason...",
+                            "signature": "sig_abc",
+                        },
+                        {"type": "text", "text": "The answer is 42."},
+                    ],
+                },
+            ],
+        }
+        result = anthropic_to_openai(body)
+        assert result["messages"][0]["content"] == "The answer is 42."
+
+    def test_redacted_thinking_blocks_stripped(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "redacted_thinking", "data": "encrypted"},
+                        {"type": "text", "text": "Here is my answer."},
+                    ],
+                },
+            ],
+        }
+        result = anthropic_to_openai(body)
+        assert result["messages"][0]["content"] == "Here is my answer."
+
+    def test_thinking_only_message_produces_empty_content(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "thinking",
+                            "thinking": "internal reasoning",
+                            "signature": "sig",
+                        },
+                    ],
+                },
+            ],
+        }
+        result = anthropic_to_openai(body)
+        assert result["messages"][0]["content"] == ""
+
+    def test_unknown_block_types_stripped(self):
         body = {
             "model": "claude-3-sonnet",
             "max_tokens": 1024,
@@ -160,7 +302,7 @@ class TestAnthropicToOpenai:
                     "role": "user",
                     "content": [
                         {"type": "text", "text": "Hello"},
-                        {"type": "image", "source": {"type": "base64", "data": "..."}},
+                        {"type": "some_future_type", "data": "stuff"},
                     ],
                 }
             ],
@@ -354,6 +496,89 @@ class TestAnthropicToOpenai:
         }
         result = anthropic_to_openai(body)
         assert result["messages"][0]["content"] == "line1\nline2"
+
+    def test_tool_results_with_text_ordered_before_user_message(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "user", "content": "Run ls and pwd"},
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "type": "tool_use",
+                            "id": "toolu_1",
+                            "name": "bash",
+                            "input": {"command": "ls"},
+                        },
+                        {
+                            "type": "tool_use",
+                            "id": "toolu_2",
+                            "name": "bash",
+                            "input": {"command": "pwd"},
+                        },
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "toolu_1",
+                            "content": "file1.txt",
+                        },
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "toolu_2",
+                            "content": "/home/user",
+                        },
+                        {"type": "text", "text": "Now explain the results"},
+                    ],
+                },
+            ],
+        }
+        result = anthropic_to_openai(body)
+        assert result["messages"][0] == {"role": "user", "content": "Run ls and pwd"}
+        assert result["messages"][1]["role"] == "assistant"
+        assert len(result["messages"][1]["tool_calls"]) == 2
+        assert result["messages"][2]["role"] == "tool"
+        assert result["messages"][2]["tool_call_id"] == "toolu_1"
+        assert result["messages"][3]["role"] == "tool"
+        assert result["messages"][3]["tool_call_id"] == "toolu_2"
+        assert result["messages"][4] == {
+            "role": "user",
+            "content": "Now explain the results",
+        }
+
+    def test_multiple_tool_results_without_text(self):
+        body = {
+            "model": "claude-3-sonnet",
+            "max_tokens": 1024,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "toolu_a",
+                            "content": "ok",
+                        },
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "toolu_b",
+                            "content": "done",
+                        },
+                    ],
+                },
+            ],
+        }
+        result = anthropic_to_openai(body)
+        assert len(result["messages"]) == 2
+        assert result["messages"][0]["role"] == "tool"
+        assert result["messages"][0]["tool_call_id"] == "toolu_a"
+        assert result["messages"][1]["role"] == "tool"
+        assert result["messages"][1]["tool_call_id"] == "toolu_b"
 
     def test_no_tools_key_when_absent(self):
         body = {
