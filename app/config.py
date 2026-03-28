@@ -11,6 +11,8 @@ DEFAULT_CONFIG_PATH = Path("~/.rex/config.yaml").expanduser()
 class ServerConfig(BaseModel):
     host: str = "0.0.0.0"
     port: int = 8000
+    timeout: float = 600
+    stream_timeout: float = 600
 
 
 class ModelConfig(BaseModel):
@@ -23,6 +25,7 @@ class ModelConfig(BaseModel):
     supports_function_calling: bool = False
     supports_reasoning: bool = False
     supports_vision: bool = False
+    timeout: float | None = None
 
 
 class ProviderConfig(BaseModel):
