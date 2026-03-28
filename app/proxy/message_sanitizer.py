@@ -3,6 +3,23 @@ from __future__ import annotations
 import json
 
 
+def sanitize_tools(tools: list[dict]) -> list[dict]:
+    return [_normalize_tool(t) for t in tools]
+
+
+def _normalize_tool(tool: dict) -> dict:
+    if "function" in tool:
+        return tool
+    return {
+        "type": "function",
+        "function": {
+            "name": tool.get("name", ""),
+            "description": tool.get("description", ""),
+            "parameters": tool.get("input_schema", {}),
+        },
+    }
+
+
 def sanitize_messages(messages: list[dict]) -> list[dict]:
     result: list[dict] = []
     for msg in messages:
