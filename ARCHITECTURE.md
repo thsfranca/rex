@@ -64,6 +64,7 @@ flowchart LR
 | Default storage | SQLite | Zero-dependency, single-file, good enough for single user |
 | Cost tracking | LiteLLM runtime cost calculation | LiteLLM's `completion_cost()` returns actual cost per request from its built-in pricing database; no manual cost config needed for known models |
 | Prompt enrichment | Pluggable pipeline, opt-in per enricher | Keeps enrichment logic separate from routing; each enricher toggles independently; zero overhead when disabled |
+| Request timeout & cancellation | `asyncio.wait_for` + connection teardown | Rex wraps upstream calls with configurable timeouts and propagates client disconnects; closing the HTTP connection is the strongest portable cancel signal a proxy can send — actual inference stop depends on the backend runtime |
 | Observability dashboard | [Datasette](https://datasette.io/) + [datasette-dashboards](https://datasette.io/plugins/datasette-dashboards) (optional) | Same Python ecosystem; built for SQLite; Rex ships a YAML config, not a UI — no frontend code to maintain; user installs only if they want the dashboard |
 
 ## Task Categories
@@ -189,6 +190,43 @@ The first enricher. When enabled, it detects complex tasks and injects a system-
 - The enricher appends to the existing system message — it never replaces it.
 - Simple tasks (`completion`, `debugging`, `optimization`, `explanation`, `general`) skip enrichment entirely.
 - Rex decides complexity, not the model. The classifier output is already available at zero cost.
+
+## Request Lifecycle & Cancellation
+
+Rex proxies requests to model backends via LiteLLM's `acompletion`. The request lifecycle determines how long Rex waits, what happens on timeout, and whether the upstream backend stops generating.
+
+**Timeout enforcement**:
+- A configurable timeout wraps each `acompletion` call via `asyncio.wait_for`.
+- When the timeout fires, Rex cancels the coroutine and closes the upstream HTTP connection.
+- Per-model timeout overrides allow shorter limits for local models (where runaway generation wastes personal hardware) and longer limits for cloud APIs.
+- A separate `stream_timeout` caps total wall-clock time for streaming responses.
+
+**Client disconnect propagation**:
+- When the downstream client (Cursor, Claude Code, etc.) closes the connection, Rex detects the disconnect and cancels the in-flight upstream request.
+- For streaming responses, the ASGI server cancels the response generator, which stops reading from the upstream stream and closes the connection.
+- For non-streaming responses, the handler checks for client disconnect and cancels the pending `acompletion` call.
+
+**What Rex can and cannot guarantee**:
+
+| Layer | Behavior |
+|---|---|
+| **Rex → provider HTTP connection** | Rex closes the connection on timeout or client disconnect. This is reliable and immediate. |
+| **Local backend (Ollama, llama.cpp)** | Closing the connection typically stops generation. Ollama uses llama.cpp as its inference engine, which cancels both prompt processing and token generation on disconnect ([PR #9679](https://github.com/ggml-org/llama.cpp/pull/9679)). Ollama inherits that behavior, though its own connection handling layer can affect how reliably the disconnect reaches llama.cpp — behavior varies by Ollama version and offload mode. |
+| **Cloud APIs (OpenAI, Anthropic, etc.)** | Closing the connection is best-effort. The provider may or may not stop server-side work. Rex stops consuming tokens and stops being billed for streaming output, but prompt processing charges may still apply. |
+
+**Complementary controls**:
+- `max_tokens` is the only knob that **always** bounds worst-case compute, regardless of cancel semantics.
+- Streaming is preferred for long answers — mid-flight abort lets the backend see the connection die and stop generating.
+- Ollama server-side knobs reduce steady-state load on personal machines:
+
+| Variable | Effect |
+|---|---|
+| `OLLAMA_NUM_PARALLEL` | Limits concurrent requests per model (default: 1). Memory scales with parallel × context. |
+| `OLLAMA_MAX_LOADED_MODELS` | Caps how many models stay loaded simultaneously. |
+| `OLLAMA_KEEP_ALIVE` | Controls how long a model stays in memory after its last request (default: 5m). Set to `0` to unload immediately. |
+| `OLLAMA_CONTEXT_LENGTH` | Smaller default context reduces KV cache memory and per-token compute. |
+| `OLLAMA_FLASH_ATTENTION` | Reduces memory usage at large context sizes. |
+| `OLLAMA_KV_CACHE_TYPE` | Quantize the KV cache (`q8_0`, `q4_0`) for lower memory at some precision cost. |
 
 ## Learning Pipeline
 
