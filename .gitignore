@@ -17,3 +17,6 @@ htmlcov/
 config.yaml
 
 .DS_Store
+
+localhost.pem
+localhost-key.pem
