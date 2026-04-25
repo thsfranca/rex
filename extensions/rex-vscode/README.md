@@ -8,7 +8,7 @@ This extension is in early development. See [`docs/EXTENSION_ROADMAP.md`](../../
 
 - PR 1: status bar, daemon detection via `rex-cli status`, typed NDJSON stream client, capability detection.
 - PR 2: activity-bar chat webview with streaming markdown, syntax-highlighted code blocks, Copy/Insert/Apply actions, native-diff Apply flow, editor context chip, and `REX: Explain/Fix/Refactor Selection` commands.
-- PR 3 (current): opt-in daemon auto-start, tag-driven release pipeline (Open VSX + optional VS Code Marketplace), docs polish. See [`docs/EXTENSION_RELEASE.md`](../../docs/EXTENSION_RELEASE.md).
+- PR 3: shipped — opt-in daemon auto-start, tag-driven release pipeline (validated VSIX + optional Open VSX / Marketplace publish), docs in [`docs/EXTENSION_RELEASE.md`](../../docs/EXTENSION_RELEASE.md).
 
 ## Using the chat view
 
@@ -22,8 +22,8 @@ The chat webview uses a strict Content Security Policy (nonce-scoped script, no 
 
 ## Requirements
 
-- `rex-cli` available on `PATH` (or set `rex.cliPath`).
-- `rex-daemon` running locally on `/tmp/rex.sock` (user-managed by default, or set `rex.daemonAutoStart: true`).
+- `rex-cli` available on `PATH` (or set `rex.cliPath` to an absolute path if the editor was not started from a shell that configures `PATH`, which is common on macOS).
+- `rex-daemon` running locally on `/tmp/rex.sock` (user-managed by default, or set `rex.daemonAutoStart: true`). With auto-start, set `rex.daemonBinaryPath` to an absolute path if `rex-daemon` is not on the editor `PATH`.
 - VS Code `^1.90` or Cursor with a compatible VS Code engine.
 
 ## Daemon auto-start (opt-in)

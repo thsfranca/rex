@@ -86,7 +86,7 @@ Open the `REX` output channel (`REX: Open Output Channel`) for details on every 
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `REX unavailable` at activation | `rex-cli` not on `PATH`. | Set `rex.cliPath` or install `rex-cli`. |
+| `REX unavailable` at activation | `rex-cli` not on `PATH` (common when VS Code/Cursor is launched from the Dock on macOS). | Set `rex.cliPath` to the absolute path of `rex-cli` (for example from `which rex-cli` in a login shell). |
 | `REX unavailable: daemon did not become ready within Nms` | Daemon took too long to bind its socket. | Increase daemon warm-up time by starting it manually, or leave auto-start off. |
 | `REX unavailable: rex-daemon exited with code N` | Daemon crashed on startup. | Inspect daemon logs; ensure only one instance runs on `/tmp/rex.sock`. |
 | `Apply to file` opens diff but shows empty proposal | The proposed code block was empty or the target selection was cleared. | Re-run the action with a non-empty selection or accept a full-file replacement. |
@@ -104,9 +104,9 @@ The extension is released independently of the REX daemon. Tags prefixed with `r
 3. The workflow runs:
    - Lint, typecheck, and unit tests.
    - `vsce package --no-dependencies --out rex-vscode-<version>.vsix`.
-   - `ovsx publish --dry-run` (always runs; validates the VSIX against Open VSX rules without publishing).
-   - If `OVSX_TOKEN` secret is set, `ovsx publish --pat $OVSX_TOKEN`.
-   - If `VSCE_PAT` secret is set, `vsce publish --packagePath <vsix> --pat $VSCE_PAT` (VS Code Marketplace).
+   - VSIX validation without publishing: `unzip -t` on the archive and `vsce generate-manifest --packagePath <vsix>` (the Open VSX CLI does not ship a publish dry-run flag).
+   - If `OVSX_TOKEN` secret is set, `ovsx publish --pat` with the packaged VSIX.
+   - If `VSCE_PAT` secret is set, `vsce publish --packagePath <vsix> --pat` (VS Code Marketplace).
    - Creates a GitHub Release with the VSIX attached when the trigger is a tag push.
 
 ### Manual dry-run
@@ -120,7 +120,7 @@ The extension is released independently of the REX daemon. Tags prefixed with `r
 | `OVSX_TOKEN` | Personal access token for Open VSX. | Publishing to Open VSX (Cursor distribution). |
 | `VSCE_PAT` | Personal access token for the VS Code Marketplace. | Optional Marketplace publish. |
 
-Without either secret the pipeline still builds, tests, packages, and dry-runs — safe for repeated use.
+Without either publish secret the pipeline still builds, tests, packages, validates the VSIX, and attaches it to the GitHub Release on tag pushes.
 
 ### Platform packaging
 
