@@ -29,3 +29,17 @@ REX is a study project for a local AI runtime on macOS (Apple Silicon).
 
 - Documentation-first milestone.
 - MVP implementation in progress.
+
+## Workspace bootstrap
+
+This repository uses a Rust workspace with three crates:
+
+- `rex-proto`: protobuf/gRPC contract generation (`rex.v1`).
+- `rex-daemon`: daemon runtime boundary (implementation to be added in follow-up PRs).
+- `rex-cli`: thin client interface (implementation to be added in follow-up PRs).
+
+Build all workspace members:
+
+```bash
+cargo build --workspace
+```
