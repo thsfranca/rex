@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it } from "vitest";
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   DaemonLifecycle,
@@ -12,6 +13,13 @@ const FIXTURE_CLI_STATUS_OK = path.join(FIXTURES_DIR, "cli_status_ok.sh");
 const FIXTURE_CLI_STATUS_FAIL = path.join(FIXTURES_DIR, "cli_status_fail.sh");
 const FIXTURE_DAEMON_SLEEP = path.join(FIXTURES_DIR, "daemon_sleep.sh");
 const FIXTURE_DAEMON_EXITS = path.join(FIXTURES_DIR, "daemon_exits.sh");
+const FIXTURE_CLI_FLAKY = path.join(FIXTURES_DIR, "cli_status_fail_twice_then_ok.sh");
+
+async function makeWorkspaceTmp(): Promise<string> {
+  const base = path.resolve(__dirname, "..", "..", ".vitest-tmp");
+  await fs.mkdir(base, { recursive: true });
+  return fs.mkdtemp(path.join(base, "daemon-lifecycle-"));
+}
 
 function makeLifecycle(
   overrides: Partial<DaemonLifecycleOptions>,
@@ -96,5 +104,66 @@ describe("DaemonLifecycle.ensureRunning", () => {
 
     await lifecycle.shutdown();
     expect(lifecycle.getState().kind).toBe("unavailable");
+  });
+});
+
+describe("DaemonLifecycle.ensureRunning single-flight", () => {
+  it("becomes ready when status flips after failures (one start cycle)", async () => {
+    const tmpDir = await makeWorkspaceTmp();
+    const stateFile = path.join(tmpDir, "status_count");
+    await fs.writeFile(stateFile, "0", "utf8");
+    const kinds: DaemonLifecycleState["kind"][] = [];
+
+    const lifecycle = new DaemonLifecycle({
+      cli: {
+        cliPath: FIXTURE_CLI_FLAKY,
+        env: { REX_TEST_STATUS_STATE_FILE: stateFile },
+        timeoutMs: 5_000,
+      },
+      daemonBinaryPath: FIXTURE_DAEMON_SLEEP,
+      readyTimeoutMs: 15_000,
+      pollIntervalMs: 50,
+      onState: (s) => kinds.push(s.kind),
+    });
+    try {
+      const state = await lifecycle.ensureRunning();
+      expect(state.kind).toBe("ready");
+      if (state.kind === "ready") {
+        expect(state.status.daemonVersion).toBe("1.0.0-flaky");
+      }
+      expect(kinds.filter((k) => k === "starting").length).toBe(1);
+      expect(kinds[kinds.length - 1]).toBe("ready");
+    } finally {
+      await lifecycle.shutdown();
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("serializes concurrent ensureRunning into one start cycle", async () => {
+    const tmpDir = await makeWorkspaceTmp();
+    const stateFile = path.join(tmpDir, "status_count");
+    await fs.writeFile(stateFile, "0", "utf8");
+    const kinds: DaemonLifecycleState["kind"][] = [];
+
+    const lifecycle = new DaemonLifecycle({
+      cli: {
+        cliPath: FIXTURE_CLI_FLAKY,
+        env: { REX_TEST_STATUS_STATE_FILE: stateFile },
+        timeoutMs: 5_000,
+      },
+      daemonBinaryPath: FIXTURE_DAEMON_SLEEP,
+      readyTimeoutMs: 15_000,
+      pollIntervalMs: 50,
+      onState: (s) => kinds.push(s.kind),
+    });
+    try {
+      const [a, b] = await Promise.all([lifecycle.ensureRunning(), lifecycle.ensureRunning()]);
+      expect(a.kind).toBe("ready");
+      expect(b.kind).toBe("ready");
+      expect(kinds.filter((k) => k === "starting").length).toBe(1);
+    } finally {
+      await lifecycle.shutdown();
+      await fs.rm(tmpDir, { recursive: true, force: true });
+    }
   });
 });

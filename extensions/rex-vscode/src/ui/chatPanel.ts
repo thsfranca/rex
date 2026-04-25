@@ -21,6 +21,8 @@ export const CHAT_VIEW_ID = "rex.chatView";
 export interface ChatPanelDependencies {
   readonly context: vscode.ExtensionContext;
   readonly getCliOptions: () => CliBridgeOptions;
+  readonly getDaemonAutoStart: () => boolean;
+  readonly ensureDaemonReady: (signal?: AbortSignal) => Promise<DaemonLifecycleState>;
   readonly getDaemonState: () => DaemonLifecycleState | undefined;
   readonly log: (message: string) => void;
 }
@@ -188,6 +190,18 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     this.postMessage({ type: "streamStarted", id: message.id });
 
     try {
+      if (this.deps.getDaemonAutoStart()) {
+        const daemonState = await this.deps.ensureDaemonReady(controller.signal);
+        if (daemonState.kind !== "ready") {
+          const detail =
+            daemonState.kind === "unavailable"
+              ? daemonState.reason
+              : "Daemon is still starting; try again in a moment.";
+          this.postMessage({ type: "streamError", id: message.id, message: detail });
+          return;
+        }
+      }
+
       for await (const event of streamComplete(this.deps.getCliOptions(), {
         prompt: fullPrompt,
         signal: controller.signal,

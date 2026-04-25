@@ -24,19 +24,44 @@ export async function* streamComplete(
   const parser = new NdjsonLineParser();
   const queue: StreamEvent[] = [];
   let pendingResolve: (() => void) | undefined;
-  let terminated = false;
-  let terminationEvent: StreamEvent | undefined;
-  let spawnError: Error | undefined;
+  let terminalEvent: Extract<StreamEvent, { kind: "done" | "error" }> | undefined;
+  let cleanupDone = false;
 
-  const signalListener = () => {
-    if (!terminated) {
+  const wakeConsumer = () => {
+    pendingResolve?.();
+    pendingResolve = undefined;
+  };
+
+  const pushEvent = (event: StreamEvent) => {
+    if (terminalEvent !== undefined) {
+      return;
+    }
+    queue.push(event);
+    if (event.kind === "done" || event.kind === "error") {
+      terminalEvent = event;
+    }
+    wakeConsumer();
+  };
+
+  const cleanup = () => {
+    if (cleanupDone) {
+      return;
+    }
+    cleanupDone = true;
+    request.signal?.removeEventListener("abort", signalListener);
+    if (!child.killed) {
       dispose();
-      queue.push({ kind: "error", message: "cancelled" });
-      terminated = true;
-      pendingResolve?.();
     }
   };
+
+  const signalListener = () => {
+    dispose();
+    pushEvent({ kind: "error", message: "cancelled" });
+  };
   request.signal?.addEventListener("abort", signalListener, { once: true });
+  if (request.signal?.aborted) {
+    signalListener();
+  }
 
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
@@ -44,20 +69,15 @@ export async function* streamComplete(
   let stderrBuffer = "";
 
   child.stdout.on("data", (chunk: string) => {
-    if (terminated) {
+    if (terminalEvent !== undefined) {
       return;
     }
     const events = parser.push(chunk);
-    if (events.length > 0) {
-      for (const event of events) {
-        queue.push(event);
-        if (event.kind === "done" || event.kind === "error") {
-          terminated = true;
-          terminationEvent = event;
-          break;
-        }
+    for (const event of events) {
+      pushEvent(event);
+      if (terminalEvent !== undefined) {
+        break;
       }
-      pendingResolve?.();
     }
   });
 
@@ -66,39 +86,31 @@ export async function* streamComplete(
   });
 
   child.once("error", (err) => {
-    spawnError = err;
-    if (!terminated) {
-      queue.push({
-        kind: "error",
-        message: `failed to spawn rex-cli: ${err.message}`,
-      });
-      terminated = true;
-      pendingResolve?.();
-    }
+    pushEvent({
+      kind: "error",
+      message: `failed to spawn rex-cli: ${err.message}`,
+    });
   });
 
   child.once("close", (code) => {
-    if (!terminated) {
+    if (terminalEvent === undefined) {
       const tail = parser.flush();
       for (const event of tail) {
-        queue.push(event);
-        if (event.kind === "done" || event.kind === "error") {
-          terminated = true;
-          terminationEvent = event;
+        pushEvent(event);
+        if (terminalEvent !== undefined) {
           break;
         }
       }
     }
-    if (!terminated) {
+    if (terminalEvent === undefined) {
       const stderrTrim = stderrBuffer.trim();
       const message =
         code === 0
           ? "stream ended without terminal event"
           : `rex-cli exited with code ${code}${stderrTrim.length > 0 ? `: ${stderrTrim}` : ""}`;
-      queue.push({ kind: "error", message });
-      terminated = true;
+      pushEvent({ kind: "error", message });
     }
-    pendingResolve?.();
+    wakeConsumer();
   });
 
   try {
@@ -111,24 +123,14 @@ export async function* streamComplete(
         }
         continue;
       }
-      if (terminated && queue.length === 0) {
-        if (terminationEvent !== undefined) {
-          return;
-        }
-        if (spawnError !== undefined) {
-          return;
-        }
+      if (terminalEvent !== undefined && queue.length === 0) {
         return;
       }
       await new Promise<void>((resolve) => {
         pendingResolve = resolve;
       });
-      pendingResolve = undefined;
     }
   } finally {
-    request.signal?.removeEventListener("abort", signalListener);
-    if (!child.killed) {
-      dispose();
-    }
+    cleanup();
   }
 }

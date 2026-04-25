@@ -1,6 +1,6 @@
 # CI and Branch Protection
 
-This project uses a PR-first CI gate and merge-result validation for `main`.
+This project uses a **pull_request** workflow on GitHub Actions. Required status checks gate merges into `main`.
 
 ## CI observability standard (GitHub-native, logs-first)
 
@@ -50,8 +50,8 @@ Use this standard for every CI job in `.github/workflows/ci.yml`.
 ### Step naming contract
 
 - Use concise, action-first step names that describe only the immediate operation.
-  - Good: `Run Tests`, `Install CLI Binaries`, `Write Job Summary`.
-  - Avoid: `Run tests with observability signals`, `Install CLI binaries via project script`.
+  - Good: `Run Tests`, `Run Rust verify`, `Write Job Summary`.
+  - Avoid: `Run tests with observability signals`, or embedding session/process context in the title.
 - Do not include chat/session/process context in step names.
 - Put extra context in script output, step logs, and docs, not in the step title.
 - Keep names stable across edits so AI triage can map failures to the same operation over time.
@@ -90,9 +90,8 @@ Keep failure codes low-cardinality. Current baseline set:
 ## Workflow triggers
 
 - `pull_request`: runs checks for normal review feedback.
-- `merge_group`: runs checks for merge queue validation against latest `main`.
 
-Both events are configured in `.github/workflows/ci.yml`.
+Configured in `.github/workflows/ci.yml`. Checkouts use `fetch-depth: 1` unless a job needs full history.
 
 ## Required status check for `main`
 
@@ -100,7 +99,7 @@ Set branch protection or ruleset on `main` to require:
 
 - `ci-checks`
 
-`ci-checks` is the final gate and fails when `rust-checks` or `extension-checks` fails. `rust-checks` gates Rust checks; `extension-checks` gates extension install/typecheck/lint/test/package. All gate jobs use canonical summary fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`) plus upstream outcomes.
+`ci-checks` is the final gate and fails when `rust-checks` or `extension-checks` fails. `rust-checks` gates Rust work (`rust-verify`). `extension-checks` gates extension install, typecheck, lint, test, and VSIX packaging (`extension-verify`). All gate jobs use canonical summary fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`) plus upstream outcomes.
 
 ## Path-aware execution model
 
@@ -136,24 +135,16 @@ CI first evaluates changed paths, then runs only relevant domain checks.
 
 ### Dependency model
 
-- Rust chain: `rust-fmt-clippy` + `rust-test` -> `rust-checks`
-- Extension chain: `extension-lint-typecheck` -> `extension-test` -> `extension-package` -> `extension-checks`
+- Rust chain: `rust-verify` -> `rust-checks`
+- Extension chain: `extension-verify` -> `extension-checks`
 - Top-level chain: `rust-checks` + `extension-checks` -> `ci-checks`
 
-When a domain is non-relevant, leaf jobs skip and that domain gate exits with `result=skip` while returning success. This keeps required checks deterministic for merge queue.
-
-## Merge queue settings
-
-In GitHub repository settings for `main`:
-
-1. Enable **Require merge queue**.
-2. Keep **Only merge non-failing pull requests** enabled.
-3. Keep build concurrency low for this project size (start with `1`).
+When a domain is non-relevant, leaf jobs skip and that domain gate exits with `result=skip` while returning success. This keeps the required `ci-checks` result deterministic on pull requests that touch only out-of-scope paths.
 
 ## Why this setup
 
-- Avoids duplicate CI runs from branch `push` + `pull_request`.
-- Validates merge results before integration into `main`.
+- Avoids duplicate CI runs from branch `push` + `pull_request` (workflow is PR-scoped).
+- Uses shallow clones where safe to reduce checkout time.
 - Keeps one stable required check name as the protection contract.
 
 ## Local verification flow for reliability changes

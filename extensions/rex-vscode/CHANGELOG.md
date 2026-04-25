@@ -18,5 +18,18 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Theme forwarding (light / dark / high-contrast) so the webview restyles with the editor.
 - Opt-in daemon auto-start (`rex.daemonAutoStart`): at activation or when the setting flips on, the extension spawns `rex-daemon`, polls `rex-cli status` until ready, and tears the child down on deactivate. Default remains off.
 - Integration tests for `DaemonLifecycle.ensureRunning` covering already-ready probe, failed spawn, and shutdown of a lifecycle-owned child.
-- Release pipeline `.github/workflows/extension-release.yml` triggered by `rex-vscode-vX.Y.Z` tags: builds + tests, packages a versioned VSIX, always runs `ovsx publish --dry-run`, publishes to Open VSX when `OVSX_TOKEN` is set, optionally publishes to the VS Code Marketplace when `VSCE_PAT` is set, and attaches the VSIX to a GitHub Release.
+- Release pipeline `.github/workflows/extension-release.yml` triggered by `rex-vscode-vX.Y.Z` tags: builds + tests, packages a versioned VSIX, validates it with `unzip -t` and `vsce generate-manifest`, publishes to Open VSX when `OVSX_TOKEN` is set, optionally publishes to the VS Code Marketplace when `VSCE_PAT` is set, and attaches the VSIX to a GitHub Release.
 - `docs/EXTENSION_RELEASE.md` covering install, auto-start guidance, troubleshooting, and the release checklist.
+- Repo script `scripts/install-extension.sh` for one-command local VSIX build, CLI install into Cursor or VS Code, and optional window reload after install.
+
+### Changed
+- `streamComplete`: clearer terminal-state handling for `done` / `error` and cancellation wakeups.
+- Periodic daemon refresh uses the same auto-start vs probe policy as activation.
+- Chat streaming waits for a ready daemon when `rex.daemonAutoStart` is enabled.
+
+### Fixed
+- `DaemonLifecycle.ensureRunning` serializes overlapping calls so concurrent chat or status work cannot spawn duplicate daemon children.
+- Optional `daemonEnv` merged only into the spawned `rex-daemon` process environment.
+
+### Added (tests / tooling)
+- Vitest temp dir `.vitest-tmp/` gitignored; integration tests for flaky status fixtures and ensureRunning single-flight behavior.

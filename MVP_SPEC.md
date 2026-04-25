@@ -124,6 +124,8 @@ This is the baseline for the first plugin-enabled phase after MVP.
 
 ## Manual validation checklist
 
+Use this list for end-to-end confidence before a release. For day-to-day automation, also run the Rust gate script (`./scripts/ci/test_enforce_rust_gate.sh` or the checks described in [`docs/CI.md`](docs/CI.md)) and `cd extensions/rex-vscode && npm test` when you touch the extension.
+
 - [ ] Build workspace with `cargo build --workspace`.
 - [ ] Run daemon and confirm socket exists at `/tmp/rex.sock`.
 - [ ] Run status command and validate output.

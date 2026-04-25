@@ -15,11 +15,10 @@ assert_contains() {
 }
 
 run_gate_case() {
-  local fmt_result="$1"
-  local test_result="$2"
-  local expected_exit="$3"
-  local expected_summary_line="$4"
-  local expected_signal_line="$5"
+  local verify_result="$1"
+  local expected_exit="$2"
+  local expected_summary_line="$3"
+  local expected_signal_line="$4"
 
   local tmp_dir
   tmp_dir="$(mktemp -d)"
@@ -29,8 +28,7 @@ run_gate_case() {
   local output
   set +e
   output="$(
-    FMT_RESULT="${fmt_result}" \
-    TEST_RESULT="${test_result}" \
+    RUST_VERIFY_RESULT="${verify_result}" \
     GITHUB_RUN_ID="local-test-run-id" \
     GITHUB_STEP_SUMMARY="${summary_file}" \
     bash "${GATE_SCRIPT}" 2>&1
@@ -57,8 +55,7 @@ run_gate_case() {
   rm -rf "${tmp_dir}"
 }
 
-run_gate_case "success" "success" 0 "- result: success" "::notice::All required checks passed."
-run_gate_case "failure" "success" 1 "- fail_code: GATE_FAIL" "CI_SIGNAL code=GATE_FAIL stage=PostRunSummary result=failure hint=Inspect upstream job summaries and artifacts."
-run_gate_case "success" "failure" 1 "- rust-test: failure" "CI_SIGNAL code=GATE_FAIL stage=PostRunSummary result=failure hint=Inspect upstream job summaries and artifacts."
+run_gate_case "success" 0 "- result: success" "::notice::All required checks passed."
+run_gate_case "failure" 1 "- rust-verify: failure" "CI_SIGNAL code=GATE_FAIL stage=PostRunSummary result=failure hint=Inspect upstream job summaries and artifacts."
 
 echo "enforce_rust_gate contract tests passed."

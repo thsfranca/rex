@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-fmt_result="${FMT_RESULT:-missing}"
-test_result="${TEST_RESULT:-missing}"
+verify_result="${RUST_VERIFY_RESULT:-missing}"
 rust_relevant="${RUST_RELEVANT:-true}"
 result="success"
 fail_stage="-"
@@ -29,7 +28,7 @@ if [ "${rust_relevant}" != "true" ]; then
   fail_stage="-"
   fail_code="-"
   hint="Rust checks were not relevant for this change set."
-elif [ "${fmt_result}" != "success" ] || [ "${test_result}" != "success" ]; then
+elif [ "${verify_result}" != "success" ]; then
   result="failure"
   fail_stage="PostRunSummary"
   fail_code="GATE_FAIL"
@@ -45,8 +44,7 @@ fi
   echo "- hint: ${hint}"
   echo "- run_id: ${GITHUB_RUN_ID:-unknown}"
   echo ""
-  echo "- rust-fmt-clippy: ${fmt_result}"
-  echo "- rust-test: ${test_result}"
+  echo "- rust-verify: ${verify_result}"
 } >> "$GITHUB_STEP_SUMMARY"
 
 {
@@ -54,8 +52,7 @@ fi
   echo "fail_stage=${fail_stage}"
   echo "fail_code=${fail_code}"
   echo "hint=${hint}"
-  echo "rust_fmt_clippy=${fmt_result}"
-  echo "rust_test=${test_result}"
+  echo "rust_verify=${verify_result}"
 } > "ci-observability/gate-summary.txt"
 
 if [ "${result}" != "success" ]; then

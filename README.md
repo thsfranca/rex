@@ -1,23 +1,42 @@
 # REX
 
-REX is a local AI runtime study project for macOS (Apple Silicon), built as a Rust daemon plus thin clients over gRPC/UDS.
+REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns inference and stream lifecycle, while **thin clients** (CLI, VS Code/Cursor extension, scripts) talk to it over **gRPC on a Unix domain socket**. The repo is both a **learning lab** for AI infrastructure patterns and a **small, testable reference** for how to keep editor and automation surfaces stable while the engine evolves.
 
-## Project status and scope
+## Purpose
 
-- MVP implementation is in progress.
-- Current focus: reliable local daemon-client streaming behavior.
-- Intended use: local development and architecture learning for AI runtime infrastructure.
-- Not yet in scope: MLX integration, remote networking/TLS, and production authentication.
+- **Single runtime boundary.** One long-lived process holds model/runtime policy, queueing, and shutdown semantics so every client sees the same behavior.
+- **Stable tool contract.** Scripts and editors integrate through a narrow surface (`rex-cli` today, shared protobuf types in `rex-proto`) instead of each tool embedding inference details.
+- **Streaming-first correctness.** Server-streaming RPCs, explicit terminal states (`done` / `error`), and tests around UDS races and interruption mirror what production local runtimes need before real models land.
+- **Room to grow.** Mock inference sits behind a seam intended for Apple MLX, sidecar plugins, and richer policy later—without rewriting clients first.
 
-## Why REX
+**Who it is for:** engineers studying daemon-hosted inference, gRPC streaming over UDS, and editor integration patterns; anyone building toward a personal or team **local-first** assistant on Mac.
+
+## What works today (high-value capabilities)
+
+| Capability | What it gives you |
+|---|---|
+| **gRPC + UDS** | Low-latency local transport on `/tmp/rex.sock` with generated types from one `rex.v1` contract. |
+| **Streaming completion** | `StreamInference`-style chunks with deterministic lifecycle logging on the daemon for triage. |
+| **`rex-cli`** | `status` and `complete`; human output by default, **`--format ndjson`** for one JSON event per line (`chunk`, `done`, `error`) so extensions and CI can parse streams safely. |
+| **Startup and failure behavior** | Bounded retry when the daemon is still booting; clear CLI errors for unavailable daemon, interrupted streams, and bad stream endings. |
+| **VS Code / Cursor extension** | Activity-bar chat with streaming markdown, selection-based commands, optional **daemon auto-start**, and install/release docs—see [`extensions/rex-vscode/README.md`](extensions/rex-vscode/README.md) and [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md). |
+| **Quality gates** | Workspace `cargo` checks plus UDS end-to-end tests covering failure paths, startup races, and post-interruption behavior (see [Operational checks](#operational-checks)). |
+
+## Project status
+
+- MVP implementation is **in progress**; inference is **mocked** with a clean swap-in path for MLX ([`MVP_SPEC.md`](MVP_SPEC.md)).
+- Current engineering focus: **reliable daemon–client streaming** and a **stable NDJSON contract** for the extension and other consumers.
+- Not primary scope yet: MLX-backed models, remote networking/TLS, production auth, full plugin sidecar lifecycle.
+
+## Why this shape
 
 REX keeps clients thin and centralizes model/runtime policy in one daemon boundary.
 
 | Component | Role |
 |---|---|
-| Daemon | Centralize inference, scheduling, and system policy. |
-| Clients | Keep UX thin (CLI, editor, scripts) and call one stable protocol. |
-| Protocol | Use gRPC over UDS for local, low-latency communication. |
+| Daemon | Own inference orchestration, stream lifecycle, and future scheduling and system policy. |
+| Clients | Own UX only (terminal, editor, scripts) and speak one protocol. |
+| Protocol | gRPC over UDS for typed, local, low-latency calls. |
 
 ## Quickstart
 
@@ -49,8 +68,15 @@ This verifies status, server-streaming behavior, and extension-consumable NDJSON
 
 4) (Optional) Install the REX VS Code / Cursor extension:
 
-- Package a VSIX locally: `cd extensions/rex-vscode && npm install && npm run package`, then run `Extensions: Install from VSIX...` in your editor.
-- Or download the VSIX from a `rex-vscode-vX.Y.Z` GitHub Release.
+```bash
+chmod +x ./scripts/install-extension.sh
+./scripts/install-extension.sh
+```
+
+This builds `extensions/rex-vscode`, packages `rex-vscode.vsix`, installs it with the `cursor` or `code` CLI (auto-detects the host when you run it from an integrated terminal), and requests **Developer: Reload Window** on the last active window. Use `./scripts/install-extension.sh --help` for flags (`--verify`, `--editor vscode`, `--no-reload`, and so on).
+
+- Manual path: `cd extensions/rex-vscode && npm install && npm run package`, then **Extensions: Install from VSIX...**
+- Release VSIX: download from a `rex-vscode-vX.Y.Z` GitHub Release.
 - Set `"rex.daemonAutoStart": true` if you want the extension to spawn `rex-daemon` on activation. See [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) for install, auto-start, and troubleshooting details.
 
 ## Operational checks
@@ -99,17 +125,17 @@ source ~/.zshrc
 ## MVP boundaries
 
 In scope now:
-- local daemon-client communication over UDS;
-- unary status RPC and server-streaming completion RPC;
-- mock inference and shutdown lifecycle reliability.
 
-Out of scope now:
-- Apple MLX runtime integration;
-- full plugin lifecycle implementation;
-- editor extension integration;
-- remote networking, TLS, and production authentication.
+- Local daemon–client communication over UDS.
+- Unary status RPC and server-streaming completion RPC.
+- Mock inference and shutdown lifecycle reliability.
+- **Editor path:** the VS Code/Cursor extension consumes **`rex-cli`** (including NDJSON streaming); the daemon does not host editor-specific RPCs.
 
-For full scope details, see [`MVP_SPEC.md`](MVP_SPEC.md).
+Out of scope for Phase 1 (see [`MVP_SPEC.md`](MVP_SPEC.md)):
+
+- Apple MLX runtime integration.
+- Full plugin sidecar lifecycle in the daemon.
+- Remote networking, TLS, and production authentication.
 
 ## Documentation map
 
@@ -133,6 +159,7 @@ For full scope details, see [`MVP_SPEC.md`](MVP_SPEC.md).
 - `rex-proto`: protobuf/gRPC contract generation (`rex.v1`).
 - `rex-daemon`: daemon runtime with status and mock streaming RPCs over UDS.
 - `rex-cli`: thin client with `status` and `complete` commands.
+- `extensions/rex-vscode`: VS Code/Cursor extension (chat UI, `rex-cli` integration, optional daemon auto-start).
 
 ## Contributing and validation baseline
 

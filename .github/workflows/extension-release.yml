@@ -15,6 +15,9 @@ concurrency:
   group: extension-release-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   package:
     name: Build and package VSIX
@@ -26,6 +29,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -85,7 +90,7 @@ jobs:
           set -euo pipefail
           npm run build
           vsix_name="rex-vscode-${VERSION}.vsix"
-          npx --no-install vsce package --no-dependencies --out "${vsix_name}"
+          SKIP_VSCE_PREPUBLISH=1 npx --no-install vsce package --no-dependencies --out "${vsix_name}"
           echo "vsix_path=extensions/rex-vscode/${vsix_name}" >> "$GITHUB_OUTPUT"
           ls -la "${vsix_name}"
 
@@ -103,12 +108,11 @@ jobs:
     if: ${{ github.event_name == 'push' || inputs.dry_run != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      OVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
-      VSCE_PAT: ${{ secrets.VSCE_PAT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -142,34 +146,34 @@ jobs:
           fi
           echo "path=${vsix_name}" >> "$GITHUB_OUTPUT"
 
-      - name: Open VSX publish (dry-run)
+      - name: Validate VSIX (Open VSX has no publish dry-run; use archive + manifest checks)
         working-directory: extensions/rex-vscode
         env:
           VSIX_PATH: ${{ steps.vsix.outputs.path }}
         run: |
           set -euo pipefail
-          echo "running ovsx publish in dry-run mode"
-          npx --no-install ovsx publish "${VSIX_PATH}" --dry-run
+          unzip -t "${VSIX_PATH}"
+          npx --no-install vsce generate-manifest --packagePath "${VSIX_PATH}" -o /tmp/rex-vsix-manifest.json
 
-      - name: Open VSX publish (real)
-        if: ${{ env.OVSX_TOKEN != '' }}
+      - name: Open VSX publish (optional)
+        if: ${{ secrets.OVSX_TOKEN != '' }}
         working-directory: extensions/rex-vscode
         env:
           VSIX_PATH: ${{ steps.vsix.outputs.path }}
         run: |
           set -euo pipefail
           echo "publishing to Open VSX"
-          npx --no-install ovsx publish "${VSIX_PATH}" --pat "${OVSX_TOKEN}"
+          npx --no-install ovsx publish "${VSIX_PATH}" --pat "${{ secrets.OVSX_TOKEN }}"
 
       - name: VS Code Marketplace publish (optional)
-        if: ${{ env.VSCE_PAT != '' }}
+        if: ${{ secrets.VSCE_PAT != '' }}
         working-directory: extensions/rex-vscode
         env:
           VSIX_PATH: ${{ steps.vsix.outputs.path }}
         run: |
           set -euo pipefail
           echo "publishing to VS Code Marketplace"
-          npx --no-install vsce publish --packagePath "${VSIX_PATH}" --pat "${VSCE_PAT}"
+          npx --no-install vsce publish --packagePath "${VSIX_PATH}" --pat "${{ secrets.VSCE_PAT }}"
 
       - name: Create GitHub Release
         if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}

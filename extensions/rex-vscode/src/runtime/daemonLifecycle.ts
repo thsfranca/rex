@@ -15,6 +15,10 @@ export interface DaemonLifecycleOptions {
   readonly cli: CliBridgeOptions;
   readonly daemonBinaryPath: string;
   /**
+   * Merged into `process.env` for the spawned `rex-daemon` child only (not for CLI status calls).
+   */
+  readonly daemonEnv?: Readonly<Record<string, string>>;
+  /**
    * Total time budget when waiting for the daemon to become ready during
    * auto-start. Defaults to 10 seconds.
    */
@@ -36,6 +40,8 @@ const DEFAULT_POLL_INTERVAL_MS = 250;
 export class DaemonLifecycle {
   private options: DaemonLifecycleOptions;
   private ownedChild: DaemonChildProcess | undefined;
+  /** Serialized concurrent `ensureRunning` calls so only one spawn runs at a time. */
+  private ensureRunningInFlight: Promise<DaemonLifecycleState> | undefined;
   private lastState: DaemonLifecycleState = {
     kind: "unavailable",
     reason: "not probed yet",
@@ -66,8 +72,25 @@ export class DaemonLifecycle {
    * Spawn `rex-daemon` and poll `rex-cli status` until ready or the timeout
    * elapses. Caller owns the lifecycle result; failures return `unavailable`
    * with a reason.
+   *
+   * Concurrent callers share one in-flight operation so two overlapping calls
+   * cannot spawn duplicate daemon processes.
    */
   async ensureRunning(signal?: AbortSignal): Promise<DaemonLifecycleState> {
+    if (this.ensureRunningInFlight !== undefined) {
+      return this.ensureRunningInFlight;
+    }
+    const run = this.ensureRunningUnserialized(signal);
+    const chained = run.finally(() => {
+      if (this.ensureRunningInFlight === chained) {
+        this.ensureRunningInFlight = undefined;
+      }
+    });
+    this.ensureRunningInFlight = chained;
+    return chained;
+  }
+
+  private async ensureRunningUnserialized(signal?: AbortSignal): Promise<DaemonLifecycleState> {
     const probeState = await this.probe(signal);
     if (probeState.kind === "ready") {
       return probeState;
@@ -103,9 +126,14 @@ export class DaemonLifecycle {
   private async startAndWait(signal?: AbortSignal): Promise<DaemonLifecycleState> {
     this.transition({ kind: "starting" });
     try {
+      const daemonEnv =
+        this.options.daemonEnv !== undefined
+          ? { ...process.env, ...this.options.daemonEnv }
+          : process.env;
       this.ownedChild = spawn(this.options.daemonBinaryPath, [], {
         stdio: ["ignore", "pipe", "pipe"],
         detached: false,
+        env: daemonEnv,
       });
     } catch (err) {
       this.transition({

@@ -1,5 +1,6 @@
 .vscode/**
 .vscode-test/**
+.vitest-tmp/**
 out/**
 out-webview/**
 node_modules/**
