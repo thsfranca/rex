@@ -1,0 +1,13 @@
+[package]
+name = "rex-proto"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+tonic.workspace = true
+prost.workspace = true
+
+[build-dependencies]
+tonic-build = "0.12"
