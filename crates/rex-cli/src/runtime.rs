@@ -91,7 +91,7 @@ async fn run_complete(prompt: String, format: CompleteOutputFormat) -> Result<()
         let lifecycle = consume_stream(&mut stream, format).await?;
         return match lifecycle {
             StreamLifecycle::Completed => Ok(()),
-            StreamLifecycle::Cancelled => Err(CliError::StreamIncomplete),
+            StreamLifecycle::Incomplete => Err(CliError::StreamIncomplete),
         };
     }
 }
@@ -124,9 +124,13 @@ async fn consume_stream(
             _ => CliError::StreamInterrupted,
         })?;
 
-        let Some(chunk) = maybe_chunk else {
-            return Ok(StreamLifecycle::Cancelled);
-        };
+        if matches!(
+            classify_stream_terminal(maybe_chunk.as_ref()),
+            Some(StreamLifecycle::Incomplete)
+        ) {
+            return Ok(StreamLifecycle::Incomplete);
+        }
+        let chunk = maybe_chunk.expect("incomplete stream should return early");
 
         if !chunk.text.is_empty() {
             match format {
@@ -145,6 +149,16 @@ async fn consume_stream(
             }
             return Ok(StreamLifecycle::Completed);
         }
+    }
+}
+
+fn classify_stream_terminal(
+    maybe_chunk: Option<&rex_proto::rex::v1::StreamInferenceResponse>,
+) -> Option<StreamLifecycle> {
+    match maybe_chunk {
+        None => Some(StreamLifecycle::Incomplete),
+        Some(chunk) if chunk.done => Some(StreamLifecycle::Completed),
+        Some(_) => None,
     }
 }
 
@@ -189,10 +203,12 @@ impl CliCommand {
 #[cfg(test)]
 mod tests {
     use super::{
-        format_ndjson_chunk_event, format_ndjson_done_event, format_ndjson_error_event,
-        should_retry_stream_start,
+        classify_stream_terminal, format_ndjson_chunk_event, format_ndjson_done_event,
+        format_ndjson_error_event, should_retry_stream_start,
     };
+    use crate::domain::StreamLifecycle;
     use crate::error::CliError;
+    use rex_proto::rex::v1::StreamInferenceResponse;
 
     #[test]
     fn retry_policy_only_retries_daemon_unavailable_within_budget() {
@@ -226,6 +242,30 @@ mod tests {
         assert_eq!(
             format_ndjson_error_event("boom".to_string()),
             r#"{"event":"error","message":"boom"}"#
+        );
+    }
+
+    #[test]
+    fn stream_terminal_classification_is_deterministic() {
+        let in_progress = StreamInferenceResponse {
+            text: "x".to_string(),
+            index: 0,
+            done: false,
+        };
+        assert_eq!(classify_stream_terminal(Some(&in_progress)), None);
+        assert_eq!(
+            classify_stream_terminal(None),
+            Some(StreamLifecycle::Incomplete)
+        );
+
+        let terminal = StreamInferenceResponse {
+            text: String::new(),
+            index: 1,
+            done: true,
+        };
+        assert_eq!(
+            classify_stream_terminal(Some(&terminal)),
+            Some(StreamLifecycle::Completed)
         );
     }
 }
