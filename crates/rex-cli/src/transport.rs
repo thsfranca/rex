@@ -18,11 +18,7 @@ pub async fn connect_client() -> Result<RexServiceClient<tonic::transport::Chann
         }))
         .await
         .map_err(|source| {
-            let message = source.to_string();
-            if message.contains("No such file")
-                || message.contains("Connection refused")
-                || message.contains("connection refused")
-            {
+            if is_daemon_unavailable_error(&source.to_string()) {
                 CliError::DaemonUnavailable {
                     socket_path: SOCKET_PATH.to_string(),
                 }
@@ -35,4 +31,36 @@ pub async fn connect_client() -> Result<RexServiceClient<tonic::transport::Chann
         })?;
 
     Ok(RexServiceClient::new(channel))
+}
+
+fn is_daemon_unavailable_error(message: &str) -> bool {
+    let message = message.to_ascii_lowercase();
+    message.contains("no such file")
+        || message.contains("os error 2")
+        || message.contains("connection refused")
+        || message.contains("not connected")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_daemon_unavailable_error;
+
+    #[test]
+    fn unavailable_detection_covers_missing_socket_paths() {
+        assert!(is_daemon_unavailable_error(
+            "No such file or directory (os error 2)"
+        ));
+    }
+
+    #[test]
+    fn unavailable_detection_covers_connection_refused() {
+        assert!(is_daemon_unavailable_error(
+            "transport error: Connection refused"
+        ));
+    }
+
+    #[test]
+    fn unavailable_detection_ignores_unrelated_transport_errors() {
+        assert!(!is_daemon_unavailable_error("invalid URI format"));
+    }
 }
