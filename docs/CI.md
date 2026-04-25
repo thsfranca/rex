@@ -74,12 +74,19 @@ Keep failure codes low-cardinality. Current baseline set:
 - `TEST_FAIL`
 - `ENV_SETUP_FAIL`
 - `GATE_FAIL`
+- `NPM_CI_FAIL` (extension dependency install)
+- `TYPECHECK_FAIL` (extension TypeScript typecheck)
+- `LINT_FAIL` (extension ESLint)
+- `BUILD_FAIL` (extension esbuild bundle)
+- `PACKAGE_FAIL` (extension VSIX packaging)
 
 ### Reliability guardrails
 
 - Set `timeout-minutes` per job.
 - Keep `concurrency.cancel-in-progress: true`.
-- Keep `rust-checks` as the single required protection check.
+- Required protection checks:
+  - `rust-checks` - gate for Rust toolchain (format, clippy, tests).
+  - `extension-checks` - gate for the VS Code/Cursor extension (typecheck, lint, tests, package).
 
 ## Workflow triggers
 
@@ -93,9 +100,9 @@ Both events are configured in `.github/workflows/ci.yml`.
 Set branch protection or ruleset on `main` to require:
 
 - `rust-checks`
+- `extension-checks`
 
-`rust-checks` is the final gate job and fails when any required upstream CI job fails.
-The gate summary includes canonical fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`) plus upstream job outcomes.
+`rust-checks` is the Rust gate job and fails when any required upstream Rust job fails. `extension-checks` is a self-contained job that installs, typechecks, lints, tests, and packages the VS Code/Cursor extension in `extensions/rex-vscode/`. Both gates use the canonical summary fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`).
 
 ## Merge queue settings
 
