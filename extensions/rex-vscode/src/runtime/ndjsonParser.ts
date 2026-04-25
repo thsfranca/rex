@@ -26,9 +26,20 @@ export interface StreamDoneEvent {
 export interface StreamErrorEvent {
   readonly kind: "error";
   readonly message: string;
+  readonly code?: StreamErrorCode;
 }
 
 export type StreamEvent = StreamChunkEvent | StreamDoneEvent | StreamErrorEvent;
+
+export type StreamErrorCode =
+  | "daemon_unavailable"
+  | "stream_timeout"
+  | "stream_interrupted"
+  | "stream_incomplete"
+  | "cancelled"
+  | "invalid_response"
+  | "spawn_failed"
+  | "unknown";
 
 export class NdjsonLineParser {
   private buffer = "";
@@ -107,12 +118,32 @@ function parseLine(raw: string): StreamEvent | undefined {
       typeof parsed["message"] === "string" && parsed["message"].length > 0
         ? parsed["message"]
         : "unknown error";
-    return { kind: "error", message };
+    const code = asErrorCode(parsed["code"]);
+    return { kind: "error", message, ...(code === undefined ? {} : { code }) };
   }
   return {
     kind: "error",
     message: `Unknown NDJSON event type: ${JSON.stringify(event)}`,
   };
+}
+
+function asErrorCode(value: unknown): StreamErrorCode | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  if (
+    value === "daemon_unavailable" ||
+    value === "stream_timeout" ||
+    value === "stream_interrupted" ||
+    value === "stream_incomplete" ||
+    value === "cancelled" ||
+    value === "invalid_response" ||
+    value === "spawn_failed" ||
+    value === "unknown"
+  ) {
+    return value;
+  }
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

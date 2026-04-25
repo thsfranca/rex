@@ -1,9 +1,19 @@
 import { spawnCompleteStream, type CliBridgeOptions } from "./cliBridge";
 import { NdjsonLineParser, type StreamEvent } from "./ndjsonParser";
+import { classifyStreamError, classifyStreamErrorMessage } from "./errorTaxonomy";
+import { appendCliExecutableNotFoundHint } from "./spawnExecutableHints";
 
 export interface StreamRequest {
   readonly prompt: string;
   readonly signal?: AbortSignal;
+  readonly onLifecycle?: (event: StreamLifecycleEvent) => void;
+}
+
+export interface StreamLifecycleEvent {
+  readonly traceId: string;
+  readonly phase: "start" | "terminal";
+  readonly terminalCode?: string;
+  readonly elapsedMs?: number;
 }
 
 /**
@@ -20,7 +30,10 @@ export async function* streamComplete(
   options: CliBridgeOptions,
   request: StreamRequest,
 ): AsyncIterable<StreamEvent> {
-  const { child, dispose } = spawnCompleteStream(options, request.prompt);
+  const traceId = createTraceId();
+  const startedAt = Date.now();
+  request.onLifecycle?.({ traceId, phase: "start" });
+  const { child, dispose } = spawnCompleteStream(options, request.prompt, traceId);
   const parser = new NdjsonLineParser();
   const queue: StreamEvent[] = [];
   let pendingResolve: (() => void) | undefined;
@@ -36,9 +49,23 @@ export async function* streamComplete(
     if (terminalEvent !== undefined) {
       return;
     }
+    if (event.kind === "error") {
+      const classified = classifyStreamError(event);
+      event = {
+        kind: "error",
+        message: classified.message,
+        code: classified.code,
+      };
+    }
     queue.push(event);
     if (event.kind === "done" || event.kind === "error") {
       terminalEvent = event;
+      request.onLifecycle?.({
+        traceId,
+        phase: "terminal",
+        terminalCode: event.kind === "done" ? "done" : event.code ?? "unknown",
+        elapsedMs: Date.now() - startedAt,
+      });
     }
     wakeConsumer();
   };
@@ -56,7 +83,7 @@ export async function* streamComplete(
 
   const signalListener = () => {
     dispose();
-    pushEvent({ kind: "error", message: "cancelled" });
+    pushEvent({ kind: "error", message: "cancelled", code: "cancelled" });
   };
   request.signal?.addEventListener("abort", signalListener, { once: true });
   if (request.signal?.aborted) {
@@ -86,9 +113,10 @@ export async function* streamComplete(
   });
 
   child.once("error", (err) => {
+    const base = `failed to spawn rex-cli: ${err instanceof Error ? err.message : String(err)}`;
     pushEvent({
       kind: "error",
-      message: `failed to spawn rex-cli: ${err.message}`,
+      message: appendCliExecutableNotFoundHint(err, base),
     });
   });
 
@@ -108,7 +136,8 @@ export async function* streamComplete(
         code === 0
           ? "stream ended without terminal event"
           : `rex-cli exited with code ${code}${stderrTrim.length > 0 ? `: ${stderrTrim}` : ""}`;
-      pushEvent({ kind: "error", message });
+      const classified = classifyStreamErrorMessage(message);
+      pushEvent({ kind: "error", message, code: classified.code });
     }
     wakeConsumer();
   });
@@ -133,4 +162,9 @@ export async function* streamComplete(
   } finally {
     cleanup();
   }
+}
+
+function createTraceId(): string {
+  const random = Math.random().toString(36).slice(2, 10);
+  return `rex-${Date.now().toString(36)}-${random}`;
 }

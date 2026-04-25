@@ -69,12 +69,14 @@ This verifies status, server-streaming behavior, and extension-consumable NDJSON
 4) (Optional) Install the REX VS Code / Cursor extension:
 
 ```bash
-chmod +x ./scripts/install-extension.sh
-./scripts/install-extension.sh
+chmod +x ./scripts/dev-rex-extension.sh
+./scripts/dev-rex-extension.sh
 ```
 
-This builds `extensions/rex-vscode`, packages `rex-vscode.vsix`, installs it with the `cursor` or `code` CLI (auto-detects the host when you run it from an integrated terminal), and requests **Developer: Reload Window** on the last active window. Use `./scripts/install-extension.sh --help` for flags (`--verify`, `--editor vscode`, `--no-reload`, and so on).
+This runs `cargo build --workspace`, installs `rex-cli` / `rex-daemon` via [`scripts/install-cli.sh`](scripts/install-cli.sh), then runs [`scripts/install-extension.sh`](scripts/install-extension.sh): it builds `extensions/rex-vscode`, packages `rex-vscode.vsix`, installs it with the `cursor` or `code` CLI (auto-detects the host when you run it from an integrated terminal), and requests **Developer: Reload Window** on the last active window. Pass flags through to the installer, for example `./scripts/dev-rex-extension.sh --verify`. Use `./scripts/install-extension.sh --help` for installer flags (`--verify`, `--editor vscode`, `--no-reload`, and so on). The dev script does **not** start `rex-daemon`; use step 2 above or auto-start as in the E2E doc.
 
+- **Full checklist** (daemon, editor `PATH`, verification): [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md).
+- Extension-only: `chmod +x ./scripts/install-extension.sh && ./scripts/install-extension.sh`.
 - Manual path: `cd extensions/rex-vscode && npm install && npm run package`, then **Extensions: Install from VSIX...**
 - Release VSIX: download from a `rex-vscode-vX.Y.Z` GitHub Release.
 - Set `"rex.daemonAutoStart": true` if you want the extension to spawn `rex-daemon` on activation. See [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) for install, auto-start, and troubleshooting details.

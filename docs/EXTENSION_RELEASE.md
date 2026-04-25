@@ -9,6 +9,8 @@ This document covers the end-to-end lifecycle for the `extensions/rex-vscode` pa
 
 ## Install
 
+For a single ordered path from **clone** to **REX ready** in the editor (including Rust build, `PATH` notes, and daemon steps), see [`EXTENSION_LOCAL_E2E.md`](./EXTENSION_LOCAL_E2E.md).
+
 Prerequisites:
 
 - VS Code `>= 1.90` (or a recent Cursor build with a compatible VS Code engine).
