@@ -122,12 +122,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (resources === undefined) {
         return;
       }
+      const previousLifecycle = resources.lifecycle;
       resources.settings = updated;
       resources.lifecycle = buildLifecycle(updated, statusBar, output, (state) => {
         lastLifecycleState = state;
         chatPanel.broadcastDaemonState(state);
       });
-      void resources.lifecycle.probe();
+      void previousLifecycle.shutdown().catch(() => undefined);
+      if (updated.daemonAutoStart) {
+        void resources.lifecycle.ensureRunning();
+      } else {
+        void resources.lifecycle.probe();
+      }
     }),
   );
 
@@ -141,7 +147,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   await activateCursorAdapter(context, (message) => output.appendLine(`[cursor] ${message}`));
 
-  void lifecycle.probe();
+  if (settings.daemonAutoStart) {
+    output.appendLine("[activate] daemonAutoStart=true -> ensuring daemon is running");
+    void lifecycle.ensureRunning().then((state) => {
+      output.appendLine(`[activate] auto-start result -> ${describeState(state)}`);
+    });
+  } else {
+    void lifecycle.probe();
+  }
   resources.probeTimer = setInterval(() => {
     void resources?.lifecycle.probe();
   }, PROBE_INTERVAL_MS);

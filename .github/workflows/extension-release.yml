@@ -1,0 +1,182 @@
+name: Extension Release
+
+on:
+  push:
+    tags:
+      - "rex-vscode-v*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build + package only; skip publish"
+        required: false
+        default: "true"
+
+concurrency:
+  group: extension-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Build and package VSIX
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.resolve_version.outputs.version }}
+      vsix_path: ${{ steps.build.outputs.vsix_path }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: extensions/rex-vscode/package-lock.json
+
+      - name: Resolve version
+        id: resolve_version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          set -euo pipefail
+          if [[ "${REF_TYPE}" == "tag" && "${REF_NAME}" == rex-vscode-v* ]]; then
+            version="${REF_NAME#rex-vscode-v}"
+          else
+            version="$(node -p "require('./extensions/rex-vscode/package.json').version")"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "resolved version: ${version}"
+
+      - name: Verify package.json matches tag
+        if: ${{ github.ref_type == 'tag' }}
+        working-directory: extensions/rex-vscode
+        env:
+          TAG_VERSION: ${{ steps.resolve_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          pkg_version="$(node -p "require('./package.json').version")"
+          if [[ "${pkg_version}" != "${TAG_VERSION}" ]]; then
+            echo "package.json version (${pkg_version}) does not match tag (${TAG_VERSION})" >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        working-directory: extensions/rex-vscode
+        run: npm ci
+
+      - name: Lint + typecheck
+        working-directory: extensions/rex-vscode
+        run: |
+          npm run lint
+          npm run typecheck
+
+      - name: Unit tests
+        working-directory: extensions/rex-vscode
+        run: npm test
+
+      - name: Package VSIX
+        id: build
+        working-directory: extensions/rex-vscode
+        env:
+          VERSION: ${{ steps.resolve_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          npm run build
+          vsix_name="rex-vscode-${VERSION}.vsix"
+          npx --no-install vsce package --no-dependencies --out "${vsix_name}"
+          echo "vsix_path=extensions/rex-vscode/${vsix_name}" >> "$GITHUB_OUTPUT"
+          ls -la "${vsix_name}"
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rex-vscode-vsix-${{ steps.resolve_version.outputs.version }}
+          path: ${{ steps.build.outputs.vsix_path }}
+          retention-days: 30
+          if-no-files-found: error
+
+  publish:
+    name: Publish to Open VSX and (optionally) VS Code Marketplace
+    needs: [package]
+    if: ${{ github.event_name == 'push' || inputs.dry_run != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: extensions/rex-vscode/package-lock.json
+
+      - name: Download VSIX artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rex-vscode-vsix-${{ needs.package.outputs.version }}
+          path: extensions/rex-vscode
+
+      - name: Install dependencies
+        working-directory: extensions/rex-vscode
+        run: npm ci
+
+      - name: Resolve VSIX path
+        id: vsix
+        working-directory: extensions/rex-vscode
+        env:
+          VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          set -euo pipefail
+          vsix_name="rex-vscode-${VERSION}.vsix"
+          if [[ ! -f "${vsix_name}" ]]; then
+            echo "expected VSIX ${vsix_name} not found" >&2
+            ls -la
+            exit 1
+          fi
+          echo "path=${vsix_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Open VSX publish (dry-run)
+        working-directory: extensions/rex-vscode
+        env:
+          VSIX_PATH: ${{ steps.vsix.outputs.path }}
+        run: |
+          set -euo pipefail
+          echo "running ovsx publish in dry-run mode"
+          npx --no-install ovsx publish "${VSIX_PATH}" --dry-run
+
+      - name: Open VSX publish (real)
+        if: ${{ env.OVSX_TOKEN != '' }}
+        working-directory: extensions/rex-vscode
+        env:
+          VSIX_PATH: ${{ steps.vsix.outputs.path }}
+        run: |
+          set -euo pipefail
+          echo "publishing to Open VSX"
+          npx --no-install ovsx publish "${VSIX_PATH}" --pat "${OVSX_TOKEN}"
+
+      - name: VS Code Marketplace publish (optional)
+        if: ${{ env.VSCE_PAT != '' }}
+        working-directory: extensions/rex-vscode
+        env:
+          VSIX_PATH: ${{ steps.vsix.outputs.path }}
+        run: |
+          set -euo pipefail
+          echo "publishing to VS Code Marketplace"
+          npx --no-install vsce publish --packagePath "${VSIX_PATH}" --pat "${VSCE_PAT}"
+
+      - name: Create GitHub Release
+        if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          name: REX Extension ${{ needs.package.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          files: extensions/rex-vscode/${{ steps.vsix.outputs.path }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
