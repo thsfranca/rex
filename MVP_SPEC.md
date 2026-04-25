@@ -4,8 +4,8 @@ This document defines the first shippable slice for REX.
 
 ## MVP goal
 
-- Prove local daemon-client communication over UDS.
-- Prove server-streaming behavior through gRPC.
+- Deliver one usable and testable local completion feature that a Cursor extension can consume.
+- Prove local daemon-client communication over UDS and server-streaming behavior through gRPC.
 - Keep inference mocked, with a clean seam for MLX integration later.
 
 ## In scope
@@ -17,6 +17,8 @@ This document defines the first shippable slice for REX.
 | Protocol | `rex.v1` package with status and streaming RPCs. |
 | Mock inference | Token/chunk streaming with small delays. |
 | Shutdown lifecycle | Graceful termination and socket cleanup. |
+| Extension-facing contract | CLI `complete` supports machine-readable stream output for editor integration. |
+| Startup reliability | CLI retries bounded daemon-unavailable startup races before failing. |
 
 ## Out of scope
 
@@ -50,6 +52,23 @@ This document defines the first shippable slice for REX.
 |---|---|
 | `rex-cli status` | Print status from `GetSystemStatus`. |
 | `rex-cli complete "<prompt>"` | Render streamed chunks until final done chunk. |
+| `rex-cli complete "<prompt>" --format ndjson` | Emit one NDJSON event per stream step (`chunk`, `done`, `error`). |
+
+## Extension consumer contract (MVP)
+
+Cursor extension work in MVP uses the CLI boundary first.
+
+| Event | Required fields | Meaning |
+|---|---|---|
+| `chunk` | `event`, `index`, `text` | Streamed output chunk. |
+| `done` | `event`, `index` | Terminal success marker. |
+| `error` | `event`, `message` | Terminal failure marker. |
+
+Contract rules:
+
+- CLI emits one JSON object per line in `ndjson` mode.
+- Stream must end with exactly one terminal event (`done` or `error`).
+- CLI keeps default human-readable output when `--format` is omitted.
 
 ## Plugin approach decision (post-MVP)
 
@@ -97,8 +116,11 @@ This is the baseline for the first plugin-enabled phase after MVP.
 1. CLI connects to daemon through `/tmp/rex.sock`.
 2. `GetSystemStatus` returns valid data.
 3. `StreamInference` returns multiple chunks and terminates correctly.
-4. Daemon shutdown removes socket file.
-5. CLI fails clearly when daemon is unavailable.
+4. `rex-cli complete --format ndjson` emits parseable `chunk` and terminal events.
+5. CLI handles short daemon startup races with bounded retry behavior.
+6. Daemon shutdown removes socket file.
+7. CLI fails clearly when daemon is unavailable.
+8. Cursor-extension bootstrap path can consume streaming completion via CLI contract.
 
 ## Manual validation checklist
 
@@ -106,8 +128,10 @@ This is the baseline for the first plugin-enabled phase after MVP.
 - [ ] Run daemon and confirm socket exists at `/tmp/rex.sock`.
 - [ ] Run status command and validate output.
 - [ ] Run streaming command and verify incremental output.
+- [ ] Run `rex-cli complete "<prompt>" --format ndjson` and confirm `chunk` then terminal event (`done` or `error`).
 - [ ] Stop daemon and confirm socket cleanup.
 - [ ] Restart daemon and confirm clean bind.
+- [ ] Verify bounded startup race handling by running `complete` while daemon starts.
 
 ## Recommended repository structure for MVP
 
@@ -120,7 +144,8 @@ This is the baseline for the first plugin-enabled phase after MVP.
 ├── docs/
 │   ├── README.md
 │   ├── DOCUMENTATION.md
-│   └── DEPENDENCIES.md
+│   ├── DEPENDENCIES.md
+│   └── EXTENSION_MVP.md
 ├── proto/rex/v1/rex.proto
 └── crates/
     ├── rex-proto/

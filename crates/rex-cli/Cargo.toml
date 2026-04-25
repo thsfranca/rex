@@ -12,3 +12,4 @@ tower = "0.5"
 hyper-util = { version = "0.1", features = ["tokio"] }
 rex-proto = { path = "../rex-proto" }
 thiserror = "2"
+serde_json = "1"

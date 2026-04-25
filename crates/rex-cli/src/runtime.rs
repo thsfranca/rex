@@ -2,23 +2,34 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use rex_proto::rex::v1::{GetSystemStatusRequest, StreamInferenceRequest};
-use tokio::time::timeout;
+use serde_json::json;
+use tokio::time::{sleep, timeout};
 use tonic::Code;
 
-use crate::command::{parse_command, print_usage, CliCommand};
-use crate::domain::{StreamLifecycle, REQUEST_TIMEOUT_SECONDS, STREAM_ITEM_TIMEOUT_SECONDS};
+use crate::command::{parse_command, print_usage, CliCommand, CompleteOutputFormat};
+use crate::domain::{
+    StreamLifecycle, REQUEST_TIMEOUT_SECONDS, STREAM_ITEM_TIMEOUT_SECONDS,
+    STREAM_START_RETRY_ATTEMPTS, STREAM_START_RETRY_DELAY_MS,
+};
 use crate::error::CliError;
 use crate::transport::connect_client;
 
 pub async fn run_cli(args: impl Iterator<Item = String>) -> ExitCode {
     match parse_command(args) {
-        Ok(command) => match execute(command).await {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(err) => {
-                eprintln!("Error: {err}");
-                ExitCode::from(1)
+        Ok(command) => {
+            let complete_format = command.output_format();
+            match execute(command).await {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(err) => {
+                    if matches!(complete_format, Some(CompleteOutputFormat::Ndjson)) {
+                        println!("{}", format_ndjson_error_event(err.to_string()));
+                    } else {
+                        eprintln!("Error: {err}");
+                    }
+                    ExitCode::from(1)
+                }
             }
-        },
+        }
         Err(message) => {
             eprintln!("{message}");
             print_usage();
@@ -30,7 +41,7 @@ pub async fn run_cli(args: impl Iterator<Item = String>) -> ExitCode {
 async fn execute(command: CliCommand) -> Result<(), CliError> {
     match command {
         CliCommand::Status => run_status().await,
-        CliCommand::Complete { prompt } => run_complete(prompt).await,
+        CliCommand::Complete { prompt, format } => run_complete(prompt, format).await,
     }
 }
 
@@ -47,19 +58,41 @@ async fn run_status() -> Result<(), CliError> {
     Ok(())
 }
 
-async fn run_complete(prompt: String) -> Result<(), CliError> {
-    let mut client = connect_client().await?;
-    let mut request = tonic::Request::new(StreamInferenceRequest { prompt });
-    request.set_timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS));
-    let response = client
-        .stream_inference(request)
-        .await
-        .map_err(map_status_error)?;
-    let mut stream = response.into_inner();
-    let lifecycle = consume_stream(&mut stream).await?;
-    match lifecycle {
-        StreamLifecycle::Completed => Ok(()),
-        StreamLifecycle::Cancelled => Err(CliError::StreamIncomplete),
+async fn run_complete(prompt: String, format: CompleteOutputFormat) -> Result<(), CliError> {
+    let mut attempt: u32 = 0;
+    loop {
+        let mut client = match connect_client().await {
+            Ok(client) => client,
+            Err(err) if should_retry_stream_start(&err, attempt) => {
+                attempt += 1;
+                sleep(Duration::from_millis(STREAM_START_RETRY_DELAY_MS)).await;
+                continue;
+            }
+            Err(err) => return Err(err),
+        };
+        let mut request = tonic::Request::new(StreamInferenceRequest {
+            prompt: prompt.clone(),
+        });
+        request.set_timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS));
+        let response = match client
+            .stream_inference(request)
+            .await
+            .map_err(map_status_error)
+        {
+            Ok(response) => response,
+            Err(err) if should_retry_stream_start(&err, attempt) => {
+                attempt += 1;
+                sleep(Duration::from_millis(STREAM_START_RETRY_DELAY_MS)).await;
+                continue;
+            }
+            Err(err) => return Err(err),
+        };
+        let mut stream = response.into_inner();
+        let lifecycle = consume_stream(&mut stream, format).await?;
+        return match lifecycle {
+            StreamLifecycle::Completed => Ok(()),
+            StreamLifecycle::Cancelled => Err(CliError::StreamIncomplete),
+        };
     }
 }
 
@@ -74,6 +107,7 @@ fn map_status_error(status: tonic::Status) -> CliError {
 
 async fn consume_stream(
     stream: &mut tonic::Streaming<rex_proto::rex::v1::StreamInferenceResponse>,
+    format: CompleteOutputFormat,
 ) -> Result<StreamLifecycle, CliError> {
     loop {
         let next = timeout(
@@ -95,11 +129,103 @@ async fn consume_stream(
         };
 
         if !chunk.text.is_empty() {
-            print!("{}", chunk.text);
+            match format {
+                CompleteOutputFormat::Text => print!("{}", chunk.text),
+                CompleteOutputFormat::Ndjson => {
+                    println!("{}", format_ndjson_chunk_event(chunk.index, &chunk.text));
+                }
+            }
         }
         if chunk.done {
-            println!();
+            match format {
+                CompleteOutputFormat::Text => println!(),
+                CompleteOutputFormat::Ndjson => {
+                    println!("{}", format_ndjson_done_event(chunk.index));
+                }
+            }
             return Ok(StreamLifecycle::Completed);
         }
+    }
+}
+
+fn should_retry_stream_start(error: &CliError, attempt: u32) -> bool {
+    matches!(error, CliError::DaemonUnavailable { .. }) && attempt < STREAM_START_RETRY_ATTEMPTS
+}
+
+fn format_ndjson_chunk_event(index: u64, text: &str) -> String {
+    json!({
+        "event": "chunk",
+        "index": index,
+        "text": text
+    })
+    .to_string()
+}
+
+fn format_ndjson_done_event(index: u64) -> String {
+    json!({
+        "event": "done",
+        "index": index
+    })
+    .to_string()
+}
+
+fn format_ndjson_error_event(message: String) -> String {
+    json!({
+        "event": "error",
+        "message": message
+    })
+    .to_string()
+}
+
+impl CliCommand {
+    fn output_format(&self) -> Option<CompleteOutputFormat> {
+        match self {
+            CliCommand::Complete { format, .. } => Some(*format),
+            CliCommand::Status => None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        format_ndjson_chunk_event, format_ndjson_done_event, format_ndjson_error_event,
+        should_retry_stream_start,
+    };
+    use crate::error::CliError;
+
+    #[test]
+    fn retry_policy_only_retries_daemon_unavailable_within_budget() {
+        let unavailable = CliError::DaemonUnavailable {
+            socket_path: "/tmp/rex.sock".to_string(),
+        };
+        assert!(should_retry_stream_start(&unavailable, 0));
+        assert!(!should_retry_stream_start(
+            &unavailable,
+            crate::domain::STREAM_START_RETRY_ATTEMPTS
+        ));
+        let interrupted = CliError::StreamInterrupted;
+        assert!(!should_retry_stream_start(&interrupted, 0));
+    }
+
+    #[test]
+    fn ndjson_chunk_event_is_stable() {
+        assert_eq!(
+            format_ndjson_chunk_event(2, "hello"),
+            r#"{"event":"chunk","index":2,"text":"hello"}"#
+        );
+    }
+
+    #[test]
+    fn ndjson_done_event_is_stable() {
+        assert_eq!(format_ndjson_done_event(3), r#"{"event":"done","index":3}"#);
+    }
+
+    #[test]
+    fn ndjson_error_event_is_stable() {
+        assert_eq!(
+            format_ndjson_error_event("boom".to_string()),
+            r#"{"event":"error","message":"boom"}"#
+        );
     }
 }
