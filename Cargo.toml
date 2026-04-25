@@ -15,10 +15,3 @@ license = "MIT"
 tonic = { version = "0.12", features = ["transport"] }
 prost = "0.13"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-[workspace]
-resolver = "2"
-members = ["crates/nexus-proto", "crates/nexus-daemon", "crates/nexus-cli"]
-
-[workspace.package]
-version = "0.1.0"
-edition = "2021"
