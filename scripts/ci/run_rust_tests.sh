@@ -33,10 +33,12 @@ elif ! ./scripts/ci/test_enforce_rust_gate.sh 2>&1 | tee "ci-observability/gate-
 fi
 echo "::endgroup::"
 
-echo "CI_RESULT=${result}" >> "$GITHUB_ENV"
-echo "CI_FAIL_CODE=${fail_code}" >> "$GITHUB_ENV"
-echo "CI_FAIL_STAGE=${fail_stage}" >> "$GITHUB_ENV"
-echo "CI_HINT=${hint}" >> "$GITHUB_ENV"
+{
+  echo "CI_RESULT=${result}"
+  echo "CI_FAIL_CODE=${fail_code}"
+  echo "CI_FAIL_STAGE=${fail_stage}"
+  echo "CI_HINT=${hint}"
+} >> "${GITHUB_ENV:-/dev/null}"
 
 if [ "${result}" != "success" ]; then
   exit 1

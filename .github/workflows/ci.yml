@@ -2,8 +2,6 @@ name: ci
 
 on:
   pull_request:
-  merge_group:
-    types: [checks_requested]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -23,6 +21,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Detect changed paths
         id: filter
@@ -66,14 +66,16 @@ jobs:
           echo "rust_relevant=${rust_relevant}" >> "$GITHUB_OUTPUT"
           echo "extension_relevant=${extension_relevant}" >> "$GITHUB_OUTPUT"
 
-  rust-fmt-clippy:
+  rust-verify:
     needs: [changes]
     if: ${{ needs.changes.outputs.rust_relevant == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Install protobuf compiler
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
@@ -86,90 +88,44 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install CLI Binaries
-        run: ./scripts/install-cli.sh
-
-      - name: Run Fmt and Clippy
-        id: run_checks
+      - name: Run Rust verify
+        id: run_rust_verify
         continue-on-error: true
-        run: ./scripts/ci/run_rust_fmt_clippy.sh
+        run: ./scripts/ci/run_rust_verify.sh
 
       - name: Write Job Summary
         if: ${{ always() }}
-        run: ./scripts/ci/write_job_summary.sh rust-fmt-clippy
+        run: ./scripts/ci/write_job_summary.sh rust-verify
 
       - name: Upload diagnostics artifact
-        if: ${{ steps.run_checks.outcome != 'success' }}
+        if: ${{ steps.run_rust_verify.outcome != 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ci-logs-rust-fmt-clippy-${{ github.run_id }}
+          name: ci-logs-rust-verify-${{ github.run_id }}
           path: ci-observability
           retention-days: 7
 
-      - name: Enforce fmt/clippy job status
-        if: ${{ steps.run_checks.outcome != 'success' }}
-        run: exit 1
-
-  rust-test:
-    needs: [changes]
-    if: ${{ needs.changes.outputs.rust_relevant == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install protobuf compiler
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install CLI Binaries
-        run: ./scripts/install-cli.sh
-
-      - name: Run Tests
-        id: run_tests
-        continue-on-error: true
-        run: ./scripts/ci/run_rust_tests.sh
-
-      - name: Write Job Summary
-        if: ${{ always() }}
-        run: ./scripts/ci/write_job_summary.sh rust-test
-
-      - name: Upload diagnostics artifact
-        if: ${{ steps.run_tests.outcome != 'success' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-test-report-rust-test-${{ github.run_id }}
-          path: ci-observability
-          retention-days: 7
-
-      - name: Enforce test job status
-        if: ${{ steps.run_tests.outcome != 'success' }}
+      - name: Enforce rust verify job status
+        if: ${{ steps.run_rust_verify.outcome != 'success' }}
         run: exit 1
 
   rust-checks:
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [changes, rust-fmt-clippy, rust-test]
+    needs: [changes, rust-verify]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Run Gate
         id: run_gate
         continue-on-error: true
         env:
           RUST_RELEVANT: ${{ needs.changes.outputs.rust_relevant }}
-          FMT_RESULT: ${{ needs.rust-fmt-clippy.result }}
-          TEST_RESULT: ${{ needs.rust-test.result }}
+          RUST_VERIFY_RESULT: ${{ needs.rust-verify.result }}
         run: ./scripts/ci/enforce_rust_gate.sh
 
       - name: Upload diagnostics artifact
@@ -184,14 +140,16 @@ jobs:
         if: ${{ steps.run_gate.outcome != 'success' }}
         run: exit 1
 
-  extension-lint-typecheck:
+  extension-verify:
     needs: [changes]
     if: ${{ needs.changes.outputs.extension_relevant == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -200,99 +158,25 @@ jobs:
           cache: "npm"
           cache-dependency-path: extensions/rex-vscode/package-lock.json
 
-      - name: Run extension lint and typecheck
-        id: run_extension_lint_typecheck
+      - name: Run extension verify
+        id: run_extension_verify
         continue-on-error: true
-        run: ./scripts/ci/run_extension_lint_typecheck.sh
+        run: ./scripts/ci/run_extension_verify.sh
 
       - name: Write Job Summary
         if: ${{ always() }}
-        run: ./scripts/ci/write_job_summary.sh extension-lint-typecheck
+        run: ./scripts/ci/write_job_summary.sh extension-verify
 
       - name: Upload diagnostics artifact
-        if: ${{ steps.run_extension_lint_typecheck.outcome != 'success' }}
+        if: ${{ steps.run_extension_verify.outcome != 'success' }}
         uses: actions/upload-artifact@v4
         with:
-          name: ci-logs-extension-lint-typecheck-${{ github.run_id }}
-          path: ci-observability
-          retention-days: 7
-
-      - name: Enforce extension lint and typecheck status
-        if: ${{ steps.run_extension_lint_typecheck.outcome != 'success' }}
-        run: exit 1
-
-  extension-test:
-    needs: [changes, extension-lint-typecheck]
-    if: ${{ needs.changes.outputs.extension_relevant == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: extensions/rex-vscode/package-lock.json
-
-      - name: Run extension tests
-        id: run_extension_tests
-        continue-on-error: true
-        run: ./scripts/ci/run_extension_tests.sh
-
-      - name: Write Job Summary
-        if: ${{ always() }}
-        run: ./scripts/ci/write_job_summary.sh extension-test
-
-      - name: Upload diagnostics artifact
-        if: ${{ steps.run_extension_tests.outcome != 'success' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-logs-extension-test-${{ github.run_id }}
-          path: ci-observability
-          retention-days: 7
-
-      - name: Enforce extension test status
-        if: ${{ steps.run_extension_tests.outcome != 'success' }}
-        run: exit 1
-
-  extension-package:
-    needs: [changes, extension-test]
-    if: ${{ needs.changes.outputs.extension_relevant == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: extensions/rex-vscode/package-lock.json
-
-      - name: Run extension package
-        id: run_extension_package
-        continue-on-error: true
-        run: ./scripts/ci/run_extension_package.sh
-
-      - name: Write Job Summary
-        if: ${{ always() }}
-        run: ./scripts/ci/write_job_summary.sh extension-package
-
-      - name: Upload diagnostics artifact
-        if: ${{ steps.run_extension_package.outcome != 'success' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-logs-extension-package-${{ github.run_id }}
+          name: ci-logs-extension-verify-${{ github.run_id }}
           path: ci-observability
           retention-days: 7
 
       - name: Upload VSIX artifact
-        if: ${{ steps.run_extension_package.outcome == 'success' }}
+        if: ${{ steps.run_extension_verify.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: rex-vscode-vsix-${{ github.run_id }}
@@ -300,27 +184,27 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-      - name: Enforce extension package status
-        if: ${{ steps.run_extension_package.outcome != 'success' }}
+      - name: Enforce extension verify job status
+        if: ${{ steps.run_extension_verify.outcome != 'success' }}
         run: exit 1
 
   extension-checks:
     if: ${{ always() }}
-    needs: [changes, extension-lint-typecheck, extension-test, extension-package]
+    needs: [changes, extension-verify]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Run Gate
         id: run_gate
         continue-on-error: true
         env:
           EXTENSION_RELEVANT: ${{ needs.changes.outputs.extension_relevant }}
-          LINT_TYPECHECK_RESULT: ${{ needs.extension-lint-typecheck.result }}
-          TEST_RESULT: ${{ needs.extension-test.result }}
-          PACKAGE_RESULT: ${{ needs.extension-package.result }}
+          EXTENSION_VERIFY_RESULT: ${{ needs.extension-verify.result }}
         run: ./scripts/ci/enforce_extension_gate.sh
 
       - name: Write Job Summary
@@ -347,6 +231,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Run Gate
         id: run_gate
