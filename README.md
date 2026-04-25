@@ -49,3 +49,41 @@ cargo build --workspace
 - Start `rex-daemon` before invoking `rex-cli` commands.
 - The CLI now uses conservative connection/request timeouts so startup races fail fast instead of hanging.
 - If the daemon is still booting, rerun `status` or `complete` after the socket is ready at `/tmp/rex.sock`.
+
+## Install as terminal commands
+
+Install or reinstall the latest local binaries:
+
+```bash
+chmod +x scripts/install-cli.sh
+./scripts/install-cli.sh
+```
+
+The script always reinstalls with `--force`, so rerunning it updates the commands to the newest local version.
+By default, it does not modify shell dotfiles.
+
+If you want it to configure `zsh` PATH automatically:
+
+```bash
+./scripts/install-cli.sh --configure-shell
+source ~/.zshrc
+```
+
+## Two-terminal manual stream test
+
+Print test instructions:
+
+```bash
+chmod +x scripts/run-manual-stream-test.sh
+./scripts/run-manual-stream-test.sh
+```
+
+Or run directly in two terminals:
+
+```bash
+rex-daemon
+```
+
+```bash
+rex-cli complete "hello from rex"
+```
