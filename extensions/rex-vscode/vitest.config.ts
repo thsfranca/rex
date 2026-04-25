@@ -5,6 +5,7 @@ export default defineConfig({
     include: ["src/**/*.test.ts"],
     environment: "node",
     globals: false,
+    maxWorkers: process.env.CI ? "100%" : undefined,
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
