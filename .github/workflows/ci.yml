@@ -20,6 +20,9 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Install CLI binaries via project script
+        run: ./scripts/install-cli.sh
+
       - name: Format check
         run: cargo fmt --all -- --check
 
