@@ -55,6 +55,36 @@ export interface PromptPrefillPayload {
   readonly context?: PromptContextSnapshot;
 }
 
+export type InteractionMode = "ask" | "plan" | "agent";
+
+export type ApprovalScope = "execution" | "mutation";
+
+export interface ModePolicy {
+  readonly mode: InteractionMode;
+  readonly canMutateFiles: boolean;
+  readonly requiresExecutionApproval: boolean;
+  readonly requiresMutationApproval: boolean;
+  readonly summary: string;
+}
+
+export interface ApprovalRequestPayload {
+  readonly id: string;
+  readonly scope: ApprovalScope;
+  readonly title: string;
+  readonly detail: string;
+}
+
+export interface ApprovalDecisionPayload {
+  readonly id: string;
+  readonly approved: boolean;
+}
+
+export interface ExecutionStepPayload {
+  readonly id: string;
+  readonly phase: "queued" | "running" | "awaiting_approval" | "completed" | "blocked" | "failed" | "cancelled";
+  readonly summary: string;
+}
+
 export type ExtensionToWebview =
   | { readonly type: "streamStarted"; readonly id: StreamId }
   | { readonly type: "streamChunk"; readonly id: StreamId; readonly text: string }
@@ -71,6 +101,9 @@ export type ExtensionToWebview =
   | { readonly type: "contextSnapshot"; readonly context: PromptContextSnapshot | null }
   | { readonly type: "prefillPrompt"; readonly payload: PromptPrefillPayload }
   | { readonly type: "applyResult"; readonly id: StreamId; readonly result: ApplyResultPayload }
+  | { readonly type: "modeState"; readonly payload: ModePolicy }
+  | { readonly type: "approvalRequested"; readonly payload: ApprovalRequestPayload }
+  | { readonly type: "executionStep"; readonly payload: ExecutionStepPayload }
   | { readonly type: "clearChat" }
   | { readonly type: "statusMessage"; readonly level: "info" | "warn" | "error"; readonly text: string };
 
@@ -93,5 +126,7 @@ export type WebviewToExtension =
     }
   | { readonly type: "insertCodeBlock"; readonly code: string }
   | { readonly type: "copyCodeBlock"; readonly code: string }
+  | { readonly type: "setMode"; readonly mode: InteractionMode }
+  | { readonly type: "approvalDecision"; readonly payload: ApprovalDecisionPayload }
   | { readonly type: "requestContextSnapshot" }
   | { readonly type: "clearChatRequested" };

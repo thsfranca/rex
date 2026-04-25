@@ -11,12 +11,14 @@ This roadmap defines how REX should grow plugin capabilities after MVP while kee
 ## Related implementation docs
 
 - Read `docs/CONTEXT_EFFICIENCY.md` for current token budget contracts, plugin boundaries, and local telemetry defaults.
+- Read `docs/ADAPTERS.md` for the inference adapter seam, Cursor CLI profile, and capabilities.
+- Read `docs/CACHING.md` for layered cache keys, mode safety, and bypass semantics.
 
 ## Principles
 
 - Prefer sidecars/plugins by default.
 - Keep built-in scope small until evidence justifies expansion.
-- Ship in small, reviewable PRs with clear acceptance criteria.
+- Ship in small, reviewable changes with clear acceptance criteria.
 - Keep transport and contracts stable while iterating feature logic.
 
 ## Sidecar-first decision gate
@@ -74,13 +76,26 @@ Default outcome: keep the feature as a sidecar/plugin.
 - **Why now:** policy changes often and varies by environment.
 - **Promote to built-in when:** enforcement must be mandatory and non-bypassable.
 
-## Roadmap sequence (small PRs)
+## Cursor CLI inference adapter (phased design track)
 
-## Goal
+This track is **post-MVP** and describes how REX routes prompts to the Cursor CLI as one `InferenceRuntime` implementation. It aligns with the **sidecar-first** gate: the same contract can later run in a **gRPC sidecar** with no change to the public client surface.
 
-Add plugin value in low-risk slices while preserving daemon simplicity.
+| Phase | Outcome | Completion signal |
+|---|---|---|
+| 1 — Adapter seam | A public, **streaming** `InferenceRuntime` surface, `InferenceRequest` metadata, and `AdapterCapabilities`. Mock remains default. | New adapters can be registered; stream terminal semantics preserved. |
+| 2 — Cursor adapter | `cursor-cli` profile: `ask` mode, spawn CLI with **typed output** (for example json), **timeout** and kill, no response cache. | `complete` with Cursor installed returns streamed text; hangs become terminal `error` within a bounded time. |
+| 3 — Layered cache | L1 **exact** cache in front of the runtime (keyed by adapter, model, mode, schema, workspace; **never** `agent`). | Repeated safe-mode prompts can report `cache=hit` in metrics; bypass still works. |
+| 4 — Proto and CLI | Optional `StreamInference` fields and CLI flags for `mode` and `model` (backward compatible). | `plan` and `agent` can be set explicitly; defaults unchanged for old clients. |
+| 5 — Model `auto` | Pass `auto` (or `default` mapping) into the adapter per `docs/ADAPTERS.md`. | Documented `auto` behavior; fallback path when a flag is unsupported. |
+| 6 — L2 semantic cache (optional) | **Ask mode** only; embedding similarity with threshold and guard rails. | Feature can stay off; when on, false-positive rate is within an agreed SLO. |
 
-### PR 1: Plugin contract and lifecycle baseline
+**Dependency note:** early work can run **in-process** in `rex-daemon`. Moving the adapter to a process boundary is a natural fit after **sidecar platform Phase 1 (plugin contract and lifecycle baseline)**; that step supplies supervision, health, and restarts for out-of-tree plugins.
+
+## Sidecar platform (phased delivery)
+
+Goal: add plugin value in low-risk slices while preserving daemon simplicity.
+
+### Phase 1: Plugin contract and lifecycle baseline
 
 - **Outcome:** daemon can load and supervise one sidecar plugin reliably.
 - **Scope:**
@@ -92,7 +107,7 @@ Add plugin value in low-risk slices while preserving daemon simplicity.
   - Daemon starts and routes with one healthy plugin.
   - Daemon surfaces clear error when plugin fails readiness.
 
-### PR 2: Observability plugin
+### Phase 2: Observability plugin
 
 - **Outcome:** request-level insight for debugging and tuning.
 - **Scope:**
@@ -103,7 +118,7 @@ Add plugin value in low-risk slices while preserving daemon simplicity.
   - Latency and terminal status are visible for success and failure paths.
   - Failure events include actionable reason categories.
 
-### PR 3: Prompt/context cache plugin
+### Phase 3: Prompt/context cache plugin
 
 - **Outcome:** lower latency for repeated context-heavy requests.
 - **Scope:**
@@ -114,7 +129,7 @@ Add plugin value in low-risk slices while preserving daemon simplicity.
   - Cache hit/miss status appears in observability output.
   - Cache bypass reliably forces model path.
 
-### PR 4: Context shaping plugin
+### Phase 4: Context shaping plugin
 
 - **Outcome:** improve completion quality by reducing irrelevant context.
 - **Scope:**
@@ -125,7 +140,7 @@ Add plugin value in low-risk slices while preserving daemon simplicity.
   - Pass-through mode preserves MVP behavior.
   - Extension consumer still receives valid stream terminal events.
 
-### PR 5: Hybrid routing plugin (optional)
+### Phase 5: Hybrid routing plugin (optional)
 
 - **Outcome:** balance local cost/privacy with quality on hard tasks.
 - **Scope:**

@@ -2,6 +2,8 @@
 
 This guide defines how REX reduces token usage and local compute for coding workflows.
 
+**Inference adapters:** pipeline stages are **not** one-size-fits-all. Each adapter (mock, local MLX, Cursor CLI, or a future sidecar) declares `AdapterCapabilities` in `docs/ADAPTERS.md` so the daemon can skip or apply indexer, compressor, token budget, cache, and behavioral prefilter. **Cursor adapter profile (design default):** skip heavy lexical **context injection** and **token-budget truncation** of the user prompt; keep the **behavioral prefilter**; **mode-gated** response cache per `docs/CACHING.md`.
+
 ## Scope
 
 - Add token budget controls before inference.
@@ -14,29 +16,41 @@ This guide defines how REX reduces token usage and local compute for coding work
 ```mermaid
 flowchart LR
   editorClient[EditorOrCLI] --> daemonCore[rexDaemon]
-  daemonCore --> budgetGate[TokenBudgetGate]
+  daemonCore --> layeredCache[LayeredResponseCache]
+  layeredCache -->|miss| budgetGate[TokenBudgetGate]
   budgetGate --> retrieverPlugin[RetrieverPlugin]
   retrieverPlugin --> indexerPlugin[IndexerPlugin]
   retrieverPlugin --> compressorPlugin[CompressorPlugin]
-  budgetGate --> cachePlugin[PrefixCachePlugin]
+  budgetGate --> contextPrefixCache[ContextPrefixCache]
   budgetGate --> behaviorPlugin[BehaviorPrefilterPlugin]
-  compressorPlugin --> daemonCore
-  cachePlugin --> daemonCore
-  behaviorPlugin --> daemonCore
-  daemonCore --> streamOut[StreamChunkDoneOrError]
+  compressorPlugin --> runtimeAdapter[InferenceRuntime]
+  contextPrefixCache --> runtimeAdapter
+  behaviorPlugin --> runtimeAdapter
+  layeredCache -->|hit| streamOut[StreamChunkDoneOrError]
+  runtimeAdapter --> streamOut
+  streamOut --> editorClient
 ```
+
+The cache and each pipeline stage can be **skipped** when the active adapter’s capabilities say so (for example, Cursor: skip most indexer or compressor context attached to the prompt, but run prefilter).
 
 ## Responsibility map
 
 | Component | Responsibility |
 |---|---|
 | `rex-daemon` | Owns UDS/gRPC transport, lifecycle, final stream contract, and orchestration. |
-| `TokenBudgetGate` | Enforces prompt/context limits before inference. |
+| `LayeredResponseCache` (design) | L1 exact (and optional L2 semantic) cache in front of the inference adapter; see `docs/CACHING.md`. |
+| `TokenBudgetGate` | Enforces prompt/context limits when the adapter opts in to REX context shaping. |
 | `IndexerPlugin` | Maintains workspace-aware lexical index and ignore rules. |
 | `RetrieverPlugin` | Selects top candidate context chunks deterministically. |
 | `CompressorPlugin` | Applies extractive compression and token-budget packing. |
-| `PrefixCachePlugin` | Reuses stable prompt prefix context with TTL and bypass. |
+| `ContextPrefixCache` | Reuses stable context segments inside the REX context pipeline (today `PrefixCache` in the daemon) with TTL and bypass. |
 | `BehaviorPrefilterPlugin` | Optionally suppresses low-value invocations using local behavior snapshots. |
+| `InferenceRuntime` (adapter) | Mock, MLX, **Cursor CLI**, or future gRPC process; see `docs/ADAPTERS.md`. |
+
+| Adapter (design) | REX context pipeline (default) |
+|---|---|
+| Mock / local MLX (future) | Full: budget gate, indexer, compressor, prefix cache, prefilter, then inference. |
+| **Cursor CLI** (design) | **Prefilter on**; do **not** add heavy `[context]` from the lexical path on top of the user text; do **not** **truncate** the user prompt in the REX path before the CLI; response cache per mode in `docs/CACHING.md`. |
 
 ## Coding-first features
 

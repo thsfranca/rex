@@ -20,6 +20,8 @@ Use `README.md` at the repository root as the runnable onboarding path (understa
 | `scripts/install-extension.sh` | One-command local VSIX build + install into Cursor/VS Code (see `docs/EXTENSION_RELEASE.md`). |
 | `scripts/dev-rex-extension.sh` | Build Rust workspace, `install-cli.sh`, then `install-extension.sh` with pass-through args (see `docs/EXTENSION_LOCAL_E2E.md`). |
 | `docs/PLUGIN_ROADMAP.md` | Sidecar-first plugin roadmap and built-in decision gates. |
+| `docs/ADAPTERS.md` | Inference adapter contract, Cursor CLI profile, capabilities checklist. |
+| `docs/CACHING.md` | Layered response cache: keys, mode safety, bypass, optional semantic layer. |
 | `docs/CONTEXT_EFFICIENCY.md` | Token budget, plugin boundaries, and telemetry defaults. |
 | `ARCHITECTURE.md` | System architecture and technical direction. |
 | `MVP_SPEC.md` | Phase 1 specification and success criteria. |
@@ -41,8 +43,9 @@ Use `README.md` at the repository root as the runnable onboarding path (understa
 - Read `docs/EXTENSION_RELEASE.md` to install the extension, enable daemon auto-start, or ship a release.
 - Read `docs/EXTENSION_LOCAL_E2E.md` for a single path from clone to a working extension plus daemon (includes macOS editor `PATH` notes).
 - Run `./scripts/install-extension.sh` from the repo root for the fastest local install into Cursor or VS Code (see that doc for prerequisites).
-- Read `docs/PLUGIN_ROADMAP.md` for post-MVP plugin sequence and promotion criteria.
-- Read `docs/CONTEXT_EFFICIENCY.md` for context optimization architecture and contracts.
+- Read `docs/PLUGIN_ROADMAP.md` for post-MVP plugin sequence, Cursor CLI adapter phases, and promotion criteria.
+- Read `docs/ADAPTERS.md` and `docs/CACHING.md` for the inference-adapter seam and response-cache design.
+- Read `docs/CONTEXT_EFFICIENCY.md` for context optimization architecture, capability-aware policy, and contracts.
 - Read `docs/DEPENDENCIES.md` to set up local prerequisites.
 - Read `docs/CI.md` for CI gate and merge queue settings.
 - Follow `docs/DOCUMENTATION.md` before editing docs.

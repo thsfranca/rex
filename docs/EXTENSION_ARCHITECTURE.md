@@ -2,12 +2,13 @@
 
 This document defines the internal architecture of the REX editor extension. For scope and phasing, see [`docs/EXTENSION_ROADMAP.md`](EXTENSION_ROADMAP.md).
 
-## Purpose
+## Goals
 
 - Keep the extension thin over the stable CLI boundary.
-- Run cleanly in both VS Code and Cursor from a single source tree.
-- Provide Cursor-class chat UX using only standard `vscode.*` APIs where possible.
-- Isolate Cursor-only features behind runtime capability detection.
+- Run cleanly in compatible editor hosts from a single source tree.
+- Provide mode-driven chat UX (`ask`, `plan`, `agent`) with deterministic guardrails.
+- Isolate host-specific features behind runtime capability detection.
+- Preserve a clear path to future guarded multi-file orchestration without redesigning core message contracts.
 
 ## Layering
 
@@ -19,7 +20,7 @@ The module layout mirrors REX's thin-client rule: thin entry, responsibilities s
 | `src/runtime/` | Talk to `rex-cli` and `rex-daemon`. |
 | `src/ui/` | Host-side view hosts and user-facing actions. |
 | `src/editor/` | Collect editor context, manage virtual documents. |
-| `src/platform/` | Detect editor capabilities and wire optional Cursor APIs. |
+| `src/platform/` | Detect editor capabilities and wire optional host APIs. |
 | `src/config/` | Typed access to user settings. |
 | `src/shared/` | Types and message contracts shared with the webview. |
 | `webview/` | React application for the chat side panel. |
@@ -34,20 +35,20 @@ flowchart LR
     host --> status[statusBar]
     host --> apply[applyEdit]
     host --> ctxp[contextProvider]
-    host -.optional.-> cursorAdapter[cursorAdapter]
+    host -.optional.-> hostAdapter[hostAdapter]
     stream --> cli[rex-cli process]
     cli <-->|UDS gRPC| daemon[rex-daemon]
     cli -->|NDJSON stdout| stream
     apply -->|"vscode.diff + WorkspaceEdit"| editor[VS Code Editor]
     ctxp -->|selection and file| host
-    cursorAdapter -.->|"vscode.cursor.plugins and mcp"| cursorHost[Cursor APIs]
+    hostAdapter -.->|"optional host APIs"| hostExtensions[HostExtensions]
 ```
 
 ## Transport contract
 
 - Transport is `rex-cli` invoked as a child process with `--format ndjson`.
 - Contract: one JSON object per stdout line with exactly one terminal event (`done` or `error`).
-- See [`docs/EXTENSION_MVP.md`](EXTENSION_MVP.md) for the authoritative event schema.
+- See the extension contract document for authoritative event schema details.
 - The extension parses markdown and extracts code blocks client-side. The CLI contract does not change.
 
 ## Typed message bus
@@ -63,6 +64,9 @@ Host to webview:
 | `streamDone` | `{ id }` | Terminal success marker for the stream. |
 | `streamError` | `{ id, message }` | Terminal failure marker with human-readable message. |
 | `daemonState` | `{ state, detail? }` | Daemon state change for header indicators. |
+| `modeState` | `{ mode, policy }` | Current mode and guardrail policy. |
+| `approvalRequested` | `{ id, scope, title, detail }` | Approval checkpoint before guarded operations. |
+| `executionStep` | `{ id, phase, summary }` | Timeline state for guarded execution flow. |
 
 Webview to host:
 
@@ -73,6 +77,20 @@ Webview to host:
 | `applyCodeBlock` | `{ id, language, code, granularity }` | Request Apply-to-file with diff preview. |
 | `insertCodeBlock` | `{ code }` | Insert at active editor cursor. |
 | `copyCodeBlock` | `{ code }` | Write to clipboard. |
+| `setMode` | `{ mode }` | Update active mode (`ask`/`plan`/`agent`). |
+| `approvalDecision` | `{ id, approved }` | Resolve a pending approval request. |
+
+## Mode orchestrator
+
+The extension host owns one mode orchestrator that applies deterministic behavior by mode:
+
+| Mode | Execution policy | Mutation policy |
+|---|---|---|
+| `ask` | No execution approval required. | Mutations blocked. |
+| `plan` | No execution approval required. | Approval required before mutation actions. |
+| `agent` | Approval required before execution starts. | Approval required before mutation actions. |
+
+The orchestrator is the single authority for mode checks. UI components consume policy state from the host rather than implementing separate policy logic.
 
 ## Apply-to-file flow
 
@@ -89,22 +107,14 @@ Granularities:
 
 ## Capability detection
 
-`src/platform/capabilities.ts` probes `vscode.cursor` without throwing. The result gates Cursor-only paths.
+`src/platform/capabilities.ts` probes optional host-specific APIs without throwing.
 
 ```mermaid
 flowchart LR
-    activate[extension.activate] --> detect[capabilities.hasCursor]
-    detect -- yes --> cursor[cursorAdapter.registerPluginPath]
-    detect -- no --> inert[Inert: VS Code only]
+    activate[extension.activate] --> detect[capabilities.hasHostExtensions]
+    detect -- yes --> hostSpecific[registerOptionalHostIntegrations]
+    detect -- no --> inert[StandardVscodePath]
 ```
-
-Cursor-only surface (today):
-
-- `vscode.cursor.plugins.registerPath(<bundled plugins dir>)`
-
-Cursor-only surface (deferred behind feature flag):
-
-- `vscode.cursor.mcp.registerServer(<REX MCP server config>)`
 
 ## Daemon lifecycle
 
@@ -149,16 +159,14 @@ stateDiagram-v2
 - Host bundle excludes React; only the webview bundle ships React and UI dependencies.
 - `.vsix` built via `vsce package`; published to Open VSX via `ovsx publish` in PR 3.
 
-## Non-goals
+## Non-goals (current architecture phase)
 
-- Agent mode or tool-calling framework.
-- Multi-file coordinated edits.
-- Inline ghost-text completions (deferred follow-up).
+- Multi-file coordinated edits (deferred to follow-up architecture phase).
+- Autonomous mutation flows without explicit approval checkpoints.
+- Inline ghost-text completions.
 - Direct Node gRPC over UDS transport.
 
 ## Related documents
 
 - [`ARCHITECTURE.md`](../ARCHITECTURE.md): REX system architecture.
-- [`MVP_SPEC.md`](../MVP_SPEC.md): phase 1 protocol and acceptance criteria.
-- [`docs/EXTENSION_MVP.md`](EXTENSION_MVP.md): NDJSON consumer contract.
 - [`docs/EXTENSION_ROADMAP.md`](EXTENSION_ROADMAP.md): phased delivery plan.
