@@ -16,3 +16,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Context chip in the chat composer showing active file + selection; user can detach before sending.
 - Commands `REX: Open Chat`, `REX: Clear Chat`, `REX: Explain/Fix/Refactor Selection` (the selection commands prefill a prompt template and focus the chat view).
 - Theme forwarding (light / dark / high-contrast) so the webview restyles with the editor.
+- Opt-in daemon auto-start (`rex.daemonAutoStart`): at activation or when the setting flips on, the extension spawns `rex-daemon`, polls `rex-cli status` until ready, and tears the child down on deactivate. Default remains off.
+- Integration tests for `DaemonLifecycle.ensureRunning` covering already-ready probe, failed spawn, and shutdown of a lifecycle-owned child.
+- Release pipeline `.github/workflows/extension-release.yml` triggered by `rex-vscode-vX.Y.Z` tags: builds + tests, packages a versioned VSIX, always runs `ovsx publish --dry-run`, publishes to Open VSX when `OVSX_TOKEN` is set, optionally publishes to the VS Code Marketplace when `VSCE_PAT` is set, and attaches the VSIX to a GitHub Release.
+- `docs/EXTENSION_RELEASE.md` covering install, auto-start guidance, troubleshooting, and the release checklist.
