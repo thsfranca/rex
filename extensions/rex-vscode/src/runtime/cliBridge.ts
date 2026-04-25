@@ -2,6 +2,8 @@ import { spawn, type ChildProcessByStdio } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import type { Readable } from "node:stream";
 
+import { appendCliExecutableNotFoundHint } from "./spawnExecutableHints";
+
 export interface StatusSnapshot {
   readonly daemonVersion: string;
   readonly uptimeSeconds: number;
@@ -53,8 +55,9 @@ export async function fetchStatus(
 export function spawnCompleteStream(
   options: CliBridgeOptions,
   prompt: string,
+  traceId?: string,
 ): SpawnedProcess {
-  const env = buildEnv(options.env);
+  const env = buildEnv(options.env, traceId);
   const child = spawn(options.cliPath, ["complete", prompt, "--format", "ndjson"], {
     cwd: options.cwd,
     env,
@@ -106,7 +109,10 @@ async function runCollect(
 
   try {
     await new Promise<void>((resolve, reject) => {
-      child.once("error", reject);
+      child.once("error", (err) => {
+        const base = err instanceof Error ? err.message : String(err);
+        reject(new Error(appendCliExecutableNotFoundHint(err, base)));
+      });
       child.once("close", (code) => {
         if (code === 0) {
           resolve();
@@ -165,9 +171,13 @@ export function parseStatusOutput(raw: string): StatusSnapshot {
   };
 }
 
-function buildEnv(extra: Readonly<Record<string, string>> | undefined): NodeJS.ProcessEnv {
-  if (extra === undefined) {
-    return process.env;
+function buildEnv(
+  extra: Readonly<Record<string, string>> | undefined,
+  traceId?: string,
+): NodeJS.ProcessEnv {
+  const env = extra === undefined ? { ...process.env } : { ...process.env, ...extra };
+  if (traceId !== undefined && traceId.length > 0) {
+    env.REX_TRACE_ID = traceId;
   }
-  return { ...process.env, ...extra };
+  return env;
 }

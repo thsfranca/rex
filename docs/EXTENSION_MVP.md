@@ -28,6 +28,20 @@ Output contract:
 - One JSON object per line.
 - Event types: `chunk`, `done`, `error`.
 - Exactly one terminal event (`done` or `error`).
+- `error` events may include a stable `code` for extension-side UX mapping.
+
+Current `error.code` taxonomy:
+
+| Code | Meaning | Retry guidance |
+|---|---|---|
+| `daemon_unavailable` | Daemon socket/process not reachable. | Retry after daemon start/check. |
+| `stream_timeout` | No stream item arrived within timeout. | Retry is usually safe. |
+| `stream_interrupted` | Stream failed mid-flight. | Retry is usually safe. |
+| `stream_incomplete` | Stream ended without terminal marker. | Do not auto-retry; inspect daemon logs. |
+| `cancelled` | User-initiated cancellation. | No retry needed unless user resubmits. |
+| `invalid_response` | Malformed or unknown NDJSON payload. | Treat as contract error; inspect CLI/daemon logs. |
+| `spawn_failed` | `rex-cli` could not be launched. | Fix local install/path first. |
+| `unknown` | Fallback category for uncategorized failures. | Manual diagnosis required. |
 
 Examples:
 
@@ -38,7 +52,7 @@ Examples:
 ```
 
 ```json
-{"event":"error","message":"daemon is unavailable at /tmp/rex.sock; start rex-daemon and retry"}
+{"event":"error","message":"daemon is unavailable at /tmp/rex.sock; start rex-daemon and retry","code":"daemon_unavailable"}
 ```
 
 ## Extension bootstrap flow
@@ -57,6 +71,14 @@ Examples:
 - Startup race: CLI performs bounded retries for daemon-unavailable startup window.
 - Non-retryable errors: CLI fails fast and emits terminal `error`.
 - Interrupted stream: CLI emits terminal `error` and exits non-zero.
+- The extension serializes cancel/send transitions so one stream ID resolves with one terminal UI state.
+
+## Trace correlation and terminal latency
+
+- The extension runtime creates a per-request trace id and passes it to `rex-cli` via `REX_TRACE_ID`.
+- `rex-cli` forwards trace metadata (`x-rex-trace-id`) to daemon stream requests.
+- Daemon logs include `trace_id` and terminal `elapsed_ms` for completion and failure paths.
+- Extension host logs include start/terminal trace lifecycle markers for cross-process triage.
 
 ## Out of scope for MVP
 

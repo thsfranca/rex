@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { parseStatusOutput } from "../runtime/cliBridge";
+import { fetchStatus, parseStatusOutput } from "../runtime/cliBridge";
+import { EXTENSION_LOCAL_E2E_DOC_PATH } from "../runtime/spawnExecutableHints";
 
 describe("parseStatusOutput", () => {
   it("parses the expected three-line status response", () => {
@@ -39,5 +40,16 @@ describe("parseStatusOutput", () => {
         "daemon_version: 0.1.0\nuptime_seconds: forever\nactive_model_id: x\n",
       ),
     ).toThrow(/non-numeric uptime_seconds/);
+  });
+});
+
+describe("fetchStatus", () => {
+  it("includes onboarding hint when rex-cli executable is missing", async () => {
+    await expect(
+      fetchStatus({ cliPath: "/__rex_vitest_nonexistent__/rex-cli", timeoutMs: 5_000 }),
+    ).rejects.toSatisfy((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      return msg.includes(EXTENSION_LOCAL_E2E_DOC_PATH) && msg.includes("rex.cliPath");
+    });
   });
 });

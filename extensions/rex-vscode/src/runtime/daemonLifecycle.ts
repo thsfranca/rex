@@ -3,6 +3,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import type { Readable } from "node:stream";
 
 import { fetchStatus, type CliBridgeOptions, type StatusSnapshot } from "./cliBridge";
+import { appendDaemonExecutableNotFoundHint } from "./spawnExecutableHints";
 
 type DaemonChildProcess = ChildProcessByStdio<null, Readable, Readable>;
 
@@ -40,6 +41,8 @@ const DEFAULT_POLL_INTERVAL_MS = 250;
 export class DaemonLifecycle {
   private options: DaemonLifecycleOptions;
   private ownedChild: DaemonChildProcess | undefined;
+  /** Set when the spawned daemon child emits `error` (for example executable not found). */
+  private spawnFailedEarly = false;
   /** Serialized concurrent `ensureRunning` calls so only one spawn runs at a time. */
   private ensureRunningInFlight: Promise<DaemonLifecycleState> | undefined;
   private lastState: DaemonLifecycleState = {
@@ -125,6 +128,7 @@ export class DaemonLifecycle {
 
   private async startAndWait(signal?: AbortSignal): Promise<DaemonLifecycleState> {
     this.transition({ kind: "starting" });
+    this.spawnFailedEarly = false;
     try {
       const daemonEnv =
         this.options.daemonEnv !== undefined
@@ -136,13 +140,32 @@ export class DaemonLifecycle {
         env: daemonEnv,
       });
     } catch (err) {
+      const base = `failed to spawn daemon: ${toErrorMessage(err)}`;
       this.transition({
         kind: "unavailable",
-        reason: `failed to spawn daemon: ${toErrorMessage(err)}`,
+        reason: appendDaemonExecutableNotFoundHint(err, base),
       });
       return this.lastState;
     }
-    this.ownedChild.once("exit", (code) => {
+    const child = this.ownedChild;
+    if (child === undefined) {
+      return this.lastState;
+    }
+    let spawnErrorHandled = false;
+    child.once("error", (err) => {
+      spawnErrorHandled = true;
+      this.spawnFailedEarly = true;
+      const base = `failed to spawn daemon: ${toErrorMessage(err)}`;
+      this.transition({
+        kind: "unavailable",
+        reason: appendDaemonExecutableNotFoundHint(err, base),
+      });
+      this.ownedChild = undefined;
+    });
+    child.once("exit", (code) => {
+      if (spawnErrorHandled) {
+        return;
+      }
       if (this.lastState.kind !== "ready") {
         this.transition({
           kind: "unavailable",
@@ -159,6 +182,9 @@ export class DaemonLifecycle {
     const pollMs = this.options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
+      if (this.spawnFailedEarly) {
+        return this.lastState;
+      }
       if (signal?.aborted === true) {
         this.transition({ kind: "unavailable", reason: "cancelled" });
         return this.lastState;

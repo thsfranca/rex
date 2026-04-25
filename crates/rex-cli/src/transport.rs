@@ -8,7 +8,9 @@ use tower::service_fn;
 use crate::domain::{CONNECT_TIMEOUT_SECONDS, REQUEST_TIMEOUT_SECONDS, SOCKET_PATH};
 use crate::error::CliError;
 
-pub async fn connect_client() -> Result<RexServiceClient<tonic::transport::Channel>, CliError> {
+pub async fn connect_client(
+    _trace_id: Option<&str>,
+) -> Result<RexServiceClient<tonic::transport::Channel>, CliError> {
     let endpoint = Endpoint::try_from("http://[::]:50051")?
         .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECONDS))
         .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS));

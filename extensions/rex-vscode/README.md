@@ -20,11 +20,20 @@ This extension is in early development. See [`docs/EXTENSION_ROADMAP.md`](../../
 
 The chat webview uses a strict Content Security Policy (nonce-scoped script, no remote resource loads). Syntax highlighting is lazy-loaded via `shiki` only after the first code block appears.
 
+Stream reliability notes:
+
+- The host enforces exactly one terminal stream transition per request (`done` or `error`).
+- Cancellation is deterministic for a stream id (no duplicate terminal states on cancel/resend).
+- Error events can include stable codes (for example `daemon_unavailable`, `stream_timeout`, `invalid_response`) to map UI behavior consistently.
+- Each request is trace-correlated across extension host, `rex-cli`, and daemon logs.
+
 ## Requirements
 
 - `rex-cli` available on `PATH` (or set `rex.cliPath` to an absolute path if the editor was not started from a shell that configures `PATH`, which is common on macOS).
 - `rex-daemon` running locally on `/tmp/rex.sock` (user-managed by default, or set `rex.daemonAutoStart: true`). With auto-start, set `rex.daemonBinaryPath` to an absolute path if `rex-daemon` is not on the editor `PATH`.
 - VS Code `^1.90` or Cursor with a compatible VS Code engine.
+
+**End-to-end from this repository:** follow [`docs/EXTENSION_LOCAL_E2E.md`](../../docs/EXTENSION_LOCAL_E2E.md) (build, install binaries, daemon, VSIX, verification). Quick combined script from repo root: `./scripts/dev-rex-extension.sh` (then start the daemon or enable auto-start as described in that doc).
 
 ## Daemon auto-start (opt-in)
 
@@ -38,7 +47,14 @@ If the spawn or probe fails, the status bar moves to `REX unavailable` and the r
 
 ## Development
 
-Fast loop from the repo root (installs into Cursor or VS Code and reloads the window):
+Fast loop from the repo root (Rust build + CLI install + VSIX install; does not start the daemon):
+
+```bash
+chmod +x ./scripts/dev-rex-extension.sh
+./scripts/dev-rex-extension.sh
+```
+
+Extension-only install (when Rust binaries are already on your `PATH`):
 
 ```bash
 chmod +x ./scripts/install-extension.sh

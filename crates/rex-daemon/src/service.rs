@@ -103,7 +103,9 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<StreamInferenceRequest>,
     ) -> Result<Response<Self::StreamInferenceStream>, Status> {
+        let request_started = Instant::now();
         let request_id = self.request_sequence.fetch_add(1, Ordering::Relaxed);
+        let trace_id = extract_trace_id(request.metadata(), request_id);
         let prompt = request.into_inner().prompt;
         let directives = PromptDirectives::from_prompt(&prompt);
         let context_request = ContextRequest {
@@ -119,12 +121,12 @@ impl RexService for RexDaemonService {
             .prepare(&context_request);
         let prompt_len = prompt.chars().count();
         println!(
-            "stream.request_id={request_id} stream.lifecycle={} prompt_len={prompt_len}",
+            "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} prompt_len={prompt_len}",
             StreamLifecycle::Starting.as_str(),
         );
         let chunks = self.runtime.build_chunks(&pipeline_result.effective_prompt);
         println!(
-            "stream.request_id={request_id} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
+            "stream.request_id={request_id} trace_id={trace_id} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
             pipeline_result.metrics.prompt_tokens,
             pipeline_result.metrics.selected_context_tokens,
             pipeline_result.metrics.context_candidates,
@@ -134,7 +136,7 @@ impl RexService for RexDaemonService {
             format_behavior_decision(&pipeline_result.metrics.behavior_decision),
         );
         println!(
-            "stream.request_id={request_id} stream.lifecycle={} chunk_count={}",
+            "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} chunk_count={}",
             StreamLifecycle::Streaming.as_str(),
             chunks.len()
         );
@@ -147,7 +149,7 @@ impl RexService for RexDaemonService {
                         chunk_count += 1;
                         if chunk_count == 1 {
                             println!(
-                                "stream.request_id={request_id} stream.event=first_chunk index={} done={}",
+                                "stream.request_id={request_id} trace_id={trace_id} stream.event=first_chunk index={} done={}",
                                 chunk.index,
                                 chunk.done
                             );
@@ -159,10 +161,11 @@ impl RexService for RexDaemonService {
                     }
                     Err(err) => {
                         println!(
-                            "stream.request_id={request_id} stream.lifecycle={} stream.event=error grpc_code={} message={}",
+                            "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.event=error grpc_code={} message={} elapsed_ms={}",
                             StreamLifecycle::Failed.as_str(),
                             err.code() as i32,
-                            err.message()
+                            err.message(),
+                            request_started.elapsed().as_millis()
                         );
                         yield Err(err);
                         return;
@@ -172,18 +175,32 @@ impl RexService for RexDaemonService {
             }
             if done_seen {
                 println!(
-                    "stream.request_id={request_id} stream.lifecycle={} terminal=done chunks_sent={chunk_count}",
+                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} terminal=done chunks_sent={chunk_count} elapsed_ms={}",
                     StreamLifecycle::Completed.as_str(),
+                    request_started.elapsed().as_millis()
                 );
             } else {
                 println!(
-                    "stream.request_id={request_id} stream.lifecycle={} terminal=stream_ended_without_done chunks_sent={chunk_count}",
+                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} terminal=stream_ended_without_done chunks_sent={chunk_count} elapsed_ms={}",
                     StreamLifecycle::Interrupted.as_str(),
+                    request_started.elapsed().as_millis()
                 );
             }
         };
 
         Ok(Response::new(Box::pin(output)))
+    }
+}
+
+fn extract_trace_id(metadata: &tonic::metadata::MetadataMap, request_id: u64) -> String {
+    let trace_id = metadata
+        .get("x-rex-trace-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty());
+    match trace_id {
+        Some(value) => value.to_string(),
+        None => format!("request-{request_id}"),
     }
 }
 
@@ -250,7 +267,8 @@ impl PromptDirectives {
 #[cfg(test)]
 mod tests {
     use super::{
-        format_behavior_decision, format_cache_status, PromptDirectives, RexDaemonService,
+        extract_trace_id, format_behavior_decision, format_cache_status, PromptDirectives,
+        RexDaemonService,
     };
     use crate::plugins::{BehaviorDecision, CacheStatus};
 
@@ -303,5 +321,11 @@ mod tests {
             format_behavior_decision(&BehaviorDecision::Suppress { reason: "x" }),
             "suppress"
         );
+    }
+
+    #[test]
+    fn trace_id_extraction_falls_back_to_request_id() {
+        let metadata = tonic::metadata::MetadataMap::new();
+        assert_eq!(extract_trace_id(&metadata, 42), "request-42");
     }
 }

@@ -21,11 +21,15 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Release pipeline `.github/workflows/extension-release.yml` triggered by `rex-vscode-vX.Y.Z` tags: builds + tests, packages a versioned VSIX, validates it with `unzip -t` and `vsce generate-manifest`, publishes to Open VSX when `OVSX_TOKEN` is set, optionally publishes to the VS Code Marketplace when `VSCE_PAT` is set, and attaches the VSIX to a GitHub Release.
 - `docs/EXTENSION_RELEASE.md` covering install, auto-start guidance, troubleshooting, and the release checklist.
 - Repo script `scripts/install-extension.sh` for one-command local VSIX build, CLI install into Cursor or VS Code, and optional window reload after install.
+- `docs/EXTENSION_LOCAL_E2E.md` and `scripts/dev-rex-extension.sh`: ordered path from clone to **REX ready** in the editor (Rust build, `install-cli.sh`, extension install; daemon steps documented, not auto-started by the script).
 
 ### Changed
+- When `rex-cli` or `rex-daemon` cannot be spawned (`ENOENT`), error text now points to `rex.cliPath` / `rex.daemonBinaryPath` and to `docs/EXTENSION_LOCAL_E2E.md` in this repository for local setup.
 - `streamComplete`: clearer terminal-state handling for `done` / `error` and cancellation wakeups.
 - Periodic daemon refresh uses the same auto-start vs probe policy as activation.
 - Chat streaming waits for a ready daemon when `rex.daemonAutoStart` is enabled.
+- Stream error handling now uses a stable code taxonomy (`daemon_unavailable`, `stream_timeout`, `stream_interrupted`, `stream_incomplete`, `cancelled`, `invalid_response`, `spawn_failed`, `unknown`) for deterministic extension UX behavior.
+- Each chat stream now carries a trace id across extension host -> `rex-cli` -> daemon logs, and terminal logs include elapsed latency.
 
 ### Fixed
 - `DaemonLifecycle.ensureRunning` serializes overlapping calls so concurrent chat or status work cannot spawn duplicate daemon children.
@@ -33,3 +37,4 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Added (tests / tooling)
 - Vitest temp dir `.vitest-tmp/` gitignored; integration tests for flaky status fixtures and ensureRunning single-flight behavior.
+- Contract conformance tests for malformed NDJSON, duplicate terminal markers, cancellation terminal uniqueness, and lifecycle trace callbacks.

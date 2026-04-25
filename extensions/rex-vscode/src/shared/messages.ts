@@ -6,6 +6,15 @@
  */
 
 export type StreamId = string;
+export type StreamErrorCode =
+  | "daemon_unavailable"
+  | "stream_timeout"
+  | "stream_interrupted"
+  | "stream_incomplete"
+  | "cancelled"
+  | "invalid_response"
+  | "spawn_failed"
+  | "unknown";
 
 export interface PromptContextSnapshot {
   readonly filePath: string;
@@ -50,7 +59,13 @@ export type ExtensionToWebview =
   | { readonly type: "streamStarted"; readonly id: StreamId }
   | { readonly type: "streamChunk"; readonly id: StreamId; readonly text: string }
   | { readonly type: "streamDone"; readonly id: StreamId }
-  | { readonly type: "streamError"; readonly id: StreamId; readonly message: string }
+  | {
+      readonly type: "streamError";
+      readonly id: StreamId;
+      readonly message: string;
+      readonly code?: StreamErrorCode;
+      readonly retryable?: boolean;
+    }
   | { readonly type: "daemonState"; readonly payload: DaemonStatePayload }
   | { readonly type: "theme"; readonly payload: ThemePayload }
   | { readonly type: "contextSnapshot"; readonly context: PromptContextSnapshot | null }

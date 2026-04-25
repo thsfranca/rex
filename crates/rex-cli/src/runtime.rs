@@ -1,5 +1,6 @@
 use std::process::ExitCode;
 use std::time::Duration;
+use std::{env, process, time::SystemTime};
 
 use rex_proto::rex::v1::{GetSystemStatusRequest, StreamInferenceRequest};
 use serde_json::json;
@@ -22,7 +23,10 @@ pub async fn run_cli(args: impl Iterator<Item = String>) -> ExitCode {
                 Ok(()) => ExitCode::SUCCESS,
                 Err(err) => {
                     if matches!(complete_format, Some(CompleteOutputFormat::Ndjson)) {
-                        println!("{}", format_ndjson_error_event(err.to_string()));
+                        println!(
+                            "{}",
+                            format_ndjson_error_event(err.to_string(), ndjson_error_code(&err))
+                        );
                     } else {
                         eprintln!("Error: {err}");
                     }
@@ -46,7 +50,7 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
 }
 
 async fn run_status() -> Result<(), CliError> {
-    let mut client = connect_client().await?;
+    let mut client = connect_client(None).await?;
     let mut request = tonic::Request::new(GetSystemStatusRequest {});
     request.set_timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS));
     let response = client.get_system_status(request).await?;
@@ -59,9 +63,11 @@ async fn run_status() -> Result<(), CliError> {
 }
 
 async fn run_complete(prompt: String, format: CompleteOutputFormat) -> Result<(), CliError> {
+    let trace_id = resolve_trace_id();
+    eprintln!("trace_id={trace_id} phase=start operation=complete");
     let mut attempt: u32 = 0;
     loop {
-        let mut client = match connect_client().await {
+        let mut client = match connect_client(Some(&trace_id)).await {
             Ok(client) => client,
             Err(err) if should_retry_stream_start(&err, attempt) => {
                 attempt += 1;
@@ -73,6 +79,13 @@ async fn run_complete(prompt: String, format: CompleteOutputFormat) -> Result<()
         let mut request = tonic::Request::new(StreamInferenceRequest {
             prompt: prompt.clone(),
         });
+        let metadata_value =
+            tonic::metadata::MetadataValue::try_from(trace_id.as_str()).map_err(|_| {
+                map_status_error(tonic::Status::invalid_argument("invalid trace id metadata"))
+            })?;
+        request
+            .metadata_mut()
+            .insert("x-rex-trace-id", metadata_value);
         request.set_timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS));
         let response = match client
             .stream_inference(request)
@@ -90,8 +103,14 @@ async fn run_complete(prompt: String, format: CompleteOutputFormat) -> Result<()
         let mut stream = response.into_inner();
         let lifecycle = consume_stream(&mut stream, format).await?;
         return match lifecycle {
-            StreamLifecycle::Completed => Ok(()),
-            StreamLifecycle::Incomplete => Err(CliError::StreamIncomplete),
+            StreamLifecycle::Completed => {
+                eprintln!("trace_id={trace_id} phase=terminal result=done");
+                Ok(())
+            }
+            StreamLifecycle::Incomplete => {
+                eprintln!("trace_id={trace_id} phase=terminal result=stream_incomplete");
+                Err(CliError::StreamIncomplete)
+            }
         };
     }
 }
@@ -183,12 +202,37 @@ fn format_ndjson_done_event(index: u64) -> String {
     .to_string()
 }
 
-fn format_ndjson_error_event(message: String) -> String {
+fn format_ndjson_error_event(message: String, code: &'static str) -> String {
     json!({
         "event": "error",
-        "message": message
+        "message": message,
+        "code": code
     })
     .to_string()
+}
+
+fn ndjson_error_code(err: &CliError) -> &'static str {
+    match err {
+        CliError::DaemonUnavailable { .. } => "daemon_unavailable",
+        CliError::StreamTimeout { .. } => "stream_timeout",
+        CliError::StreamInterrupted => "stream_interrupted",
+        CliError::StreamIncomplete => "stream_incomplete",
+        CliError::DaemonConnect { .. } => "daemon_unavailable",
+        CliError::Endpoint(_) | CliError::Status(_) => "unknown",
+    }
+}
+
+fn resolve_trace_id() -> String {
+    if let Ok(existing) = env::var("REX_TRACE_ID") {
+        if !existing.trim().is_empty() {
+            return existing;
+        }
+    }
+    let millis = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map(|value| value.as_millis())
+        .unwrap_or(0);
+    format!("rex-cli-{millis}-{}", process::id())
 }
 
 impl CliCommand {
@@ -204,7 +248,7 @@ impl CliCommand {
 mod tests {
     use super::{
         classify_stream_terminal, format_ndjson_chunk_event, format_ndjson_done_event,
-        format_ndjson_error_event, should_retry_stream_start,
+        format_ndjson_error_event, ndjson_error_code, should_retry_stream_start,
     };
     use crate::domain::StreamLifecycle;
     use crate::error::CliError;
@@ -239,9 +283,30 @@ mod tests {
 
     #[test]
     fn ndjson_error_event_is_stable() {
+        let parsed: serde_json::Value =
+            serde_json::from_str(&format_ndjson_error_event("boom".to_string(), "unknown"))
+                .expect("ndjson error should be valid json");
         assert_eq!(
-            format_ndjson_error_event("boom".to_string()),
-            r#"{"event":"error","message":"boom"}"#
+            parsed,
+            serde_json::json!({
+                "event": "error",
+                "message": "boom",
+                "code": "unknown"
+            })
+        );
+    }
+
+    #[test]
+    fn ndjson_error_codes_are_stable() {
+        assert_eq!(
+            ndjson_error_code(&CliError::StreamInterrupted),
+            "stream_interrupted"
+        );
+        assert_eq!(
+            ndjson_error_code(&CliError::DaemonUnavailable {
+                socket_path: "/tmp/rex.sock".to_string()
+            }),
+            "daemon_unavailable"
         );
     }
 

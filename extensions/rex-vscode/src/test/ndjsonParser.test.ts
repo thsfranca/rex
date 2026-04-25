@@ -48,9 +48,11 @@ describe("NdjsonLineParser", () => {
 
   it("surfaces error events from the upstream CLI", () => {
     const parser = new NdjsonLineParser();
-    const events = parser.push('{"event":"error","message":"daemon unavailable"}\n');
+    const events = parser.push(
+      '{"event":"error","message":"daemon unavailable","code":"daemon_unavailable"}\n',
+    );
     expect(events).toEqual([
-      { kind: "error", message: "daemon unavailable" },
+      { kind: "error", message: "daemon unavailable", code: "daemon_unavailable" },
     ]);
   });
 
