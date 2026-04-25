@@ -32,6 +32,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const chatPanel = new ChatPanelProvider({
     context,
     getCliOptions: () => ({ cliPath: resources?.settings.cliPath ?? settings.cliPath }),
+    getDaemonAutoStart: () => resources?.settings.daemonAutoStart ?? settings.daemonAutoStart,
+    ensureDaemonReady: (signal) => {
+      const r = resources;
+      if (r === undefined) {
+        return Promise.resolve({
+          kind: "unavailable",
+          reason: "REX extension is not active",
+        } as DaemonLifecycleState);
+      }
+      return r.lifecycle.ensureRunning(signal);
+    },
     getDaemonState: () => lastLifecycleState,
     log: (message) => output.appendLine(message),
   });
@@ -54,7 +65,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(
     vscode.commands.registerCommand("rex.showStatus", async () => {
-      const state = await resources?.lifecycle.probe();
+      const state = await refreshDaemonConnection(resources);
       output.appendLine(`[command] showStatus -> ${describeState(state)}`);
       if (state?.kind === "ready") {
         void vscode.window.showInformationMessage(
@@ -156,7 +167,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     void lifecycle.probe();
   }
   resources.probeTimer = setInterval(() => {
-    void resources?.lifecycle.probe();
+    void refreshDaemonConnection(resources);
   }, PROBE_INTERVAL_MS);
 
   async function prefillFromSelection(template: string): Promise<void> {
@@ -215,4 +226,16 @@ function describeState(state: DaemonLifecycleState | undefined): string {
 
 function summarizeSettings(settings: RexSettings): string {
   return `cli=${settings.cliPath} daemon=${settings.daemonBinaryPath} autoStart=${settings.daemonAutoStart}`;
+}
+
+function refreshDaemonConnection(
+  r: ActivationResources | undefined,
+): Promise<DaemonLifecycleState | undefined> {
+  if (r === undefined) {
+    return Promise.resolve(undefined);
+  }
+  if (r.settings.daemonAutoStart) {
+    return r.lifecycle.ensureRunning();
+  }
+  return r.lifecycle.probe();
 }

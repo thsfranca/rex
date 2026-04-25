@@ -16,6 +16,10 @@ async function collect(iter: AsyncIterable<StreamEvent>): Promise<StreamEvent[]>
   return events;
 }
 
+function terminalEvents(events: StreamEvent[]): StreamEvent[] {
+  return events.filter((event) => event.kind === "done" || event.kind === "error");
+}
+
 describe("streamComplete", () => {
   it("yields chunk events and terminates with done on a normal run", async () => {
     const events = await collect(
@@ -28,6 +32,7 @@ describe("streamComplete", () => {
       { kind: "chunk", index: 1, text: "world" },
       { kind: "done", index: 2 },
     ]);
+    expect(terminalEvents(events)).toHaveLength(1);
   });
 
   it("propagates error events from the CLI", async () => {
@@ -39,6 +44,7 @@ describe("streamComplete", () => {
     expect(events).toEqual([
       { kind: "error", message: "daemon unavailable" },
     ]);
+    expect(terminalEvents(events)).toHaveLength(1);
   });
 
   it("emits a synthetic error when the CLI exits without a terminal event", async () => {
@@ -49,6 +55,7 @@ describe("streamComplete", () => {
     );
     expect(events.length).toBeGreaterThanOrEqual(1);
     expect(events.at(-1)?.kind).toBe("error");
+    expect(terminalEvents(events)).toHaveLength(1);
   });
 
   it("cancels an in-flight stream via AbortSignal", async () => {
@@ -73,5 +80,19 @@ describe("streamComplete", () => {
     expect(events.some((event) => event.kind === "error" && event.message === "cancelled")).toBe(
       true,
     );
+    expect(terminalEvents(events)).toHaveLength(1);
+  });
+
+  it("emits a single cancellation error when the signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const events = await collect(
+      streamComplete({ cliPath: fixtureBinary("cli_slow.sh") }, {
+        prompt: "hi",
+        signal: controller.signal,
+      }),
+    );
+    expect(events).toEqual([{ kind: "error", message: "cancelled" }]);
+    expect(terminalEvents(events)).toHaveLength(1);
   });
 });
