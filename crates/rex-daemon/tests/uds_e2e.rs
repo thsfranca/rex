@@ -231,11 +231,18 @@ async fn stream_reports_terminal_error_when_daemon_interrupts() {
     let _ = daemon.await;
     cleanup_socket(&socket_path);
 
-    let maybe_err = timeout(STREAM_READ_TIMEOUT, stream.message())
-        .await
-        .expect("stream should terminate quickly after daemon abort");
-    assert!(
-        maybe_err.is_err() || maybe_err.expect("stream read should resolve").is_none(),
-        "expected stream read error or termination after daemon abort"
-    );
+    let deadline = Instant::now() + STREAM_READ_TIMEOUT;
+    loop {
+        let now = Instant::now();
+        assert!(
+            now < deadline,
+            "expected stream read error or termination after daemon abort"
+        );
+        let remaining = deadline - now;
+        match timeout(remaining, stream.message()).await {
+            Ok(Err(_)) | Ok(Ok(None)) => break,
+            Ok(Ok(Some(_))) => continue,
+            Err(_) => panic!("expected stream read error or termination after daemon abort"),
+        }
+    }
 }
