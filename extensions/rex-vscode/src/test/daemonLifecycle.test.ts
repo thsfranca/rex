@@ -7,6 +7,7 @@ import {
   type DaemonLifecycleOptions,
   type DaemonLifecycleState,
 } from "../runtime/daemonLifecycle";
+import { EXTENSION_LOCAL_E2E_DOC_PATH } from "../runtime/spawnExecutableHints";
 
 const FIXTURES_DIR = path.resolve(__dirname, "fixtures");
 const FIXTURE_CLI_STATUS_OK = path.join(FIXTURES_DIR, "cli_status_ok.sh");
@@ -63,6 +64,25 @@ describe("DaemonLifecycle.ensureRunning", () => {
       expect(state.status.activeModelId).toBe("test-model");
     }
     expect(transitions.map((t) => t.kind)).toEqual(["ready"]);
+  });
+
+  it("includes onboarding hint when rex-daemon executable is missing", async () => {
+    const lifecycle = makeLifecycle({
+      cli: { cliPath: FIXTURE_CLI_STATUS_FAIL, timeoutMs: 2_000 },
+      daemonBinaryPath: "/__rex_vitest_nonexistent__/rex-daemon",
+      readyTimeoutMs: 3_000,
+      pollIntervalMs: 50,
+    });
+    lifecycles.push(lifecycle);
+
+    const state = await lifecycle.ensureRunning();
+
+    expect(state.kind).toBe("unavailable");
+    if (state.kind === "unavailable") {
+      expect(state.reason).toMatch(/failed to spawn daemon/);
+      expect(state.reason).toContain(EXTENSION_LOCAL_E2E_DOC_PATH);
+      expect(state.reason).toContain("rex.daemonBinaryPath");
+    }
   });
 
   it("reports unavailable when spawning the daemon fails immediately", async () => {

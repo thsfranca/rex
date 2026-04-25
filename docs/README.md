@@ -14,7 +14,9 @@ This folder keeps project documentation organized by purpose.
 | `docs/EXTENSION_ROADMAP.md` | Phased roadmap for the VS Code/Cursor extension. |
 | `docs/EXTENSION_ARCHITECTURE.md` | Extension component layout and typed message bus. |
 | `docs/EXTENSION_RELEASE.md` | Install, auto-start, troubleshooting, and release pipeline for the extension. |
+| `docs/EXTENSION_LOCAL_E2E.md` | Ordered checklist from clone to **REX ready** in the editor (daemon, CLI, PATH, extension install). |
 | `scripts/install-extension.sh` | One-command local VSIX build + install into Cursor/VS Code (see `docs/EXTENSION_RELEASE.md`). |
+| `scripts/dev-rex-extension.sh` | Build Rust workspace, `install-cli.sh`, then `install-extension.sh` with pass-through args (see `docs/EXTENSION_LOCAL_E2E.md`). |
 | `docs/PLUGIN_ROADMAP.md` | Sidecar-first plugin roadmap and built-in decision gates. |
 | `docs/CONTEXT_EFFICIENCY.md` | Token budget, plugin boundaries, and telemetry defaults. |
 | `ARCHITECTURE.md` | System architecture and technical direction. |
@@ -29,6 +31,7 @@ This folder keeps project documentation organized by purpose.
 - Read `docs/EXTENSION_ROADMAP.md` for the phased plan of the VS Code/Cursor extension.
 - Read `docs/EXTENSION_ARCHITECTURE.md` for the extension component layout and message bus.
 - Read `docs/EXTENSION_RELEASE.md` to install the extension, enable daemon auto-start, or ship a release.
+- Read `docs/EXTENSION_LOCAL_E2E.md` for a single path from clone to a working extension plus daemon (includes macOS editor `PATH` notes).
 - Run `./scripts/install-extension.sh` from the repo root for the fastest local install into Cursor or VS Code (see that doc for prerequisites).
 - Read `docs/PLUGIN_ROADMAP.md` for post-MVP plugin sequence and promotion criteria.
 - Read `docs/CONTEXT_EFFICIENCY.md` for context optimization architecture and contracts.

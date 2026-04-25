@@ -6,6 +6,7 @@ import { snapshotActiveEditor } from "../editor/context";
 import { RexProposalProvider } from "../editor/virtualDocs";
 import type { CliBridgeOptions } from "../runtime/cliBridge";
 import type { DaemonLifecycleState } from "../runtime/daemonLifecycle";
+import { classifyStreamError, classifyStreamErrorMessage } from "../runtime/errorTaxonomy";
 import { streamComplete } from "../runtime/streamClient";
 import type {
   ExtensionToWebview,
@@ -151,7 +152,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
         await this.handleSubmitPrompt(message);
         return;
       case "cancelStream":
-        this.pendingStreams.get(message.id)?.controller.abort();
+        this.cancelPendingStream(message.id);
         return;
       case "applyCodeBlock":
         await this.handleApplyCodeBlock(message);
@@ -179,6 +180,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   private async handleSubmitPrompt(
     message: Extract<WebviewToExtension, { type: "submitPrompt" }>,
   ): Promise<void> {
+    this.cancelPendingStream(message.id);
     const controller = new AbortController();
     this.pendingStreams.set(message.id, { controller });
 
@@ -205,6 +207,15 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       for await (const event of streamComplete(this.deps.getCliOptions(), {
         prompt: fullPrompt,
         signal: controller.signal,
+        onLifecycle: (lifecycle) => {
+          if (lifecycle.phase === "start") {
+            this.deps.log(`[chat] trace_id=${lifecycle.traceId} phase=start`);
+            return;
+          }
+          this.deps.log(
+            `[chat] trace_id=${lifecycle.traceId} phase=terminal code=${lifecycle.terminalCode ?? "unknown"} elapsed_ms=${lifecycle.elapsedMs ?? 0}`,
+          );
+        },
       })) {
         if (event.kind === "chunk") {
           this.postMessage({ type: "streamChunk", id: message.id, text: event.text });
@@ -214,15 +225,38 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
           this.postMessage({ type: "streamDone", id: message.id });
           continue;
         }
-        this.postMessage({ type: "streamError", id: message.id, message: event.message });
+        const classified = classifyStreamError(event);
+        this.postMessage({
+          type: "streamError",
+          id: message.id,
+          message: classified.message,
+          code: classified.code,
+          retryable: classified.retryable,
+        });
       }
     } catch (error) {
       const errText = error instanceof Error ? error.message : String(error);
+      const classified = classifyStreamErrorMessage(errText);
       this.deps.log(`[chat] stream failure: ${errText}`);
-      this.postMessage({ type: "streamError", id: message.id, message: errText });
+      this.postMessage({
+        type: "streamError",
+        id: message.id,
+        message: classified.message,
+        code: classified.code,
+        retryable: classified.retryable,
+      });
     } finally {
       this.pendingStreams.delete(message.id);
     }
+  }
+
+  private cancelPendingStream(id: string): void {
+    const pending = this.pendingStreams.get(id);
+    if (pending === undefined) {
+      return;
+    }
+    pending.controller.abort();
+    this.pendingStreams.delete(id);
   }
 
   private async handleApplyCodeBlock(
