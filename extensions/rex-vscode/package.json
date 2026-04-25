@@ -16,10 +16,30 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onView:rex.chatView"
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "rex",
+          "title": "REX",
+          "icon": "media/rex-activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "rex": [
+        {
+          "id": "rex.chatView",
+          "name": "Chat",
+          "type": "webview",
+          "contextualTitle": "REX"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "rex.showStatus",
@@ -32,8 +52,47 @@
       {
         "command": "rex.openOutput",
         "title": "REX: Open Output Channel"
+      },
+      {
+        "command": "rex.focusChat",
+        "title": "REX: Open Chat"
+      },
+      {
+        "command": "rex.clearChat",
+        "title": "REX: Clear Chat"
+      },
+      {
+        "command": "rex.explainSelection",
+        "title": "REX: Explain Selection"
+      },
+      {
+        "command": "rex.fixSelection",
+        "title": "REX: Fix Selection"
+      },
+      {
+        "command": "rex.refactorSelection",
+        "title": "REX: Refactor Selection"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "rex.explainSelection",
+          "group": "rex@1",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "rex.fixSelection",
+          "group": "rex@2",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "rex.refactorSelection",
+          "group": "rex@3",
+          "when": "editorHasSelection"
+        }
+      ]
+    },
     "configuration": {
       "title": "REX",
       "properties": {
