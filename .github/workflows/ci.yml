@@ -12,6 +12,7 @@ concurrency:
 jobs:
   rust-fmt-clippy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,17 +28,33 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install CLI binaries via project script
+      - name: Install CLI Binaries
         run: ./scripts/install-cli.sh
 
-      - name: Format check
-        run: cargo fmt --all -- --check
+      - name: Run Fmt and Clippy
+        id: run_checks
+        continue-on-error: true
+        run: ./scripts/ci/run_rust_fmt_clippy.sh
 
-      - name: Lint check
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Write Job Summary
+        if: ${{ always() }}
+        run: ./scripts/ci/write_job_summary.sh rust-fmt-clippy
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_checks.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-rust-fmt-clippy-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+
+      - name: Enforce fmt/clippy job status
+        if: ${{ steps.run_checks.outcome != 'success' }}
+        run: exit 1
 
   rust-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,20 +70,41 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install CLI binaries via project script
+      - name: Install CLI Binaries
         run: ./scripts/install-cli.sh
 
-      - name: Test (all targets)
-        run: cargo test --workspace --all-targets --locked
+      - name: Run Tests
+        id: run_tests
+        continue-on-error: true
+        run: ./scripts/ci/run_rust_tests.sh
+
+      - name: Write Job Summary
+        if: ${{ always() }}
+        run: ./scripts/ci/write_job_summary.sh rust-test
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_tests.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-test-report-rust-test-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+
+      - name: Enforce test job status
+        if: ${{ steps.run_tests.outcome != 'success' }}
+        run: exit 1
 
   rust-checks:
     if: ${{ always() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [rust-fmt-clippy, rust-test]
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Ensure all required jobs passed
-        run: |
-          if [ "${{ needs.rust-fmt-clippy.result }}" != "success" ] || [ "${{ needs.rust-test.result }}" != "success" ]; then
-            echo "At least one required check failed."
-            exit 1
-          fi
+        env:
+          FMT_RESULT: ${{ needs.rust-fmt-clippy.result }}
+          TEST_RESULT: ${{ needs.rust-test.result }}
+        run: ./scripts/ci/enforce_rust_gate.sh

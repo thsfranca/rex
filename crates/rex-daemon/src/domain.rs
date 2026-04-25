@@ -30,9 +30,27 @@ pub fn chunk_output(text: &str, max_chunk_chars: usize) -> Vec<String> {
         .collect()
 }
 
+/// Stream lifecycle phases emitted by daemon logs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StreamLifecycle {
+    Starting,
+    Streaming,
+    Completed,
+}
+
+impl StreamLifecycle {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Starting => "starting",
+            Self::Streaming => "streaming",
+            Self::Completed => "completed",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{build_mock_output, chunk_output};
+    use super::{build_mock_output, chunk_output, StreamLifecycle};
 
     #[test]
     fn uses_empty_prompt_marker_for_blank_input() {
@@ -54,5 +72,11 @@ mod tests {
     fn uses_minimum_chunk_size_of_one() {
         let chunks = chunk_output("abc", 0);
         assert_eq!(chunks, vec!["a", "b", "c"]);
+    }
+
+    #[test]
+    fn lifecycle_labels_are_stable() {
+        assert_eq!(StreamLifecycle::Starting.as_str(), "starting");
+        assert_eq!(StreamLifecycle::Completed.as_str(), "completed");
     }
 }

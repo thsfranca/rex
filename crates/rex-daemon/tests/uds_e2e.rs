@@ -5,7 +5,7 @@ use rex_proto::rex::v1::rex_service_client::RexServiceClient;
 use rex_proto::rex::v1::{GetSystemStatusRequest, StreamInferenceRequest};
 use serial_test::serial;
 use tokio::net::UnixStream;
-use tokio::time::{sleep, Instant};
+use tokio::time::{sleep, timeout, Instant};
 use tonic::transport::Endpoint;
 use tower::service_fn;
 
@@ -21,6 +21,7 @@ mod service;
 
 const READINESS_TIMEOUT: Duration = Duration::from_secs(4);
 const CONNECT_TIMEOUT: Duration = Duration::from_millis(250);
+const STREAM_READ_TIMEOUT: Duration = Duration::from_secs(2);
 
 fn test_socket_path() -> String {
     let mut path = std::env::temp_dir();
@@ -152,4 +153,96 @@ async fn connect_fails_when_daemon_is_unavailable() {
             || err.to_string().contains("No such file"),
         "unexpected error message: {err}"
     );
+}
+
+#[tokio::test]
+#[serial]
+async fn startup_race_recovers_and_serves_status() {
+    if !uds_bind_supported() {
+        eprintln!("Skipping UDS e2e: sandbox does not allow unix socket bind");
+        return;
+    }
+
+    let socket_path = test_socket_path();
+    cleanup_socket(&socket_path);
+    let daemon_socket = socket_path.clone();
+    let daemon = tokio::spawn(async move {
+        runtime::run_daemon_on_socket(&daemon_socket)
+            .await
+            .expect("daemon runtime should run without transport error");
+    });
+
+    // Validate startup race: first connection may fail before socket bind.
+    let _ = connect_client(&socket_path).await;
+    wait_for_daemon_ready(&socket_path).await;
+
+    let mut client = connect_client(&socket_path)
+        .await
+        .expect("daemon should accept connections after ready");
+    let status = client
+        .get_system_status(GetSystemStatusRequest {})
+        .await
+        .expect("status request should succeed")
+        .into_inner();
+    assert!(!status.daemon_version.is_empty());
+
+    daemon.abort();
+    let _ = daemon.await;
+    cleanup_socket(&socket_path);
+}
+
+#[tokio::test]
+#[serial]
+async fn stream_reports_terminal_error_when_daemon_interrupts() {
+    if !uds_bind_supported() {
+        eprintln!("Skipping UDS e2e: sandbox does not allow unix socket bind");
+        return;
+    }
+
+    let socket_path = test_socket_path();
+    cleanup_socket(&socket_path);
+    let daemon_socket = socket_path.clone();
+    let daemon = tokio::spawn(async move {
+        runtime::run_daemon_on_socket(&daemon_socket)
+            .await
+            .expect("daemon runtime should run without transport error");
+    });
+    wait_for_daemon_ready(&socket_path).await;
+
+    let mut client = connect_client(&socket_path)
+        .await
+        .expect("daemon should accept connections");
+    let response = client
+        .stream_inference(StreamInferenceRequest {
+            prompt: "interrupt me".to_string(),
+        })
+        .await
+        .expect("stream request should succeed");
+    let mut stream = response.into_inner();
+
+    let first = timeout(STREAM_READ_TIMEOUT, stream.message())
+        .await
+        .expect("first chunk should arrive within timeout")
+        .expect("stream read should not fail before interruption")
+        .expect("stream should emit first chunk");
+    assert!(!first.done);
+
+    daemon.abort();
+    let _ = daemon.await;
+    cleanup_socket(&socket_path);
+
+    let deadline = Instant::now() + STREAM_READ_TIMEOUT;
+    loop {
+        let now = Instant::now();
+        assert!(
+            now < deadline,
+            "expected stream read error or termination after daemon abort"
+        );
+        let remaining = deadline - now;
+        match timeout(remaining, stream.message()).await {
+            Ok(Err(_)) | Ok(Ok(None)) => break,
+            Ok(Ok(Some(_))) => continue,
+            Err(_) => panic!("expected stream read error or termination after daemon abort"),
+        }
+    }
 }
