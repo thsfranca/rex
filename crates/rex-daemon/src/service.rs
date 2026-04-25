@@ -1,5 +1,11 @@
 use std::time::Instant;
-use std::{env, sync::Mutex};
+use std::{
+    env,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, Mutex,
+    },
+};
 
 use async_stream::stream;
 use rex_proto::rex::v1::rex_service_server::RexService;
@@ -21,20 +27,21 @@ use crate::plugins::{
 pub struct RexDaemonService {
     started_at: Instant,
     pipeline: Mutex<ContextPipeline>,
+    runtime: Arc<dyn InferenceRuntime>,
+    request_sequence: AtomicU64,
 }
 
 const STREAM_CHUNK_MAX_CHARS: usize = 8;
 const STREAM_CHUNK_DELAY_MS: u64 = 35;
 
-impl RexDaemonService {
-    pub fn new(started_at: Instant) -> Self {
-        Self {
-            started_at,
-            pipeline: Mutex::new(ContextPipeline::default_sidecar_like()),
-        }
-    }
+trait InferenceRuntime: Send + Sync {
+    fn build_chunks(&self, prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>>;
+}
 
-    pub fn build_inference_chunks(prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>> {
+struct MockInferenceRuntime;
+
+impl InferenceRuntime for MockInferenceRuntime {
+    fn build_chunks(&self, prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>> {
         let text = build_mock_output(prompt);
         let mut chunks = Vec::new();
         let content_chunks = chunk_output(&text, STREAM_CHUNK_MAX_CHARS);
@@ -53,6 +60,26 @@ impl RexDaemonService {
             done: true,
         }));
         chunks
+    }
+}
+
+impl RexDaemonService {
+    pub fn new(started_at: Instant) -> Self {
+        Self::with_runtime(started_at, Arc::new(MockInferenceRuntime))
+    }
+
+    fn with_runtime(started_at: Instant, runtime: Arc<dyn InferenceRuntime>) -> Self {
+        Self {
+            started_at,
+            pipeline: Mutex::new(ContextPipeline::default_sidecar_like()),
+            runtime,
+            request_sequence: AtomicU64::new(1),
+        }
+    }
+
+    #[cfg(test)]
+    pub fn build_inference_chunks(prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>> {
+        MockInferenceRuntime.build_chunks(prompt)
     }
 }
 
@@ -76,6 +103,7 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<StreamInferenceRequest>,
     ) -> Result<Response<Self::StreamInferenceStream>, Status> {
+        let request_id = self.request_sequence.fetch_add(1, Ordering::Relaxed);
         let prompt = request.into_inner().prompt;
         let directives = PromptDirectives::from_prompt(&prompt);
         let context_request = ContextRequest {
@@ -91,12 +119,12 @@ impl RexService for RexDaemonService {
             .prepare(&context_request);
         let prompt_len = prompt.chars().count();
         println!(
-            "stream.lifecycle={} prompt_len={prompt_len}",
-            StreamLifecycle::Starting.as_str()
+            "stream.request_id={request_id} stream.lifecycle={} prompt_len={prompt_len}",
+            StreamLifecycle::Starting.as_str(),
         );
-        let chunks = Self::build_inference_chunks(&pipeline_result.effective_prompt);
+        let chunks = self.runtime.build_chunks(&pipeline_result.effective_prompt);
         println!(
-            "stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
+            "stream.request_id={request_id} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
             pipeline_result.metrics.prompt_tokens,
             pipeline_result.metrics.selected_context_tokens,
             pipeline_result.metrics.context_candidates,
@@ -106,19 +134,53 @@ impl RexService for RexDaemonService {
             format_behavior_decision(&pipeline_result.metrics.behavior_decision),
         );
         println!(
-            "stream.lifecycle={} chunk_count={}",
+            "stream.request_id={request_id} stream.lifecycle={} chunk_count={}",
             StreamLifecycle::Streaming.as_str(),
             chunks.len()
         );
         let output = stream! {
+            let mut chunk_count: u64 = 0;
+            let mut done_seen = false;
             for chunk in chunks {
-                yield chunk;
+                match chunk {
+                    Ok(chunk) => {
+                        chunk_count += 1;
+                        if chunk_count == 1 {
+                            println!(
+                                "stream.request_id={request_id} stream.event=first_chunk index={} done={}",
+                                chunk.index,
+                                chunk.done
+                            );
+                        }
+                        if chunk.done {
+                            done_seen = true;
+                        }
+                        yield Ok(chunk);
+                    }
+                    Err(err) => {
+                        println!(
+                            "stream.request_id={request_id} stream.lifecycle={} stream.event=error grpc_code={} message={}",
+                            StreamLifecycle::Failed.as_str(),
+                            err.code() as i32,
+                            err.message()
+                        );
+                        yield Err(err);
+                        return;
+                    }
+                }
                 sleep(Duration::from_millis(STREAM_CHUNK_DELAY_MS)).await;
             }
-            println!(
-                "stream.lifecycle={} terminal=done",
-                StreamLifecycle::Completed.as_str()
-            );
+            if done_seen {
+                println!(
+                    "stream.request_id={request_id} stream.lifecycle={} terminal=done chunks_sent={chunk_count}",
+                    StreamLifecycle::Completed.as_str(),
+                );
+            } else {
+                println!(
+                    "stream.request_id={request_id} stream.lifecycle={} terminal=stream_ended_without_done chunks_sent={chunk_count}",
+                    StreamLifecycle::Interrupted.as_str(),
+                );
+            }
         };
 
         Ok(Response::new(Box::pin(output)))
