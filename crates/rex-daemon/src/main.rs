@@ -1,4 +1,5 @@
 mod domain;
+mod plugins;
 mod runtime;
 mod service;
 

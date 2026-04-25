@@ -13,6 +13,9 @@ use tower::service_fn;
 #[path = "../src/domain.rs"]
 mod domain;
 #[allow(dead_code)]
+#[path = "../src/plugins.rs"]
+mod plugins;
+#[allow(dead_code)]
 #[path = "../src/runtime.rs"]
 mod runtime;
 #[allow(dead_code)]

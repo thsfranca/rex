@@ -9,8 +9,12 @@ This folder keeps project documentation organized by purpose.
 | `docs/README.md` | Entry point for documentation. |
 | `docs/DOCUMENTATION.md` | Project writing checklist and standards. |
 | `docs/DEPENDENCIES.md` | Local build and runtime dependency checklist. |
-| `docs/CI.md` | CI strategy and `main` branch protection settings. |
+| `docs/CI.md` | Path-aware CI strategy and `main` branch protection settings. |
 | `docs/EXTENSION_MVP.md` | Extension bootstrap flow using `rex-cli` NDJSON stream output. |
+| `docs/EXTENSION_ROADMAP.md` | Phased roadmap for the VS Code/Cursor extension. |
+| `docs/EXTENSION_ARCHITECTURE.md` | Extension component layout and typed message bus. |
+| `docs/PLUGIN_ROADMAP.md` | Sidecar-first plugin roadmap and built-in decision gates. |
+| `docs/CONTEXT_EFFICIENCY.md` | Token budget, plugin boundaries, and telemetry defaults. |
 | `ARCHITECTURE.md` | System architecture and technical direction. |
 | `MVP_SPEC.md` | Phase 1 specification and success criteria. |
 
@@ -20,6 +24,10 @@ This folder keeps project documentation organized by purpose.
 - Read `ARCHITECTURE.md` for long-term design.
 - Read `MVP_SPEC.md` for current implementation scope.
 - Read `docs/EXTENSION_MVP.md` for MVP extension integration contract.
+- Read `docs/EXTENSION_ROADMAP.md` for the phased plan of the VS Code/Cursor extension.
+- Read `docs/EXTENSION_ARCHITECTURE.md` for the extension component layout and message bus.
+- Read `docs/PLUGIN_ROADMAP.md` for post-MVP plugin sequence and promotion criteria.
+- Read `docs/CONTEXT_EFFICIENCY.md` for context optimization architecture and contracts.
 - Read `docs/DEPENDENCIES.md` to set up local prerequisites.
 - Read `docs/CI.md` for CI gate and merge queue settings.
 - Follow `docs/DOCUMENTATION.md` before editing docs.

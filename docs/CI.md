@@ -74,12 +74,17 @@ Keep failure codes low-cardinality. Current baseline set:
 - `TEST_FAIL`
 - `ENV_SETUP_FAIL`
 - `GATE_FAIL`
+- `NPM_CI_FAIL` (extension dependency install)
+- `TYPECHECK_FAIL` (extension TypeScript typecheck)
+- `LINT_FAIL` (extension ESLint)
+- `BUILD_FAIL` (extension esbuild bundle)
+- `PACKAGE_FAIL` (extension VSIX packaging)
 
 ### Reliability guardrails
 
 - Set `timeout-minutes` per job.
 - Keep `concurrency.cancel-in-progress: true`.
-- Keep `rust-checks` as the single required protection check.
+- Keep `ci-checks` as the single required protection check.
 
 ## Workflow triggers
 
@@ -92,10 +97,49 @@ Both events are configured in `.github/workflows/ci.yml`.
 
 Set branch protection or ruleset on `main` to require:
 
-- `rust-checks`
+- `ci-checks`
 
-`rust-checks` is the final gate job and fails when any required upstream CI job fails.
-The gate summary includes canonical fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`) plus upstream job outcomes.
+`ci-checks` is the final gate and fails when `rust-checks` or `extension-checks` fails. All gate jobs use canonical summary fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`) plus upstream outcomes.
+
+## Path-aware execution model
+
+CI first evaluates changed paths, then runs only relevant domain checks.
+
+### Change detection outputs
+
+- `rust_changed`
+- `extension_changed`
+- `ci_changed`
+- `global_changed`
+- `rust_relevant`
+- `extension_relevant`
+
+### Path relevance defaults
+
+- Rust-relevant:
+  - `crates/**`
+  - `Cargo.toml`
+  - `Cargo.lock`
+  - `scripts/install-cli.sh`
+  - `scripts/ci/run_rust_*.sh`
+  - `scripts/ci/enforce_rust_gate.sh`
+- Extension-relevant:
+  - `extensions/rex-vscode/**`
+  - `scripts/ci/run_extension*.sh`
+  - `scripts/ci/enforce_extension_gate.sh`
+- Cross-domain triggers:
+  - `.github/workflows/**`
+  - `scripts/ci/**`
+  - `README.md`
+  - `docs/**`
+
+### Dependency model
+
+- Rust chain: `rust-fmt-clippy` + `rust-test` -> `rust-checks`
+- Extension chain: `extension-lint-typecheck` -> `extension-test` -> `extension-package` -> `extension-checks`
+- Top-level chain: `rust-checks` + `extension-checks` -> `ci-checks`
+
+When a domain is non-relevant, leaf jobs skip and that domain gate exits with `result=skip` while returning success. This keeps required checks deterministic for merge queue.
 
 ## Merge queue settings
 

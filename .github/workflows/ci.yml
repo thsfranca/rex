@@ -10,7 +10,65 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      rust_changed: ${{ steps.filter.outputs.rust_changed }}
+      extension_changed: ${{ steps.filter.outputs.extension_changed }}
+      ci_changed: ${{ steps.filter.outputs.ci_changed }}
+      global_changed: ${{ steps.filter.outputs.global_changed }}
+      rust_relevant: ${{ steps.set_outputs.outputs.rust_relevant }}
+      extension_relevant: ${{ steps.set_outputs.outputs.extension_relevant }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            rust_changed:
+              - 'crates/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'scripts/install-cli.sh'
+              - 'scripts/ci/run_rust_*.sh'
+              - 'scripts/ci/enforce_rust_gate.sh'
+            extension_changed:
+              - 'extensions/rex-vscode/**'
+              - 'scripts/ci/run_extension*.sh'
+              - 'scripts/ci/enforce_extension_gate.sh'
+            ci_changed:
+              - '.github/workflows/**'
+              - 'scripts/ci/**'
+            global_changed:
+              - 'README.md'
+              - 'docs/**'
+
+      - name: Set relevance outputs
+        id: set_outputs
+        env:
+          RUST_CHANGED: ${{ steps.filter.outputs.rust_changed }}
+          EXT_CHANGED: ${{ steps.filter.outputs.extension_changed }}
+          CI_CHANGED: ${{ steps.filter.outputs.ci_changed }}
+          GLOBAL_CHANGED: ${{ steps.filter.outputs.global_changed }}
+        run: |
+          rust_relevant=false
+          extension_relevant=false
+          if [ "${RUST_CHANGED}" = "true" ] || [ "${CI_CHANGED}" = "true" ] || [ "${GLOBAL_CHANGED}" = "true" ]; then
+            rust_relevant=true
+          fi
+          if [ "${EXT_CHANGED}" = "true" ] || [ "${CI_CHANGED}" = "true" ] || [ "${GLOBAL_CHANGED}" = "true" ]; then
+            extension_relevant=true
+          fi
+          echo "rust_relevant=${rust_relevant}" >> "$GITHUB_OUTPUT"
+          echo "extension_relevant=${extension_relevant}" >> "$GITHUB_OUTPUT"
+
   rust-fmt-clippy:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.rust_relevant == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -53,6 +111,8 @@ jobs:
         run: exit 1
 
   rust-test:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.rust_relevant == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -98,7 +158,7 @@ jobs:
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [rust-fmt-clippy, rust-test]
+    needs: [changes, rust-fmt-clippy, rust-test]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -107,6 +167,7 @@ jobs:
         id: run_gate
         continue-on-error: true
         env:
+          RUST_RELEVANT: ${{ needs.changes.outputs.rust_relevant }}
           FMT_RESULT: ${{ needs.rust-fmt-clippy.result }}
           TEST_RESULT: ${{ needs.rust-test.result }}
         run: ./scripts/ci/enforce_rust_gate.sh
@@ -120,5 +181,193 @@ jobs:
           retention-days: 7
 
       - name: Enforce gate job status
+        if: ${{ steps.run_gate.outcome != 'success' }}
+        run: exit 1
+
+  extension-lint-typecheck:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.extension_relevant == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: extensions/rex-vscode/package-lock.json
+
+      - name: Run extension lint and typecheck
+        id: run_extension_lint_typecheck
+        continue-on-error: true
+        run: ./scripts/ci/run_extension_lint_typecheck.sh
+
+      - name: Write Job Summary
+        if: ${{ always() }}
+        run: ./scripts/ci/write_job_summary.sh extension-lint-typecheck
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_extension_lint_typecheck.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-extension-lint-typecheck-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+
+      - name: Enforce extension lint and typecheck status
+        if: ${{ steps.run_extension_lint_typecheck.outcome != 'success' }}
+        run: exit 1
+
+  extension-test:
+    needs: [changes, extension-lint-typecheck]
+    if: ${{ needs.changes.outputs.extension_relevant == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: extensions/rex-vscode/package-lock.json
+
+      - name: Run extension tests
+        id: run_extension_tests
+        continue-on-error: true
+        run: ./scripts/ci/run_extension_tests.sh
+
+      - name: Write Job Summary
+        if: ${{ always() }}
+        run: ./scripts/ci/write_job_summary.sh extension-test
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_extension_tests.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-extension-test-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+
+      - name: Enforce extension test status
+        if: ${{ steps.run_extension_tests.outcome != 'success' }}
+        run: exit 1
+
+  extension-package:
+    needs: [changes, extension-test]
+    if: ${{ needs.changes.outputs.extension_relevant == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: extensions/rex-vscode/package-lock.json
+
+      - name: Run extension package
+        id: run_extension_package
+        continue-on-error: true
+        run: ./scripts/ci/run_extension_package.sh
+
+      - name: Write Job Summary
+        if: ${{ always() }}
+        run: ./scripts/ci/write_job_summary.sh extension-package
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_extension_package.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-extension-package-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+
+      - name: Upload VSIX artifact
+        if: ${{ steps.run_extension_package.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rex-vscode-vsix-${{ github.run_id }}
+          path: extensions/rex-vscode/rex-vscode.vsix
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Enforce extension package status
+        if: ${{ steps.run_extension_package.outcome != 'success' }}
+        run: exit 1
+
+  extension-checks:
+    if: ${{ always() }}
+    needs: [changes, extension-lint-typecheck, extension-test, extension-package]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Gate
+        id: run_gate
+        continue-on-error: true
+        env:
+          EXTENSION_RELEVANT: ${{ needs.changes.outputs.extension_relevant }}
+          LINT_TYPECHECK_RESULT: ${{ needs.extension-lint-typecheck.result }}
+          TEST_RESULT: ${{ needs.extension-test.result }}
+          PACKAGE_RESULT: ${{ needs.extension-package.result }}
+        run: ./scripts/ci/enforce_extension_gate.sh
+
+      - name: Write Job Summary
+        if: ${{ always() }}
+        run: ./scripts/ci/write_job_summary.sh extension-checks
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_gate.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-extension-checks-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+
+      - name: Enforce extension checks status
+        if: ${{ steps.run_gate.outcome != 'success' }}
+        run: exit 1
+
+  ci-checks:
+    if: ${{ always() }}
+    needs: [rust-checks, extension-checks]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Gate
+        id: run_gate
+        continue-on-error: true
+        env:
+          RUST_RESULT: ${{ needs.rust-checks.result }}
+          EXTENSION_RESULT: ${{ needs.extension-checks.result }}
+        run: ./scripts/ci/enforce_ci_gate.sh
+
+      - name: Write Job Summary
+        if: ${{ always() }}
+        run: ./scripts/ci/write_job_summary.sh ci-checks
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_gate.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-ci-checks-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+
+      - name: Enforce ci checks status
         if: ${{ steps.run_gate.outcome != 'success' }}
         run: exit 1
