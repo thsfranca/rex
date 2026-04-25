@@ -47,6 +47,12 @@ cargo run -p rex-cli -- complete "hello from rex" --format ndjson
 
 This verifies status, server-streaming behavior, and extension-consumable NDJSON output.
 
+4) (Optional) Install the REX VS Code / Cursor extension:
+
+- Package a VSIX locally: `cd extensions/rex-vscode && npm install && npm run package`, then run `Extensions: Install from VSIX...` in your editor.
+- Or download the VSIX from a `rex-vscode-vX.Y.Z` GitHub Release.
+- Set `"rex.daemonAutoStart": true` if you want the extension to spawn `rex-daemon` on activation. See [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) for install, auto-start, and troubleshooting details.
+
 ## Operational checks
 
 Use these checks when touching daemon/CLI lifecycle behavior:
@@ -115,6 +121,7 @@ For full scope details, see [`MVP_SPEC.md`](MVP_SPEC.md).
 | [`docs/EXTENSION_MVP.md`](docs/EXTENSION_MVP.md) | Cursor extension bootstrap path using CLI NDJSON streaming. |
 | [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md) | Phased roadmap for the VS Code/Cursor extension. |
 | [`docs/EXTENSION_ARCHITECTURE.md`](docs/EXTENSION_ARCHITECTURE.md) | Extension component layout and typed message bus. |
+| [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) | Install, daemon auto-start, troubleshooting, and release pipeline for the extension. |
 | [`docs/PLUGIN_ROADMAP.md`](docs/PLUGIN_ROADMAP.md) | Sidecar-first plugin roadmap and built-in promotion gates. |
 | [`docs/CONTEXT_EFFICIENCY.md`](docs/CONTEXT_EFFICIENCY.md) | Token budget contracts, context pipeline, and telemetry defaults. |
 | [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Local build/runtime prerequisites by layer. |
