@@ -167,14 +167,33 @@ async fn startup_race_recovers_and_serves_status() {
     cleanup_socket(&socket_path);
     let daemon_socket = socket_path.clone();
     let daemon = tokio::spawn(async move {
+        // Delay startup so the test always exercises the unavailable-then-ready race window.
+        sleep(Duration::from_millis(250)).await;
         runtime::run_daemon_on_socket(&daemon_socket)
             .await
             .expect("daemon runtime should run without transport error");
     });
 
-    // Validate startup race: first connection may fail before socket bind.
-    let _ = connect_client(&socket_path).await;
-    wait_for_daemon_ready(&socket_path).await;
+    let started = Instant::now();
+    let mut saw_unavailable = false;
+    loop {
+        match connect_client(&socket_path).await {
+            Ok(_) => break,
+            Err(_) => {
+                saw_unavailable = true;
+                assert!(
+                    started.elapsed() < READINESS_TIMEOUT,
+                    "daemon did not become ready in {:?}",
+                    READINESS_TIMEOUT
+                );
+                sleep(Duration::from_millis(50)).await;
+            }
+        }
+    }
+    assert!(
+        saw_unavailable,
+        "expected at least one unavailable connection attempt before daemon readiness"
+    );
 
     let mut client = connect_client(&socket_path)
         .await
