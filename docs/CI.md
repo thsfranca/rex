@@ -30,3 +30,17 @@ In GitHub repository settings for `main`:
 - Avoids duplicate CI runs from branch `push` + `pull_request`.
 - Validates merge results before integration into `main`.
 - Keeps one stable required check name as the protection contract.
+
+## Local verification flow for reliability changes
+
+Run this sequence before opening PRs that change stream lifecycle behavior:
+
+1. `cargo fmt --all -- --check`
+2. `cargo clippy --workspace --all-targets --locked -- -D warnings`
+3. `cargo test --workspace --all-targets --locked`
+
+For lifecycle/race fixes, ensure E2E coverage includes:
+
+- daemon unavailable connection path;
+- startup race recovery path;
+- stream interruption/terminal behavior path.

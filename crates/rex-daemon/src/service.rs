@@ -10,7 +10,9 @@ use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
 use tonic::{Request, Response, Status};
 
-use crate::domain::{build_mock_output, chunk_output, ACTIVE_MODEL_ID, DAEMON_VERSION};
+use crate::domain::{
+    build_mock_output, chunk_output, StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION,
+};
 
 pub struct RexDaemonService {
     started_at: Instant,
@@ -67,12 +69,26 @@ impl RexService for RexDaemonService {
         request: Request<StreamInferenceRequest>,
     ) -> Result<Response<Self::StreamInferenceStream>, Status> {
         let prompt = request.into_inner().prompt;
+        let prompt_len = prompt.chars().count();
+        println!(
+            "stream.lifecycle={} prompt_len={prompt_len}",
+            StreamLifecycle::Starting.as_str()
+        );
         let chunks = Self::build_inference_chunks(&prompt);
+        println!(
+            "stream.lifecycle={} chunk_count={}",
+            StreamLifecycle::Streaming.as_str(),
+            chunks.len()
+        );
         let output = stream! {
             for chunk in chunks {
                 yield chunk;
                 sleep(Duration::from_millis(STREAM_CHUNK_DELAY_MS)).await;
             }
+            println!(
+                "stream.lifecycle={} terminal=done",
+                StreamLifecycle::Completed.as_str()
+            );
         };
 
         Ok(Response::new(Box::pin(output)))
