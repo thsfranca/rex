@@ -103,8 +103,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure all required jobs passed
+      - name: Run Gate
+        id: run_gate
+        continue-on-error: true
         env:
           FMT_RESULT: ${{ needs.rust-fmt-clippy.result }}
           TEST_RESULT: ${{ needs.rust-test.result }}
         run: ./scripts/ci/enforce_rust_gate.sh
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_gate.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-rust-checks-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+
+      - name: Enforce gate job status
+        if: ${{ steps.run_gate.outcome != 'success' }}
+        run: exit 1

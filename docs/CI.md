@@ -38,6 +38,7 @@ Use this standard for every CI job in `.github/workflows/ci.yml`.
   - `ci-logs-<job>-<run_id>`
   - `ci-test-report-<job>-<run_id>`
 - Set `retention-days: 7` unless project needs change.
+- Ensure gate jobs upload diagnostics on failure too (for this workflow: `ci-logs-rust-checks-<run_id>`).
 
 ### Workflow script separation contract
 
@@ -94,6 +95,7 @@ Set branch protection or ruleset on `main` to require:
 - `rust-checks`
 
 `rust-checks` is the final gate job and fails when any required upstream CI job fails.
+The gate summary includes canonical fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`) plus upstream job outcomes.
 
 ## Merge queue settings
 
@@ -116,6 +118,7 @@ Run this sequence before opening PRs that change stream lifecycle behavior:
 1. `cargo fmt --all -- --check`
 2. `cargo clippy --workspace --all-targets --locked -- -D warnings`
 3. `cargo test --workspace --all-targets --locked`
+4. `cargo test -p rex-daemon --test uds_e2e -- --nocapture`
 
 For lifecycle/race fixes, ensure E2E coverage includes:
 

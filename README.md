@@ -54,6 +54,19 @@ cargo build --workspace
 - `rex-cli complete` now surfaces deterministic lifecycle errors for daemon unavailable, interrupted streams, and incomplete stream termination.
 - `rex-daemon` now emits lightweight stream lifecycle logs (`starting`, `streaming`, `completed`) for troubleshooting.
 
+## Runtime reliability verification
+
+Use these checks when touching daemon/CLI lifecycle behavior:
+
+```bash
+cargo test -p rex-daemon --test uds_e2e -- --nocapture
+```
+
+The E2E suite covers:
+- daemon unavailable connection failure path;
+- startup race recovery path;
+- stream terminal behavior after daemon interruption.
+
 ## Install as terminal commands
 
 Install or reinstall the latest local binaries:

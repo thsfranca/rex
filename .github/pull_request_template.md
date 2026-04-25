@@ -15,6 +15,19 @@
 - [ ] Manual checks:
   - 
 
+## Validation Proof Points
+
+<!-- Keep this focused on concrete evidence for merge readiness. -->
+- [ ] Runtime lifecycle proof:
+  - daemon unavailable path validated
+  - startup race recovery validated
+  - stream terminal behavior validated
+- [ ] CI gate proof:
+  - `rust-checks` summary includes `result`, `fail_stage`, `fail_code`, `hint`, `run_id`
+  - failure diagnostics artifact behavior verified for changed jobs
+- [ ] Docs proof:
+  - runtime/CI behavior in docs matches implemented behavior
+
 ## Risk And Rollback
 
 <!-- Note side effects, migration concerns, and rollback path. -->
