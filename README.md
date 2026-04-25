@@ -35,11 +35,17 @@ REX is a study project for a local AI runtime on macOS (Apple Silicon).
 This repository uses a Rust workspace with three crates:
 
 - `rex-proto`: protobuf/gRPC contract generation (`rex.v1`).
-- `rex-daemon`: daemon runtime boundary (implementation to be added in follow-up PRs).
-- `rex-cli`: thin client interface (implementation to be added in follow-up PRs).
+- `rex-daemon`: daemon runtime with status and mock streaming RPCs over UDS.
+- `rex-cli`: thin client with `status` and `complete` commands.
 
 Build all workspace members:
 
 ```bash
 cargo build --workspace
 ```
+
+## Runtime notes
+
+- Start `rex-daemon` before invoking `rex-cli` commands.
+- The CLI now uses conservative connection/request timeouts so startup races fail fast instead of hanging.
+- If the daemon is still booting, rerun `status` or `complete` after the socket is ready at `/tmp/rex.sock`.
