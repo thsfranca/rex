@@ -89,6 +89,8 @@ MVP does not implement plugins. For the next phase, start with **gRPC sidecar pl
 - Choose gRPC sidecar first for delivery speed and simpler integration.
 - Revisit Wasm when plugin APIs stabilize and performance/sandbox priorities increase.
 
+**Post-MVP (design only, out of Phase 1 scope):** REX is intended to use an **agnostic inference-adapter** seam for backends such as the mock engine, a future local MLX path, and **Cursor CLI** as a frontier-model gateway. See `ARCHITECTURE.md` (Inference adapters), `docs/ADAPTERS.md`, `docs/CACHING.md`, and the **Cursor CLI inference adapter** table in `docs/PLUGIN_ROADMAP.md` for the phased design track. MVP does not implement these; this pointer exists so future work does not conflict with the MVP contract.
+
 ## Runtime-managed sidecars (design baseline)
 
 This is the baseline for the first plugin-enabled phase after MVP.
