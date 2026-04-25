@@ -1,438 +1,133 @@
-# Rex — Architecture
+# REX Architecture
 
-For a project overview and getting started guide, see [README.md](README.md). For the delivery plan, see [ROADMAP.md](ROADMAP.md).
+This document defines the long-term technical direction for REX.
 
-An OpenAI- and Anthropic-compatible proxy that sits between AI-powered coding tools and multiple model backends (local + cloud). Rex identifies what each coding task needs and routes it to the cheapest model that fits.
+## Purpose
 
-- Compatible with any tool that supports a custom OpenAI or Anthropic API base URL (Cursor, Claude Code, Continue, Aider, etc.).
-- Each user runs their own Rex instance locally — all data, embeddings, and trained classifiers stay on the user's machine.
-- The ML classifier personalizes to each user's coding patterns over time.
+- Centralize local AI inference in one daemon.
+- Keep clients thin (CLI, editor, scripts).
+- Expose one stable local protocol for all clients.
 
-## System Overview
+## Technology stack
 
-```mermaid
-flowchart LR
-    Client[AI Coding Tool] -->|OpenAI / Anthropic API| Proxy[Rex Proxy]
-    Proxy --> Adapter[Client Adapter]
-    Adapter --> Classifier{Task Classifier}
-    Classifier -->|parallel| Heuristics[Heuristic Rules<br/>+ Structural Tokens]
-    Classifier -->|parallel| MLClassifier[ML Classifier]
-    Classifier -->|parallel| LLMJudge[LLM-as-Judge]
-    Heuristics --> Router[Routing Engine]
-    MLClassifier --> Router
-    LLMJudge --> Router
-    Router --> Registry[Model Registry<br/>+ Performance Tracker]
-    Discovery[Model Discovery] -->|config + auto-discovery| Registry
-    Registry --> Enrichment[Enrichment Pipeline]
-    Enrichment --> Local[Local Models]
-    Enrichment --> Cloud[Cloud APIs]
-    Router --> Logger[Decision Logger]
-    Logger --> Store[Storage Interface]
-    Store --> DataStore[SQLite]
-    Adapter --> Embedder[Sentence Transformer]
-    Embedder --> EmbeddingStore[Embedding Store]
-    EmbeddingStore --> LearningPipeline[Learning Pipeline]
-    Heuristics --> LearningPipeline
-    LearningPipeline --> MLClassifier
-    Registry -.->|confidence-aware| Fallback[Fallback Chain]
-    Fallback --> Local
-    Fallback --> Cloud
-```
+| Topic | Decision |
+|---|---|
+| Primary platform | macOS on Apple Silicon |
+| Runtime language | Rust |
+| Protocol | gRPC |
+| Transport | Unix Domain Socket (`/tmp/rex.sock`) |
+| Inference direction | Apple MLX (post-MVP), mock engine in MVP |
 
-**Phase 6 Enhancements** (see [ROADMAP.md — Phase 6](ROADMAP.md#phase-6--classification-optimization)):
-- **Parallel Classifiers**: Heuristics, ML classifier, and judge run concurrently; return first confident result
-- **Structural Tokens**: Pre-scoring of stack traces, diffs, error messages boosts confidence before classifiers run
-- **Performance Tracker**: Tracks response time per (model, category) pair; weights model selection by actual latency
-- **Confidence-Aware Fallback**: Fallback strategy changes based on classification confidence (cost → balanced → capability)
+## Thin client, thick server
 
-- **Model Discovery** loads models and providers from `~/.rex/config.yaml` as the primary source. Config providers (remote LiteLLM proxies, custom endpoints) are probed for their model lists and override auto-discovered providers with the same prefix. Auto-discovery supplements with additional providers from environment variables and Ollama. Each model is enriched with metadata from LiteLLM's built-in database.
-- The **Client Adapter** normalizes tool-specific request patterns into a common format for the classifier.
-- Each supported tool (Cursor, Claude Code, etc.) has its own adapter that detects features like tab completion vs. chat.
-- The **Learning Pipeline** runs in the background, consuming query embeddings and heuristic votes to train the ML classifier automatically.
-- The **Enrichment Pipeline** transforms requests after routing but before the model call. Each enricher is opt-in and modifies the request (e.g., injecting task decomposition instructions for complex tasks).
-
-## Design Decisions
-
-| Decision | Choice | Rationale |
+| Concern | Thin client | REX daemon |
 |---|---|---|
-| Language | Python + FastAPI | Fastest to prototype, async-native, rich AI ecosystem |
-| Model backends | LiteLLM as library | Handles 100+ providers (local and cloud) with unified interface |
-| Classification | Hybrid (heuristics → ML classifier → LLM judge) | Heuristics are fast and free; ML classifier replaces heuristics once trained; LLM judge catches edge cases |
-| Query embeddings | Sentence Transformer ([all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)) | ~80MB local model, ~10ms per query on CPU, zero API cost; produces vectors for clustering and classification ([Reimers & Gurevych, 2019](https://arxiv.org/abs/1908.10084); [Wang et al., 2020](https://arxiv.org/abs/2002.10957)) |
-| Category discovery | Unsupervised K-means clustering | Automatically discovers task categories from query embeddings without labels; [silhouette score](https://doi.org/10.1016/0377-0427(87)90125-7) selects optimal cluster count (Rousseeuw, 1987) |
-| Automated labeling | Weak supervision | Heuristic rules act as noisy labeling functions; a probabilistic label model aggregates their votes into clean training labels without manual annotation ([Ratner et al., 2016](https://arxiv.org/abs/1605.07723); [Ratner et al., 2017](https://arxiv.org/abs/1711.10160)) |
-| Model discovery | Config-first, auto-discovery supplements | When `~/.rex/config.yaml` defines `models` or `providers`, Rex uses them as the primary source. Config providers (remote LiteLLM proxies, custom endpoints) override auto-discovered providers by prefix. Auto-discovery fills in models not already listed. Without a config file, Rex falls back to full auto-discovery (scan env vars, query provider APIs, probe Ollama) |
-| Model metadata | LiteLLM built-in database | `litellm.get_model_info()` provides context window, pricing, and capability flags for known models; no manual metadata needed |
-| Routing criteria | Cost + context window + capability flags | All routing signals come from measurable model properties — no manually curated "strengths" list |
-| Two-tier primary | Separate primaries for completion (cheapest) and chat (cheapest with function calling) | Completion needs speed; chat/agent needs capability. Auto-selected from LiteLLM metadata, overridable via `routing.chat_model` |
-| Context-aware routing | Pre-call token estimation + context-specific fallback | Prevents wasted API calls by checking request size before routing; catches estimation mismatches via `ContextWindowExceededError` as a safety net |
-| Config format | Optional YAML overrides | Config file is not required; when present, it adds models and overrides routing defaults |
-| Client detection | User-Agent header → adapter | Rex selects the adapter based on the client's User-Agent header; new tools supported by adding an adapter |
-| API compatibility | Full OpenAI + Anthropic Messages API, transparent proxy | Rex routes known endpoints (OpenAI and Anthropic) and passes through everything else to the primary model's backend; never blocks unknown endpoints |
-| Error handling | Graceful degradation | Every failure falls back to a simpler path; classification failure → primary model; all models fail → error to client |
-| Logging storage | Repository pattern | Core logic decoupled from storage; SQLite as default implementation, swappable without touching routing code |
-| Deployment model | Global CLI, per-user local instance | Rex installs as a CLI tool; `rex start` launches the proxy, `rex stop` shuts it down; any AI tool connects to the same instance; all data stays on the user's machine; each instance learns independently from its own usage |
-| Default storage | SQLite | Zero-dependency, single-file, good enough for single user |
-| Cost tracking | LiteLLM runtime cost calculation | LiteLLM's `completion_cost()` returns actual cost per request from its built-in pricing database; no manual cost config needed for known models |
-| Prompt enrichment | Pluggable pipeline, opt-in per enricher | Keeps enrichment logic separate from routing; each enricher toggles independently; zero overhead when disabled |
-| Request timeout & cancellation | `asyncio.wait_for` + connection teardown | Rex wraps upstream calls with configurable timeouts and propagates client disconnects; closing the HTTP connection is the strongest portable cancel signal a proxy can send — actual inference stop depends on the backend runtime |
-| Observability dashboard | [Datasette](https://datasette.io/) + [datasette-dashboards](https://datasette.io/plugins/datasette-dashboards) (optional) | Same Python ecosystem; built for SQLite; Rex ships a YAML config, not a UI — no frontend code to maintain; user installs only if they want the dashboard |
+| UX rendering | Owns | Does not own |
+| Model lifecycle | Does not own | Owns |
+| Scheduling and policy | Does not own | Owns |
+| Streaming contract | Consumes | Produces |
 
-## Task Categories
+## Core components
 
-The heuristic classifier uses these predefined categories as a starting point:
+### `rex-daemon`
 
-| Category | Signals | Routing Criteria |
+- Host process for model lifecycle and inference orchestration.
+- Enforce queueing, cancellation, and stream lifecycle.
+- Apply machine-aware policy (memory, thermal, battery) as the project evolves.
+- Manage plugin sidecar lifecycle in post-MVP phases.
+
+### `rex-proto`
+
+- Keep protobuf definitions in `proto/rex/v1`.
+- Generate shared Rust types and gRPC stubs.
+- Preserve backward compatibility in `rex.v1`.
+
+### `rex-cli`
+
+- Connect to daemon over UDS.
+- Call status and streaming endpoints.
+- Provide a deterministic interface for MVP validation.
+
+## Plugin model (high level)
+
+REX adopts a runtime-managed gRPC sidecar model for early plugin phases.
+
+### Design summary
+
+- Plugins run as separate OS processes (sidecars), not inside `rex-daemon`.
+- Each sidecar exposes a gRPC server using the shared protobuf contract.
+- `rex-daemon` launches, probes, monitors, and stops plugin processes.
+- Plugin configuration declares runtime, version, and entrypoint.
+
+### Why this model
+
+| Factor | Runtime-managed sidecars |
+|---|---|
+| Plugin author experience | Fast onboarding with familiar language runtimes |
+| Iteration speed | High; no compile-to-Wasm requirement |
+| Isolation | Process boundary by default |
+| Contract stability | Strong; gRPC + protobuf versioning |
+| Operational cost | Higher runtime/dependency management burden |
+
+### Operating boundaries
+
+- Keep communication local through UDS by default.
+- Limit supported runtimes in early phases to reduce complexity.
+- Enforce health checks, startup timeouts, and explicit compatibility metadata.
+- Treat plugin packaging and security hardening as phased work.
+
+## Protocol contract (high level)
+
+| RPC | Type | Purpose |
 |---|---|---|
-| **completion** | Short prompt, code context, single-turn | Completion primary (cheapest model), lowest latency |
-| **debugging** | Stack traces, "error", "fix", "bug", "crash" | `supports_reasoning`, cheapest among matches |
-| **refactoring** | "refactor", "clean up", "simplify", "restructure" | Context window ≥ 32K, cheapest among matches |
-| **optimization** | "faster", "performance", "optimize", "memory", "efficient" | `supports_reasoning`, cheapest among matches |
-| **test_generation** | "write tests", "add test", "spec", "coverage" | Context window ≥ 16K, cheapest among matches |
-| **explanation** | "explain", "what does", "how does", "why" | Cheapest model |
-| **documentation** | "document", "docstring", "README", "API docs" | Context window ≥ 16K, cheapest among matches |
-| **code_review** | "review", "is this correct", "what's wrong", "security" | Context window ≥ 32K, `supports_reasoning`, cheapest among matches |
-| **generation** | Writing new code from description | Context window ≥ 16K, cheapest among matches |
-| **migration** | "upgrade", "migrate", "convert to", "update from" | Context window ≥ 32K, `supports_reasoning`, cheapest among matches |
-| **general** | Fallback when nothing else matches | Chat primary |
+| `GetSystemStatus` | Unary | Return daemon metadata and health status. |
+| `StreamInference` | Server streaming | Stream inference chunks to clients. |
 
-All routing criteria come from measurable model properties — cost, context window, capability flags from LiteLLM, and `is_local`. Rex never uses a manually curated "strengths" list.
+## Data flow
 
-- All categories start on the cheapest model that meets the criteria. The fallback chain handles individual failures in real time.
-- Once clustering produces a silhouette score above the quality threshold (>0.5), unsupervised clustering takes over.
-- The learning pipeline discovers the user's actual task categories from their real usage patterns.
-- Discovered categories may differ from the predefined ones — they reflect how the individual user actually works.
+1. Client receives a user action.
+2. Client sends a gRPC request over UDS.
+3. Daemon validates request and chooses execution path.
+4. Inference engine emits chunks.
+5. Daemon streams chunks back to the client.
+6. Client renders incremental output.
 
-## API Surface
+## Reliability rules
 
-Rex exposes a fully OpenAI- and Anthropic-compatible API as a transparent proxy:
+- Start with one socket owner and predictable lifecycle.
+- Handle graceful shutdown and always remove stale socket files.
+- Use bounded queues to prevent unbounded buffering.
+- Return clear errors on startup, connection, and stream failures.
 
-- **Routed endpoints** — Rex applies classification and routing logic:
-  - `POST /v1/chat/completions` — OpenAI format (streaming and non-streaming)
-  - `POST /v1/messages` — Anthropic Messages API format (streaming and non-streaming)
-  - `POST /v1/completions` (legacy)
-- **Handled directly**:
-  - `GET /v1/models` — returns models from Rex's registry
-  - `GET /health` — returns proxy status
-- **Management**:
-  - `POST /v1/reset` — clears all learning data and trained models, restores Rex to its initial state
-- **Transparent passthrough** — Rex forwards to the primary model's backend without routing:
-  - `/v1/embeddings`, `/v1/audio/*`, `/v1/images/*`, `/v1/files`, `/v1/moderations`, and any other endpoint
-  - Rex never blocks an unknown endpoint — it passes it through to the primary model's backend
+## Security rules
 
-## Routing Strategy
+- Keep communication local through UDS by default.
+- Use filesystem permissions to scope socket access.
+- Keep remote listeners disabled unless a future spec enables them.
 
-```mermaid
-flowchart TD
-    Request[Incoming Request] --> ClientAdapter[Client Adapter]
-    ClientAdapter --> EndpointCheck{Routed Endpoint?}
-    EndpointCheck -->|No| Passthrough[Forward to primary backend]
-    EndpointCheck -->|Yes| FeatureDetect{Feature Detection}
-    FeatureDetect -->|Completion| CompletionPrimary["Completion primary (cheapest model)"]
-    FeatureDetect -->|Chat / Agent| ChatPrimary["Chat primary (cheapest with function calling)"]
-    ChatPrimary --> ClassifierChain{Classifier Chain}
-    ClassifierChain -->|heuristics confident| RouteDirectly[Route to assigned model for category]
-    ClassifierChain -->|ML model available| MLClassify[ML Classifier]
-    ClassifierChain -->|still uncertain| LLMJudge[LLM-as-Judge classification]
-    MLClassify --> RouteClassified[Route based on classification]
-    LLMJudge --> RouteClassified
-    CompletionPrimary --> Fallback{Success?}
-    RouteDirectly --> Enrichment[Enrichment Pipeline]
-    RouteClassified --> Enrichment
-    Enrichment --> Fallback{Success?}
-    Fallback -->|Yes| Log[Log decision + outcome]
-    Fallback -->|No| Escalate[Fallback to next model up]
-    Escalate --> Log
-    Log --> FeedbackData[Accumulate data for learning pipeline]
+## Directory structure
+
+Recommended structure for this phase:
+
+```text
+.
+├── Cargo.toml
+├── README.md
+├── ARCHITECTURE.md
+├── MVP_SPEC.md
+├── docs/
+│   ├── README.md
+│   └── DOCUMENTATION.md
+├── proto/
+│   └── rex/v1/rex.proto
+└── crates/
+    ├── rex-proto/
+    ├── rex-daemon/
+    └── rex-cli/
 ```
 
-- **Client adapter**: Normalizes the incoming request from a specific tool into a common format. Detects features (completion vs. chat/agent) based on tool-specific request patterns.
-- **Two-tier primary**: Completion requests go to the cheapest model (fast, low latency). Chat/agent requests start from the cheapest model that supports function calling (capable enough for tool use and complex prompts). See [Two-Tier Primary](#two-tier-primary) below.
+## Non-goals in this document
 
-**Classifier chain** (the router evaluates in order, stops at the first confident result):
-
-1. **Heuristics**: Keyword matching, pattern detection, structural analysis.
-   - The router routes immediately if confidence is high (<1ms overhead).
-   - Heuristic rules also serve as labeling functions for the learning pipeline.
-2. **ML classifier**: Classifies by nearest pre-seeded centroid in embedding space from day 1.
-   - Evolves to logistic regression trained on cluster-derived and weakly-supervised labels once clusters stabilize.
-   - Runs locally, <50ms inference.
-3. **LLM judge**: A small local LLM classifies the task when the above are uncertain ([Zheng et al., 2023](https://arxiv.org/abs/2306.05685)).
-   - Only triggered for chat/agent requests where 200-500ms extra latency is acceptable.
-
-### Confidence-Based Model Escalation
-
-Low classification confidence triggers **classifier escalation** — the system tries more sophisticated classifiers (heuristics → centroid → LLM judge) to get a better category label. When confidence remains below the threshold after the full classifier chain, the engine escalates the **model** — picking the next more capable model in cost order instead of the cheapest one.
-
-```mermaid
-flowchart TD
-    Request[Request] --> ClassifierChain[Classifier Chain]
-    ClassifierChain --> ConfCheck{Confidence >= threshold?}
-    ConfCheck -->|Yes| CheapModel[Cheapest model meeting requirements]
-    ConfCheck -->|No| EscalateModel[Next model up in cost order]
-    CheapModel --> Response[Response]
-    EscalateModel --> Response
-```
-
-The key principle: uncertainty about a task is a signal that the task is likely complex or ambiguous. Complex tasks benefit from more capable models. This is a per-request decision — no persistence, no tracking windows, no retroactive category promotion. The confidence score computed on every request is the only input.
-
-This aligns with the Confidence-Driven LLM Router research ([Zhang et al., 2025](https://arxiv.org/abs/2502.11021)) which demonstrates that uncertainty-based routing outperforms both accuracy-based and human-preference-based routing for balancing cost and response quality.
-
-The routing decision carries an `escalated` flag for observability in the decision log.
-
-### Context-Aware Routing
-
-Rex routes requests to models that can fit the input and recovers intelligently when a model rejects a request for exceeding its context window. Two layers work together:
-
-**Pre-call token estimation** (proactive):
-- Before sending a request, Rex estimates the input token count using `litellm.token_counter()`.
-- Rex compares the estimate against the model's effective context window — `max_context_window × effective_context_ratio` (default: 0.8).
-- If the request exceeds the effective window, Rex skips that model and selects the next cheapest model with a large enough window.
-- This prevents wasted latency and API costs from requests guaranteed to fail.
-
-**Context-specific fallback** (reactive):
-- When a model rejects a request with a context window error, LiteLLM raises `ContextWindowExceededError`.
-- Rex catches this error separately from general failures and filters remaining fallback candidates to only models with a larger `max_context_window` than the one that failed.
-- This avoids trying multiple models with the same or smaller context window before reaching one that fits.
-
-```mermaid
-flowchart TD
-    Request[Request with N tokens] --> Estimate["Estimate token count"]
-    Estimate --> FitsCheck{N <= model effective window?}
-    FitsCheck -->|Yes| CallModel[Call model]
-    FitsCheck -->|No| NextModel[Skip to next model with larger window]
-    CallModel --> Success{Success?}
-    Success -->|Yes| Response[Response]
-    Success -->|ContextWindowExceededError| FilterFallbacks["Filter fallbacks: only models with larger window"]
-    Success -->|Other error| GeneralFallback["General fallback: next model in cost order"]
-    NextModel --> CallModel
-    FilterFallbacks --> CallModel
-    GeneralFallback --> CallModel
-```
-
-**Effective context ratio**: Models advertise generous context limits, but real-world performance degrades 30-40% before the hard limit due to the "lost-in-the-middle" problem ([Zylos Research, 2026](https://zylos.ai/research/2026-01-19-llm-context-management)). The configurable ratio (default: 0.8) applies a safety margin so Rex routes conservatively without requiring manual adjustment of every model's metadata.
-
-**Token estimation accuracy**: `litellm.token_counter()` uses the model's native tokenizer when available, falling back to tiktoken. Estimates may diverge from the provider's actual count for images, tool definitions, or system prompt formatting. The context-specific fallback catches these edge cases as a safety net.
-
-### Two-Tier Primary
-
-Rex resolves two primary models at startup instead of one:
-
-- **Completion primary**: the cheapest model overall (local-first, then by cost). Handles tab completions where speed matters more than capability.
-- **Chat primary**: the cheapest model with `supports_function_calling=True`. Handles chat and agent requests where the model needs to produce structured tool calls and follow complex instructions.
-
-```mermaid
-flowchart TD
-    Startup[Startup] --> SortModels["Sort models by cost (local first)"]
-    SortModels --> CompPrimary["Completion primary = cheapest model"]
-    SortModels --> CheckFC{"Any model with\nsupports_function_calling?"}
-    CheckFC -->|Yes| ChatPrimary["Chat primary = cheapest with function calling"]
-    CheckFC -->|No| FallbackChat["Chat primary = completion primary"]
-    ConfigOverride{"routing.chat_model\nconfigured?"}
-    ConfigOverride -->|Yes| ExplicitChat["Chat primary = configured model"]
-    ConfigOverride -->|No| CheckFC
-```
-
-**Auto-selection logic** (in priority order):
-1. If `routing.chat_model` is set in config, the chat primary uses that model.
-2. Otherwise, the chat primary is the cheapest model where LiteLLM metadata reports `supports_function_calling=True`.
-3. If no model has that flag, the chat primary falls back to the completion primary (backwards compatible — same behavior as today).
-
-**Why `supports_function_calling`**:
-- Agentic clients (Claude Code, Cursor agent mode) send tool definitions in every request. The model must produce structured `tool_calls` responses — small models that lack function calling support output raw JSON text instead.
-- LiteLLM provides this flag for major models (cloud APIs, popular Ollama variants like `qwen2.5-coder:32b`). When LiteLLM has no metadata for a model, the flag defaults to `False`, which is conservative and correct for most small models.
-- `supports_function_calling` is a strong proxy for "capable enough for chat/agent work." Models with function calling support tend to handle complex prompts, multi-step instructions, and long context well.
-
-**How it interacts with existing routing**:
-- Category requirements still apply on top of the chat primary. If a category needs `supports_reasoning` or a minimum context window, the router selects the cheapest model meeting those requirements.
-- Confidence-based escalation still works — low confidence pushes to the next model up from the chat primary, not from the cheapest overall.
-- The fallback chain on failure still iterates models in cost order.
-
-**Research basis**: Every major coding tool uses different models per interaction mode. Cursor uses a custom small MoE model for tab completion (~260ms latency) and user-selected frontier models for chat/agent. Intelligent routing across model tiers reduces inference costs 40-85% while maintaining 90-95% quality ([Zylos Research, 2026](https://zylos.ai/research/2026-01-29-llm-routing-intelligent-model-selection)).
-
-## Enrichment Pipeline
-
-The enrichment pipeline transforms requests after routing but before the model call. Each enricher receives the request (messages, selected model, task category) and returns a modified request.
-
-- Enrichers are opt-in — each one toggles independently via config.
-- Enrichers run in sequence. Each one receives the output of the previous one.
-- The pipeline only applies to `chat` requests — `completion` requests (tab completions) skip it entirely.
-- If no enrichers are enabled, the pipeline is a no-op with zero overhead.
-
-### Task Decomposition Enricher
-
-The first enricher. When enabled, it detects complex tasks and injects a system-level instruction telling the model to break the task into numbered steps and work through them one at a time.
-
-**Complexity detection** uses the task category from classification:
-
-| Signal | How it indicates complexity |
-|---|---|
-| Task category | `generation`, `refactoring`, `migration`, `code_review`, `test_generation`, `documentation` are inherently multi-step |
-
-- The enricher appends to the existing system message — it never replaces it.
-- Simple tasks (`completion`, `debugging`, `optimization`, `explanation`, `general`) skip enrichment entirely.
-- Rex decides complexity, not the model. The classifier output is already available at zero cost.
-
-## Request Lifecycle & Cancellation
-
-Rex proxies requests to model backends via LiteLLM's `acompletion`. The request lifecycle determines how long Rex waits, what happens on timeout, and whether the upstream backend stops generating.
-
-**Timeout enforcement**:
-- `_call_with_fallback` wraps each `litellm.acompletion` call via `asyncio.wait_for` with a resolved timeout.
-- **Resolution order**: per-model `ModelConfig.timeout` (when set) overrides the global `ServerConfig.timeout` (default: 600 seconds).
-- When the timeout fires, Rex cancels the coroutine, closes the upstream HTTP connection, and falls back to the next model in the chain. If all models time out, the handler returns **HTTP 504** (Gateway Timeout).
-- Streaming requests use `ServerConfig.stream_timeout` (default: 600 seconds) instead of `ServerConfig.timeout`.
-- Per-model timeout overrides allow shorter limits for local models (where runaway generation wastes personal hardware) and longer limits for cloud APIs.
-- A separate `stream_timeout` caps total wall-clock time for streaming responses.
-
-**Client disconnect propagation**:
-- When the downstream client (Cursor, Claude Code, etc.) closes the connection, Rex detects the disconnect and cancels the in-flight upstream request.
-- For streaming responses, the ASGI server cancels the response generator, which stops reading from the upstream stream and closes the connection.
-- For non-streaming responses, the handler checks for client disconnect and cancels the pending `acompletion` call.
-
-**What Rex can and cannot guarantee**:
-
-| Layer | Behavior |
-|---|---|
-| **Rex → provider HTTP connection** | Rex closes the connection on timeout or client disconnect. This is reliable and immediate. |
-| **Local backend (Ollama, llama.cpp)** | Closing the connection typically stops generation. Ollama uses llama.cpp as its inference engine, which cancels both prompt processing and token generation on disconnect ([PR #9679](https://github.com/ggml-org/llama.cpp/pull/9679)). Ollama inherits that behavior, though its own connection handling layer can affect how reliably the disconnect reaches llama.cpp — behavior varies by Ollama version and offload mode. |
-| **Cloud APIs (OpenAI, Anthropic, etc.)** | Closing the connection is best-effort. The provider may or may not stop server-side work. Rex stops consuming tokens and stops being billed for streaming output, but prompt processing charges may still apply. |
-
-**Complementary controls**:
-- `max_tokens` is the only knob that **always** bounds worst-case compute, regardless of cancel semantics.
-- Streaming is preferred for long answers — mid-flight abort lets the backend see the connection die and stop generating.
-- Ollama server-side knobs reduce steady-state load on personal machines:
-
-| Variable | Effect |
-|---|---|
-| `OLLAMA_NUM_PARALLEL` | Limits concurrent requests per model (default: 1). Memory scales with parallel × context. |
-| `OLLAMA_MAX_LOADED_MODELS` | Caps how many models stay loaded simultaneously. |
-| `OLLAMA_KEEP_ALIVE` | Controls how long a model stays in memory after its last request (default: 5m). Set to `0` to unload immediately. |
-| `OLLAMA_CONTEXT_LENGTH` | Smaller default context reduces KV cache memory and per-token compute. |
-| `OLLAMA_FLASH_ATTENTION` | Reduces memory usage at large context sizes. |
-| `OLLAMA_KV_CACHE_TYPE` | Quantize the KV cache (`q8_0`, `q4_0`) for lower memory at some precision cost. |
-
-## Learning Pipeline
-
-The learning pipeline trains the ML classifier automatically in the background, without manual labeling.
-
-```mermaid
-flowchart TD
-    subgraph seed [Initialization]
-        Exemplars[Synthetic Exemplars] --> SeedEmbed["Embed seed queries"]
-        SeedEmbed --> InitCentroids[Initial Cluster Centroids]
-    end
-
-    subgraph perRequest [Per Request]
-        Query[User Query] --> Embed["Sentence Transformer (~10ms)"]
-        Embed --> NearestCentroid[Nearest Centroid Classification]
-        InitCentroids --> NearestCentroid
-        Query --> Rules[Heuristic Rules]
-    end
-
-    subgraph background [Background - Periodic]
-        StoredEmb[Stored Embeddings] --> Cluster["K-means Clustering\n(discovers task categories)"]
-        Cluster --> Categories[Discovered Categories]
-        RuleVotes[Heuristic Rule Votes] --> WeakSup["Weak Supervision Label Model\n(aggregates noisy votes)"]
-        WeakSup --> Labels[Probabilistic Labels]
-        Categories --> Train[Train Classifier]
-        Labels --> Train
-        Train --> Updated[Updated ML Classifier]
-    end
-
-    Embed --> StoredEmb
-    Rules --> RuleVotes
-    Categories -->|update| InitCentroids
-    Updated -->|replaces heuristics| Rules
-```
-
-**Initialization**:
-- The system embeds synthetic exemplar queries for each predefined category (e.g., "fix this null pointer exception" → debugging).
-- These embeddings serve as initial cluster centroids, enabling semantic classification from the first query ([Kushnareva et al., 2025](https://arxiv.org/abs/2601.09692)).
-
-**Per request**:
-- The sentence transformer embeds each query (~10ms, local CPU).
-- The router classifies by nearest centroid in embedding space.
-- This catches semantic similarity that keyword heuristics miss (e.g., "fix this crash" matches the debugging cluster without the word "error").
-- The system stores the embedding and heuristic rule votes for the background pipeline.
-
-**Periodically (~every 100 queries)**:
-1. **Clustering**: K-means re-groups stored embeddings.
-   - Centroids shift to reflect actual usage patterns.
-   - New categories can emerge beyond the predefined set.
-   - [Silhouette score](https://doi.org/10.1016/0377-0427(87)90125-7) determines optimal cluster count and whether clusters are stable enough to promote (threshold: >0.5) (Rousseeuw, 1987).
-   - Unsupervised clustering on query embeddings can match oracle-level routing accuracy ([Neurometric, 2026](https://neurometric.substack.com/p/unsupervised-llm-routing-matching)).
-2. **Weak supervision**: Heuristic rules act as noisy labeling functions.
-   - A probabilistic label model learns each rule's reliability from agreement/disagreement patterns.
-   - The model produces clean probabilistic labels without any ground-truth labels ([Ratner et al., 2017](https://arxiv.org/abs/1711.10160)).
-3. **Training**: A lightweight classifier (logistic regression) trains on the cluster-derived and weakly-supervised labels.
-   - Once trained, it replaces heuristics as the primary classifier in the chain.
-
-## Training Reset
-
-Reset is available through both the API (`POST /v1/reset`) and the CLI (`rex reset`). The CLI command asks for confirmation before proceeding — skippable with `--yes`. Both paths clear all accumulated learning data and return Rex to a fresh state. The reset covers:
-
-| Component | What gets cleared |
-|---|---|
-| **SQLite database** | All rows from the `decisions` table (routing history, embeddings, rule votes) |
-| **ML classifier file** | Deletes `~/.rex/ml_classifier.joblib` and clears in-memory model |
-| **Retraining scheduler** | Resets training counter, promotion status, and label model |
-| **Routing engine** | Demotes ML classifier, restores cold-start centroid classifier from synthetic exemplars |
-
-After reset:
-- Heuristics resume as the primary classifier.
-- The cold-start centroid classifier provides semantic fallback from the first query.
-- The learning pipeline begins accumulating data from scratch.
-- The system behaves exactly as it does on a fresh start.
-
-## Project Structure
-
-```
-app/
-  main.py                # FastAPI app entry point
-  cli.py                 # CLI entry point (rex start/stop/reset)
-  config.py              # Pydantic settings model + optional YAML loader
-  utils.py               # Shared utility functions
-  adapters/
-    base.py              # Client adapter interface and NormalizedRequest
-    default.py           # Default adapter (generic feature detection)
-    registry.py          # Selects adapter by User-Agent header
-  discovery/
-    providers.py         # Detects available providers from env vars
-    models.py            # Queries provider APIs for available models
-    metadata.py          # Enriches models with LiteLLM metadata
-    registry_builder.py  # Orchestrates discovery and builds the model registry
-  enrichment/
-    context.py           # EnrichmentContext dataclass
-    pipeline.py          # Enricher protocol and pipeline runner
-    task_decomposition.py # Task decomposition enricher
-  learning/
-    embeddings.py        # Sentence transformer embedding service
-    centroids.py         # Centroid classifier with synthetic exemplars
-    clustering.py        # K-means clustering + silhouette score
-    labeling.py          # Weak supervision label model
-    trainer.py           # ML classifier training pipeline
-    scheduler.py         # Re-training scheduler
-  logging/
-    models.py            # DecisionRecord dataclass
-    repository.py        # DecisionRepository protocol
-    sqlite.py            # SQLite implementation of decision repository
-  router/
-    categories.py        # Task categories and routing requirements
-    classifier.py        # Heuristic task classifier (keyword + structural)
-    detector.py          # Feature detection (completion vs. chat)
-    engine.py            # Routing engine (task-aware selection + fallback)
-    llm_judge.py         # LLM-as-Judge fallback classifier
-    ml_classifier.py     # Trained ML classifier (logistic regression)
-    registry.py          # Model registry (lookups, cost sorting, filtering)
-  proxy/
-    anthropic.py         # Anthropic Messages API translator (request/response/streaming)
-    handler.py           # Request handlers (OpenAI + Anthropic)
-    message_sanitizer.py # Converts mixed-format messages (Anthropic content blocks in OpenAI requests) to valid OpenAI format
-    streaming.py         # OpenAI SSE streaming response logic
-config.yaml.example     # Example configuration (optional)
-pyproject.toml           # Project dependencies (uv)
-tests/                   # pytest test suite
-```
-
-All learning pipeline modules are implemented: clustering, weak supervision, ML classifier training, and re-training scheduler.
+- Full API schema details (see `MVP_SPEC.md` for current scope).
+- Plugin model design details.
+- Production hardening checklist for multi-user environments.
