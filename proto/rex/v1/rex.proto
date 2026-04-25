@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package rex.v1;
+
+service RexService {
+  rpc GetSystemStatus(GetSystemStatusRequest) returns (GetSystemStatusResponse);
+  rpc StreamInference(StreamInferenceRequest) returns (stream StreamInferenceResponse);
+}
+
+message GetSystemStatusRequest {}
+
+message GetSystemStatusResponse {
+  string daemon_version = 1;
+  uint64 uptime_seconds = 2;
+  string active_model_id = 3;
+}
+
+message StreamInferenceRequest {
+  string prompt = 1;
+}
+
+message StreamInferenceResponse {
+  string text = 1;
+  uint64 index = 2;
+  bool done = 3;
+}
