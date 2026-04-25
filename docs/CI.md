@@ -133,8 +133,8 @@ CI first evaluates changed paths, then runs only relevant domain checks.
 - Cross-domain triggers:
   - `.github/workflows/**`
   - `scripts/ci/**`
-  - `README.md`
-  - `docs/**`
+  - `Cargo.toml`
+  - `Cargo.lock`
 
 ### Dependency model
 
@@ -143,6 +143,8 @@ CI first evaluates changed paths, then runs only relevant domain checks.
 - Top-level chain: `rust-checks` + `extension-checks` -> `ci-checks`
 
 When a domain is non-relevant, leaf jobs skip and that domain gate exits with `result=skip` while returning success. This keeps the required `ci-checks` result deterministic on pull requests that touch only out-of-scope paths.
+
+Docs-only and README-only pull requests are treated as out-of-scope for both domain verify jobs. In those cases, `rust-checks`, `extension-checks`, and `ci-checks` still run and pass through the gate scripts.
 
 ## Why this setup
 
