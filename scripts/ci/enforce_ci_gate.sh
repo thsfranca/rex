@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-fmt_result="${FMT_RESULT:-missing}"
-test_result="${TEST_RESULT:-missing}"
-rust_relevant="${RUST_RELEVANT:-true}"
+rust_result="${RUST_RESULT:-missing}"
+extension_result="${EXTENSION_RESULT:-missing}"
 result="success"
 fail_stage="-"
 fail_code="-"
@@ -12,7 +11,7 @@ hint="-"
 mkdir -p ci-observability
 
 echo "::group::Setup"
-echo "::notice::Evaluating upstream required checks."
+echo "::notice::Evaluating top-level CI gate dependencies."
 echo "::endgroup::"
 
 echo "::group::BuildAndChecks"
@@ -24,20 +23,15 @@ echo "::notice::No test execution in gate job."
 echo "::endgroup::"
 
 echo "::group::PostRunSummary"
-if [ "${rust_relevant}" != "true" ]; then
-  result="skip"
-  fail_stage="-"
-  fail_code="-"
-  hint="Rust checks were not relevant for this change set."
-elif [ "${fmt_result}" != "success" ] || [ "${test_result}" != "success" ]; then
+if [ "${rust_result}" != "success" ] || [ "${extension_result}" != "success" ]; then
   result="failure"
   fail_stage="PostRunSummary"
   fail_code="GATE_FAIL"
-  hint="Inspect upstream job summaries and artifacts."
+  hint="Inspect rust-checks and extension-checks summaries."
 fi
 
 {
-  echo "### rust-checks"
+  echo "### ci-checks"
   echo ""
   echo "- result: ${result}"
   echo "- fail_stage: ${fail_stage}"
@@ -45,8 +39,8 @@ fi
   echo "- hint: ${hint}"
   echo "- run_id: ${GITHUB_RUN_ID:-unknown}"
   echo ""
-  echo "- rust-fmt-clippy: ${fmt_result}"
-  echo "- rust-test: ${test_result}"
+  echo "- rust-checks: ${rust_result}"
+  echo "- extension-checks: ${extension_result}"
 } >> "$GITHUB_STEP_SUMMARY"
 
 {
@@ -54,19 +48,14 @@ fi
   echo "fail_stage=${fail_stage}"
   echo "fail_code=${fail_code}"
   echo "hint=${hint}"
-  echo "rust_fmt_clippy=${fmt_result}"
-  echo "rust_test=${test_result}"
-} > "ci-observability/gate-summary.txt"
+  echo "rust_checks=${rust_result}"
+  echo "extension_checks=${extension_result}"
+} > "ci-observability/ci-gate-summary.txt"
 
 if [ "${result}" != "success" ]; then
-  if [ "${result}" = "skip" ]; then
-    echo "::notice::Rust checks skipped as non-relevant."
-    echo "::endgroup::"
-    exit 0
-  fi
-  echo "::error::At least one required check failed."
+  echo "::error::Top-level CI gate failed."
   echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
   exit 1
 fi
-echo "::notice::All required checks passed."
+echo "::notice::Top-level CI gate passed."
 echo "::endgroup::"

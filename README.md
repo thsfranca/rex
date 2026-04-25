@@ -140,6 +140,8 @@ cargo test --workspace --all-targets --locked
 
 For reliability-specific work, follow the full sequence in [`docs/CI.md`](docs/CI.md).
 
+Branch protection should require only `ci-checks`, which aggregates `rust-checks` and `extension-checks`.
+
 ## License
 
 REX is licensed under MIT (`workspace.package.license` in `Cargo.toml`).

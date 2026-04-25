@@ -9,7 +9,7 @@ This folder keeps project documentation organized by purpose.
 | `docs/README.md` | Entry point for documentation. |
 | `docs/DOCUMENTATION.md` | Project writing checklist and standards. |
 | `docs/DEPENDENCIES.md` | Local build and runtime dependency checklist. |
-| `docs/CI.md` | CI strategy and `main` branch protection settings. |
+| `docs/CI.md` | Path-aware CI strategy and `main` branch protection settings. |
 | `docs/EXTENSION_MVP.md` | Extension bootstrap flow using `rex-cli` NDJSON stream output. |
 | `docs/EXTENSION_ROADMAP.md` | Phased roadmap for the VS Code/Cursor extension. |
 | `docs/EXTENSION_ARCHITECTURE.md` | Extension component layout and typed message bus. |
