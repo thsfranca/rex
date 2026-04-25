@@ -20,5 +20,5 @@ pub const STREAM_START_RETRY_DELAY_MS: u64 = 150;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StreamLifecycle {
     Completed,
-    Cancelled,
+    Incomplete,
 }
