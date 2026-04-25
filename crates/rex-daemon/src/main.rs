@@ -1,4 +1,8 @@
+mod domain;
+mod runtime;
+mod service;
+
 #[tokio::main]
-async fn main() {
-    println!("rex-daemon bootstrap ready");
+async fn main() -> Result<(), runtime::DaemonRuntimeError> {
+    runtime::run_daemon().await
 }
