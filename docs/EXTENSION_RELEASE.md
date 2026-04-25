@@ -21,6 +21,24 @@ Prerequisites:
 2. In VS Code or Cursor, run `Extensions: Install from VSIX...` and choose the downloaded file.
 3. Reload the editor if prompted.
 
+### Developer install from this repository
+
+From the repo root (requires Node.js 20+ and the **Cursor** or **VS Code** shell CLI on `PATH`, or set `REX_EXTENSION_EDITOR` to the full path of the CLI binary):
+
+```bash
+chmod +x ./scripts/install-extension.sh
+./scripts/install-extension.sh
+```
+
+The script runs `npm install` and `npm run package` under `extensions/rex-vscode`, installs `rex-vscode.vsix` with `--force`, then runs `workbench.action.reloadWindow` on the last active editor window when the CLI supports it. When both `cursor` and `code` exist, the script prefers the host indicated by `TERM_PROGRAM` if you run it from an integrated terminal.
+
+Useful flags:
+
+- `--verify` — run lint, typecheck, and tests before packaging.
+- `--editor cursor` or `--editor vscode` — pin the CLI when auto-detection is wrong.
+- `--no-reload` — install only; reload the window yourself.
+- `--only-install` — reuse an existing `extensions/rex-vscode/rex-vscode.vsix` without rebuilding.
+
 ### Option 2 — From Open VSX (once published)
 
 - Cursor: search `REX` in the extensions view (Open VSX is the default marketplace).

@@ -38,6 +38,21 @@ If the spawn or probe fails, the status bar moves to `REX unavailable` and the r
 
 ## Development
 
+Fast loop from the repo root (installs into Cursor or VS Code and reloads the window):
+
+```bash
+chmod +x ./scripts/install-extension.sh
+./scripts/install-extension.sh
+```
+
+Run checks before packaging when you want CI parity:
+
+```bash
+./scripts/install-extension.sh --verify
+```
+
+Manual steps:
+
 ```bash
 cd extensions/rex-vscode
 npm install

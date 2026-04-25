@@ -20,3 +20,4 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Integration tests for `DaemonLifecycle.ensureRunning` covering already-ready probe, failed spawn, and shutdown of a lifecycle-owned child.
 - Release pipeline `.github/workflows/extension-release.yml` triggered by `rex-vscode-vX.Y.Z` tags: builds + tests, packages a versioned VSIX, always runs `ovsx publish --dry-run`, publishes to Open VSX when `OVSX_TOKEN` is set, optionally publishes to the VS Code Marketplace when `VSCE_PAT` is set, and attaches the VSIX to a GitHub Release.
 - `docs/EXTENSION_RELEASE.md` covering install, auto-start guidance, troubleshooting, and the release checklist.
+- Repo script `scripts/install-extension.sh` for one-command local VSIX build, CLI install into Cursor or VS Code, and optional window reload after install.
