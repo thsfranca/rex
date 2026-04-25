@@ -118,12 +118,13 @@ Run this sequence before opening PRs that change stream lifecycle behavior:
 1. `cargo fmt --all -- --check`
 2. `cargo clippy --workspace --all-targets --locked -- -D warnings`
 3. `cargo test --workspace --all-targets --locked`
-4. `cargo test -p rex-daemon --test uds_e2e -- --nocapture`
+4. `./scripts/ci/test_enforce_rust_gate.sh`
+5. `cargo test -p rex-daemon --test uds_e2e -- --nocapture`
 
 For lifecycle/race fixes, ensure E2E coverage includes:
 
 - daemon unavailable connection path;
-- startup race recovery path;
+- deterministic startup race recovery path (unavailable -> ready);
 - stream interruption/terminal behavior path.
 
 ## New CI job checklist

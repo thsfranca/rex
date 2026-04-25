@@ -59,12 +59,13 @@ cargo build --workspace
 Use these checks when touching daemon/CLI lifecycle behavior:
 
 ```bash
+./scripts/ci/test_enforce_rust_gate.sh
 cargo test -p rex-daemon --test uds_e2e -- --nocapture
 ```
 
 The E2E suite covers:
 - daemon unavailable connection failure path;
-- startup race recovery path;
+- deterministic startup race recovery path (unavailable -> ready);
 - stream terminal behavior after daemon interruption.
 
 ## Install as terminal commands
