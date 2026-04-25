@@ -26,7 +26,6 @@ pub struct BehaviorSnapshot {
     pub typing_cadence_cpm: u16,
     pub pause_events_last_minute: u8,
 }
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BehaviorDecision {
     Allow,
