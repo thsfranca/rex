@@ -17,6 +17,7 @@ export interface CodeBlockProps {
     code: string;
     granularity: ApplyGranularity;
   }) => void;
+  readonly canMutateFiles: boolean;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -27,7 +28,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function CodeBlock(props: CodeBlockProps): React.ReactElement {
-  const { id, language, code, theme, applyResult, onCopy, onInsert, onApply } = props;
+  const { id, language, code, theme, applyResult, onCopy, onInsert, onApply, canMutateFiles } = props;
   const [highlighted, setHighlighted] = React.useState<string | undefined>(undefined);
   const [copied, setCopied] = React.useState(false);
 
@@ -57,7 +58,7 @@ export function CodeBlock(props: CodeBlockProps): React.ReactElement {
           <button type="button" onClick={handleCopy} aria-label="Copy code">
             {copied ? "Copied" : "Copy"}
           </button>
-          <button type="button" onClick={() => onInsert(code)} aria-label="Insert at cursor">
+          <button type="button" onClick={() => onInsert(code)} aria-label="Insert at cursor" disabled={!canMutateFiles}>
             Insert
           </button>
           <button
@@ -66,6 +67,7 @@ export function CodeBlock(props: CodeBlockProps): React.ReactElement {
               onApply({ id, language, code, granularity: "selection" })
             }
             aria-label="Apply to selection"
+            disabled={!canMutateFiles}
           >
             Apply
           </button>

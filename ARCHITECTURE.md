@@ -48,6 +48,31 @@ This document defines the long-term technical direction for REX.
 - Call status and streaming endpoints.
 - Provide a deterministic interface for MVP validation.
 
+## Inference adapters
+
+The daemon does not hard-code a single inference engine. REX keeps prompt construction, context policy, **layered caching** (see `docs/CACHING.md`), and the streaming contract; inference backends are **pluggable adapters** behind a stable `InferenceRuntime` seam (contract details in `docs/ADAPTERS.md`).
+
+| Adapter (examples) | Role |
+|---|---|
+| Mock | Default for MVP: deterministic stream without a real model. |
+| Cursor CLI | **Frontier-model gateway** — use Cursor for account-bound models. Cursor runs its own agent loop; it is not a pass-through, so REX does not treat it as the only context or retrieval system. |
+| Apple MLX (future) | Local model path; REX can drive context shaping and inference together. |
+
+Adapters declare **capabilities** so the daemon can skip or apply pipeline stages (indexer, compressor, token budget, behavioral prefilter) per adapter. A future **gRPC sidecar** can implement the same `InferenceRuntime` contract without client changes.
+
+```mermaid
+flowchart LR
+  client[CLI or Extension] --> daemon[rex-daemon]
+  daemon --> cache[LayeredCache]
+  cache -->|miss| pipeline[ContextPipeline capability-aware]
+  pipeline --> runtime[InferenceRuntime trait]
+  runtime -->|mock| mockRt[MockRuntime]
+  runtime -->|cursor-cli| cursorRt[CursorCliAdapter]
+  cursorRt --> cursorProc["spawn cursor-agent -p --output-format json"]
+  cache -->|hit| daemon
+  daemon --> stream[stream chunk done or error]
+```
+
 ## Plugin model (high level)
 
 REX adopts a runtime-managed gRPC sidecar model for early plugin phases.
@@ -87,9 +112,9 @@ REX adopts a runtime-managed gRPC sidecar model for early plugin phases.
 
 1. Client receives a user action.
 2. Client sends a gRPC request over UDS.
-3. Daemon validates request and chooses execution path.
-4. Inference engine emits chunks.
-5. Daemon streams chunks back to the client.
+3. Daemon validates the request, applies optional **layered cache** lookup, and on miss runs a **capability-aware** context pipeline, then dispatches to the selected `InferenceRuntime` adapter.
+4. The inference adapter (mock, Cursor CLI, MLX, or a future sidecar) produces chunks.
+5. Daemon applies terminal stream semantics and streams chunks back to the client.
 6. Client renders incremental output.
 
 ## Reliability rules
@@ -117,6 +142,8 @@ Recommended structure for this phase:
 ├── MVP_SPEC.md
 ├── docs/
 │   ├── README.md
+│   ├── ADAPTERS.md
+│   ├── CACHING.md
 │   └── DOCUMENTATION.md
 ├── proto/
 │   └── rex/v1/rex.proto
@@ -142,4 +169,5 @@ Recommended structure for this phase:
 
 - Full API schema details (see `MVP_SPEC.md` for current scope).
 - Plugin model design details.
+- Full adapter and caching field lists (see `docs/ADAPTERS.md` and `docs/CACHING.md`).
 - Production hardening checklist for multi-user environments.

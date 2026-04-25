@@ -63,6 +63,27 @@ button:focus-visible {
   gap: 6px;
 }
 
+.rex-header__status-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rex-mode-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rex-mode-select select {
+  background: var(--vscode-dropdown-background, var(--vscode-input-background));
+  color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground));
+  border: 1px solid var(--vscode-dropdown-border, var(--vscode-input-border, transparent));
+  border-radius: 2px;
+  padding: 2px 4px;
+  font-size: 11px;
+}
+
 .rex-status-dot {
   width: 8px;
   height: 8px;
@@ -90,6 +111,37 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.rex-policy-note {
+  font-size: 11px;
+  opacity: 0.8;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--vscode-panel-border, transparent);
+}
+
+.rex-approval-card {
+  margin: 8px 10px 0;
+  border: 1px solid var(--vscode-inputValidation-warningBorder, var(--vscode-panel-border, transparent));
+  background: var(--vscode-inputValidation-warningBackground, rgba(210, 153, 34, 0.1));
+  border-radius: 4px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rex-approval-card__title {
+  font-weight: 600;
+}
+
+.rex-approval-card__detail {
+  font-size: 12px;
+}
+
+.rex-approval-card__actions {
+  display: inline-flex;
+  gap: 6px;
 }
 
 .rex-message {
@@ -272,6 +324,29 @@ button:focus-visible {
 .rex-composer textarea:focus {
   outline: 1px solid var(--vscode-focusBorder);
   outline-offset: -1px;
+}
+
+.rex-timeline {
+  max-height: 120px;
+  overflow-y: auto;
+  border: 1px solid var(--vscode-panel-border, transparent);
+  border-radius: 2px;
+  padding: 4px 6px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rex-timeline__item {
+  display: flex;
+  gap: 6px;
+}
+
+.rex-timeline__phase {
+  text-transform: uppercase;
+  opacity: 0.7;
+  min-width: 82px;
 }
 
 .rex-composer__row {

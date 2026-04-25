@@ -29,10 +29,11 @@ export interface MessageProps {
     code: string;
     granularity: ApplyGranularity;
   }) => void;
+  readonly canMutateFiles: boolean;
 }
 
 export function Message(props: MessageProps): React.ReactElement {
-  const { message, theme, onCopy, onInsert, onApply } = props;
+  const { message, theme, onCopy, onInsert, onApply, canMutateFiles } = props;
 
   if (message.role === "user") {
     return (
@@ -70,6 +71,7 @@ export function Message(props: MessageProps): React.ReactElement {
               onCopy={onCopy}
               onInsert={onInsert}
               onApply={onApply}
+              canMutateFiles={canMutateFiles}
             />
           );
         })}
