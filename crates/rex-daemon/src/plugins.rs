@@ -21,19 +21,10 @@ impl Default for TokenBudget {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct BehaviorSnapshot {
     pub typing_cadence_cpm: u16,
     pub pause_events_last_minute: u8,
-}
-
-impl Default for BehaviorSnapshot {
-    fn default() -> Self {
-        Self {
-            typing_cadence_cpm: 0,
-            pause_events_last_minute: 0,
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
