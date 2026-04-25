@@ -33,4 +33,3 @@
 - [ ] I kept this PR focused on one primary concern.
 - [ ] I updated docs when behavior, setup, or operations changed.
 - [ ] I confirmed this change with tests or explicit manual verification.
-- [ ] I enabled auto-merge (at PR creation or immediately after).

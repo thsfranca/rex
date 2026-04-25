@@ -1,13 +1,13 @@
 # Extension Roadmap
 
-This roadmap defines the phased delivery of the REX editor extension that works in both VS Code and Cursor.
+This document records the phased delivery of the REX editor extension for both VS Code and Cursor and tracks what remains after that foundation shipped.
 
 ## Current purpose
 
-- Ship one hybrid VS Code and Cursor extension that consumes the stable `rex-cli` NDJSON contract defined in [`docs/EXTENSION_MVP.md`](EXTENSION_MVP.md).
-- Target Cursor-class chat UX (streaming markdown, highlighted code blocks, Apply-to-file with native diff) without forking per-editor code paths.
+- Keep one hybrid VS Code and Cursor extension on the stable `rex-cli` NDJSON contract defined in [`docs/EXTENSION_MVP.md`](EXTENSION_MVP.md).
+- Maintain Cursor-class chat UX (streaming markdown, highlighted code blocks, Apply-to-file with native diff) without forking per-editor code paths.
 - Keep Cursor-specific features optional behind runtime capability detection so the same VSIX installs cleanly in plain VS Code.
-- Keep daemon lifecycle user-managed by default; opt-in auto-start ships behind `rex.daemonAutoStart` (default off).
+- Keep daemon lifecycle user-managed by default; opt-in auto-start remains behind `rex.daemonAutoStart` (default off).
 
 ## Scope principles
 
@@ -30,13 +30,14 @@ This roadmap defines the phased delivery of the REX editor extension that works 
 - No imports into Rust crates; depends only on the `rex-cli` binary contract.
 - Release versioning uses `rex-vscode-vX.Y.Z` git tags so tag history is portable.
 
-## Phased roadmap
+## Delivery status snapshot
 
-The extension ships in three PRs. Each PR authors docs and tests first, then feature code.
+The initial extension plan shipped in three PRs. This section is a historical delivery record.
 
 ### PR 1 - Foundations and headless core
 
-Goal: docs, scaffolding, CI, testable headless modules, and a minimum visible surface.
+Goal: docs, scaffolding, CI, testable headless modules, and a minimum visible surface.  
+Status: shipped.
 
 | Area | Deliverable |
 |---|---|
@@ -60,7 +61,8 @@ Acceptance criteria:
 
 ### PR 2 - Chat UX with Cursor-parity features
 
-Goal: full user-facing chat experience.
+Goal: full user-facing chat experience.  
+Status: shipped.
 
 | Area | Deliverable |
 |---|---|
@@ -81,7 +83,8 @@ Acceptance criteria:
 
 ### PR 3 - Reliability and distribution
 
-Goal: opt-in auto-start, release pipeline, and docs polish.
+Goal: opt-in auto-start, release pipeline, and docs polish.  
+Status: shipped.
 
 | Area | Deliverable |
 |---|---|
@@ -104,6 +107,12 @@ These stay out of scope to protect delivery speed and KISS:
 - Inline ghost-text completions (follow-up once chat is solid).
 - Workspace @-mentions and file search indexing.
 - Direct Node gRPC over UDS (deferred; CLI boundary is sufficient).
+
+## What remains after phase delivery
+
+- Continue reliability hardening and observability for long-running chat sessions.
+- Keep release automation and install docs aligned with CLI/daemon lifecycle changes.
+- Add follow-up features only when they preserve the stable CLI NDJSON boundary and keep behavior symmetric across Cursor and plain VS Code.
 
 ## Success signals
 
