@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-fmt_result="${FMT_RESULT:-missing}"
+extension_relevant="${EXTENSION_RELEVANT:-true}"
+lint_typecheck_result="${LINT_TYPECHECK_RESULT:-missing}"
 test_result="${TEST_RESULT:-missing}"
-rust_relevant="${RUST_RELEVANT:-true}"
+package_result="${PACKAGE_RESULT:-missing}"
 result="success"
 fail_stage="-"
 fail_code="-"
@@ -12,7 +13,7 @@ hint="-"
 mkdir -p ci-observability
 
 echo "::group::Setup"
-echo "::notice::Evaluating upstream required checks."
+echo "::notice::Evaluating upstream extension checks."
 echo "::endgroup::"
 
 echo "::group::BuildAndChecks"
@@ -24,20 +25,18 @@ echo "::notice::No test execution in gate job."
 echo "::endgroup::"
 
 echo "::group::PostRunSummary"
-if [ "${rust_relevant}" != "true" ]; then
+if [ "${extension_relevant}" != "true" ]; then
   result="skip"
-  fail_stage="-"
-  fail_code="-"
-  hint="Rust checks were not relevant for this change set."
-elif [ "${fmt_result}" != "success" ] || [ "${test_result}" != "success" ]; then
+  hint="Extension checks were not relevant for this change set."
+elif [ "${lint_typecheck_result}" != "success" ] || [ "${test_result}" != "success" ] || [ "${package_result}" != "success" ]; then
   result="failure"
   fail_stage="PostRunSummary"
   fail_code="GATE_FAIL"
-  hint="Inspect upstream job summaries and artifacts."
+  hint="Inspect upstream extension job summaries and artifacts."
 fi
 
 {
-  echo "### rust-checks"
+  echo "### extension-checks"
   echo ""
   echo "- result: ${result}"
   echo "- fail_stage: ${fail_stage}"
@@ -45,8 +44,9 @@ fi
   echo "- hint: ${hint}"
   echo "- run_id: ${GITHUB_RUN_ID:-unknown}"
   echo ""
-  echo "- rust-fmt-clippy: ${fmt_result}"
-  echo "- rust-test: ${test_result}"
+  echo "- extension-lint-typecheck: ${lint_typecheck_result}"
+  echo "- extension-test: ${test_result}"
+  echo "- extension-package: ${package_result}"
 } >> "$GITHUB_STEP_SUMMARY"
 
 {
@@ -54,19 +54,20 @@ fi
   echo "fail_stage=${fail_stage}"
   echo "fail_code=${fail_code}"
   echo "hint=${hint}"
-  echo "rust_fmt_clippy=${fmt_result}"
-  echo "rust_test=${test_result}"
-} > "ci-observability/gate-summary.txt"
+  echo "extension_lint_typecheck=${lint_typecheck_result}"
+  echo "extension_test=${test_result}"
+  echo "extension_package=${package_result}"
+} > "ci-observability/extension-gate-summary.txt"
 
 if [ "${result}" != "success" ]; then
   if [ "${result}" = "skip" ]; then
-    echo "::notice::Rust checks skipped as non-relevant."
+    echo "::notice::Extension checks skipped as non-relevant."
     echo "::endgroup::"
     exit 0
   fi
-  echo "::error::At least one required check failed."
+  echo "::error::At least one required extension check failed."
   echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
   exit 1
 fi
-echo "::notice::All required checks passed."
+echo "::notice::All required extension checks passed."
 echo "::endgroup::"

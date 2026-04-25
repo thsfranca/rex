@@ -1,0 +1,101 @@
+{
+  "name": "rex-vscode",
+  "displayName": "REX",
+  "description": "Local AI runtime client for VS Code and Cursor, backed by the REX daemon.",
+  "version": "0.0.1",
+  "private": true,
+  "publisher": "rex",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=20"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "rex.showStatus",
+        "title": "REX: Show Daemon Status"
+      },
+      {
+        "command": "rex.howToStartDaemon",
+        "title": "REX: How to Start the Daemon"
+      },
+      {
+        "command": "rex.openOutput",
+        "title": "REX: Open Output Channel"
+      }
+    ],
+    "configuration": {
+      "title": "REX",
+      "properties": {
+        "rex.cliPath": {
+          "type": "string",
+          "default": "rex-cli",
+          "description": "Executable path or name for rex-cli. Defaults to lookup on PATH.",
+          "scope": "machine-overridable"
+        },
+        "rex.daemonBinaryPath": {
+          "type": "string",
+          "default": "rex-daemon",
+          "description": "Executable path or name for rex-daemon. Used only when auto-start is enabled.",
+          "scope": "machine-overridable"
+        },
+        "rex.daemonAutoStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Spawn rex-daemon automatically if it is not running. Disabled by default.",
+          "scope": "machine-overridable"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .vscode-test out coverage",
+    "build:extension": "node esbuild.extension.mjs",
+    "build:webview": "node esbuild.webview.mjs",
+    "build": "npm run build:extension && npm run build:webview",
+    "watch:extension": "node esbuild.extension.mjs --watch",
+    "watch:webview": "node esbuild.webview.mjs --watch",
+    "lint": "eslint \"src/**/*.ts\" \"webview/**/*.{ts,tsx}\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webview.json --noEmit",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "package": "npm run build && vsce package --no-dependencies --out rex-vscode.vsix",
+    "vscode:prepublish": "npm run build"
+  },
+  "dependencies": {
+    "marked": "^12.0.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "shiki": "^1.14.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/vscode": "^1.90.0",
+    "@typescript-eslint/eslint-plugin": "^7.17.0",
+    "@typescript-eslint/parser": "^7.17.0",
+    "@vitest/coverage-v8": "^2.0.5",
+    "@vscode/vsce": "^2.30.0",
+    "esbuild": "^0.23.0",
+    "eslint": "^8.57.0",
+    "ovsx": "^0.9.2",
+    "rimraf": "^5.0.9",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thsfranca/rex"
+  }
+}
