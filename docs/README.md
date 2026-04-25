@@ -7,6 +7,7 @@ This folder keeps project documentation organized by purpose.
 | Path | Purpose |
 |---|---|
 | `docs/README.md` | Entry point for documentation. |
+| `docs/DEVELOPER_EXPERIENCE_GUIDE.md` | Developer workflow, plugin path, and compatibility policy. |
 | `docs/DOCUMENTATION.md` | Project writing checklist and standards. |
 | `docs/DEPENDENCIES.md` | Local build and runtime dependency checklist. |
 | `docs/CI.md` | CI strategy and `main` branch protection settings. |
@@ -16,6 +17,7 @@ This folder keeps project documentation organized by purpose.
 ## How to use this documentation
 
 - Start with `README.md` for project context.
+- Read `docs/DEVELOPER_EXPERIENCE_GUIDE.md` for development and plugin-facing workflow rules.
 - Read `ARCHITECTURE.md` for long-term design.
 - Read `MVP_SPEC.md` for current implementation scope.
 - Read `docs/DEPENDENCIES.md` to set up local prerequisites.
