@@ -23,6 +23,13 @@ if ! cargo test --workspace --all-targets --locked 2>&1 | tee "ci-observability/
   hint="Run cargo test locally."
   echo "::error::Test execution failed."
   echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
+elif ! ./scripts/ci/test_enforce_rust_gate.sh 2>&1 | tee "ci-observability/gate-script-test.log"; then
+  result="failure"
+  fail_code="TEST_FAIL"
+  fail_stage="TestExecution"
+  hint="Run scripts/ci/test_enforce_rust_gate.sh locally."
+  echo "::error::Gate script contract tests failed."
+  echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
 fi
 echo "::endgroup::"
 
