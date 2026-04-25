@@ -79,7 +79,13 @@ async fn run_complete(prompt: String, format: CompleteOutputFormat) -> Result<()
         let mut request = tonic::Request::new(StreamInferenceRequest {
             prompt: prompt.clone(),
         });
-        attach_trace_metadata(&mut request, &trace_id)?;
+        let metadata_value =
+            tonic::metadata::MetadataValue::try_from(trace_id.as_str()).map_err(|_| {
+                map_status_error(tonic::Status::invalid_argument("invalid trace id metadata"))
+            })?;
+        request
+            .metadata_mut()
+            .insert("x-rex-trace-id", metadata_value);
         request.set_timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS));
         let response = match client
             .stream_inference(request)
@@ -229,16 +235,6 @@ fn resolve_trace_id() -> String {
     format!("rex-cli-{millis}-{}", process::id())
 }
 
-fn attach_trace_metadata(
-    request: &mut tonic::Request<StreamInferenceRequest>,
-    trace_id: &str,
-) -> Result<(), CliError> {
-    let metadata_value = tonic::metadata::MetadataValue::try_from(trace_id)
-        .map_err(|_| tonic::Status::invalid_argument("invalid trace id metadata"))?;
-    request.metadata_mut().insert("x-rex-trace-id", metadata_value);
-    Ok(())
-}
-
 impl CliCommand {
     fn output_format(&self) -> Option<CompleteOutputFormat> {
         match self {
@@ -302,7 +298,10 @@ mod tests {
 
     #[test]
     fn ndjson_error_codes_are_stable() {
-        assert_eq!(ndjson_error_code(&CliError::StreamInterrupted), "stream_interrupted");
+        assert_eq!(
+            ndjson_error_code(&CliError::StreamInterrupted),
+            "stream_interrupted"
+        );
         assert_eq!(
             ndjson_error_code(&CliError::DaemonUnavailable {
                 socket_path: "/tmp/rex.sock".to_string()
