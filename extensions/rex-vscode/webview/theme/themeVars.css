@@ -1,0 +1,337 @@
+:root {
+  color-scheme: light dark;
+  font-family: var(--vscode-font-family);
+  font-size: var(--vscode-font-size);
+  color: var(--vscode-foreground);
+  background: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--vscode-sideBar-background, transparent);
+  color: var(--vscode-foreground);
+  height: 100vh;
+  overflow: hidden;
+}
+
+#rex-root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+button:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+
+.rex-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 0;
+}
+
+.rex-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--vscode-panel-border, transparent);
+  font-size: 12px;
+}
+
+.rex-header__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rex-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vscode-charts-yellow, #d29922);
+}
+
+.rex-status-dot--ready {
+  background: var(--vscode-charts-green, #4ac26b);
+}
+
+.rex-status-dot--unavailable {
+  background: var(--vscode-charts-red, #f85149);
+}
+
+.rex-header__actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.rex-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rex-message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rex-message__role {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.rex-message__body {
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border, transparent);
+  padding: 8px 10px;
+  border-radius: 4px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rex-message--user .rex-message__body {
+  background: var(--vscode-input-background);
+  border-color: var(--vscode-input-border, transparent);
+}
+
+.rex-message__body p {
+  margin: 0 0 8px 0;
+}
+
+.rex-message__body p:last-child {
+  margin-bottom: 0;
+}
+
+.rex-message__body pre {
+  margin: 8px 0;
+  padding: 0;
+  background: transparent;
+  overflow-x: auto;
+}
+
+.rex-message__body ul,
+.rex-message__body ol {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+
+.rex-codeblock {
+  border: 1px solid var(--vscode-panel-border, transparent);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0;
+  background: var(--vscode-textBlockQuote-background, rgba(127, 127, 127, 0.1));
+}
+
+.rex-codeblock__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  font-size: 11px;
+  background: var(--vscode-editorGroupHeader-tabsBackground, rgba(127, 127, 127, 0.1));
+  border-bottom: 1px solid var(--vscode-panel-border, transparent);
+}
+
+.rex-codeblock__lang {
+  opacity: 0.75;
+}
+
+.rex-codeblock__actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.rex-codeblock__actions button {
+  padding: 2px 6px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, inherit);
+  border-radius: 2px;
+}
+
+.rex-codeblock__actions button:hover:not(:disabled) {
+  background: var(--vscode-button-secondaryHoverBackground, rgba(127, 127, 127, 0.2));
+}
+
+.rex-codeblock__actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rex-codeblock__body {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.rex-codeblock__body pre {
+  margin: 0;
+  padding: 8px 10px;
+  background: transparent !important;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: var(--vscode-editor-font-size, 13px);
+  line-height: 1.4;
+}
+
+.rex-codeblock__status {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--vscode-panel-border, transparent);
+}
+
+.rex-codeblock__status--applied {
+  color: var(--vscode-charts-green, #4ac26b);
+}
+
+.rex-codeblock__status--error,
+.rex-codeblock__status--rejected {
+  color: var(--vscode-errorForeground, #f85149);
+}
+
+.rex-context-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--vscode-panel-border, transparent);
+  border-radius: 2px;
+  font-size: 12px;
+  background: var(--vscode-editorWidget-background, transparent);
+}
+
+.rex-context-chip__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.rex-context-chip__path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rex-context-chip__selection {
+  opacity: 0.75;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rex-composer {
+  border-top: 1px solid var(--vscode-panel-border, transparent);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--vscode-editorWidget-background, transparent);
+}
+
+.rex-composer textarea {
+  width: 100%;
+  min-height: 60px;
+  max-height: 200px;
+  resize: vertical;
+  padding: 6px 8px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 2px;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.rex-composer textarea:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.rex-composer__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.rex-composer__send {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: 1px solid var(--vscode-button-border, transparent);
+  padding: 4px 12px;
+}
+
+.rex-composer__send:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.rex-composer__send:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.rex-composer__cancel {
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, inherit);
+  border: 1px solid var(--vscode-button-border, transparent);
+}
+
+.rex-hint {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.rex-trailing {
+  opacity: 0.8;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.95em;
+  white-space: pre-wrap;
+}
+
+.rex-error {
+  color: var(--vscode-errorForeground, #f85149);
+  font-size: 12px;
+}
+
+.rex-status-banner {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--vscode-panel-border, transparent);
+}
+
+.rex-status-banner--info {
+  background: var(--vscode-editorInfo-background, transparent);
+}
+.rex-status-banner--warn {
+  background: var(--vscode-inputValidation-warningBackground, rgba(210, 153, 34, 0.1));
+}
+.rex-status-banner--error {
+  background: var(--vscode-inputValidation-errorBackground, rgba(248, 81, 73, 0.1));
+}
