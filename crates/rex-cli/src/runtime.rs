@@ -3,9 +3,10 @@ use std::time::Duration;
 
 use rex_proto::rex::v1::{GetSystemStatusRequest, StreamInferenceRequest};
 use tokio::time::timeout;
+use tonic::Code;
 
 use crate::command::{parse_command, print_usage, CliCommand};
-use crate::domain::{REQUEST_TIMEOUT_SECONDS, STREAM_ITEM_TIMEOUT_SECONDS};
+use crate::domain::{StreamLifecycle, REQUEST_TIMEOUT_SECONDS, STREAM_ITEM_TIMEOUT_SECONDS};
 use crate::error::CliError;
 use crate::transport::connect_client;
 
@@ -50,24 +51,55 @@ async fn run_complete(prompt: String) -> Result<(), CliError> {
     let mut client = connect_client().await?;
     let mut request = tonic::Request::new(StreamInferenceRequest { prompt });
     request.set_timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS));
-    let response = client.stream_inference(request).await?;
+    let response = client
+        .stream_inference(request)
+        .await
+        .map_err(map_status_error)?;
     let mut stream = response.into_inner();
+    let lifecycle = consume_stream(&mut stream).await?;
+    match lifecycle {
+        StreamLifecycle::Completed => Ok(()),
+        StreamLifecycle::Cancelled => Err(CliError::StreamIncomplete),
+    }
+}
 
-    while let Some(chunk) = timeout(
-        Duration::from_secs(STREAM_ITEM_TIMEOUT_SECONDS),
-        stream.message(),
-    )
-    .await
-    .map_err(|_| CliError::StreamTimeout {
-        seconds: STREAM_ITEM_TIMEOUT_SECONDS,
-    })?? {
+fn map_status_error(status: tonic::Status) -> CliError {
+    match status.code() {
+        Code::Unavailable => CliError::DaemonUnavailable {
+            socket_path: crate::domain::SOCKET_PATH.to_string(),
+        },
+        _ => CliError::Status(status),
+    }
+}
+
+async fn consume_stream(
+    stream: &mut tonic::Streaming<rex_proto::rex::v1::StreamInferenceResponse>,
+) -> Result<StreamLifecycle, CliError> {
+    loop {
+        let next = timeout(
+            Duration::from_secs(STREAM_ITEM_TIMEOUT_SECONDS),
+            stream.message(),
+        )
+        .await
+        .map_err(|_| CliError::StreamTimeout {
+            seconds: STREAM_ITEM_TIMEOUT_SECONDS,
+        })?;
+
+        let maybe_chunk = next.map_err(|status| match status.code() {
+            Code::Unavailable => map_status_error(status),
+            _ => CliError::StreamInterrupted,
+        })?;
+
+        let Some(chunk) = maybe_chunk else {
+            return Ok(StreamLifecycle::Cancelled);
+        };
+
         if !chunk.text.is_empty() {
             print!("{}", chunk.text);
         }
         if chunk.done {
             println!();
-            break;
+            return Ok(StreamLifecycle::Completed);
         }
     }
-    Ok(())
 }

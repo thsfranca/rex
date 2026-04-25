@@ -9,3 +9,10 @@ pub const REQUEST_TIMEOUT_SECONDS: u64 = 5;
 
 /// Timeout budget for receiving each stream item from daemon.
 pub const STREAM_ITEM_TIMEOUT_SECONDS: u64 = 15;
+
+/// High-level lifecycle outcomes for `complete` command execution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StreamLifecycle {
+    Completed,
+    Cancelled,
+}

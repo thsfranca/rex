@@ -50,6 +50,8 @@ cargo build --workspace
 - Start `rex-daemon` before invoking `rex-cli` commands.
 - The CLI now uses conservative connection/request timeouts so startup races fail fast instead of hanging.
 - If the daemon is still booting, rerun `status` or `complete` after the socket is ready at `/tmp/rex.sock`.
+- `rex-cli complete` now surfaces deterministic lifecycle errors for daemon unavailable, interrupted streams, and incomplete stream termination.
+- `rex-daemon` now emits lightweight stream lifecycle logs (`starting`, `streaming`, `completed`) for troubleshooting.
 
 ## Install as terminal commands
 
