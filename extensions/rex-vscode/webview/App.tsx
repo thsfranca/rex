@@ -1,10 +1,13 @@
 import * as React from "react";
 
 import type {
+  ApprovalRequestPayload,
   ApplyGranularity,
   ApplyResultPayload,
   DaemonStatePayload,
   ExtensionToWebview,
+  InteractionMode,
+  ModePolicy,
   PromptContextSnapshot,
   ThemeKind,
 } from "../src/shared/messages";
@@ -31,15 +34,20 @@ interface AppState {
   streaming: boolean;
   activeStreamId?: string;
   banner?: BannerState;
+  modePolicy: ModePolicy;
+  pendingApprovals: ApprovalRequestPayload[];
+  timeline: { id: string; summary: string; phase: string }[];
 }
 
 type Action =
   | { type: "hostMessage"; payload: ExtensionToWebview }
   | { type: "setPrompt"; value: string }
   | { type: "setAttachContext"; value: boolean }
+  | { type: "setMode"; value: InteractionMode }
   | { type: "userSend"; id: string; text: string; context?: PromptContextSnapshot; attachContext: boolean }
   | { type: "clearChat" }
   | { type: "cancelStream" }
+  | { type: "approvalDecision"; id: string; approved: boolean }
   | { type: "clearBanner" };
 
 const initialState: AppState = {
@@ -52,6 +60,15 @@ const initialState: AppState = {
   attachContext: true,
   prompt: "",
   streaming: false,
+  modePolicy: {
+    mode: "ask",
+    canMutateFiles: false,
+    requiresExecutionApproval: false,
+    requiresMutationApproval: true,
+    summary: "Research and explain only. File mutations are blocked.",
+  },
+  pendingApprovals: [],
+  timeline: [],
 };
 
 function reducer(state: AppState, action: Action): AppState {
@@ -60,6 +77,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, prompt: action.value };
     case "setAttachContext":
       return { ...state, attachContext: action.value };
+    case "setMode":
+      return { ...state, modePolicy: { ...state.modePolicy, mode: action.value } };
     case "clearBanner":
       return { ...state, banner: undefined };
     case "userSend": {
@@ -99,6 +118,11 @@ function reducer(state: AppState, action: Action): AppState {
       };
     case "cancelStream":
       return state;
+    case "approvalDecision":
+      return {
+        ...state,
+        pendingApprovals: state.pendingApprovals.filter((pending) => pending.id !== action.id),
+      };
     case "hostMessage":
       return handleHostMessage(state, action.payload);
   }
@@ -110,6 +134,8 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
       return { ...state, daemon: message.payload };
     case "theme":
       return { ...state, theme: message.payload.kind };
+    case "modeState":
+      return { ...state, modePolicy: message.payload };
     case "contextSnapshot":
       return { ...state, context: message.context };
     case "streamStarted":
@@ -176,6 +202,19 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
       return {
         ...state,
         banner: { level: message.level, text: message.text },
+      };
+    case "approvalRequested":
+      return {
+        ...state,
+        pendingApprovals: [...state.pendingApprovals, message.payload],
+      };
+    case "executionStep":
+      return {
+        ...state,
+        timeline: [
+          ...state.timeline,
+          { id: message.payload.id, phase: message.payload.phase, summary: message.payload.summary },
+        ].slice(-20),
       };
   }
 }
@@ -255,6 +294,16 @@ export function App(): React.ReactElement {
     dispatch({ type: "clearChat" });
   };
 
+  const handleModeChange = (mode: InteractionMode): void => {
+    dispatch({ type: "setMode", value: mode });
+    postToHost({ type: "setMode", mode });
+  };
+
+  const handleApprovalDecision = (id: string, approved: boolean): void => {
+    dispatch({ type: "approvalDecision", id, approved });
+    postToHost({ type: "approvalDecision", payload: { id, approved } });
+  };
+
   const handleCopy = (code: string): void => {
     postToHost({ type: "copyCodeBlock", code });
   };
@@ -295,12 +344,17 @@ export function App(): React.ReactElement {
         attachContext={state.attachContext}
         streaming={state.streaming}
         daemonReady={state.daemon.state === "ready"}
+        modePolicy={state.modePolicy}
+        timeline={state.timeline}
+        pendingApprovals={state.pendingApprovals}
         prompt={state.prompt}
         onPromptChange={(value) => dispatch({ type: "setPrompt", value })}
         onAttachContextChange={(value) => dispatch({ type: "setAttachContext", value })}
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         onClear={handleClear}
+        onModeChange={handleModeChange}
+        onApprovalDecision={handleApprovalDecision}
         onCopy={handleCopy}
         onInsert={handleInsert}
         onApply={handleApply}

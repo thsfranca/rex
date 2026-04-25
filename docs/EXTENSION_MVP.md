@@ -1,21 +1,31 @@
 # Extension MVP Consumer Path
 
-This guide defines the first integration path for a Cursor extension.
+This guide defines the current MVP for the REX editor extension.
 
-## Goal
+## Goals
 
-- Use `rex-cli` as the extension boundary.
-- Stream completion output in a machine-readable format.
-- Keep extension code thin while MVP daemon behavior stabilizes.
+- Keep one stable extension boundary through `rex-cli`.
+- Support three user-facing modes: `ask`, `plan`, and `agent`.
+- Deliver guardrailed execution with explicit approvals for execution and mutation-capable operations.
+- Keep UX deterministic so mode transitions and terminal states remain predictable.
 
-## Why this path in MVP
+## MVP behavior contract
 
-| Option | MVP decision | Reason |
+### Mode contract
+
+| Mode | Purpose | Mutation behavior |
 |---|---|---|
-| Direct Node gRPC over UDS | Deferred | Adds transport complexity during early reliability work. |
-| Extension -> CLI (`ndjson`) | Chosen | Fastest path to a usable and testable feature. |
+| `ask` | Research and explanation | Blocks file mutations. |
+| `plan` | Structured planning and handoff | Allows mutations only after approval checkpoints. |
+| `agent` | Guarded execution flow | Requires approval for execution and mutations. |
 
-## Command contract
+Rules:
+
+- Exactly one active mode per session.
+- Mode transitions are explicit and visible in the chat UI.
+- Inline actions (insert/apply) always respect the active mode policy.
+
+### Stream contract
 
 Use:
 
@@ -27,7 +37,7 @@ Output contract:
 
 - One JSON object per line.
 - Event types: `chunk`, `done`, `error`.
-- Exactly one terminal event (`done` or `error`).
+- Exactly one terminal event (`done` or `error`) per request path.
 - `error` events may include a stable `code` for extension-side UX mapping.
 
 Current `error.code` taxonomy:
@@ -43,28 +53,17 @@ Current `error.code` taxonomy:
 | `spawn_failed` | `rex-cli` could not be launched. | Fix local install/path first. |
 | `unknown` | Fallback category for uncategorized failures. | Manual diagnosis required. |
 
-Examples:
-
-```json
-{"event":"chunk","index":0,"text":"mock: he"}
-{"event":"chunk","index":1,"text":"llo"}
-{"event":"done","index":2}
-```
-
-```json
-{"event":"error","message":"daemon is unavailable at /tmp/rex.sock; start rex-daemon and retry","code":"daemon_unavailable"}
-```
-
 ## Extension bootstrap flow
 
-1. Extension command collects prompt text.
-2. Extension starts `rex-cli complete "<prompt>" --format ndjson`.
-3. Extension reads stdout line-by-line.
-4. Extension routes events:
+1. User selects mode (`ask`, `plan`, `agent`) in chat.
+2. Extension captures prompt and optional editor context.
+3. Extension enforces mode policy and approval checkpoints.
+4. Extension starts `rex-cli complete "<prompt>" --format ndjson`.
+5. Extension reads stdout line-by-line.
+6. Extension routes events:
    - `chunk`: append streamed text to UI buffer.
    - `done`: finalize UI state as success.
    - `error`: finalize UI state as failure and show message.
-5. Extension handles process exit as a secondary signal only.
 
 ## Reliability expectations
 
@@ -72,6 +71,7 @@ Examples:
 - Non-retryable errors: CLI fails fast and emits terminal `error`.
 - Interrupted stream: CLI emits terminal `error` and exits non-zero.
 - The extension serializes cancel/send transitions so one stream ID resolves with one terminal UI state.
+- Approval-required operations never execute without explicit user approval.
 
 ## Trace correlation and terminal latency
 
@@ -80,8 +80,9 @@ Examples:
 - Daemon logs include `trace_id` and terminal `elapsed_ms` for completion and failure paths.
 - Extension host logs include start/terminal trace lifecycle markers for cross-process triage.
 
-## Out of scope for MVP
+## Non-goals for this MVP
 
-- Full extension UX polish.
 - Direct extension gRPC transport.
 - Plugin runtime management inside extension.
+- Fully autonomous execution without approval checkpoints.
+- Multi-file coordinated edits.
