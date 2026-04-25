@@ -750,6 +750,7 @@ version = "0.1.0"
 dependencies = [
  "hyper-util",
  "rex-proto",
+ "serde_json",
  "thiserror",
  "tokio",
  "tonic",

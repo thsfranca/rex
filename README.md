@@ -1,14 +1,17 @@
 # REX
 
-REX is a study project for a local AI runtime on macOS (Apple Silicon).
+REX is a local AI runtime study project for macOS (Apple Silicon), built as a Rust daemon plus thin clients over gRPC/UDS.
 
-## What this repository contains
+## Project status and scope
 
-- Product and technical documentation.
-- Rust workspace scaffolding for the daemon, CLI, and proto crates.
-- MVP definition for local gRPC over Unix Domain Sockets (UDS).
+- MVP implementation is in progress.
+- Current focus: reliable local daemon-client streaming behavior.
+- Intended use: local development and architecture learning for AI runtime infrastructure.
+- Not yet in scope: MLX integration, remote networking/TLS, and production authentication.
 
-## Core idea
+## Why REX
+
+REX keeps clients thin and centralizes model/runtime policy in one daemon boundary.
 
 | Component | Role |
 |---|---|
@@ -16,45 +19,35 @@ REX is a study project for a local AI runtime on macOS (Apple Silicon).
 | Clients | Keep UX thin (CLI, editor, scripts) and call one stable protocol. |
 | Protocol | Use gRPC over UDS for local, low-latency communication. |
 
-## Documentation map
+## Quickstart
 
-| Document | Purpose |
-|---|---|
-| [`docs/README.md`](docs/README.md) | Documentation index and structure. |
-| [`docs/DEVELOPER_EXPERIENCE_GUIDE.md`](docs/DEVELOPER_EXPERIENCE_GUIDE.md) | Development workflow, plugin path, and compatibility rules. |
-| [`docs/CI.md`](docs/CI.md) | CI strategy, branch protection/merge queue setup, and observability standards. |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | System architecture and long-term direction. |
-| [`MVP_SPEC.md`](MVP_SPEC.md) | Phase 1 scope, protocol, and acceptance criteria. |
-| [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) | Project documentation checklist and writing standards. |
-
-## Current status
-
-- Documentation-first milestone.
-- MVP implementation in progress.
-
-## Workspace bootstrap
-
-This repository uses a Rust workspace with three crates:
-
-- `rex-proto`: protobuf/gRPC contract generation (`rex.v1`).
-- `rex-daemon`: daemon runtime with status and mock streaming RPCs over UDS.
-- `rex-cli`: thin client with `status` and `complete` commands.
-
-Build all workspace members:
+1) Build the workspace:
 
 ```bash
 cargo build --workspace
 ```
 
-## Runtime notes
+This compiles `rex-proto`, `rex-daemon`, and `rex-cli`.
 
-- Start `rex-daemon` before invoking `rex-cli` commands.
-- The CLI now uses conservative connection/request timeouts so startup races fail fast instead of hanging.
-- If the daemon is still booting, rerun `status` or `complete` after the socket is ready at `/tmp/rex.sock`.
-- `rex-cli complete` now surfaces deterministic lifecycle errors for daemon unavailable, interrupted streams, and incomplete stream termination.
-- `rex-daemon` now emits lightweight stream lifecycle logs (`starting`, `streaming`, `completed`) for troubleshooting.
+2) Start the daemon:
 
-## Runtime reliability verification
+```bash
+cargo run -p rex-daemon
+```
+
+This starts the local gRPC server on `/tmp/rex.sock`.
+
+3) In another terminal, run CLI commands:
+
+```bash
+cargo run -p rex-cli -- status
+cargo run -p rex-cli -- complete "hello from rex"
+cargo run -p rex-cli -- complete "hello from rex" --format ndjson
+```
+
+This verifies status, server-streaming behavior, and extension-consumable NDJSON output.
+
+## Operational checks
 
 Use these checks when touching daemon/CLI lifecycle behavior:
 
@@ -63,45 +56,86 @@ Use these checks when touching daemon/CLI lifecycle behavior:
 cargo test -p rex-daemon --test uds_e2e -- --nocapture
 ```
 
-The E2E suite covers:
+Coverage includes:
 - daemon unavailable connection failure path;
-- deterministic startup race recovery path (unavailable -> ready);
+- deterministic startup race recovery path (`unavailable -> ready`);
 - stream terminal behavior after daemon interruption.
 
 ## Install as terminal commands
 
-Install or reinstall the latest local binaries:
+Install or reinstall local binaries:
 
 ```bash
 chmod +x scripts/install-cli.sh
 ./scripts/install-cli.sh
 ```
 
-The script always reinstalls with `--force`, so rerunning it updates the commands to the newest local version.
-By default, it does not modify shell dotfiles.
+The script reinstalls with `--force` and does not modify shell dotfiles by default.
 
-If you want it to configure `zsh` PATH automatically:
+If you want automatic `zsh` PATH configuration:
 
 ```bash
 ./scripts/install-cli.sh --configure-shell
 source ~/.zshrc
 ```
 
-## Two-terminal manual stream test
+## Manual troubleshooting
 
-Print test instructions:
+- Start `rex-daemon` before invoking `rex-cli` commands.
+- If the daemon is still booting, rerun `status` or `complete` after `/tmp/rex.sock` exists.
+- `rex-cli complete` surfaces deterministic lifecycle errors for:
+  - daemon unavailable;
+  - interrupted streams;
+  - incomplete stream termination.
+- `rex-cli complete --format ndjson` emits one JSON event per line with terminal `done` or `error`.
+- `rex-daemon` emits stream lifecycle logs (`starting`, `streaming`, `completed`) for troubleshooting.
+
+## MVP boundaries
+
+In scope now:
+- local daemon-client communication over UDS;
+- unary status RPC and server-streaming completion RPC;
+- mock inference and shutdown lifecycle reliability.
+
+Out of scope now:
+- Apple MLX runtime integration;
+- full plugin lifecycle implementation;
+- editor extension integration;
+- remote networking, TLS, and production authentication.
+
+For full scope details, see [`MVP_SPEC.md`](MVP_SPEC.md).
+
+## Documentation map
+
+| Document | Purpose |
+|---|---|
+| [`docs/README.md`](docs/README.md) | Documentation index and reading order. |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | System architecture and long-term direction. |
+| [`MVP_SPEC.md`](MVP_SPEC.md) | Phase 1 scope, protocol, and acceptance criteria. |
+| [`docs/EXTENSION_MVP.md`](docs/EXTENSION_MVP.md) | Cursor extension bootstrap path using CLI NDJSON streaming. |
+| [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Local build/runtime prerequisites by layer. |
+| [`docs/CI.md`](docs/CI.md) | CI strategy, gate contracts, and merge protections. |
+| [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) | Documentation checklist and writing standards. |
+
+## Workspace layout
+
+- `rex-proto`: protobuf/gRPC contract generation (`rex.v1`).
+- `rex-daemon`: daemon runtime with status and mock streaming RPCs over UDS.
+- `rex-cli`: thin client with `status` and `complete` commands.
+
+## Contributing and validation baseline
+
+- Keep changes focused and align with repository docs.
+- Run CI-aligned local checks before PRs:
 
 ```bash
-chmod +x scripts/run-manual-stream-test.sh
-./scripts/run-manual-stream-test.sh
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo test --workspace --all-targets --locked
 ```
 
-Or run directly in two terminals:
+For reliability-specific work, follow the full sequence in [`docs/CI.md`](docs/CI.md).
 
-```bash
-rex-daemon
-```
+## License
 
-```bash
-rex-cli complete "hello from rex"
-```
+REX is licensed under MIT (`workspace.package.license` in `Cargo.toml`).
