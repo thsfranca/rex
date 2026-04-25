@@ -21,7 +21,7 @@ REX is a study project for a local AI runtime on macOS (Apple Silicon).
 | Document | Purpose |
 |---|---|
 | [`docs/README.md`](docs/README.md) | Documentation index and structure. |
-| [`docs/CI.md`](docs/CI.md) | CI strategy and branch protection/merge queue setup. |
+| [`docs/CI.md`](docs/CI.md) | CI strategy, branch protection/merge queue setup, and observability standards. |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System architecture and long-term direction. |
 | [`MVP_SPEC.md`](MVP_SPEC.md) | Phase 1 scope, protocol, and acceptance criteria. |
 | [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) | Project documentation checklist and writing standards. |
@@ -50,6 +50,8 @@ cargo build --workspace
 - Start `rex-daemon` before invoking `rex-cli` commands.
 - The CLI now uses conservative connection/request timeouts so startup races fail fast instead of hanging.
 - If the daemon is still booting, rerun `status` or `complete` after the socket is ready at `/tmp/rex.sock`.
+- `rex-cli complete` now surfaces deterministic lifecycle errors for daemon unavailable, interrupted streams, and incomplete stream termination.
+- `rex-daemon` now emits lightweight stream lifecycle logs (`starting`, `streaming`, `completed`) for troubleshooting.
 
 ## Install as terminal commands
 

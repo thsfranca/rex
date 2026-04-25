@@ -17,9 +17,21 @@ pub async fn connect_client() -> Result<RexServiceClient<tonic::transport::Chann
             UnixStream::connect(SOCKET_PATH).await.map(TokioIo::new)
         }))
         .await
-        .map_err(|source| CliError::DaemonConnect {
-            socket_path: SOCKET_PATH.to_string(),
-            source,
+        .map_err(|source| {
+            let message = source.to_string();
+            if message.contains("No such file")
+                || message.contains("Connection refused")
+                || message.contains("connection refused")
+            {
+                CliError::DaemonUnavailable {
+                    socket_path: SOCKET_PATH.to_string(),
+                }
+            } else {
+                CliError::DaemonConnect {
+                    socket_path: SOCKET_PATH.to_string(),
+                    source,
+                }
+            }
         })?;
 
     Ok(RexServiceClient::new(channel))
