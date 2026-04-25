@@ -83,6 +83,9 @@ Keep failure codes low-cardinality. Current baseline set:
 ### Reliability guardrails
 
 - Set `timeout-minutes` per job.
+- **`rust-verify`** uses **mold** (`RUSTFLAGS=-C link-arg=-fuse-ld=mold`), lean **`apt-get install --no-install-recommends`**, **`cargo-nextest`** when available (falls back to `cargo test` in [`run_rust_tests.sh`](scripts/ci/run_rust_tests.sh)), and **`CARGO_TERM_PROGRESS_WHEN=never`** to trim log noise.
+- **`extension-verify`** sets **`NODE_OPTIONS=--max-old-space-size=6144`** and **`CI=true`** so Vitest can use full CPU (`maxWorkers` in [`vitest.config.ts`](extensions/rex-vscode/vitest.config.ts)).
+- Gate jobs (`rust-checks`, `extension-checks`, `ci-checks`) use **sparse checkout** of `scripts/ci/` only (faster clone; gates only run shell scripts there).
 - Keep `concurrency.cancel-in-progress: true`.
 - Keep `ci-checks` as the single required protection check.
 - Keep `rust-checks` and `extension-checks` as domain gate jobs feeding the final gate.
@@ -91,7 +94,7 @@ Keep failure codes low-cardinality. Current baseline set:
 
 - `pull_request`: runs checks for normal review feedback.
 
-Configured in `.github/workflows/ci.yml`. Checkouts use `fetch-depth: 1` unless a job needs full history.
+Configured in `.github/workflows/ci.yml`. Checkouts use `fetch-depth: 1` unless a job needs full history. Gate jobs use sparse checkout as noted above.
 
 ## Required status check for `main`
 
@@ -153,7 +156,7 @@ Run this sequence before opening PRs that change stream lifecycle behavior:
 
 1. `cargo fmt --all -- --check`
 2. `cargo clippy --workspace --all-targets --locked -- -D warnings`
-3. `cargo test --workspace --all-targets --locked`
+3. `cargo test --workspace --all-targets --locked` (optional: `cargo install cargo-nextest` then `cargo nextest run --workspace --all-targets --locked` to mirror CI)
 4. `./scripts/ci/test_enforce_rust_gate.sh`
 5. `cargo test -p rex-daemon --test uds_e2e -- --nocapture`
 
