@@ -119,10 +119,23 @@ This is the baseline for the first plugin-enabled phase after MVP.
 ├── MVP_SPEC.md
 ├── docs/
 │   ├── README.md
-│   └── DOCUMENTATION.md
+│   ├── DOCUMENTATION.md
+│   └── DEPENDENCIES.md
 ├── proto/rex/v1/rex.proto
 └── crates/
     ├── rex-proto/
     ├── rex-daemon/
+    │   └── src/
+    │       ├── main.rs
+    │       ├── runtime.rs
+    │       ├── service.rs
+    │       └── domain.rs
     └── rex-cli/
+        └── src/
+            ├── main.rs
+            ├── runtime.rs
+            ├── command.rs
+            ├── transport.rs
+            ├── error.rs
+            └── domain.rs
 ```

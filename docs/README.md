@@ -8,6 +8,7 @@ This folder keeps project documentation organized by purpose.
 |---|---|
 | `docs/README.md` | Entry point for documentation. |
 | `docs/DOCUMENTATION.md` | Project writing checklist and standards. |
+| `docs/DEPENDENCIES.md` | Local build and runtime dependency checklist. |
 | `ARCHITECTURE.md` | System architecture and technical direction. |
 | `MVP_SPEC.md` | Phase 1 specification and success criteria. |
 
@@ -16,4 +17,5 @@ This folder keeps project documentation organized by purpose.
 - Start with `README.md` for project context.
 - Read `ARCHITECTURE.md` for long-term design.
 - Read `MVP_SPEC.md` for current implementation scope.
+- Read `docs/DEPENDENCIES.md` to set up local prerequisites.
 - Follow `docs/DOCUMENTATION.md` before editing docs.

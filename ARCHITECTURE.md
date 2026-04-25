@@ -123,7 +123,19 @@ Recommended structure for this phase:
 └── crates/
     ├── rex-proto/
     ├── rex-daemon/
+    │   └── src/
+    │       ├── main.rs      # thin entrypoint
+    │       ├── runtime.rs   # process lifecycle
+    │       ├── service.rs   # gRPC handlers
+    │       └── domain.rs    # core constants and pure helpers
     └── rex-cli/
+        └── src/
+            ├── main.rs      # thin entrypoint
+            ├── runtime.rs   # command execution flow
+            ├── command.rs   # parse and validate CLI commands
+            ├── transport.rs # daemon connection boundary
+            ├── error.rs     # typed error contracts
+            └── domain.rs    # shared constants
 ```
 
 ## Non-goals in this document
