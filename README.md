@@ -113,6 +113,10 @@ For full scope details, see [`MVP_SPEC.md`](MVP_SPEC.md).
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System architecture and long-term direction. |
 | [`MVP_SPEC.md`](MVP_SPEC.md) | Phase 1 scope, protocol, and acceptance criteria. |
 | [`docs/EXTENSION_MVP.md`](docs/EXTENSION_MVP.md) | Cursor extension bootstrap path using CLI NDJSON streaming. |
+| [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md) | Phased roadmap for the VS Code/Cursor extension. |
+| [`docs/EXTENSION_ARCHITECTURE.md`](docs/EXTENSION_ARCHITECTURE.md) | Extension component layout and typed message bus. |
+| [`docs/PLUGIN_ROADMAP.md`](docs/PLUGIN_ROADMAP.md) | Sidecar-first plugin roadmap and built-in promotion gates. |
+| [`docs/CONTEXT_EFFICIENCY.md`](docs/CONTEXT_EFFICIENCY.md) | Token budget contracts, context pipeline, and telemetry defaults. |
 | [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Local build/runtime prerequisites by layer. |
 | [`docs/CI.md`](docs/CI.md) | CI strategy, gate contracts, and merge protections. |
 | [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) | Documentation checklist and writing standards. |

@@ -1,4 +1,5 @@
 use std::time::Instant;
+use std::{env, sync::Mutex};
 
 use async_stream::stream;
 use rex_proto::rex::v1::rex_service_server::RexService;
@@ -13,9 +14,13 @@ use tonic::{Request, Response, Status};
 use crate::domain::{
     build_mock_output, chunk_output, StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION,
 };
+use crate::plugins::{
+    BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
+};
 
 pub struct RexDaemonService {
     started_at: Instant,
+    pipeline: Mutex<ContextPipeline>,
 }
 
 const STREAM_CHUNK_MAX_CHARS: usize = 8;
@@ -23,7 +28,10 @@ const STREAM_CHUNK_DELAY_MS: u64 = 35;
 
 impl RexDaemonService {
     pub fn new(started_at: Instant) -> Self {
-        Self { started_at }
+        Self {
+            started_at,
+            pipeline: Mutex::new(ContextPipeline::default_sidecar_like()),
+        }
     }
 
     pub fn build_inference_chunks(prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>> {
@@ -69,12 +77,34 @@ impl RexService for RexDaemonService {
         request: Request<StreamInferenceRequest>,
     ) -> Result<Response<Self::StreamInferenceStream>, Status> {
         let prompt = request.into_inner().prompt;
+        let directives = PromptDirectives::from_prompt(&prompt);
+        let context_request = ContextRequest {
+            prompt: prompt.clone(),
+            diagnostics_hint: directives.diagnostics_hint.clone(),
+            cache_bypass: directives.cache_bypass || cache_bypass_from_env(),
+            behavior_snapshot: directives.behavior_snapshot,
+        };
+        let pipeline_result = self
+            .pipeline
+            .lock()
+            .expect("context pipeline mutex should not be poisoned")
+            .prepare(&context_request);
         let prompt_len = prompt.chars().count();
         println!(
             "stream.lifecycle={} prompt_len={prompt_len}",
             StreamLifecycle::Starting.as_str()
         );
-        let chunks = Self::build_inference_chunks(&prompt);
+        let chunks = Self::build_inference_chunks(&pipeline_result.effective_prompt);
+        println!(
+            "stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
+            pipeline_result.metrics.prompt_tokens,
+            pipeline_result.metrics.selected_context_tokens,
+            pipeline_result.metrics.context_candidates,
+            pipeline_result.metrics.context_selected,
+            pipeline_result.metrics.context_truncated,
+            format_cache_status(pipeline_result.metrics.cache_status),
+            format_behavior_decision(&pipeline_result.metrics.behavior_decision),
+        );
         println!(
             "stream.lifecycle={} chunk_count={}",
             StreamLifecycle::Streaming.as_str(),
@@ -95,9 +125,72 @@ impl RexService for RexDaemonService {
     }
 }
 
+fn cache_bypass_from_env() -> bool {
+    let value = env::var("REX_CACHE_BYPASS").unwrap_or_default();
+    value == "1" || value.eq_ignore_ascii_case("true")
+}
+
+fn format_cache_status(status: CacheStatus) -> &'static str {
+    match status {
+        CacheStatus::Hit => "hit",
+        CacheStatus::MissStored => "miss_stored",
+        CacheStatus::Bypass => "bypass",
+    }
+}
+
+fn format_behavior_decision(decision: &BehaviorDecision) -> &'static str {
+    match decision {
+        BehaviorDecision::Allow => "allow",
+        BehaviorDecision::Suppress { .. } => "suppress",
+    }
+}
+
+#[derive(Debug, Clone)]
+struct PromptDirectives {
+    diagnostics_hint: Option<String>,
+    cache_bypass: bool,
+    behavior_snapshot: BehaviorSnapshot,
+}
+
+impl PromptDirectives {
+    fn from_prompt(prompt: &str) -> Self {
+        let mut diagnostics_hint = None;
+        let mut cache_bypass = false;
+        let mut behavior_snapshot = BehaviorSnapshot::default();
+        for line in prompt.lines() {
+            if let Some(value) = line
+                .strip_prefix("[[diag:")
+                .and_then(|text| text.strip_suffix("]]"))
+            {
+                let normalized = value.trim();
+                if !normalized.is_empty() {
+                    diagnostics_hint = Some(normalized.to_string());
+                }
+                continue;
+            }
+            if line.trim() == "[[cache:bypass]]" {
+                cache_bypass = true;
+                continue;
+            }
+            if line.trim() == "[[behavior:focused]]" {
+                behavior_snapshot.typing_cadence_cpm = 500;
+                behavior_snapshot.pause_events_last_minute = 0;
+            }
+        }
+        Self {
+            diagnostics_hint,
+            cache_bypass,
+            behavior_snapshot,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::RexDaemonService;
+    use super::{
+        format_behavior_decision, format_cache_status, PromptDirectives, RexDaemonService,
+    };
+    use crate::plugins::{BehaviorDecision, CacheStatus};
 
     #[test]
     fn stream_chunks_end_with_done_marker() {
@@ -122,5 +215,31 @@ mod tests {
             .expect("last chunk should be ok");
         assert!(last.done);
         assert_eq!(last.text, "");
+    }
+
+    #[test]
+    fn prompt_directives_parse_cache_and_diagnostics() {
+        let directives =
+            PromptDirectives::from_prompt("[[diag: cargo test failed]]\n[[cache:bypass]]");
+        assert_eq!(
+            directives.diagnostics_hint.as_deref(),
+            Some("cargo test failed")
+        );
+        assert!(directives.cache_bypass);
+    }
+
+    #[test]
+    fn cache_status_format_is_stable() {
+        assert_eq!(format_cache_status(CacheStatus::Hit), "hit");
+        assert_eq!(format_cache_status(CacheStatus::Bypass), "bypass");
+    }
+
+    #[test]
+    fn behavior_decision_format_is_stable() {
+        assert_eq!(format_behavior_decision(&BehaviorDecision::Allow), "allow");
+        assert_eq!(
+            format_behavior_decision(&BehaviorDecision::Suppress { reason: "x" }),
+            "suppress"
+        );
     }
 }
