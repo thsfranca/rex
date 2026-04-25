@@ -7,7 +7,7 @@ This roadmap defines the phased delivery of the REX editor extension that works 
 - Ship one hybrid VS Code and Cursor extension that consumes the stable `rex-cli` NDJSON contract defined in [`docs/EXTENSION_MVP.md`](EXTENSION_MVP.md).
 - Target Cursor-class chat UX (streaming markdown, highlighted code blocks, Apply-to-file with native diff) without forking per-editor code paths.
 - Keep Cursor-specific features optional behind runtime capability detection so the same VSIX installs cleanly in plain VS Code.
-- Keep daemon lifecycle user-managed by default and add opt-in auto-start later under a setting.
+- Keep daemon lifecycle user-managed by default; opt-in auto-start ships behind `rex.daemonAutoStart` (default off).
 
 ## Scope principles
 
@@ -86,14 +86,14 @@ Goal: opt-in auto-start, release pipeline, and docs polish.
 | Area | Deliverable |
 |---|---|
 | Reliability | `rex.daemonAutoStart` enabled path with lifecycle + tests |
-| Release | Tag-triggered `vsce package` + `ovsx publish` dry-run |
-| Optional | `vsce publish` gated by presence of a secret |
+| Release | Tag-triggered `vsce package` + VSIX validation (`unzip -t`, `vsce generate-manifest`); optional `ovsx publish` / `vsce publish` when secrets are set |
+| Optional | Marketplace publishes gated by `OVSX_TOKEN` / `VSCE_PAT` secrets |
 | Docs | `CHANGELOG.md`, install/first-run guide, troubleshooting |
 
 Acceptance criteria:
 
 - Auto-start succeeds on cold start; default behavior (off) unchanged.
-- Tag triggers a `.vsix` artifact and dry-runs against Open VSX.
+- Tag triggers a `.vsix` artifact, VSIX validation, and optional Open VSX / Marketplace publish when tokens are configured.
 - Install and troubleshooting docs reviewed and indexed.
 
 ## Non-goals

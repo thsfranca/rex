@@ -2,9 +2,7 @@
 set -euo pipefail
 
 extension_relevant="${EXTENSION_RELEVANT:-true}"
-lint_typecheck_result="${LINT_TYPECHECK_RESULT:-missing}"
-test_result="${TEST_RESULT:-missing}"
-package_result="${PACKAGE_RESULT:-missing}"
+verify_result="${EXTENSION_VERIFY_RESULT:-missing}"
 result="success"
 fail_stage="-"
 fail_code="-"
@@ -28,7 +26,7 @@ echo "::group::PostRunSummary"
 if [ "${extension_relevant}" != "true" ]; then
   result="skip"
   hint="Extension checks were not relevant for this change set."
-elif [ "${lint_typecheck_result}" != "success" ] || [ "${test_result}" != "success" ] || [ "${package_result}" != "success" ]; then
+elif [ "${verify_result}" != "success" ]; then
   result="failure"
   fail_stage="PostRunSummary"
   fail_code="GATE_FAIL"
@@ -44,9 +42,7 @@ fi
   echo "- hint: ${hint}"
   echo "- run_id: ${GITHUB_RUN_ID:-unknown}"
   echo ""
-  echo "- extension-lint-typecheck: ${lint_typecheck_result}"
-  echo "- extension-test: ${test_result}"
-  echo "- extension-package: ${package_result}"
+  echo "- extension-verify: ${verify_result}"
 } >> "$GITHUB_STEP_SUMMARY"
 
 {
@@ -54,9 +50,7 @@ fi
   echo "fail_stage=${fail_stage}"
   echo "fail_code=${fail_code}"
   echo "hint=${hint}"
-  echo "extension_lint_typecheck=${lint_typecheck_result}"
-  echo "extension_test=${test_result}"
-  echo "extension_package=${package_result}"
+  echo "extension_verify=${verify_result}"
 } > "ci-observability/extension-gate-summary.txt"
 
 if [ "${result}" != "success" ]; then

@@ -5,3 +5,4 @@ out-webview/
 coverage/
 *.vsix
 .vscode-test/
+.vitest-tmp/
