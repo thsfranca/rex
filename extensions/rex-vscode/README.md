@@ -2,13 +2,23 @@
 
 Local AI runtime client for VS Code and Cursor, backed by the [REX daemon](../..).
 
-This extension is in early development. PR 1 ships foundations (status bar, daemon detection, headless runtime modules). Chat UI arrives in PR 2. See [`docs/EXTENSION_ROADMAP.md`](../../docs/EXTENSION_ROADMAP.md).
+This extension is in early development. See [`docs/EXTENSION_ROADMAP.md`](../../docs/EXTENSION_ROADMAP.md) for the phased plan.
 
 ## Status
 
-- PR 1 (current): status bar, daemon detection via `rex-cli status`, typed NDJSON stream client, capability detection. No chat UI yet.
-- PR 2: streaming chat webview, syntax-highlighted code blocks, Apply-to-file via native diff.
+- PR 1: status bar, daemon detection via `rex-cli status`, typed NDJSON stream client, capability detection.
+- PR 2 (current): activity-bar chat webview with streaming markdown, syntax-highlighted code blocks, Copy/Insert/Apply actions, native-diff Apply flow, editor context chip, and `REX: Explain/Fix/Refactor Selection` commands.
 - PR 3: opt-in daemon auto-start, Open VSX publish pipeline, docs polish.
+
+## Using the chat view
+
+1. Start `rex-daemon` (user-managed by default) so the status bar reads `REX ready`.
+2. Open the `REX` view container from the activity bar, or run `REX: Open Chat`.
+3. Type a prompt and send (`Cmd/Ctrl+Enter`); the assistant response streams with live markdown.
+4. Per code block you can `Copy`, `Insert at cursor`, or `Apply` (opens a diff and asks for confirmation before writing a `WorkspaceEdit`).
+5. Select code in the editor and run `REX: Explain/Fix/Refactor Selection` to prefill the prompt with editor context.
+
+The chat webview uses a strict Content Security Policy (nonce-scoped script, no remote resource loads). Syntax highlighting is lazy-loaded via `shiki` only after the first code block appears.
 
 ## Requirements
 

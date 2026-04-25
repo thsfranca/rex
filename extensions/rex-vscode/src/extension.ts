@@ -1,8 +1,10 @@
 import * as vscode from "vscode";
 
 import { readSettings, onSettingsChanged, type RexSettings } from "./config/settings";
+import { snapshotActiveEditor } from "./editor/context";
 import { activateCursorAdapter } from "./platform/cursorAdapter";
 import { DaemonLifecycle, type DaemonLifecycleState } from "./runtime/daemonLifecycle";
+import { ChatPanelProvider, CHAT_VIEW_ID } from "./ui/chatPanel";
 import { createStatusBar, type StatusBar } from "./ui/statusBar";
 
 const PROBE_INTERVAL_MS = 10_000;
@@ -10,6 +12,7 @@ const PROBE_INTERVAL_MS = 10_000;
 interface ActivationResources {
   readonly output: vscode.OutputChannel;
   readonly statusBar: StatusBar;
+  readonly chatPanel: ChatPanelProvider;
   lifecycle: DaemonLifecycle;
   probeTimer: NodeJS.Timeout | undefined;
   settings: RexSettings;
@@ -26,8 +29,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const settings = readSettings();
   output.appendLine(`[activate] settings: ${summarizeSettings(settings)}`);
 
-  const lifecycle = buildLifecycle(settings, statusBar, output);
-  resources = { output, statusBar, lifecycle, probeTimer: undefined, settings };
+  const chatPanel = new ChatPanelProvider({
+    context,
+    getCliOptions: () => ({ cliPath: resources?.settings.cliPath ?? settings.cliPath }),
+    getDaemonState: () => lastLifecycleState,
+    log: (message) => output.appendLine(message),
+  });
+  context.subscriptions.push(chatPanel.register());
+
+  let lastLifecycleState: DaemonLifecycleState | undefined;
+
+  const lifecycle = buildLifecycle(settings, statusBar, output, (state) => {
+    lastLifecycleState = state;
+    chatPanel.broadcastDaemonState(state);
+  });
+  resources = {
+    output,
+    statusBar,
+    chatPanel,
+    lifecycle,
+    probeTimer: undefined,
+    settings,
+  };
 
   context.subscriptions.push(
     vscode.commands.registerCommand("rex.showStatus", async () => {
@@ -40,9 +63,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       } else if (state?.kind === "starting") {
         void vscode.window.showInformationMessage("REX daemon is starting...");
       } else if (state?.kind === "unavailable") {
-        void vscode.window.showWarningMessage(
-          `REX daemon unavailable: ${state.reason}`,
-        );
+        void vscode.window.showWarningMessage(`REX daemon unavailable: ${state.reason}`);
       }
     }),
   );
@@ -66,13 +87,46 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("rex.focusChat", async () => {
+      await vscode.commands.executeCommand(`${CHAT_VIEW_ID}.focus`);
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("rex.clearChat", () => {
+      resources?.chatPanel.clearChat();
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("rex.explainSelection", async () => {
+      await prefillFromSelection("Explain the selected code. Focus on control flow and intent.");
+    }),
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand("rex.fixSelection", async () => {
+      await prefillFromSelection("Fix the selected code and explain the root cause briefly.");
+    }),
+  );
+  context.subscriptions.push(
+    vscode.commands.registerCommand("rex.refactorSelection", async () => {
+      await prefillFromSelection(
+        "Refactor the selected code for readability; preserve behavior and mention trade-offs.",
+      );
+    }),
+  );
+
+  context.subscriptions.push(
     onSettingsChanged((updated) => {
       output.appendLine(`[settings] changed -> ${summarizeSettings(updated)}`);
       if (resources === undefined) {
         return;
       }
       resources.settings = updated;
-      resources.lifecycle = buildLifecycle(updated, statusBar, output);
+      resources.lifecycle = buildLifecycle(updated, statusBar, output, (state) => {
+        lastLifecycleState = state;
+        chatPanel.broadcastDaemonState(state);
+      });
       void resources.lifecycle.probe();
     }),
   );
@@ -87,10 +141,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   await activateCursorAdapter(context, (message) => output.appendLine(`[cursor] ${message}`));
 
-  void resources.lifecycle.probe();
+  void lifecycle.probe();
   resources.probeTimer = setInterval(() => {
     void resources?.lifecycle.probe();
   }, PROBE_INTERVAL_MS);
+
+  async function prefillFromSelection(template: string): Promise<void> {
+    const snapshot = snapshotActiveEditor();
+    const prompt =
+      snapshot?.selectionText !== undefined
+        ? `${template}\n\nSelection:\n\`\`\`${snapshot.languageId}\n${snapshot.selectionText}\n\`\`\``
+        : template;
+    chatPanel.prefillPrompt({ prompt, context: snapshot });
+    await vscode.commands.executeCommand(`${CHAT_VIEW_ID}.focus`);
+  }
 }
 
 export async function deactivate(): Promise<void> {
@@ -100,6 +164,7 @@ export async function deactivate(): Promise<void> {
   if (resources.probeTimer !== undefined) {
     clearInterval(resources.probeTimer);
   }
+  resources.chatPanel.dispose();
   await resources.lifecycle.shutdown();
   resources = undefined;
 }
@@ -108,6 +173,7 @@ function buildLifecycle(
   settings: RexSettings,
   statusBar: StatusBar,
   output: vscode.OutputChannel,
+  onStateChange: (state: DaemonLifecycleState) => void,
 ): DaemonLifecycle {
   return new DaemonLifecycle({
     cli: { cliPath: settings.cliPath },
@@ -115,6 +181,7 @@ function buildLifecycle(
     onState: (state) => {
       statusBar.update(state);
       output.appendLine(`[lifecycle] ${describeState(state)}`);
+      onStateChange(state);
     },
   });
 }

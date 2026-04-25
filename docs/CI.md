@@ -85,6 +85,7 @@ Keep failure codes low-cardinality. Current baseline set:
 - Set `timeout-minutes` per job.
 - Keep `concurrency.cancel-in-progress: true`.
 - Keep `ci-checks` as the single required protection check.
+- Keep `rust-checks` and `extension-checks` as domain gate jobs feeding the final gate.
 
 ## Workflow triggers
 
@@ -99,7 +100,7 @@ Set branch protection or ruleset on `main` to require:
 
 - `ci-checks`
 
-`ci-checks` is the final gate and fails when `rust-checks` or `extension-checks` fails. All gate jobs use canonical summary fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`) plus upstream outcomes.
+`ci-checks` is the final gate and fails when `rust-checks` or `extension-checks` fails. `rust-checks` gates Rust checks; `extension-checks` gates extension install/typecheck/lint/test/package. All gate jobs use canonical summary fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`) plus upstream outcomes.
 
 ## Path-aware execution model
 

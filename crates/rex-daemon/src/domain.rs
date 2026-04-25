@@ -36,6 +36,8 @@ pub enum StreamLifecycle {
     Starting,
     Streaming,
     Completed,
+    Interrupted,
+    Failed,
 }
 
 impl StreamLifecycle {
@@ -44,6 +46,8 @@ impl StreamLifecycle {
             Self::Starting => "starting",
             Self::Streaming => "streaming",
             Self::Completed => "completed",
+            Self::Interrupted => "interrupted",
+            Self::Failed => "failed",
         }
     }
 }
@@ -78,5 +82,7 @@ mod tests {
     fn lifecycle_labels_are_stable() {
         assert_eq!(StreamLifecycle::Starting.as_str(), "starting");
         assert_eq!(StreamLifecycle::Completed.as_str(), "completed");
+        assert_eq!(StreamLifecycle::Interrupted.as_str(), "interrupted");
+        assert_eq!(StreamLifecycle::Failed.as_str(), "failed");
     }
 }
