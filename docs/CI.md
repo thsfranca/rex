@@ -39,6 +39,13 @@ Use this standard for every CI job in `.github/workflows/ci.yml`.
   - `ci-test-report-<job>-<run_id>`
 - Set `retention-days: 7` unless project needs change.
 
+### Workflow script separation contract
+
+- Keep `.github/workflows/*.yml` focused on orchestration (triggers, jobs, permissions, and step order).
+- When a check contains many operations, branching, or reusable command groups, move logic to scripts under `scripts/ci/`.
+- Call scripts from workflow steps instead of embedding long inline `run` blocks.
+- Keep script interfaces explicit with arguments or environment variables.
+
 ### Failure taxonomy
 
 Use one shared result vocabulary:
@@ -118,3 +125,4 @@ When adding a new CI job, verify all items:
 - [ ] Uploads failure diagnostics as artifact with `retention-days`.
 - [ ] Uses standard result vocabulary and low-cardinality failure codes.
 - [ ] Sets `timeout-minutes`.
+- [ ] Uses `scripts/ci/` for non-trivial check logic instead of long inline `run` blocks.
