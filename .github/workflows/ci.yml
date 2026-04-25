@@ -28,15 +28,15 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install CLI binaries via project script
+      - name: Install CLI Binaries
         run: ./scripts/install-cli.sh
 
-      - name: Run fmt and clippy with observability signals
+      - name: Run Fmt and Clippy
         id: run_checks
         continue-on-error: true
         run: ./scripts/ci/run_rust_fmt_clippy.sh
 
-      - name: Post run summary
+      - name: Write Job Summary
         if: ${{ always() }}
         run: ./scripts/ci/write_job_summary.sh rust-fmt-clippy
 
@@ -70,15 +70,15 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Install CLI binaries via project script
+      - name: Install CLI Binaries
         run: ./scripts/install-cli.sh
 
-      - name: Run tests with observability signals
+      - name: Run Tests
         id: run_tests
         continue-on-error: true
         run: ./scripts/ci/run_rust_tests.sh
 
-      - name: Post run summary
+      - name: Write Job Summary
         if: ${{ always() }}
         run: ./scripts/ci/write_job_summary.sh rust-test
 

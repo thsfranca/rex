@@ -46,6 +46,15 @@ Use this standard for every CI job in `.github/workflows/ci.yml`.
 - Call scripts from workflow steps instead of embedding long inline `run` blocks.
 - Keep script interfaces explicit with arguments or environment variables.
 
+### Step naming contract
+
+- Use concise, action-first step names that describe only the immediate operation.
+  - Good: `Run Tests`, `Install CLI Binaries`, `Write Job Summary`.
+  - Avoid: `Run tests with observability signals`, `Install CLI binaries via project script`.
+- Do not include chat/session/process context in step names.
+- Put extra context in script output, step logs, and docs, not in the step title.
+- Keep names stable across edits so AI triage can map failures to the same operation over time.
+
 ### Failure taxonomy
 
 Use one shared result vocabulary:
@@ -126,3 +135,4 @@ When adding a new CI job, verify all items:
 - [ ] Uses standard result vocabulary and low-cardinality failure codes.
 - [ ] Sets `timeout-minutes`.
 - [ ] Uses `scripts/ci/` for non-trivial check logic instead of long inline `run` blocks.
+- [ ] Uses concise, context-free step names (action-first, no process/chat wording).
