@@ -1,10 +1,26 @@
-/**
- * Webview entry point.
- *
- * PR 1 ships an intentionally empty webview bundle. The chat UI, React
- * component tree, and streaming renderer land in PR 2. Keeping the entry in
- * place means the dual-esbuild build graph, CSP-capable wiring, and VSIX
- * packaging are validated from day one.
- */
+import * as React from "react";
+import { createRoot } from "react-dom/client";
 
-export {};
+import themeCss from "./theme/themeVars.css";
+
+import { App } from "./App";
+
+const rootEl = document.getElementById("rex-root");
+if (rootEl === null) {
+  throw new Error("Missing #rex-root in webview shell");
+}
+
+injectStyles(themeCss);
+
+createRoot(rootEl).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+);
+
+function injectStyles(css: string): void {
+  const style = document.createElement("style");
+  style.setAttribute("data-rex-style", "true");
+  style.textContent = css;
+  document.head.appendChild(style);
+}
