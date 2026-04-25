@@ -21,6 +21,7 @@ REX is a study project for a local AI runtime on macOS (Apple Silicon).
 | Document | Purpose |
 |---|---|
 | [`docs/README.md`](docs/README.md) | Documentation index and structure. |
+| [`docs/DEVELOPER_EXPERIENCE_GUIDE.md`](docs/DEVELOPER_EXPERIENCE_GUIDE.md) | Development workflow, plugin path, and compatibility rules. |
 | [`docs/CI.md`](docs/CI.md) | CI strategy, branch protection/merge queue setup, and observability standards. |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System architecture and long-term direction. |
 | [`MVP_SPEC.md`](MVP_SPEC.md) | Phase 1 scope, protocol, and acceptance criteria. |
