@@ -26,6 +26,7 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 
 - MVP implementation is **in progress**; inference is **mocked** with a clean swap-in path for MLX ([`MVP_SPEC.md`](MVP_SPEC.md)).
 - Current engineering focus: **reliable daemon–client streaming** and a **stable NDJSON contract** for the extension and other consumers.
+- VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
 - Not primary scope yet: MLX-backed models, remote networking/TLS, production auth, full plugin sidecar lifecycle.
 
 ## Why this shape
@@ -166,6 +167,9 @@ Out of scope for Phase 1 (see [`MVP_SPEC.md`](MVP_SPEC.md)):
 ## Contributing and validation baseline
 
 - Keep changes focused and align with repository docs.
+- Treat generated/runtime outputs as disposable and keep commits source-first:
+  - do not commit `target/`, temporary test outputs, or scratch/handoff files;
+  - treat local VSIX artifacts as build outputs unless a release flow explicitly requires them.
 - Run CI-aligned local checks before PRs:
 
 ```bash

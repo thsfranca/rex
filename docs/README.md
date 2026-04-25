@@ -2,6 +2,8 @@
 
 This folder keeps project documentation organized by purpose.
 
+Use `README.md` at the repository root as the runnable onboarding path (understand -> run -> verify -> troubleshoot). Use this index to choose deeper references after first setup.
+
 ## Structure
 
 | Path | Purpose |
@@ -21,6 +23,12 @@ This folder keeps project documentation organized by purpose.
 | `docs/CONTEXT_EFFICIENCY.md` | Token budget, plugin boundaries, and telemetry defaults. |
 | `ARCHITECTURE.md` | System architecture and technical direction. |
 | `MVP_SPEC.md` | Phase 1 specification and success criteria. |
+
+## Source vs generated artifacts
+
+- Treat docs and source files as canonical; generated/runtime outputs are disposable.
+- Do not commit local runtime/build artifacts such as `target/`, temporary test outputs, or ad-hoc local logs.
+- Extension packaging can generate `extensions/rex-vscode/rex-vscode.vsix` for local install and release workflows; treat it as build output unless a release process explicitly requires it.
 
 ## How to use this documentation
 

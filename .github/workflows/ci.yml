@@ -44,8 +44,8 @@ jobs:
               - '.github/workflows/**'
               - 'scripts/ci/**'
             global_changed:
-              - 'README.md'
-              - 'docs/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
 
       - name: Set relevance outputs
         id: set_outputs
