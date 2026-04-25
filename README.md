@@ -88,7 +88,7 @@ source ~/.zshrc
   - interrupted streams;
   - incomplete stream termination.
 - `rex-cli complete --format ndjson` emits one JSON event per line with terminal `done` or `error`.
-- `rex-daemon` emits stream lifecycle logs (`starting`, `streaming`, `completed`) for troubleshooting.
+- `rex-daemon` emits request-scoped stream lifecycle logs (`starting`, `streaming`, `completed`, `interrupted`, `failed`) plus `request_id` and first-chunk markers for troubleshooting.
 
 ## MVP boundaries
 
