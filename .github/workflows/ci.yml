@@ -34,64 +34,11 @@ jobs:
       - name: Run fmt and clippy with observability signals
         id: run_checks
         continue-on-error: true
-        run: |
-          set -o pipefail
-          mkdir -p ci-observability
-          result="success"
-          fail_code="-"
-          fail_stage="-"
-          hint="-"
-
-          echo "::group::Setup"
-          echo "::notice::CI stage Setup complete; dependencies and toolchain are ready."
-          echo "::endgroup::"
-
-          echo "::group::BuildAndChecks"
-          if ! cargo fmt --all -- --check 2>&1 | tee "ci-observability/fmt.log"; then
-            result="failure"
-            fail_code="FMT_FAIL"
-            fail_stage="BuildAndChecks"
-            hint="Run cargo fmt locally."
-            echo "::error::Formatting check failed."
-            echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
-          elif ! cargo clippy --workspace --all-targets --locked -- -D warnings 2>&1 | tee "ci-observability/clippy.log"; then
-            result="failure"
-            fail_code="CLIPPY_FAIL"
-            fail_stage="BuildAndChecks"
-            hint="Fix clippy warnings locally."
-            echo "::error::Lint check failed."
-            echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
-          fi
-          echo "::endgroup::"
-
-          echo "::group::TestExecution"
-          echo "::notice::No test execution in this job."
-          echo "::endgroup::"
-
-          echo "CI_RESULT=${result}" >> "$GITHUB_ENV"
-          echo "CI_FAIL_CODE=${fail_code}" >> "$GITHUB_ENV"
-          echo "CI_FAIL_STAGE=${fail_stage}" >> "$GITHUB_ENV"
-          echo "CI_HINT=${hint}" >> "$GITHUB_ENV"
-
-          if [ "${result}" != "success" ]; then
-            exit 1
-          fi
+        run: ./scripts/ci/run_rust_fmt_clippy.sh
 
       - name: Post run summary
         if: ${{ always() }}
-        run: |
-          echo "::group::PostRunSummary"
-          {
-            echo "### rust-fmt-clippy"
-            echo ""
-            echo "- result: ${CI_RESULT}"
-            echo "- fail_stage: ${CI_FAIL_STAGE}"
-            echo "- fail_code: ${CI_FAIL_CODE}"
-            echo "- hint: ${CI_HINT}"
-            echo "- run_id: ${{ github.run_id }}"
-          } >> "$GITHUB_STEP_SUMMARY"
-          echo "::notice::Summary written for rust-fmt-clippy."
-          echo "::endgroup::"
+        run: ./scripts/ci/write_job_summary.sh rust-fmt-clippy
 
       - name: Upload diagnostics artifact
         if: ${{ steps.run_checks.outcome != 'success' }}
@@ -129,57 +76,11 @@ jobs:
       - name: Run tests with observability signals
         id: run_tests
         continue-on-error: true
-        run: |
-          set -o pipefail
-          mkdir -p ci-observability
-          result="success"
-          fail_code="-"
-          fail_stage="-"
-          hint="-"
-
-          echo "::group::Setup"
-          echo "::notice::CI stage Setup complete; dependencies and toolchain are ready."
-          echo "::endgroup::"
-
-          echo "::group::BuildAndChecks"
-          echo "::notice::No build-only checks in this job."
-          echo "::endgroup::"
-
-          echo "::group::TestExecution"
-          if ! cargo test --workspace --all-targets --locked 2>&1 | tee "ci-observability/test.log"; then
-            result="failure"
-            fail_code="TEST_FAIL"
-            fail_stage="TestExecution"
-            hint="Run cargo test locally."
-            echo "::error::Test execution failed."
-            echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
-          fi
-          echo "::endgroup::"
-
-          echo "CI_RESULT=${result}" >> "$GITHUB_ENV"
-          echo "CI_FAIL_CODE=${fail_code}" >> "$GITHUB_ENV"
-          echo "CI_FAIL_STAGE=${fail_stage}" >> "$GITHUB_ENV"
-          echo "CI_HINT=${hint}" >> "$GITHUB_ENV"
-
-          if [ "${result}" != "success" ]; then
-            exit 1
-          fi
+        run: ./scripts/ci/run_rust_tests.sh
 
       - name: Post run summary
         if: ${{ always() }}
-        run: |
-          echo "::group::PostRunSummary"
-          {
-            echo "### rust-test"
-            echo ""
-            echo "- result: ${CI_RESULT}"
-            echo "- fail_stage: ${CI_FAIL_STAGE}"
-            echo "- fail_code: ${CI_FAIL_CODE}"
-            echo "- hint: ${CI_HINT}"
-            echo "- run_id: ${{ github.run_id }}"
-          } >> "$GITHUB_STEP_SUMMARY"
-          echo "::notice::Summary written for rust-test."
-          echo "::endgroup::"
+        run: ./scripts/ci/write_job_summary.sh rust-test
 
       - name: Upload diagnostics artifact
         if: ${{ steps.run_tests.outcome != 'success' }}
@@ -200,33 +101,7 @@ jobs:
     needs: [rust-fmt-clippy, rust-test]
     steps:
       - name: Ensure all required jobs passed
-        run: |
-          fmt_result="${{ needs.rust-fmt-clippy.result }}"
-          test_result="${{ needs.rust-test.result }}"
-          echo "::group::Setup"
-          echo "::notice::Evaluating upstream required checks."
-          echo "::endgroup::"
-
-          echo "::group::BuildAndChecks"
-          echo "::notice::No build/check execution in gate job."
-          echo "::endgroup::"
-
-          echo "::group::TestExecution"
-          echo "::notice::No test execution in gate job."
-          echo "::endgroup::"
-
-          echo "::group::PostRunSummary"
-          {
-            echo "### rust-checks"
-            echo ""
-            echo "- rust-fmt-clippy: ${fmt_result}"
-            echo "- rust-test: ${test_result}"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [ "${fmt_result}" != "success" ] || [ "${test_result}" != "success" ]; then
-            echo "::error::At least one required check failed."
-            echo "CI_SIGNAL code=GATE_FAIL stage=PostRunSummary result=failure hint=Inspect upstream job summaries and artifacts."
-            exit 1
-          fi
-          echo "::notice::All required checks passed."
-          echo "::endgroup::"
+        env:
+          FMT_RESULT: ${{ needs.rust-fmt-clippy.result }}
+          TEST_RESULT: ${{ needs.rust-test.result }}
+        run: ./scripts/ci/enforce_rust_gate.sh
