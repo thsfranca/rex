@@ -16,11 +16,18 @@ echo "::notice::No build-only checks in this job."
 echo "::endgroup::"
 
 echo "::group::TestExecution"
-if ! cargo test --workspace --all-targets --locked 2>&1 | tee "ci-observability/test.log"; then
+if command -v cargo-nextest >/dev/null 2>&1; then
+  echo "::notice::Using cargo-nextest (CI or local install)."
+  test_cmd=(cargo nextest run --workspace --all-targets --locked)
+else
+  echo "::notice::Using cargo test (install cargo-nextest for faster runs)."
+  test_cmd=(cargo test --workspace --all-targets --locked)
+fi
+if ! "${test_cmd[@]}" 2>&1 | tee "ci-observability/test.log"; then
   result="failure"
   fail_code="TEST_FAIL"
   fail_stage="TestExecution"
-  hint="Run cargo test locally."
+  hint="Run cargo test --workspace --all-targets --locked locally (or: cargo install cargo-nextest && cargo nextest run --workspace --all-targets --locked)."
   echo "::error::Test execution failed."
   echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
 elif ! ./scripts/ci/test_enforce_rust_gate.sh 2>&1 | tee "ci-observability/gate-script-test.log"; then
