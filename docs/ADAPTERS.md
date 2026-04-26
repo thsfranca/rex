@@ -52,7 +52,7 @@ Intended use: shell out to Cursor’s CLI (for example `cursor-agent`) in **non-
 | First slice | `ask` mode only; `plan` and `agent` unlock after proto/CLI can pass mode and policy safely. |
 | Context | **No** REX full lexical context injection on top of the user prompt; Cursor’s workspace tools handle retrieval. Behavioral prefilter may still run. |
 | Session | **Fresh** invocation per request: REX owns long-lived conversation and routing; Cursor is stateless at the REX boundary unless you add explicit session ids later. |
-| Lifecycle | Mandatory **timeout** and process teardown on expiry; map hangs to a clear terminal `error` for the client. |
+| Lifecycle | Mandatory **timeout** and process teardown on expiry; map hangs to a clear terminal `error` for the client. Non-zero exits embed stderr in the gRPC `unavailable` text with a bounded length; see [CONFIGURATION.md](CONFIGURATION.md) (Cursor CLI). |
 | Model | Pass through `model_hint` including `auto` when the CLI supports it. |
 
 Risks to document in operations: some environments report `print` / headless mode not exiting; defensive timeouts and logging are required.
