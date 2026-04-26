@@ -56,6 +56,8 @@ The following are read in **Rust** code paths for the **daemon** or **CLI** as i
 
 Deeper treatment of the Cursor adapter path: [`PLUGIN_ROADMAP.md`](PLUGIN_ROADMAP.md), [`DEPENDENCIES.md`](DEPENDENCIES.md), [`ADAPTERS.md`](ADAPTERS.md).
 
+**Cursor CLI:** On non-zero exit, the daemon may include stderr in the terminal gRPC `unavailable` message. The adapter **truncates** overlong stderr (marker ` [rex: cursor stderr truncated] `) so error payloads stay bounded. Run `cursor-agent` in a shell if you need the full transcript.
+
 ## Not implemented yet (roadmap)
 
 - **Persistent user config** on disk (TOML or JSON under XDG paths).

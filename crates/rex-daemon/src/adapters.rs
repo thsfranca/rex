@@ -12,6 +12,9 @@ use crate::domain::{build_mock_output, chunk_output};
 
 const STREAM_CHUNK_MAX_CHARS: usize = 8;
 const CURSOR_TIMEOUT_SECS_DEFAULT: u64 = 20;
+/// Max stderr characters embedded in a non-success `Status::unavailable` (avoids huge gRPC payloads and log lines).
+const CURSOR_STDERR_DETAIL_MAX_CHARS: usize = 8_192;
+const CURSOR_STDERR_TRUNC_MARKER: &str = " [rex: cursor stderr truncated] ";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuntimeKind {
@@ -172,9 +175,9 @@ impl CursorCliRuntime {
 
         if !exit_status.success() {
             let stderr = String::from_utf8_lossy(&stderr_bytes);
+            let detail = truncate_detail_for_unavailable(&stderr, CURSOR_STDERR_DETAIL_MAX_CHARS);
             return Err(Status::unavailable(format!(
-                "cursor runtime failed: status={exit_status}; stderr={}",
-                stderr.trim()
+                "cursor runtime failed: status={exit_status}; stderr={detail}",
             )));
         }
 
@@ -195,6 +198,33 @@ impl InferenceRuntime for CursorCliRuntime {
             Err(err) => vec![Err(err)],
         }
     }
+}
+
+fn truncate_detail_for_unavailable(stderr: &str, max_chars: usize) -> String {
+    let t = stderr.trim();
+    if t.is_empty() {
+        return String::new();
+    }
+    if t.chars().count() <= max_chars {
+        return t.to_string();
+    }
+    if max_chars < CURSOR_STDERR_TRUNC_MARKER.chars().count() + 8 {
+        return t.chars().take(max_chars).collect();
+    }
+    let marker_len = CURSOR_STDERR_TRUNC_MARKER.chars().count();
+    let keep = max_chars - marker_len;
+    let head = keep * 2 / 5;
+    let tail = keep - head;
+    let head_s: String = t.chars().take(head).collect();
+    let tail_s: String = t
+        .chars()
+        .rev()
+        .take(tail)
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect();
+    format!("{head_s}{CURSOR_STDERR_TRUNC_MARKER}{tail_s}")
 }
 
 fn stream_chunks_with_done(
@@ -313,6 +343,15 @@ plain line"#;
     #[test]
     fn shell_quote_escapes_single_quotes() {
         assert_eq!(shell_single_quote("a'b"), "'a'\"'\"'b'");
+    }
+
+    #[test]
+    fn truncates_huge_cursor_stderr_in_status_detail() {
+        let huge = "e".repeat(20_000);
+        let out = super::truncate_detail_for_unavailable(&huge, 2000);
+        assert!(out.len() < huge.len());
+        assert!(out.contains("[rex: cursor stderr truncated]"));
+        assert!(out.starts_with("ee"));
     }
 
     #[tokio::test]
