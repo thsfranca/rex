@@ -1,3 +1,6 @@
+# Editor / AI local config (not shared)
+.cursor/
+
 # Temporary local-only files
 TEMP_*
 # PR / merge handoff (keep in GitHub UI, /tmp, or editor; not the repo)
