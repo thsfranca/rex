@@ -19,15 +19,15 @@ This document defines the first shippable slice for REX.
 | Shutdown lifecycle | Graceful termination and socket cleanup. |
 | Extension-facing contract | CLI `complete` supports machine-readable stream output for editor integration. |
 | Startup reliability | CLI retries bounded daemon-unavailable startup races before failing. |
-| Configuration policy (documentation) | `docs/CONFIGURATION.md` defines precedence (defaults, env, and future file/CLI), the Phase 1 `REX_*` catalog, and what remains **unimplemented** until a follow-up. |
+| Configuration policy (documentation) | `CONFIGURATION.md` defines precedence (defaults, env, and future file/CLI), the Phase 1 `REX_*` catalog, and what remains **unimplemented** until a follow-up. |
 
 ## Out of scope
 
 - Apple MLX runtime integration.
 - Full plugin lifecycle implementation.
-- Editor extension integration (as a **Phase 1** daemon/CLI deliverable; a companion [VS Code / Cursor extension](docs/EXTENSION_ROADMAP.md) now consumes the `rex-cli` NDJSON contract and does not change the core gRPC/UDS **runtime** requirements above).
+- Editor extension integration (as a **Phase 1** daemon/CLI deliverable; a companion [VS Code / Cursor extension](EXTENSION_ROADMAP.md) now consumes the `rex-cli` NDJSON contract and does not change the core gRPC/UDS **runtime** requirements above).
 - Remote networking, TLS, and production authentication.
-- **Configuration implementation beyond env:** on-disk user config, project-local config files, `rex config` (or similar) subcommands, and **global** CLI flags on `rex-daemon` / `rex-cli` that override environment variables. These ship in a later phase; Phase 1 **documents** the policy in `docs/CONFIGURATION.md` and keeps **runtime** behavior **env + defaults** as implemented in Rust.
+- **Configuration implementation beyond env:** on-disk user config, project-local config files, `rex config` (or similar) subcommands, and **global** CLI flags on `rex-daemon` / `rex-cli` that override environment variables. These ship in a later phase; Phase 1 **documents** the policy in `CONFIGURATION.md` and keeps **runtime** behavior **env + defaults** as implemented in Rust.
 
 ## Protocol requirements (`rex.v1`)
 
@@ -91,7 +91,7 @@ MVP does not implement plugins. For the next phase, start with **gRPC sidecar pl
 - Choose gRPC sidecar first for delivery speed and simpler integration.
 - Revisit Wasm when plugin APIs stabilize and performance/sandbox priorities increase.
 
-**Post-MVP (design only, out of Phase 1 scope):** REX is intended to use an **agnostic inference-adapter** seam for backends such as the mock engine, a future local MLX path, and **Cursor CLI** as a frontier-model gateway. See `ARCHITECTURE.md` (Inference adapters), `docs/ADAPTERS.md`, `docs/CACHING.md`, and the **Cursor CLI inference adapter** table in `docs/PLUGIN_ROADMAP.md` for the phased design track. MVP does not implement these; this pointer exists so future work does not conflict with the MVP contract.
+**Post-MVP (design only, out of Phase 1 scope):** REX is intended to use an **agnostic inference-adapter** seam for backends such as the mock engine, a future local MLX path, and **Cursor CLI** as a frontier-model gateway. See `ARCHITECTURE.md` (Inference adapters), `ADAPTERS.md`, `CACHING.md`, and the **Cursor CLI inference adapter** table in `PLUGIN_ROADMAP.md` for the phased design track. MVP does not implement these; this pointer exists so future work does not conflict with the MVP contract.
 
 ## Runtime-managed sidecars (design baseline)
 
@@ -125,11 +125,11 @@ This is the baseline for the first plugin-enabled phase after MVP.
 6. Daemon shutdown removes socket file.
 7. CLI fails clearly when daemon is unavailable.
 8. Cursor-extension bootstrap path can consume streaming completion via CLI contract.
-9. A reader can list configuration **precedence** and every **Phase 1** `REX_*` variable from `docs/CONFIGURATION.md` (canonical with `ARCHITECTURE.md` for boundaries).
+9. A reader can list configuration **precedence** and every **Phase 1** `REX_*` variable from `CONFIGURATION.md` (canonical with `ARCHITECTURE.md` for boundaries).
 
 ## Manual validation checklist
 
-Use this list for end-to-end confidence before a release. For day-to-day automation, also run the Rust gate script (`./scripts/ci/test_enforce_rust_gate.sh` or the checks described in [`docs/CI.md`](docs/CI.md)) and `cd extensions/rex-vscode && npm test` when you touch the extension.
+Use this list for end-to-end confidence before a release. For day-to-day automation, also run the Rust gate script (`./scripts/ci/test_enforce_rust_gate.sh` or the checks described in [`CI.md`](CI.md)) and `cd extensions/rex-vscode && npm test` when you touch the extension.
 
 - [ ] Build workspace with `cargo build --workspace`.
 - [ ] Run daemon and confirm socket exists at `/tmp/rex.sock`.
@@ -139,7 +139,7 @@ Use this list for end-to-end confidence before a release. For day-to-day automat
 - [ ] Stop daemon and confirm socket cleanup.
 - [ ] Restart daemon and confirm clean bind.
 - [ ] Verify bounded startup race handling by running `complete` while daemon starts.
-- [ ] Skim `docs/CONFIGURATION.md` for precedence, the Phase 1 `REX_*` list, and “not implemented” items so the document stays accurate when settings change.
+- [ ] Skim `CONFIGURATION.md` for precedence, the Phase 1 `REX_*` list, and “not implemented” items so the document stays accurate when settings change.
 
 ## Recommended repository structure for MVP
 
@@ -147,14 +147,14 @@ Use this list for end-to-end confidence before a release. For day-to-day automat
 .
 ├── Cargo.toml
 ├── README.md
-├── ARCHITECTURE.md
-├── MVP_SPEC.md
 ├── docs/
 │   ├── README.md
 │   ├── DOCUMENTATION.md
 │   ├── CONFIGURATION.md
 │   ├── DEPENDENCIES.md
-│   └── EXTENSION_MVP.md
+│   ├── EXTENSION_MVP.md
+│   ├── ARCHITECTURE.md
+│   └── MVP_SPEC.md
 ├── proto/rex/v1/rex.proto
 └── crates/
     ├── rex-proto/

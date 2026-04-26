@@ -50,7 +50,7 @@ This document defines the long-term technical direction for REX.
 
 ## Inference adapters
 
-The daemon does not hard-code a single inference engine. REX keeps prompt construction, context policy, **layered caching** (see `docs/CACHING.md`), and the streaming contract; inference backends are **pluggable adapters** behind a stable `InferenceRuntime` seam (contract details in `docs/ADAPTERS.md`).
+The daemon does not hard-code a single inference engine. REX keeps prompt construction, context policy, **layered caching** (see `CACHING.md`), and the streaming contract; inference backends are **pluggable adapters** behind a stable `InferenceRuntime` seam (contract details in `ADAPTERS.md`).
 
 | Adapter (examples) | Role |
 |---|---|
@@ -119,7 +119,7 @@ REX adopts a runtime-managed gRPC sidecar model for early plugin phases.
 
 ## Configuration
 
-`rex-daemon` reads **inference and cache** policy from **built-in defaults** and **environment variables** today. `rex-cli` is a thin client and can carry **per-request** metadata (for example a trace id from the editor). A single **precedence** model (defaults, optional future user file, env, optional future CLI flags) and the full **`REX_*` catalog** live in [docs/CONFIGURATION.md](docs/CONFIGURATION.md). When you add new settings, extend that doc and keep **one** mapping from names to behavior so parents (extension, CI) and future flags stay consistent.
+`rex-daemon` reads **inference and cache** policy from **built-in defaults** and **environment variables** today. `rex-cli` is a thin client and can carry **per-request** metadata (for example a trace id from the editor). A single **precedence** model (defaults, optional future user file, env, optional future CLI flags) and the full **`REX_*` catalog** live in [CONFIGURATION.md](CONFIGURATION.md). When you add new settings, extend that doc and keep **one** mapping from names to behavior so parents (extension, CI) and future flags stay consistent.
 
 ## Reliability rules
 
@@ -142,14 +142,14 @@ Recommended structure for this phase:
 .
 ├── Cargo.toml
 ├── README.md
-├── ARCHITECTURE.md
-├── MVP_SPEC.md
 ├── docs/
 │   ├── README.md
 │   ├── ADAPTERS.md
 │   ├── CACHING.md
 │   ├── CONFIGURATION.md
-│   └── DOCUMENTATION.md
+│   ├── DOCUMENTATION.md
+│   ├── ARCHITECTURE.md
+│   └── MVP_SPEC.md
 ├── proto/
 │   └── rex/v1/rex.proto
 └── crates/
@@ -174,5 +174,5 @@ Recommended structure for this phase:
 
 - Full API schema details (see `MVP_SPEC.md` for current scope).
 - Plugin model design details.
-- Full adapter and caching field lists (see `docs/ADAPTERS.md` and `docs/CACHING.md`).
+- Full adapter and caching field lists (see `ADAPTERS.md` and `CACHING.md`).
 - Production hardening checklist for multi-user environments.

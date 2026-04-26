@@ -132,7 +132,7 @@ Revisit the monorepo decision if any of the following become true:
 
 ## Related documents
 
-- [`ARCHITECTURE.md`](../ARCHITECTURE.md): REX system architecture.
-- [`MVP_SPEC.md`](../MVP_SPEC.md): phase 1 protocol and acceptance criteria.
+- [ARCHITECTURE.md](ARCHITECTURE.md): REX system architecture.
+- [MVP_SPEC.md](MVP_SPEC.md): phase 1 protocol and acceptance criteria.
 - [`docs/EXTENSION_MVP.md`](EXTENSION_MVP.md): CLI NDJSON consumer contract.
 - [`docs/EXTENSION_ARCHITECTURE.md`](EXTENSION_ARCHITECTURE.md): extension component and message-bus architecture.
