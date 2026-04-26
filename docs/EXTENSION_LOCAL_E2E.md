@@ -31,6 +31,8 @@ chmod +x ./scripts/install-cli.sh
 ./scripts/install-cli.sh
 ```
 
+To print the standard install locations for **REX: Cli Path** and **REX: Daemon Binary Path** without re-installing, run `./scripts/install-cli.sh --print-bin-path`.
+
 Optional: add `~/.cargo/bin` to your shell and restart the editor so GUI-launched apps inherit it:
 
 ```bash
