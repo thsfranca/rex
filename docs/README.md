@@ -23,6 +23,7 @@ Use `README.md` at the repository root as the runnable onboarding path (understa
 | `docs/ADAPTERS.md` | Inference adapter contract, Cursor CLI profile, capabilities checklist. |
 | `docs/CACHING.md` | Layered response cache: keys, mode safety, bypass, optional semantic layer. |
 | `docs/CONTEXT_EFFICIENCY.md` | Token budget, plugin boundaries, and telemetry defaults. |
+| `docs/CONFIGURATION.md` | Precedence, `REX_*` catalog, and roadmap for flags and user config. |
 | `ARCHITECTURE.md` | System architecture and technical direction. |
 | `MVP_SPEC.md` | Phase 1 specification and success criteria. |
 
@@ -37,6 +38,7 @@ Use `README.md` at the repository root as the runnable onboarding path (understa
 - Start with `README.md` for project context.
 - Read `ARCHITECTURE.md` for long-term design.
 - Read `MVP_SPEC.md` for current implementation scope.
+- Read `docs/CONFIGURATION.md` for the configuration policy, `REX_*` variables, and future precedence.
 - Read `docs/EXTENSION_MVP.md` for MVP extension integration contract.
 - Read `docs/EXTENSION_ROADMAP.md` for the phased plan of the VS Code/Cursor extension.
 - Read `docs/EXTENSION_ARCHITECTURE.md` for the extension component layout and message bus.
