@@ -6,9 +6,10 @@ alwaysApply: true
 # PR Creation And Template Policy
 
 ## Auto-merge
-- Create PRs with auto-merge enabled when possible.
-- If auto-merge is not enabled on creation, enable it immediately after creation.
-- Treat PR creation as incomplete until auto-merge is enabled.
+- Create PRs with auto-merge enabled only when the PR description checklist (from `.github/pull_request_template.md`) is fully checked.
+- If any checklist item is still unchecked, do not enable auto-merge on creation, and do not enable it after creation until the checklist is complete.
+- If the checklist is fully checked and auto-merge is not enabled on creation, enable it immediately after creation.
+- Treat PR creation as incomplete until the template checklist is fully checked. After the checklist is complete, if auto-merge is not enabled on creation, enable it immediately; treat the PR handoff as incomplete until then.
 
 ## Template
 - Use `.github/pull_request_template.md` for every PR description.
