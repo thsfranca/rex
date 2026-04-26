@@ -129,6 +129,22 @@ This is the baseline for the **gRPC sidecar** plugin-enabled phase after the **i
 10. With the **Cursor CLI** inference plugin **enabled** (per `CONFIGURATION.md`), `StreamInference` routes prompts through that path and the CLI/extension still see exactly one terminal NDJSON event and bounded failure behavior.
 11. A reader can list configuration **precedence** and every **Phase 1** `REX_*` variable from `CONFIGURATION.md` (canonical with `ARCHITECTURE.md` for boundaries).
 
+### Success criteria to evidence (tests and docs)
+
+| Criterion | Evidence | Notes |
+|---|---|---|
+| 1. CLI via `/tmp/rex.sock` (default) | `crates/rex-daemon/tests/uds_e2e.rs` (gRPC over UDS to default path in tests) | UDS e2e uses a temp path per test; same transport as spec. |
+| 2. `GetSystemStatus` | `crates/rex-daemon/tests/uds_e2e.rs` (`get_system_status`); `crates/rex-daemon/src/service.rs` (unit tests) | |
+| 3. `StreamInference` streaming | `crates/rex-daemon/tests/uds_e2e.rs`; `crates/rex-daemon/src/service.rs` tests | |
+| 4. NDJSON `chunk` / terminal | `crates/rex-cli/src/runtime.rs` (NDJSON and terminal count unit tests); `crates/rex-cli/src/command.rs` tests | |
+| 5. Bounded startup retry | `crates/rex-cli/src/runtime.rs` (`should_retry_stream_start` and related); `crates/rex-daemon/tests/uds_e2e.rs` (race / readiness paths) | |
+| 6. Shutdown removes socket | `crates/rex-daemon/src/runtime.rs` (`remove_file` on shutdown path); manual checklist below | **No** single automated test that only asserts post-process socket absent; use checklist + local run. |
+| 7. Clear failure when daemon unavailable | `crates/rex-cli/src/runtime.rs` tests; `crates/rex-daemon/src/service.rs` (terminal error when no `done` chunk) | |
+| 8. Extension path NDJSON and recovery | `extensions/rex-vscode/src/test/streamClient.test.ts`, `ndjsonParser.test.ts`, `errorTaxonomy.test.ts` | **Plus** [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) and manual chat send/cancel. |
+| 9. Stable routine IDE development | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) (“What remains”); [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) | **Human / dogfooding**; no full automation. |
+| 10. `REX_INFERENCE_RUNTIME=cursor-cli` | `crates/rex-daemon/tests/uds_e2e.rs` (Cursor CLI **stub** via `REX_CURSOR_CLI_COMMAND`); [ADAPTERS.md](ADAPTERS.md) | **Optional** real `cursor-agent`; CI uses **mock** / stubs per [CI.md](CI.md). |
+| 11. `CONFIGURATION.md` | [CONFIGURATION.md](CONFIGURATION.md) (Phase 1 `REX_*` and precedence) | Re-verify when env wiring changes in the daemon or CLI. |
+
 ## Manual validation checklist
 
 Use this list for end-to-end confidence before a release. For day-to-day automation, also run the Rust gate script (`./scripts/ci/test_enforce_rust_gate.sh` or the checks described in [`CI.md`](CI.md)) and `cd extensions/rex-vscode && npm test` when you touch the extension.
