@@ -1,6 +1,6 @@
 # REX configuration
 
-This document is the **canonical** policy for how REX settings work: what applies today, how precedence will work when you add new layers, and where each `REX_*` variable is read. See [`../ARCHITECTURE.md`](../ARCHITECTURE.md) for where the **daemon** applies inference and cache policy.
+This document is the **canonical** policy for how REX settings work: what applies today, how precedence will work when you add new layers, and where each `REX_*` variable is read. See [ARCHITECTURE.md](ARCHITECTURE.md) for where the **daemon** applies inference and cache policy.
 
 ## Why this policy exists
 
@@ -64,7 +64,7 @@ If you add any of the above, update this file **and** the precedence table in th
 
 ## See also
 
-- [`ARCHITECTURE.md`](../ARCHITECTURE.md) — system shape and data flow.
-- [`MVP_SPEC.md`](../MVP_SPEC.md) — which configuration **documentation** is in scope for Phase 1 versus which **implementation** ships later.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — system shape and data flow.
+- [MVP_SPEC.md](MVP_SPEC.md) — which configuration **documentation** is in scope for Phase 1 versus which **implementation** ships later.
 - [`CACHING.md`](CACHING.md) — `REX_CACHE_BYPASS` and cache behavior.
 - [`EXTENSION_MVP.md`](EXTENSION_MVP.md) — `REX_TRACE_ID` from the editor.
