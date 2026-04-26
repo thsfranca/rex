@@ -149,6 +149,9 @@ async fn status_and_stream_inference_work_over_uds() {
     cleanup_socket(&socket_path);
 }
 
+/// Covers the Cursor-CLI runtime with a **shell stub** (`REX_CURSOR_CLI_COMMAND`), not the real
+/// `cursor-agent` binary. For optional local testing with a real CLI, see `docs/ADAPTERS.md`
+/// (Local verification).
 #[tokio::test]
 #[serial]
 async fn cursor_runtime_streams_chunks_over_uds() {
