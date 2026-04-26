@@ -35,6 +35,8 @@ flowchart LR
 
 **Scope note (Must — core stream):** If an inference runtime omits the final `done` chunk, the daemon now yields a terminal gRPC error with a clear message. `rex-cli` has unit coverage for the NDJSON invariant (at most one `done` or `error` event per successful parse in sample outputs). Deeper UDS and interrupt coverage remains in [CI](CI.md) and `crates/rex-daemon/tests/uds_e2e.rs`. Remaining **Should** work (readability of logs, extension polish, adapter bounds) is tracked in the same table.
 
+**Scope note (Should — observability / adapter / extension):** Daemon logs expose `stream.terminal` and related fields; the Cursor CLI adapter surfaces **timeout** and **spawn** hints that point at [CONFIGURATION.md](CONFIGURATION.md). [ARCHITECTURE.md](ARCHITECTURE.md) documents the correlation story. Extension **cancel and single terminal event** behavior is covered by local tests; long-running session stress remains a follow-up (see [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md)).
+
 ## Next — good follow-on topics (not all are started)
 
 | Priority | What / why | Source(s) | “Done enough” (examples) | Where to work |
