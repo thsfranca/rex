@@ -2,7 +2,7 @@
 
 Rex is a **small study project** (see [README.md](../README.md)): a hands-on look at local AI infrastructure (daemon, gRPC over UDS, thin clients, streaming contracts). This document gives a **lightweight** way to **order** work and to **park** deferred items, using clear buckets and a short score.
 
-Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view. Deeper lists live in [MVP_SPEC.md](../MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), and [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md). The **`REX_*` catalog** is in [CONFIGURATION.md](CONFIGURATION.md).
+Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view. Deeper lists live in [MVP_SPEC.md](MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), and [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md). The **`REX_*` catalog** is in [CONFIGURATION.md](CONFIGURATION.md).
 
 ## When to use this
 
@@ -16,7 +16,7 @@ Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view. Deeper lists liv
 | Bucket | Definition for this repo |
 |--------|--------------------------|
 | **Must** | Breaks the contract, safety, or CI, or blocks the main learning loop (daemon + UDS + streaming + NDJSON). |
-| **Should** | Clear **learning** or “local demo” value; risk is manageable; fits [ARCHITECTURE.md](../ARCHITECTURE.md) and [ADAPTERS.md](ADAPTERS.md). |
+| **Should** | Clear **learning** or “local demo” value; risk is manageable; fits [ARCHITECTURE.md](ARCHITECTURE.md) and [ADAPTERS.md](ADAPTERS.md). |
 | **Could** | A solid next step after current items; more work or groundwork first. |
 | **Won’t (now)** | **Parked** for this period. Add a **pointer** in a design doc so the idea can be picked up later with context (see [DOCUMENTATION.md](DOCUMENTATION.md) for how we write scope). |
 

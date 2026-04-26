@@ -26,7 +26,7 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 
 ## Project status
 
-- MVP implementation is **in progress**; inference is **mocked** with a clean swap-in path for MLX ([`MVP_SPEC.md`](MVP_SPEC.md)). A concise **what to do next** view is in [`docs/ROADMAP.md`](docs/ROADMAP.md); [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) explains light bucketing and scoring for ordering work in a small repo.
+- MVP implementation is **in progress**; inference is **mocked** with a clean swap-in path for MLX ([`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)). A concise **what to do next** view is in [`docs/ROADMAP.md`](docs/ROADMAP.md); [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) explains light bucketing and scoring for ordering work in a small repo.
 - Current engineering focus: **reliable daemon–client streaming** and a **stable NDJSON contract** for the extension and other consumers.
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
 - Not primary scope yet: MLX-backed models, remote networking/TLS, production auth, full plugin sidecar lifecycle.
@@ -136,7 +136,7 @@ In scope now:
 - Mock inference and shutdown lifecycle reliability.
 - **Editor path:** the VS Code/Cursor extension consumes **`rex-cli`** (including NDJSON streaming); the daemon does not host editor-specific RPCs.
 
-Out of scope for Phase 1 (see [`MVP_SPEC.md`](MVP_SPEC.md)):
+Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 
 - Apple MLX runtime integration.
 - Full plugin sidecar lifecycle in the daemon.
@@ -147,8 +147,9 @@ Out of scope for Phase 1 (see [`MVP_SPEC.md`](MVP_SPEC.md)):
 | Document | Purpose |
 |---|---|
 | [`docs/README.md`](docs/README.md) | Documentation index and reading order. |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md) | System architecture and long-term direction. |
-| [`MVP_SPEC.md`](MVP_SPEC.md) | Phase 1 scope, protocol, and acceptance criteria. |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture and long-term direction. |
+| [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) | Phase 1 scope, protocol, and acceptance criteria. |
+| [`docs/REFACTOR_PROPOSALS.md`](docs/REFACTOR_PROPOSALS.md) | Engineering refactor backlog (stable IDs; status and dependency lines). |
 | [`docs/EXTENSION_MVP.md`](docs/EXTENSION_MVP.md) | Cursor extension bootstrap path using CLI NDJSON streaming. |
 | [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md) | Phased roadmap for the VS Code/Cursor extension. |
 | [`docs/EXTENSION_ARCHITECTURE.md`](docs/EXTENSION_ARCHITECTURE.md) | Extension component layout and typed message bus. |

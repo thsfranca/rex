@@ -78,4 +78,4 @@ The daemon should be able to report per request:
 
 - [ADAPTERS.md](ADAPTERS.md) — which modes and adapters may cache.
 - [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — context pipeline, directives, and behavioral prefilter.
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — data flow and layered cache in the system picture.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — data flow and layered cache in the system picture.

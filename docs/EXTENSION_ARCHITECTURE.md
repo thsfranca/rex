@@ -168,5 +168,5 @@ stateDiagram-v2
 
 ## Related documents
 
-- [`ARCHITECTURE.md`](../ARCHITECTURE.md): REX system architecture.
+- [ARCHITECTURE.md](ARCHITECTURE.md): REX system architecture.
 - [`docs/EXTENSION_ROADMAP.md`](EXTENSION_ROADMAP.md): phased delivery plan.

@@ -72,7 +72,7 @@ The same logical contract (capabilities + stream semantics) can be implemented i
 
 ## Related
 
-- [ARCHITECTURE.md](../ARCHITECTURE.md) — high-level data flow and inference adapters overview.
+- [ARCHITECTURE.md](ARCHITECTURE.md) — high-level data flow and inference adapters overview.
 - [CACHING.md](CACHING.md) — layered cache keys, bypass, and mode safety.
 - [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — per-adapter pipeline policy.
 - [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) — Cursor adapter phased track and sidecar-first gate.
