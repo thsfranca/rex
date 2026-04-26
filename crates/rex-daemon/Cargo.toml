@@ -10,6 +10,7 @@ tokio = { workspace = true, features = ["fs", "io-util", "net", "process", "sign
 tonic.workspace = true
 tokio-stream = { version = "0.1", features = ["net"] }
 async-stream = "0.3"
+lru = "0.12"
 rex-proto = { path = "../rex-proto" }
 thiserror = "2"
 serde_json = "1"

@@ -45,7 +45,12 @@ pub async fn run_cli(args: impl Iterator<Item = String>) -> ExitCode {
 async fn execute(command: CliCommand) -> Result<(), CliError> {
     match command {
         CliCommand::Status => run_status().await,
-        CliCommand::Complete { prompt, format } => run_complete(prompt, format).await,
+        CliCommand::Complete {
+            prompt,
+            model,
+            mode,
+            format,
+        } => run_complete(prompt, model, mode, format).await,
     }
 }
 
@@ -62,7 +67,12 @@ async fn run_status() -> Result<(), CliError> {
     Ok(())
 }
 
-async fn run_complete(prompt: String, format: CompleteOutputFormat) -> Result<(), CliError> {
+async fn run_complete(
+    prompt: String,
+    model: String,
+    mode: String,
+    format: CompleteOutputFormat,
+) -> Result<(), CliError> {
     let trace_id = resolve_trace_id();
     eprintln!("trace_id={trace_id} phase=start operation=complete");
     let mut attempt: u32 = 0;
@@ -78,6 +88,8 @@ async fn run_complete(prompt: String, format: CompleteOutputFormat) -> Result<()
         };
         let mut request = tonic::Request::new(StreamInferenceRequest {
             prompt: prompt.clone(),
+            model: model.clone(),
+            mode: mode.clone(),
         });
         let metadata_value =
             tonic::metadata::MetadataValue::try_from(trace_id.as_str()).map_err(|_| {

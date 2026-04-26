@@ -16,6 +16,8 @@ mod adapters;
 #[allow(dead_code)]
 #[path = "../src/domain.rs"]
 mod domain;
+#[path = "../src/l1_cache.rs"]
+mod l1_cache;
 #[allow(dead_code)]
 #[path = "../src/plugins.rs"]
 mod plugins;
@@ -115,6 +117,7 @@ async fn status_and_stream_inference_work_over_uds() {
     let response = client
         .stream_inference(StreamInferenceRequest {
             prompt: "hello from test".to_string(),
+            ..Default::default()
         })
         .await
         .expect("stream request should succeed");
@@ -178,6 +181,7 @@ async fn cursor_runtime_streams_chunks_over_uds() {
     let response = client
         .stream_inference(StreamInferenceRequest {
             prompt: "use cursor path".to_string(),
+            ..Default::default()
         })
         .await
         .expect("stream request should succeed");
@@ -314,6 +318,7 @@ async fn stream_reports_terminal_error_when_daemon_interrupts() {
     let response = client
         .stream_inference(StreamInferenceRequest {
             prompt: "interrupt me".to_string(),
+            ..Default::default()
         })
         .await
         .expect("stream request should succeed");
