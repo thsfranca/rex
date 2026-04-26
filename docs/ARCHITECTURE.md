@@ -119,7 +119,7 @@ REX adopts a runtime-managed gRPC sidecar model for early plugin phases.
 
 ## Observability
 
-- **Daemon stdout** (local dev) uses stable `key=value` fields so you can grep failures: `stream.request_id`, `trace_id`, `stream.lifecycle`, `stream.terminal` (for example `done`, `grpc_error`, or `missing_done` when a runtime breaks the contract), plus `grpc_code` and `elapsed_ms` on error paths.
+- **Daemon stdout** (local dev) uses stable `key=value` fields so you can grep failures: `stream.request_id`, `trace_id`, `inference_runtime` (`mock` or `cursor-cli`, from `REX_INFERENCE_RUNTIME`), `stream.lifecycle`, `stream.terminal` (for example `done`, `grpc_error`, or `missing_done` when a runtime breaks the contract), plus `grpc_code` and `elapsed_ms` on error paths.
 - **CLI** logs the same `trace_id` on stderr (`phase=start`, `phase=terminal`) for correlation with the daemon and with the **extension** chat log (`[chat] trace_id=...`).
 - **Optional Cursor CLI** adapter errors reference `REX_CURSOR_CLI_*` env vars and [CONFIGURATION.md](CONFIGURATION.md); default **CI** keeps the mock runtime (see [DEPENDENCIES.md](DEPENDENCIES.md)).
 
