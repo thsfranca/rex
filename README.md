@@ -34,6 +34,18 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
 - Not primary scope yet: production-grade local runtime adapters beyond the MVP set (for example **MLX** / Ollama-class as first-class paths), remote networking/TLS, production auth, full **gRPC** plugin sidecar lifecycle.
 
+## MVP local operator path
+
+Linear recipe from a clone to **REX** chat in the editor (**mock** inference is the default; no extra runtimes required):
+
+1. **Build** the Rust workspace: `cargo build --workspace` — or one shot: `chmod +x ./scripts/dev-rex-extension.sh && ./scripts/dev-rex-extension.sh` (also installs `rex-cli` / `rex-daemon` and packages or installs the VSIX per [`scripts/install-cli.sh`](scripts/install-cli.sh) and [`scripts/install-extension.sh`](scripts/install-extension.sh)).
+2. **Put** `rex-cli` (and the daemon if you use auto-start) where the **editor** can find them. Recommended: [`scripts/install-cli.sh`](scripts/install-cli.sh) so both land in Cargo’s `bin` directory. If the GUI-launched app has a smaller `PATH` than your shell, set absolute paths in **REX: Cli Path** / **REX: Daemon Binary Path** (see step 2 in [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md)).
+3. **Run** the daemon: in a separate terminal, `cargo run -p rex-daemon` (or `rex-daemon` after install). Alternatively set `rex.daemonAutoStart: true` so the extension can spawn the daemon. Socket: `/tmp/rex.sock`.
+4. **Install** the extension if you did not use `dev-rex-extension.sh`: `chmod +x ./scripts/install-extension.sh && ./scripts/install-extension.sh` (see [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md#5-install-the-extension)). Reload the window if prompted.
+5. **In the editor:** run **REX: Open Chat**, send a short prompt, and confirm streaming output (see step 6 in [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md)).
+
+Deeper install, `PATH` troubleshooting, and optional **Cursor CLI** inference are in [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md), [docs/EXTENSION_RELEASE.md](docs/EXTENSION_RELEASE.md), and [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
+
 ## Why this shape
 
 REX keeps clients thin and centralizes model/runtime policy in one daemon boundary.
