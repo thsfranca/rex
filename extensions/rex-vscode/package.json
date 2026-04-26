@@ -115,7 +115,52 @@
           "scope": "machine-overridable"
         }
       }
-    }
+    },
+    "walkthroughs": [
+      {
+        "id": "rex.getStarted",
+        "title": "REX: get started (local)",
+        "description": "Point the extension at **rex-cli**, run **rex-daemon** (or enable auto-start), then open chat. Mock inference is the default; no network required.",
+        "steps": [
+          {
+            "id": "rex.getStarted.cli",
+            "title": "rex-cli must be visible to the editor",
+            "description": "The extension spawns **rex-cli** with the **extension host** environment, which may have a smaller `PATH` than your terminal. If the status bar shows **REX unavailable** while the same command works in a terminal, set **REX: Cli Path** to the **absolute** path to `rex-cli`.\n\n[Open the REX output channel](command:rex.openOutput)",
+            "media": {
+              "path": "media/rex-activity.svg",
+              "altText": "REX"
+            },
+            "completionEvents": [
+              "onCommand:rex.openOutput"
+            ]
+          },
+          {
+            "id": "rex.getStarted.daemon",
+            "title": "Start rex-daemon (or enable auto-start)",
+            "description": "**User-managed (default):** run `rex-daemon` in a terminal so it listens on `/tmp/rex.sock`.\n\n**Extension-managed:** set **rex.daemonAutoStart** to `true` and, if needed, set **REX: Daemon Binary Path** to the absolute `rex-daemon` binary.\n\n[How to start the daemon](command:rex.howToStartDaemon)\n[Show daemon status](command:rex.showStatus)",
+            "media": {
+              "path": "media/rex-activity.svg",
+              "altText": "REX"
+            },
+            "completionEvents": [
+              "onCommand:rex.howToStartDaemon"
+            ]
+          },
+          {
+            "id": "rex.getStarted.chat",
+            "title": "Open REX chat and send a prompt",
+            "description": "When the status bar is **REX ready**, open the REX view and try a short prompt (mock response by default).\n\n[REX: Open Chat](command:rex.focusChat)",
+            "media": {
+              "path": "media/rex-activity.svg",
+              "altText": "REX"
+            },
+            "completionEvents": [
+              "onCommand:rex.focusChat"
+            ]
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "clean": "rimraf dist .vscode-test out coverage",
