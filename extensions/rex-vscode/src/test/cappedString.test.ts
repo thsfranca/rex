@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { appendWithByteCap } from "../runtime/cappedString";
+import { appendWithByteCap, elideForTooltip } from "../runtime/cappedString";
+
+describe("elideForTooltip", () => {
+  it("returns short strings unchanged", () => {
+    expect(elideForTooltip("ok", 10)).toBe("ok");
+  });
+
+  it("truncates with an ellipsis", () => {
+    expect(elideForTooltip("0123456789", 4)).toBe("012…");
+  });
+});
 
 describe("appendWithByteCap", () => {
   it("keeps the string when under the cap", () => {

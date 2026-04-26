@@ -1,8 +1,11 @@
 import * as vscode from "vscode";
 
+import { elideForTooltip } from "../runtime/cappedString";
 import type { DaemonLifecycleState } from "../runtime/daemonLifecycle";
 
 const COMMAND_ID = "rex.showStatus";
+/** Max characters from `unavailable.reason` in the status tooltip (stack traces, spawn output). */
+const UNAVAILABLE_TOOLTIP_MAX_CHARS = 800;
 
 export interface StatusBar {
   readonly item: vscode.StatusBarItem;
@@ -46,7 +49,7 @@ function renderState(item: vscode.StatusBarItem, state: DaemonLifecycleState): v
     }
     case "unavailable": {
       item.text = "$(circle-slash) REX unavailable";
-      item.tooltip = `rex-daemon unavailable: ${state.reason}`;
+      item.tooltip = `rex-daemon unavailable: ${elideForTooltip(state.reason, UNAVAILABLE_TOOLTIP_MAX_CHARS)}`;
       item.backgroundColor = new vscode.ThemeColor("statusBarItem.errorBackground");
       return;
     }

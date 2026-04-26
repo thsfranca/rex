@@ -1,7 +1,17 @@
 /**
- * Bounded string growth for stderr and similar capture paths (long sessions).
+ * Bounded string growth for stderr, status UI, and similar paths (long sessions).
  */
 const TRUNC_MARKER = "[rex: stderr truncated]";
+
+export function elideForTooltip(value: string, maxChars: number): string {
+  if (value.length <= maxChars) {
+    return value;
+  }
+  if (maxChars < 2) {
+    return "…";
+  }
+  return `${value.slice(0, maxChars - 1)}…`;
+}
 
 export function appendWithByteCap(current: string, add: string, maxBytes: number): string {
   const next = current + add;
