@@ -149,6 +149,9 @@ This is the baseline for the **gRPC sidecar** plugin-enabled phase after the **i
 
 Use this list for end-to-end confidence before a release. For day-to-day automation, also run the Rust gate script (`./scripts/ci/test_enforce_rust_gate.sh` or the checks described in [`CI.md`](CI.md)) and `cd extensions/rex-vscode && npm test` when you touch the extension.
 
+**Preflight (automated):** Run [`scripts/verify_mvp_local.sh`](../scripts/verify_mvp_local.sh) from the repo root (see [CI.md](CI.md)) so the workspace build, Rust verify, and extension checks match CI before you spend time on editor-only steps.
+
+- [ ] Run `./scripts/verify_mvp_local.sh` (or the equivalent commands in [`CI.md`](CI.md)).
 - [ ] Build workspace with `cargo build --workspace`.
 - [ ] Run daemon and confirm socket exists at `/tmp/rex.sock`.
 - [ ] Run status command and validate output.
