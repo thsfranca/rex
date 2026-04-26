@@ -6,12 +6,13 @@ license.workspace = true
 publish = false
 
 [dependencies]
-tokio = { workspace = true, features = ["fs", "net", "signal", "time"] }
+tokio = { workspace = true, features = ["fs", "io-util", "net", "process", "signal", "time"] }
 tonic.workspace = true
 tokio-stream = { version = "0.1", features = ["net"] }
 async-stream = "0.3"
 rex-proto = { path = "../rex-proto" }
 thiserror = "2"
+serde_json = "1"
 
 [dev-dependencies]
 serial_test = "3"

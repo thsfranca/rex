@@ -4,6 +4,7 @@ use hyper_util::rt::TokioIo;
 use rex_proto::rex::v1::rex_service_client::RexServiceClient;
 use rex_proto::rex::v1::{GetSystemStatusRequest, StreamInferenceRequest};
 use serial_test::serial;
+use std::env;
 use tokio::net::UnixStream;
 use tokio::time::{sleep, timeout, Instant};
 use tonic::transport::Endpoint;
@@ -12,6 +13,9 @@ use tower::service_fn;
 #[allow(dead_code)]
 #[path = "../src/domain.rs"]
 mod domain;
+#[allow(dead_code)]
+#[path = "../src/adapters.rs"]
+mod adapters;
 #[allow(dead_code)]
 #[path = "../src/plugins.rs"]
 mod plugins;
@@ -140,6 +144,79 @@ async fn status_and_stream_inference_work_over_uds() {
     daemon.abort();
     let _ = daemon.await;
     cleanup_socket(&socket_path);
+}
+
+#[tokio::test]
+#[serial]
+async fn cursor_runtime_streams_chunks_over_uds() {
+    if !uds_bind_supported() {
+        eprintln!("Skipping UDS e2e: sandbox does not allow unix socket bind");
+        return;
+    }
+
+    let prev_runtime = env::var("REX_INFERENCE_RUNTIME").ok();
+    let prev_cmd = env::var("REX_CURSOR_CLI_COMMAND").ok();
+    env::set_var("REX_INFERENCE_RUNTIME", "cursor-cli");
+    env::set_var(
+        "REX_CURSOR_CLI_COMMAND",
+        "printf '{\"text\":\"hello from cursor\"}\\n'",
+    );
+
+    let socket_path = test_socket_path();
+    cleanup_socket(&socket_path);
+    let daemon_socket = socket_path.clone();
+    let daemon = tokio::spawn(async move {
+        runtime::run_daemon_on_socket(&daemon_socket)
+            .await
+            .expect("daemon runtime should run without transport error");
+    });
+    wait_for_daemon_ready(&socket_path).await;
+
+    let mut client = connect_client(&socket_path)
+        .await
+        .expect("daemon should accept connections");
+    let response = client
+        .stream_inference(StreamInferenceRequest {
+            prompt: "use cursor path".to_string(),
+        })
+        .await
+        .expect("stream request should succeed");
+    let mut stream = response.into_inner();
+    let mut chunks = Vec::new();
+    while let Some(chunk) = stream.message().await.expect("stream read should succeed") {
+        chunks.push(chunk);
+    }
+    assert!(
+        chunks.len() >= 2,
+        "expected at least one data chunk and done chunk"
+    );
+    for (idx, chunk) in chunks.iter().enumerate() {
+        assert_eq!(chunk.index, idx as u64);
+    }
+    let last = chunks
+        .last()
+        .expect("stream should return at least one chunk");
+    assert!(last.done);
+    assert!(last.text.is_empty());
+    assert!(chunks[..chunks.len() - 1].iter().all(|chunk| !chunk.done));
+    assert!(chunks[..chunks.len() - 1]
+        .iter()
+        .all(|chunk| !chunk.text.is_empty()));
+
+    daemon.abort();
+    let _ = daemon.await;
+    cleanup_socket(&socket_path);
+
+    if let Some(value) = prev_runtime {
+        env::set_var("REX_INFERENCE_RUNTIME", value);
+    } else {
+        env::remove_var("REX_INFERENCE_RUNTIME");
+    }
+    if let Some(value) = prev_cmd {
+        env::set_var("REX_CURSOR_CLI_COMMAND", value);
+    } else {
+        env::remove_var("REX_CURSOR_CLI_COMMAND");
+    }
 }
 
 #[tokio::test]

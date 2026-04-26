@@ -31,6 +31,12 @@ brew install protobuf
 | Unix-like OS with Unix Domain Socket support | Daemon and CLI communicate through `/tmp/rex.sock`. | macOS works out of the box. |
 | Local process execution | `rex-daemon` and `rex-cli` run as local processes. | No external DB/cache/broker required in MVP. |
 
+### Optional: Cursor CLI adapter (local only)
+
+- Install Cursor and ensure the CLI is available on your `PATH` when you set `REX_INFERENCE_RUNTIME=cursor-cli`.
+- Default CI and headless tests keep the mock runtime; do not require Cursor in automated environments unless the runner already provides it.
+- You can also point `REX_CURSOR_CLI_PATH` or `REX_CURSOR_CLI_COMMAND` at a test stub for deterministic local runs.
+
 ## 3) Dev quality/tooling dependencies
 
 | Dependency | Why it is required | Notes |

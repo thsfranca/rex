@@ -17,8 +17,11 @@ use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
 use tonic::{Request, Response, Status};
 
+use crate::adapters::InferenceRuntime;
+#[cfg(test)]
+use crate::adapters::MockInferenceRuntime;
 use crate::domain::{
-    build_mock_output, chunk_output, StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION,
+    StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION,
 };
 use crate::plugins::{
     BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
@@ -31,44 +34,10 @@ pub struct RexDaemonService {
     request_sequence: AtomicU64,
 }
 
-const STREAM_CHUNK_MAX_CHARS: usize = 8;
 const STREAM_CHUNK_DELAY_MS: u64 = 35;
 
-trait InferenceRuntime: Send + Sync {
-    fn build_chunks(&self, prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>>;
-}
-
-struct MockInferenceRuntime;
-
-impl InferenceRuntime for MockInferenceRuntime {
-    fn build_chunks(&self, prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>> {
-        let text = build_mock_output(prompt);
-        let mut chunks = Vec::new();
-        let content_chunks = chunk_output(&text, STREAM_CHUNK_MAX_CHARS);
-
-        for (index, chunk) in content_chunks.iter().enumerate() {
-            chunks.push(Ok(StreamInferenceResponse {
-                text: chunk.clone(),
-                index: index as u64,
-                done: false,
-            }));
-        }
-
-        chunks.push(Ok(StreamInferenceResponse {
-            text: String::new(),
-            index: content_chunks.len() as u64,
-            done: true,
-        }));
-        chunks
-    }
-}
-
 impl RexDaemonService {
-    pub fn new(started_at: Instant) -> Self {
-        Self::with_runtime(started_at, Arc::new(MockInferenceRuntime))
-    }
-
-    fn with_runtime(started_at: Instant, runtime: Arc<dyn InferenceRuntime>) -> Self {
+    pub fn with_runtime(started_at: Instant, runtime: Arc<dyn InferenceRuntime>) -> Self {
         Self {
             started_at,
             pipeline: Mutex::new(ContextPipeline::default_sidecar_like()),
@@ -78,8 +47,10 @@ impl RexDaemonService {
     }
 
     #[cfg(test)]
-    pub fn build_inference_chunks(prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>> {
-        MockInferenceRuntime.build_chunks(prompt)
+    pub async fn build_inference_chunks(
+        prompt: &str,
+    ) -> Vec<Result<StreamInferenceResponse, Status>> {
+        MockInferenceRuntime.build_chunks(prompt).await
     }
 }
 
@@ -124,7 +95,7 @@ impl RexService for RexDaemonService {
             "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} prompt_len={prompt_len}",
             StreamLifecycle::Starting.as_str(),
         );
-        let chunks = self.runtime.build_chunks(&pipeline_result.effective_prompt);
+        let chunks = self.runtime.build_chunks(&pipeline_result.effective_prompt).await;
         println!(
             "stream.request_id={request_id} trace_id={trace_id} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
             pipeline_result.metrics.prompt_tokens,
@@ -274,7 +245,8 @@ mod tests {
 
     #[test]
     fn stream_chunks_end_with_done_marker() {
-        let chunks = RexDaemonService::build_inference_chunks("ping");
+        let runtime = tokio::runtime::Runtime::new().expect("runtime should build");
+        let chunks = runtime.block_on(RexDaemonService::build_inference_chunks("ping"));
         assert!(chunks.len() >= 3);
 
         let first = chunks[0].as_ref().expect("first chunk should be ok");
