@@ -1,12 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+rust_relevant="${RUST_RELEVANT:-true}"
+extension_relevant="${EXTENSION_RELEVANT:-true}"
 rust_result="${RUST_RESULT:-missing}"
 extension_result="${EXTENSION_RESULT:-missing}"
 result="success"
 fail_stage="-"
 fail_code="-"
 hint="-"
+
+domain_ok() {
+  local relevant="$1"
+  local res="$2"
+  if [ "${relevant}" = "true" ]; then
+    [ "${res}" = "success" ] && return 0
+    return 1
+  fi
+  if [ "${res}" = "success" ] || [ "${res}" = "skipped" ]; then
+    return 0
+  fi
+  return 1
+}
 
 mkdir -p ci-observability
 
@@ -23,11 +38,11 @@ echo "::notice::No test execution in gate job."
 echo "::endgroup::"
 
 echo "::group::PostRunSummary"
-if [ "${rust_result}" != "success" ] || [ "${extension_result}" != "success" ]; then
+if ! domain_ok "${rust_relevant}" "${rust_result}" || ! domain_ok "${extension_relevant}" "${extension_result}"; then
   result="failure"
   fail_stage="PostRunSummary"
   fail_code="GATE_FAIL"
-  hint="Inspect rust-checks and extension-checks summaries."
+  hint="Inspect rust-checks and extension-checks summaries; when a domain is not relevant, upstream may be skipped."
 fi
 
 {
