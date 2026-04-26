@@ -8,6 +8,8 @@ This guide walks from a clean clone to **REX ready** in the editor: built binari
 - Node.js **20+** and `npm` (for the extension build).
 - **Cursor** or **VS Code** with the shell CLI on `PATH`, or set `REX_EXTENSION_EDITOR` to the full path of the `cursor` or `code` binary when using [scripts/install-extension.sh](../scripts/install-extension.sh).
 
+**Preflight (automated):** From the repo root, run `chmod +x ./scripts/verify_mvp_local.sh && ./scripts/verify_mvp_local.sh`. That command builds the workspace, runs the same Rust gate as CI (`fmt`, `clippy`, tests), and runs the extension gate (`npm ci`, typecheck, lint, build, tests, VSIX package). It does **not** start the daemon. Use it before the manual editor checks in step 6 below.
+
 ## 1) Build the Rust workspace
 
 From the repository root:
