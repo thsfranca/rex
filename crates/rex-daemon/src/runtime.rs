@@ -9,8 +9,8 @@ use tokio::signal;
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::transport::Server;
 
-use crate::adapters::runtime_from_env;
-use crate::domain::SOCKET_PATH;
+use crate::adapters::{runtime_from_env, RuntimeKind};
+use crate::domain::{DAEMON_VERSION, SOCKET_PATH};
 use crate::service::RexDaemonService;
 
 #[derive(Debug, Error)]
@@ -38,13 +38,21 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
     let runtime = runtime_from_env();
     let service = RexDaemonService::with_runtime(Instant::now(), runtime);
 
-    println!("rex-daemon listening on {}", socket_path);
+    println!(
+        "rex-daemon event=listen socket={} inference_runtime={} daemon_version={}",
+        socket_path,
+        RuntimeKind::from_env().log_label(),
+        DAEMON_VERSION
+    );
     Server::builder()
         .add_service(RexServiceServer::new(service))
         .serve_with_incoming_shutdown(incoming, shutdown_signal())
         .await?;
     remove_stale_socket(socket_path)?;
-    println!("rex-daemon shutdown complete; socket removed");
+    println!(
+        "rex-daemon event=shutdown socket={} reason=signal",
+        socket_path
+    );
 
     Ok(())
 }
