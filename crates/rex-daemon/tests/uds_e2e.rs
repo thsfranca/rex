@@ -11,11 +11,11 @@ use tonic::transport::Endpoint;
 use tower::service_fn;
 
 #[allow(dead_code)]
-#[path = "../src/domain.rs"]
-mod domain;
-#[allow(dead_code)]
 #[path = "../src/adapters.rs"]
 mod adapters;
+#[allow(dead_code)]
+#[path = "../src/domain.rs"]
+mod domain;
 #[allow(dead_code)]
 #[path = "../src/plugins.rs"]
 mod plugins;

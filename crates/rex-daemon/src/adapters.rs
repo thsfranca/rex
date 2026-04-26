@@ -102,16 +102,13 @@ impl CursorCliRuntime {
             cmd
         } else {
             let mut cmd = Command::new(&self.command_path);
-            cmd.arg("-p")
-                .arg(prompt)
-                .arg("--output-format")
-                .arg("json");
+            cmd.arg("-p").arg(prompt).arg("--output-format").arg("json");
             cmd
         };
         command.stdout(Stdio::piped()).stderr(Stdio::piped());
-        let mut child = command.spawn().map_err(|err| {
-            Status::unavailable(format!("cursor runtime spawn failed: {err}"))
-        })?;
+        let mut child = command
+            .spawn()
+            .map_err(|err| Status::unavailable(format!("cursor runtime spawn failed: {err}")))?;
 
         let mut stdout = child
             .stdout
@@ -188,7 +185,9 @@ impl InferenceRuntime for CursorCliRuntime {
     }
 }
 
-fn stream_chunks_with_done(content_chunks: Vec<String>) -> Vec<Result<StreamInferenceResponse, Status>> {
+fn stream_chunks_with_done(
+    content_chunks: Vec<String>,
+) -> Vec<Result<StreamInferenceResponse, Status>> {
     let mut chunks = Vec::new();
     for (index, chunk) in content_chunks.iter().enumerate() {
         chunks.push(Ok(StreamInferenceResponse {
@@ -252,7 +251,9 @@ fn shell_single_quote(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{extract_cursor_text, shell_single_quote, CursorCliRuntime, InferenceRuntime, RuntimeKind};
+    use super::{
+        extract_cursor_text, shell_single_quote, CursorCliRuntime, InferenceRuntime, RuntimeKind,
+    };
 
     #[test]
     fn runtime_kind_defaults_to_mock() {
@@ -261,7 +262,10 @@ mod tests {
 
     #[test]
     fn runtime_kind_uses_cursor_when_requested() {
-        assert_eq!(RuntimeKind::from_setting("cursor-cli"), RuntimeKind::CursorCli);
+        assert_eq!(
+            RuntimeKind::from_setting("cursor-cli"),
+            RuntimeKind::CursorCli
+        );
     }
 
     #[test]
@@ -274,10 +278,7 @@ plain line"#;
 
     #[test]
     fn shell_quote_escapes_single_quotes() {
-        assert_eq!(
-            shell_single_quote("a'b"),
-            "'a'\"'\"'b'"
-        );
+        assert_eq!(shell_single_quote("a'b"), "'a'\"'\"'b'");
     }
 
     #[tokio::test]
@@ -299,15 +300,11 @@ plain line"#;
         );
         let chunks = runtime.build_chunks("ignored").await;
         assert!(chunks.len() >= 2);
-        assert!(
-            chunks[..chunks.len() - 1]
-                .iter()
-                .all(|chunk| chunk.as_ref().is_ok_and(|value| !value.done))
-        );
-        assert!(
-            chunks[chunks.len() - 1]
-                .as_ref()
-                .is_ok_and(|value| value.done)
-        );
+        assert!(chunks[..chunks.len() - 1]
+            .iter()
+            .all(|chunk| chunk.as_ref().is_ok_and(|value| !value.done)));
+        assert!(chunks[chunks.len() - 1]
+            .as_ref()
+            .is_ok_and(|value| value.done));
     }
 }

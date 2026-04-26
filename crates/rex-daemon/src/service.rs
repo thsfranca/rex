@@ -20,9 +20,7 @@ use tonic::{Request, Response, Status};
 use crate::adapters::InferenceRuntime;
 #[cfg(test)]
 use crate::adapters::MockInferenceRuntime;
-use crate::domain::{
-    StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION,
-};
+use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::plugins::{
     BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
 };
@@ -95,7 +93,10 @@ impl RexService for RexDaemonService {
             "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} prompt_len={prompt_len}",
             StreamLifecycle::Starting.as_str(),
         );
-        let chunks = self.runtime.build_chunks(&pipeline_result.effective_prompt).await;
+        let chunks = self
+            .runtime
+            .build_chunks(&pipeline_result.effective_prompt)
+            .await;
         println!(
             "stream.request_id={request_id} trace_id={trace_id} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
             pipeline_result.metrics.prompt_tokens,
