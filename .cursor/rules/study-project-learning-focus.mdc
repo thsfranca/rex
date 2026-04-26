@@ -1,0 +1,23 @@
+---
+description: Keep planning aligned with study goals for AI infrastructure and agent engineering
+alwaysApply: true
+---
+
+# Study Project Planning Focus
+
+## Rules
+- Prioritize production-grade outcomes and practical learning.
+- Emphasize three areas: AI infrastructure fundamentals, agent engineering, and cost optimization.
+- For each proposed step, state the learning objective.
+- Prefer realistic production-ready options with clear reliability and maintainability expectations.
+- Include expected cost impact and key trade-offs.
+- When multiple options exist, choose the best value/learning/complexity balance.
+
+## Planning Output
+- Current objective
+- Learning goal
+- Next step
+- AI infrastructure focus
+- Agent focus
+- Production-grade note
+- Cost note

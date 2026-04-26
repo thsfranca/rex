@@ -1,0 +1,15 @@
+---
+description: Roadmap and prioritization docs must stay linked to design sources
+globs: docs/ROADMAP.md,docs/PRIORITIZATION.md
+alwaysApply: false
+---
+
+# Rex roadmap and prioritization docs
+
+Apply the same checks when editing **either** matched file at `globs` paths.
+
+- Every **work item** in [docs/ROADMAP.md](docs/ROADMAP.md) must include a **source link** to an existing project doc (or an in-repo code area named there). No orphan feature lines.
+- **Won’t (now)** items must name **which design doc** to reopen (for example [PLUGIN_ROADMAP.md](docs/PLUGIN_ROADMAP.md), [MVP_SPEC.md](MVP_SPEC.md)).
+- Do **not** state or imply that **CI** must install or invoke the **Cursor CLI** / `cursor-agent` unless [docs/CI.md](docs/CI.md) and [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md) have been updated for that. Default automation stays **mock** / self-contained.
+- Use **MoSCoW** and **R-ICE** terms consistently with the definitions in [docs/PRIORITIZATION.md](docs/PRIORITIZATION.md). Do not paste long scoring essays into [docs/ROADMAP.md](docs/ROADMAP.md); point back to that file.
+- **Do not** add editor or coding-assistant configuration instructions to `docs/**` or the root `README.md`. Keep human-facing project and study notes in `docs/` only; machine-oriented editor config lives outside those paths.

@@ -1,4 +1,4 @@
-.cursor/
+# Cursor project rules (shared). Add other .cursor/ paths to gitignore if they are local-only.
 
 # Temporary local-only files
 TEMP_*

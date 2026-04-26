@@ -1,0 +1,13 @@
+---
+description: Prevent committing temporary or explicitly non-committable files
+alwaysApply: true
+---
+
+# Commit Hygiene For Temporary Files
+
+## Rules
+- Do not commit files marked temporary/disposable by name or context.
+- Do not commit files marked non-committable in name, header, or inline note (for example: `DO NOT COMMIT`, `local only`).
+- Before committing, review changed files and exclude matching files from staging.
+- If the agent created disposable files that are no longer needed, remove them.
+- If permanence is ambiguous, ask the user before committing.
