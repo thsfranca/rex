@@ -84,7 +84,7 @@ Use this review checklist before accepting AI-generated changes:
 
 CI and PR expectations:
 - CI gate behavior follows `docs/CI.md`.
-- PR description follows `.github/pull_request_template.md`.
+- PR description follows `.github/pull_request_template.md` and stays about this repository and the change (no required coupling to external trackers for now).
 
 ## 4) Plugin developer track (current and next phase)
 
