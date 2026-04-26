@@ -140,6 +140,21 @@ describe("streamComplete", () => {
     expect(terminalEvents(events)).toHaveLength(1);
   });
 
+  it("caps huge stderr on non-zero exit without growing unbounded", async () => {
+    const events = await collect(
+      streamComplete({ cliPath: fixtureBinary("cli_huge_stderr.sh") }, {
+        prompt: "hi",
+      }),
+    );
+    const last = events.at(-1);
+    expect(last?.kind).toBe("error");
+    if (last?.kind === "error") {
+      expect(last.message).toContain("rex-cli exited with code 2");
+      expect(last.message).toContain("[rex: stderr truncated]");
+      expect(last.message.length).toBeLessThan(40_000);
+    }
+  });
+
   it("emits trace lifecycle callbacks with terminal metrics", async () => {
     const traces: string[] = [];
     const events = await collect(

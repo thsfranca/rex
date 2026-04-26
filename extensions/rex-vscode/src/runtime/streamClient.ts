@@ -1,7 +1,11 @@
+import { appendWithByteCap } from "./cappedString";
 import { spawnCompleteStream, type CliBridgeOptions } from "./cliBridge";
 import { NdjsonLineParser, type StreamEvent } from "./ndjsonParser";
 import { classifyStreamError, classifyStreamErrorMessage } from "./errorTaxonomy";
 import { appendCliExecutableNotFoundHint } from "./spawnExecutableHints";
+
+/** Max stderr captured for exit-code error messages (extension process memory). */
+const STDERR_CAPTURE_MAX_BYTES = 32_768;
 
 export interface StreamRequest {
   readonly prompt: string;
@@ -109,7 +113,7 @@ export async function* streamComplete(
   });
 
   child.stderr.on("data", (chunk: string) => {
-    stderrBuffer += chunk;
+    stderrBuffer = appendWithByteCap(stderrBuffer, chunk, STDERR_CAPTURE_MAX_BYTES);
   });
 
   child.once("error", (err) => {

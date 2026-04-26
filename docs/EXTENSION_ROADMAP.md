@@ -110,7 +110,7 @@ These stay out of scope to protect delivery speed and KISS:
 
 ## What remains after phase delivery
 
-- Continue **stress hardening** for very long chat sessions (memory, output channel backpressure) and rare status-bar edge cases; the **core** path already enforces a single NDJSON terminal event, cancel-to-idle, and structured chat logging (see `src/runtime/streamClient.ts` and tests under `src/test/`).
+- Continue **stress hardening** for very long chat sessions (memory, output channel backpressure) and rare status-bar edge cases. **stderr** from `rex-cli` is now **capped** when building exit-code error messages in `src/runtime/cappedString.ts` / `streamClient.ts` so pathological spawns do not grow extension memory unbounded. The **core** path still enforces a single NDJSON terminal event, cancel-to-idle, and structured chat logging (see `src/runtime/streamClient.ts` and tests under `src/test/`).
 - Keep release automation and install docs aligned with CLI/daemon lifecycle changes.
 - Add follow-up features only when they preserve the stable CLI NDJSON boundary and keep behavior symmetric across Cursor and plain VS Code.
 
