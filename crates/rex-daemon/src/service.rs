@@ -137,7 +137,7 @@ impl RexService for RexDaemonService {
                     }
                     Err(err) => {
                         println!(
-                            "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.event=error grpc_code={} message={} elapsed_ms={}",
+                            "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
                             StreamLifecycle::Failed.as_str(),
                             err.code() as i32,
                             err.message(),
@@ -150,13 +150,13 @@ impl RexService for RexDaemonService {
             }
             if done_seen {
                 println!(
-                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} terminal=done chunks_sent={chunk_count} elapsed_ms={}",
+                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.terminal=done chunks_sent={chunk_count} elapsed_ms={}",
                     StreamLifecycle::Completed.as_str(),
                     request_started.elapsed().as_millis()
                 );
             } else {
                 println!(
-                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} terminal=stream_ended_without_done chunks_sent={chunk_count} elapsed_ms={}",
+                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.event=incomplete stream.terminal=missing_done chunks_sent={chunk_count} elapsed_ms={}",
                     StreamLifecycle::Interrupted.as_str(),
                     request_started.elapsed().as_millis()
                 );

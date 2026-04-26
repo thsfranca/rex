@@ -108,7 +108,11 @@ impl CursorCliRuntime {
         command.stdout(Stdio::piped()).stderr(Stdio::piped());
         let mut child = command
             .spawn()
-            .map_err(|err| Status::unavailable(format!("cursor runtime spawn failed: {err}")))?;
+            .map_err(|err| {
+                Status::unavailable(format!(
+                    "cursor runtime spawn failed: {err} (hint: REX_CURSOR_CLI_PATH, REX_CURSOR_CLI_COMMAND, or `docs/CONFIGURATION.md`)"
+                ))
+            })?;
 
         let mut stdout = child
             .stdout
@@ -143,7 +147,7 @@ impl CursorCliRuntime {
                 let _ = child.kill().await;
                 let _ = child.wait().await;
                 return Err(Status::deadline_exceeded(format!(
-                    "cursor runtime timed out after {}s",
+                    "cursor runtime timed out after {}s (increase REX_CURSOR_CLI_TIMEOUT_SECS; see `docs/CONFIGURATION.md`)",
                     self.timeout.as_secs()
                 )));
             }
