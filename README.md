@@ -9,6 +9,8 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 - **Streaming-first correctness.** Server-streaming RPCs, explicit terminal states (`done` / `error`), and tests around UDS races and interruption mirror what production local runtimes need before real models land.
 - **Room to grow.** Mock inference sits behind a seam intended for Apple MLX, sidecar plugins, and richer policy later—without rewriting clients first.
 
+**Configuration policy** (precedence, `REX_*` catalog, and roadmap for CLI and user config files): [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+
 **Who it is for:** engineers studying daemon-hosted inference, gRPC streaming over UDS, and editor integration patterns; anyone building toward a personal or team **local-first** assistant on Mac.
 
 ## What works today (high-value capabilities)

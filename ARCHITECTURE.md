@@ -117,6 +117,10 @@ REX adopts a runtime-managed gRPC sidecar model for early plugin phases.
 5. Daemon applies terminal stream semantics and streams chunks back to the client.
 6. Client renders incremental output.
 
+## Configuration
+
+`rex-daemon` reads **inference and cache** policy from **built-in defaults** and **environment variables** today. `rex-cli` is a thin client and can carry **per-request** metadata (for example a trace id from the editor). A single **precedence** model (defaults, optional future user file, env, optional future CLI flags) and the full **`REX_*` catalog** live in [docs/CONFIGURATION.md](docs/CONFIGURATION.md). When you add new settings, extend that doc and keep **one** mapping from names to behavior so parents (extension, CI) and future flags stay consistent.
+
 ## Reliability rules
 
 - Start with one socket owner and predictable lifecycle.
@@ -144,6 +148,7 @@ Recommended structure for this phase:
 │   ├── README.md
 │   ├── ADAPTERS.md
 │   ├── CACHING.md
+│   ├── CONFIGURATION.md
 │   └── DOCUMENTATION.md
 ├── proto/
 │   └── rex/v1/rex.proto
