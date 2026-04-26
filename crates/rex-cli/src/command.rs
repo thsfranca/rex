@@ -3,6 +3,8 @@ pub enum CliCommand {
     Status,
     Complete {
         prompt: String,
+        model: String,
+        mode: String,
         format: CompleteOutputFormat,
     },
 }
@@ -23,46 +25,67 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
             if prompt.trim().is_empty() {
                 return Err("Prompt cannot be empty.".to_string());
             }
-            let format = parse_complete_format(&mut args)?;
-            Ok(CliCommand::Complete { prompt, format })
+            let (format, model, mode) = parse_complete_trailing(&mut args)?;
+            Ok(CliCommand::Complete {
+                prompt,
+                model,
+                mode,
+                format,
+            })
         }
         Some(other) => Err(format!("Unknown command: {other}")),
         None => Err("Missing command.".to_string()),
     }
 }
 
-fn parse_complete_format(
+/// Parses optional `complete` flags: `--format`, `--model`, `--model <id>`, `--mode <ask|plan|agent>` (any order).
+fn parse_complete_trailing(
     args: &mut impl Iterator<Item = String>,
-) -> Result<CompleteOutputFormat, String> {
-    let Some(flag) = args.next() else {
-        return Ok(CompleteOutputFormat::Text);
-    };
-    if flag != "--format" {
-        return Err(format!("Unknown argument for `complete`: {flag}"));
-    }
-    let value = args
-        .next()
-        .ok_or_else(|| "Missing value for `--format`.".to_string())?;
-    let format = match value.as_str() {
-        "text" => CompleteOutputFormat::Text,
-        "ndjson" => CompleteOutputFormat::Ndjson,
-        _ => {
-            return Err(format!(
-                "Unsupported format: {value}. Use `text` or `ndjson`."
-            ))
+) -> Result<(CompleteOutputFormat, String, String), String> {
+    let mut format = CompleteOutputFormat::Text;
+    let mut model = String::new();
+    let mut mode = String::new();
+    while let Some(flag) = args.next() {
+        match flag.as_str() {
+            "--format" => {
+                let value = args
+                    .next()
+                    .ok_or_else(|| "Missing value for `--format`.".to_string())?;
+                format = match value.as_str() {
+                    "text" => CompleteOutputFormat::Text,
+                    "ndjson" => CompleteOutputFormat::Ndjson,
+                    _ => {
+                        return Err(format!(
+                            "Unsupported format: {value}. Use `text` or `ndjson`."
+                        ));
+                    }
+                };
+            }
+            "--model" => {
+                let value = args
+                    .next()
+                    .ok_or_else(|| "Missing value for `--model`.".to_string())?;
+                model = value;
+            }
+            "--mode" => {
+                let value = args
+                    .next()
+                    .ok_or_else(|| "Missing value for `--mode`.".to_string())?;
+                mode = value;
+            }
+            other => {
+                return Err(format!("Unknown argument for `complete`: {other}"));
+            }
         }
-    };
-    if let Some(extra) = args.next() {
-        return Err(format!("Unknown argument for `complete`: {extra}"));
     }
-    Ok(format)
+    Ok((format, model, mode))
 }
 
 pub fn print_usage() {
     eprintln!("Usage:");
     eprintln!("  rex-cli status");
     eprintln!("  rex-cli complete \"<prompt>\"");
-    eprintln!("  rex-cli complete \"<prompt>\" --format <text|ndjson>");
+    eprintln!("  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ]");
 }
 
 #[cfg(test)]
@@ -84,6 +107,8 @@ mod tests {
             cmd,
             CliCommand::Complete {
                 prompt: "hello".to_string(),
+                model: String::new(),
+                mode: String::new(),
                 format: CompleteOutputFormat::Text,
             }
         );
@@ -112,6 +137,8 @@ mod tests {
             cmd,
             CliCommand::Complete {
                 prompt: "hello".to_string(),
+                model: String::new(),
+                mode: String::new(),
                 format: CompleteOutputFormat::Ndjson,
             }
         );
@@ -131,6 +158,33 @@ mod tests {
         assert_eq!(
             err.to_string(),
             "Unknown argument for `complete`: --unknown"
+        );
+    }
+
+    #[test]
+    fn parses_model_and_mode_with_ndjson_in_different_order() {
+        let cmd = parse_command(
+            vec![
+                "complete".to_string(),
+                "hi".to_string(),
+                "--model".to_string(),
+                "m1".to_string(),
+                "--format".to_string(),
+                "ndjson".to_string(),
+                "--mode".to_string(),
+                "ask".to_string(),
+            ]
+            .into_iter(),
+        )
+        .expect("parse");
+        assert_eq!(
+            cmd,
+            CliCommand::Complete {
+                prompt: "hi".to_string(),
+                model: "m1".to_string(),
+                mode: "ask".to_string(),
+                format: CompleteOutputFormat::Ndjson,
+            }
         );
     }
 }

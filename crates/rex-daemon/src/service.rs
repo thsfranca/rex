@@ -20,7 +20,9 @@ use tonic::{Request, Response, Status};
 use crate::adapters::InferenceRuntime;
 #[cfg(test)]
 use crate::adapters::MockInferenceRuntime;
+use crate::adapters::RuntimeKind;
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
+use crate::l1_cache::{l1_cachable_responses, normalize_mode, L1Key, L1ResponseCache};
 use crate::plugins::{
     BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
 };
@@ -30,6 +32,7 @@ pub struct RexDaemonService {
     pipeline: Mutex<ContextPipeline>,
     runtime: Arc<dyn InferenceRuntime>,
     request_sequence: AtomicU64,
+    l1_cache: L1ResponseCache,
 }
 
 const STREAM_CHUNK_DELAY_MS: u64 = 35;
@@ -41,6 +44,7 @@ impl RexDaemonService {
             pipeline: Mutex::new(ContextPipeline::default_sidecar_like()),
             runtime,
             request_sequence: AtomicU64::new(1),
+            l1_cache: L1ResponseCache::new(),
         }
     }
 
@@ -75,7 +79,10 @@ impl RexService for RexDaemonService {
         let request_started = Instant::now();
         let request_id = self.request_sequence.fetch_add(1, Ordering::Relaxed);
         let trace_id = extract_trace_id(request.metadata(), request_id);
-        let prompt = request.into_inner().prompt;
+        let inner = request.into_inner();
+        let prompt = inner.prompt;
+        let model = inner.model;
+        let mode = inner.mode;
         let directives = PromptDirectives::from_prompt(&prompt);
         let context_request = ContextRequest {
             prompt: prompt.clone(),
@@ -93,10 +100,6 @@ impl RexService for RexDaemonService {
             "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} prompt_len={prompt_len}",
             StreamLifecycle::Starting.as_str(),
         );
-        let chunks = self
-            .runtime
-            .build_chunks(&pipeline_result.effective_prompt)
-            .await;
         println!(
             "stream.request_id={request_id} trace_id={trace_id} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
             pipeline_result.metrics.prompt_tokens,
@@ -107,6 +110,45 @@ impl RexService for RexDaemonService {
             format_cache_status(pipeline_result.metrics.cache_status),
             format_behavior_decision(&pipeline_result.metrics.behavior_decision),
         );
+        let cache_bypass = directives.cache_bypass || cache_bypass_from_env();
+        let l1_key = L1Key::try_new(
+            RuntimeKind::from_env(),
+            &model,
+            &mode,
+            &pipeline_result.effective_prompt,
+            cache_bypass,
+        );
+        let mut l1_state = l1_key.as_ref().map(|_| "miss");
+        let chunks: Vec<Result<StreamInferenceResponse, Status>> = if let Some(key) = &l1_key {
+            if let Some(cached) = self.l1_cache.get(key) {
+                l1_state = Some("hit");
+                cached.into_iter().map(Ok).collect()
+            } else {
+                let built = self
+                    .runtime
+                    .build_chunks(&pipeline_result.effective_prompt)
+                    .await;
+                if let (Some(k), Some(to_store)) = (l1_key.clone(), l1_cachable_responses(&built)) {
+                    self.l1_cache.put(k, to_store);
+                }
+                built
+            }
+        } else {
+            self.runtime
+                .build_chunks(&pipeline_result.effective_prompt)
+                .await
+        };
+        if let Some(state) = l1_state {
+            println!(
+                "stream.request_id={request_id} trace_id={trace_id} l1_cache={state} model={} mode={}",
+                if model.trim().is_empty() {
+                    ACTIVE_MODEL_ID
+                } else {
+                    model.trim()
+                },
+                normalize_mode(&mode)
+            );
+        }
         println!(
             "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} chunk_count={}",
             StreamLifecycle::Streaming.as_str(),
@@ -129,11 +171,15 @@ impl RexService for RexDaemonService {
                         if chunk.done {
                             done_seen = true;
                         }
+                        let terminal = chunk.done;
                         yield Ok(chunk);
+                        if !terminal {
+                            sleep(Duration::from_millis(STREAM_CHUNK_DELAY_MS)).await;
+                        }
                     }
                     Err(err) => {
                         println!(
-                            "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.event=error grpc_code={} message={} elapsed_ms={}",
+                            "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
                             StreamLifecycle::Failed.as_str(),
                             err.code() as i32,
                             err.message(),
@@ -143,20 +189,22 @@ impl RexService for RexDaemonService {
                         return;
                     }
                 }
-                sleep(Duration::from_millis(STREAM_CHUNK_DELAY_MS)).await;
             }
             if done_seen {
                 println!(
-                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} terminal=done chunks_sent={chunk_count} elapsed_ms={}",
+                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.terminal=done chunks_sent={chunk_count} elapsed_ms={}",
                     StreamLifecycle::Completed.as_str(),
                     request_started.elapsed().as_millis()
                 );
             } else {
                 println!(
-                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} terminal=stream_ended_without_done chunks_sent={chunk_count} elapsed_ms={}",
+                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.event=incomplete stream.terminal=missing_done chunks_sent={chunk_count} elapsed_ms={}",
                     StreamLifecycle::Interrupted.as_str(),
                     request_started.elapsed().as_millis()
                 );
+                yield Err(Status::internal(
+                    "incomplete inference stream: missing final done chunk",
+                ));
             }
         };
 
@@ -242,7 +290,14 @@ mod tests {
         extract_trace_id, format_behavior_decision, format_cache_status, PromptDirectives,
         RexDaemonService,
     };
+    use crate::adapters::MissingDoneMockRuntime;
     use crate::plugins::{BehaviorDecision, CacheStatus};
+    use futures::StreamExt;
+    use rex_proto::rex::v1::rex_service_server::RexService;
+    use rex_proto::rex::v1::StreamInferenceRequest;
+    use std::sync::Arc;
+    use std::time::Instant;
+    use tonic::Request;
 
     #[test]
     fn stream_chunks_end_with_done_marker() {
@@ -300,5 +355,31 @@ mod tests {
     fn trace_id_extraction_falls_back_to_request_id() {
         let metadata = tonic::metadata::MetadataMap::new();
         assert_eq!(extract_trace_id(&metadata, 42), "request-42");
+    }
+
+    #[tokio::test]
+    async fn stream_emits_grpc_error_when_runtime_omits_done() {
+        let svc = RexDaemonService::with_runtime(Instant::now(), Arc::new(MissingDoneMockRuntime));
+        let req = Request::new(StreamInferenceRequest {
+            prompt: "x".to_string(),
+            ..Default::default()
+        });
+        let mut out = svc
+            .stream_inference(req)
+            .await
+            .expect("stream starts")
+            .into_inner();
+        let first = out.next().await.expect("stream item").expect("ok chunk");
+        assert!(!first.done);
+        let err = out
+            .next()
+            .await
+            .expect("second item")
+            .expect_err("terminal grpc error");
+        assert_eq!(err.code(), tonic::Code::Internal);
+        assert!(err
+            .message()
+            .contains("incomplete inference stream: missing final done chunk"));
+        assert!(out.next().await.is_none());
     }
 }

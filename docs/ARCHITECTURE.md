@@ -117,6 +117,12 @@ REX adopts a runtime-managed gRPC sidecar model for early plugin phases.
 5. Daemon applies terminal stream semantics and streams chunks back to the client.
 6. Client renders incremental output.
 
+## Observability
+
+- **Daemon stdout** (local dev) uses stable `key=value` fields so you can grep failures: `stream.request_id`, `trace_id`, `stream.lifecycle`, `stream.terminal` (for example `done`, `grpc_error`, or `missing_done` when a runtime breaks the contract), plus `grpc_code` and `elapsed_ms` on error paths.
+- **CLI** logs the same `trace_id` on stderr (`phase=start`, `phase=terminal`) for correlation with the daemon and with the **extension** chat log (`[chat] trace_id=...`).
+- **Optional Cursor CLI** adapter errors reference `REX_CURSOR_CLI_*` env vars and [CONFIGURATION.md](CONFIGURATION.md); default **CI** keeps the mock runtime (see [DEPENDENCIES.md](DEPENDENCIES.md)).
+
 ## Configuration
 
 `rex-daemon` reads **inference and cache** policy from **built-in defaults** and **environment variables** today. `rex-cli` is a thin client and can carry **per-request** metadata (for example a trace id from the editor). A single **precedence** model (defaults, optional future user file, env, optional future CLI flags) and the full **`REX_*` catalog** live in [CONFIGURATION.md](CONFIGURATION.md). When you add new settings, extend that doc and keep **one** mapping from names to behavior so parents (extension, CI) and future flags stay consistent.

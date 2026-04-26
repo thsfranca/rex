@@ -33,14 +33,20 @@ flowchart LR
 | **Should** | Extension chat stays **usable** (cancel, status, clean return to idle) | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | “What remains” shrinks without breaking NDJSON | `extensions/rex-vscode` |
 | **Should** | Optional **Cursor CLI** path stays **bounded** (time limit, clear errors) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md), [CONFIGURATION.md](CONFIGURATION.md) | **Local** try path documented; **CI** stays **mock**-first per [DEPENDENCIES.md](DEPENDENCIES.md) | daemon |
 
+**Scope note (Must — core stream):** If an inference runtime omits the final `done` chunk, the daemon now yields a terminal gRPC error with a clear message. `rex-cli` has unit coverage for the NDJSON invariant (at most one `done` or `error` event per successful parse in sample outputs). Deeper UDS and interrupt coverage remains in [CI](CI.md) and `crates/rex-daemon/tests/uds_e2e.rs`. Remaining **Should** work (readability of logs, extension polish, adapter bounds) is tracked in the same table.
+
+**Scope note (Should — observability / adapter / extension):** Daemon logs expose `stream.terminal` and related fields; the Cursor CLI adapter surfaces **timeout** and **spawn** hints that point at [CONFIGURATION.md](CONFIGURATION.md). [ARCHITECTURE.md](ARCHITECTURE.md) documents the correlation story. Extension **cancel and single terminal event** behavior is covered by local tests; long-running session stress remains a follow-up (see [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md)).
+
 ## Next — good follow-on topics (not all are started)
 
 | Priority | What / why | Source(s) | “Done enough” (examples) | Where to work |
 |----------|------------|-----------|---------------------------|---------------|
-| **Should** | L1 **exact** response cache (safe modes) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [CACHING.md](CACHING.md) | Observable hit path where implemented; **agent** path follows [CACHING.md](CACHING.md) safety rules | daemon |
-| **Should** | Optional **mode/model** on the wire and CLI, backward compatible | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md) | Old clients work; [CONFIGURATION.md](CONFIGURATION.md) updated | rex-proto, rex-cli, daemon |
+| **Should** | L1 **exact** response cache (safe modes) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [CACHING.md](CACHING.md) | In-memory LRU + `l1_cache=hit` in daemon logs; **agent** / **plan** not served from L1 | daemon (`l1_cache` module) |
+| **Should** | Optional **mode/model** on the wire and CLI, backward compatible | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md) | Proto + `rex-cli` flags; [CONFIGURATION.md](CONFIGURATION.md) | `proto/`, `rex-proto`, `rex-cli`, daemon |
 | **Could** | **One** sidecar / plugin process supervised by the daemon | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [MVP_SPEC.md](MVP_SPEC.md) (sidecar sketch) | 0 or 1 plugin, clear errors | daemon |
 | **Could** | **Context** pipeline / token-budget per [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Respects adapter capabilities; docs stay true | daemon |
+
+**Scope note (Next — L1 and mode/model):** [CACHING.md](CACHING.md) and [CONFIGURATION.md](CONFIGURATION.md) track behavior; the editor extension can pass `--model` / `--mode` in a follow-up if needed (CLI supports them; NDJSON line shape unchanged).
 
 ## Later — only if the core path stays healthy
 

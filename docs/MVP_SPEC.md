@@ -36,11 +36,14 @@ This document defines the first shippable slice for REX.
 | `GetSystemStatus` | Unary | Return daemon version, uptime, and active mock model id. |
 | `StreamInference` | Server streaming | Return one or more chunks and end with `done = true`. |
 
+`StreamInferenceRequest` includes the prompt plus optional `model` and `mode` string fields. **Backward compatibility:** clients that send only `prompt` behave as before (the daemon applies defaults, for example `ask` and the active mock model id in Phase 1). The extension can adopt these fields later; they are not required for the NDJSON line contract.
+
 ## Message expectations
 
 - Request includes prompt text.
 - Stream response includes token text, monotonic index, and done flag.
 - Client handles abrupt stream termination without deadlock.
+- If a server implementation would end `StreamInference` without a `done = true` chunk, the REX **daemon** emits a terminal gRPC `INTERNAL` error (instead of an ambiguous empty end-of-stream) so clients can map to a single user-visible failure. Unit tests in `crates/rex-daemon` cover this path; well-behaved runtimes still end with a final `done` chunk as in the table above.
 
 ## Mock inference behavior
 

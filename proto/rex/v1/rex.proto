@@ -17,6 +17,10 @@ message GetSystemStatusResponse {
 
 message StreamInferenceRequest {
   string prompt = 1;
+  // Optional. Empty string means "use daemon default" (e.g. mock model id in MVP).
+  string model = 2;
+  // Optional. Empty string is treated as "ask". Values are normalized server-side.
+  string mode = 3;
 }
 
 message StreamInferenceResponse {

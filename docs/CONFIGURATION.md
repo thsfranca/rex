@@ -36,13 +36,16 @@ The following are read in **Rust** code paths for the **daemon** or **CLI** as i
 | `REX_CURSOR_CLI_PATH` | `cursor-agent` | Executable used when the runtime is `cursor` / `cursor-cli`. |
 | `REX_CURSOR_CLI_COMMAND` | (none) | Optional full shell command template; `{prompt}` is substituted. |
 | `REX_CURSOR_CLI_TIMEOUT_SECS` | `20` | Bound for the adapter subprocess, in seconds. |
-| `REX_CACHE_BYPASS` | off | Set to `1` or `true` to bypass the response cache (diagnostics). See [`CACHING.md`](CACHING.md). |
+| `REX_CACHE_BYPASS` | off | Set to `1` or `true` to bypass the **L1** response cache and the context **prefix** cache (diagnostics). See [`CACHING.md`](CACHING.md). |
+| `REX_WORKSPACE_ROOT` | (default fingerprint) | Optional absolute path to the current workspace. When set, it scopes the in-memory L1 **exact** response key so a cache entry from one checkout does not match another. If unset, the daemon uses a stable default (same process always matches). |
 
 ### `rex-cli` (client metadata)
 
 | Variable | Default (if unset) | Purpose |
 |----------|--------------------|---------|
 | `REX_TRACE_ID` | (none) | If set, the CLI propagates it for request correlation. The extension sets this when it runs `rex-cli`; see [`EXTENSION_MVP.md`](EXTENSION_MVP.md). |
+
+**CLI flags (not environment):** `rex-cli complete` accepts optional `--model <id>` and `--mode <ask|plan|agent>` in any order with `--format`. Empty values behave like the defaults documented in the protobuf ([`MVP_SPEC.md`](MVP_SPEC.md)): unset model leaves model selection to the daemon default; empty mode is treated as **ask** on the server for inference policy (L1 only caches **ask**; see `CACHING.md`).
 
 ### Related project scripts (not `rex-daemon` / `rex-cli` binaries)
 
