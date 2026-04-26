@@ -152,6 +152,17 @@ Docs-only and README-only pull requests are treated as out-of-scope for both dom
 - Uses shallow clones where safe to reduce checkout time.
 - Keeps one stable required check name as the protection contract.
 
+## Local MVP preflight (operator path)
+
+Before you run the **manual** editor checklist in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) or [MVP_SPEC.md](MVP_SPEC.md), run the same **build + Rust verify + extension verify** sequence locally:
+
+```bash
+chmod +x ./scripts/verify_mvp_local.sh
+./scripts/verify_mvp_local.sh
+```
+
+That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), then [`scripts/ci/run_extension_checks.sh`](../scripts/ci/run_extension_checks.sh). It does **not** start `rex-daemon` and does **not** replace the human steps for socket checks, chat UX, or optional `REX_INFERENCE_RUNTIME=cursor-cli` validation.
+
 ## Local verification flow for reliability changes
 
 Run this sequence before opening PRs that change stream lifecycle behavior:
