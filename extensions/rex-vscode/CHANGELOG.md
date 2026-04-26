@@ -4,6 +4,17 @@ All notable changes to the REX VS Code/Cursor extension are tracked here.
 
 The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions use `rex-vscode-vX.Y.Z` git tags so the extension history is portable.
 
+## [0.1.0] - 2026-04-26
+
+### Added
+
+- Built-in **Get Started** walkthrough (`contributes.walkthroughs`): editor `PATH`, starting `rex-daemon` (or auto-start), and **REX: Open Chat**.
+- Actionable **Warning** notifications when a chat stream ends with `daemon_unavailable`, `spawn_failed`, or `stream_timeout`, with actions **How to start daemon** and **Open REX output**; structured lines in the REX output channel for every terminal stream error.
+
+### Changed
+
+- When `rex.daemonAutoStart` is on but the daemon never becomes ready, the chat error now includes `code: daemon_unavailable` and uses the same user-hint path as CLI stream failures.
+
 ## [Unreleased]
 
 ### Added
