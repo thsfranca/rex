@@ -4,13 +4,24 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIGURE_SHELL=false
 
+print_bin_paths() {
+  local base="${HOME}/.cargo/bin"
+  cat <<EOF
+Copy-paste when the editor host PATH omits ${base} (see docs/EXTENSION_LOCAL_E2E.md):
+
+  rex.cliPath         ${base}/rex-cli
+  rex.daemonBinaryPath ${base}/rex-daemon
+EOF
+}
+
 print_usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/install-cli.sh [--configure-shell]
+  ./scripts/install-cli.sh [--configure-shell] [--print-bin-path]
 
 Options:
   --configure-shell   Add ~/.cargo/bin to ~/.zshrc if missing.
+  --print-bin-path    Print absolute paths to rex-cli and rex-daemon in ~/.cargo/bin, then exit.
   -h, --help          Show this help message.
 EOF
 }
@@ -20,6 +31,10 @@ case "${1:-}" in
     ;;
   --configure-shell)
     CONFIGURE_SHELL=true
+    ;;
+  --print-bin-path)
+    print_bin_paths
+    exit 0
     ;;
   -h|--help)
     print_usage
