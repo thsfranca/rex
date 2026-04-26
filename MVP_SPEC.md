@@ -19,6 +19,7 @@ This document defines the first shippable slice for REX.
 | Shutdown lifecycle | Graceful termination and socket cleanup. |
 | Extension-facing contract | CLI `complete` supports machine-readable stream output for editor integration. |
 | Startup reliability | CLI retries bounded daemon-unavailable startup races before failing. |
+| Configuration policy (documentation) | `docs/CONFIGURATION.md` defines precedence (defaults, env, and future file/CLI), the Phase 1 `REX_*` catalog, and what remains **unimplemented** until a follow-up. |
 
 ## Out of scope
 
@@ -26,6 +27,7 @@ This document defines the first shippable slice for REX.
 - Full plugin lifecycle implementation.
 - Editor extension integration.
 - Remote networking, TLS, and production authentication.
+- **Configuration implementation beyond env:** on-disk user config, project-local config files, `rex config` (or similar) subcommands, and **global** CLI flags on `rex-daemon` / `rex-cli` that override environment variables. These ship in a later phase; Phase 1 **documents** the policy in `docs/CONFIGURATION.md` and keeps **runtime** behavior **env + defaults** as implemented in Rust.
 
 ## Protocol requirements (`rex.v1`)
 
@@ -123,6 +125,7 @@ This is the baseline for the first plugin-enabled phase after MVP.
 6. Daemon shutdown removes socket file.
 7. CLI fails clearly when daemon is unavailable.
 8. Cursor-extension bootstrap path can consume streaming completion via CLI contract.
+9. A reader can list configuration **precedence** and every **Phase 1** `REX_*` variable from `docs/CONFIGURATION.md` (canonical with `ARCHITECTURE.md` for boundaries).
 
 ## Manual validation checklist
 
@@ -136,6 +139,7 @@ Use this list for end-to-end confidence before a release. For day-to-day automat
 - [ ] Stop daemon and confirm socket cleanup.
 - [ ] Restart daemon and confirm clean bind.
 - [ ] Verify bounded startup race handling by running `complete` while daemon starts.
+- [ ] Skim `docs/CONFIGURATION.md` for precedence, the Phase 1 `REX_*` list, and “not implemented” items so the document stays accurate when settings change.
 
 ## Recommended repository structure for MVP
 
@@ -148,6 +152,7 @@ Use this list for end-to-end confidence before a release. For day-to-day automat
 ├── docs/
 │   ├── README.md
 │   ├── DOCUMENTATION.md
+│   ├── CONFIGURATION.md
 │   ├── DEPENDENCIES.md
 │   └── EXTENSION_MVP.md
 ├── proto/rex/v1/rex.proto
