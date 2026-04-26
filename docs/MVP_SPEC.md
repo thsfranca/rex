@@ -4,9 +4,9 @@ This document defines the first shippable slice for REX.
 
 ## MVP goal
 
-- Deliver one usable and testable local completion feature that a Cursor extension can consume.
-- Prove local daemon-client communication over UDS and server-streaming behavior through gRPC.
-- Keep inference mocked, with a clean seam for MLX integration later.
+- Enable a practical dogfooding loop: use the VS Code/Cursor extension (via `rex-cli`) to develop `rex` in the same workspace.
+- Keep that loop usable and testable with stable NDJSON streaming, explicit terminal states, and deterministic failure handling.
+- Prove local daemon–client communication over UDS and server-streaming behavior through gRPC. **Default inference plugins** (built-in `InferenceRuntime` implementations) are part of the MVP: **mock** remains the default; the **Cursor CLI** plugin can be **enabled** to **forward prompts** to Cursor’s CLI so day-to-day work is **AI-assisted**, not mock-only. Apple MLX and full sidecar processes stay out of Phase 1 (see [ADAPTERS.md](ADAPTERS.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md)).
 
 ## In scope
 
@@ -18,14 +18,17 @@ This document defines the first shippable slice for REX.
 | Mock inference | Token/chunk streaming with small delays. |
 | Shutdown lifecycle | Graceful termination and socket cleanup. |
 | Extension-facing contract | CLI `complete` supports machine-readable stream output for editor integration. |
+| Dogfooding workflow | Extension + CLI path is reliable enough for day-to-day `rex` development tasks in the IDE. |
+| Default inference plugins | Built-in runtimes the operator can turn on or off; **mock** is always available as the safe default. |
+| Cursor CLI plugin | Optional **enableable** default that **forwards prompts** to the Cursor CLI (frontier / account-bound models). When enabled, streaming and terminal NDJSON semantics match the mock path; timeouts and spawn errors are bounded and legible. Config and env: [CONFIGURATION.md](CONFIGURATION.md), [ADAPTERS.md](ADAPTERS.md). |
 | Startup reliability | CLI retries bounded daemon-unavailable startup races before failing. |
 | Configuration policy (documentation) | `CONFIGURATION.md` defines precedence (defaults, env, and future file/CLI), the Phase 1 `REX_*` catalog, and what remains **unimplemented** until a follow-up. |
 
 ## Out of scope
 
 - Apple MLX runtime integration.
-- Full plugin lifecycle implementation.
-- Editor extension integration (as a **Phase 1** daemon/CLI deliverable; a companion [VS Code / Cursor extension](EXTENSION_ROADMAP.md) now consumes the `rex-cli` NDJSON contract and does not change the core gRPC/UDS **runtime** requirements above).
+- **gRPC sidecar process supervision** and the full **multi-plugin** platform described under “Sidecar platform” in [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) (MVP uses **in-process** inference plugins/adapters only).
+- Direct editor-to-daemon transport (the MVP keeps `rex-cli` as the extension boundary; no editor-specific gRPC client or daemon RPC surface is required).
 - Remote networking, TLS, and production authentication.
 - **Configuration implementation beyond env:** on-disk user config, project-local config files, `rex config` (or similar) subcommands, and **global** CLI flags on `rex-daemon` / `rex-cli` that override environment variables. These ship in a later phase; Phase 1 **documents** the policy in `CONFIGURATION.md` and keeps **runtime** behavior **env + defaults** as implemented in Rust.
 
@@ -75,30 +78,24 @@ Contract rules:
 - Stream must end with exactly one terminal event (`done` or `error`).
 - CLI keeps default human-readable output when `--format` is omitted.
 
-## Plugin approach decision (post-MVP)
+## Inference plugins in MVP vs sidecars (later)
 
-MVP does not implement plugins. For the next phase, start with **gRPC sidecar plugins** and defer **Wasm plugins**.
+**MVP** ships **in-process** inference plugins (adapters) behind one `InferenceRuntime` seam: **mock** (default) and an **enableable** **Cursor CLI** plugin that **forwards prompts** per [ADAPTERS.md](ADAPTERS.md). That is the minimum to **develop `rex` with AI assistance** (dogfooding) while **CI and automation** keep **mock** as the default (see [DEPENDENCIES.md](DEPENDENCIES.md), [CI.md](CI.md)).
 
-### Why sidecar first
+**After MVP** (or in parallel with hardening), REX can promote heavy or third-party work to **gRPC sidecar** processes; start with **gRPC sidecars** and defer **Wasm** for the same reasons as today.
 
-| Decision factor | gRPC sidecar (chosen first) | Wasm plugin (deferred) |
+| Decision factor | gRPC sidecar (next for out-of-tree work) | Wasm plugin (deferred) |
 |---|---|---|
 | Team speed | Reuse existing Python/Go components quickly | Requires Wasm target setup and host ABI design |
 | Integration effort | Straightforward process + gRPC contract | Requires runtime embedding and capability model |
 | Debugging | Standard process tooling and logs | Additional Wasm host/runtime debugging layer |
 | Isolation model | OS process boundary | Strong sandbox, but more host integration work |
-| MVP alignment | Faster path to prove extension points | Better for later hardening and performance tuning |
 
-### Decision statement
-
-- Choose gRPC sidecar first for delivery speed and simpler integration.
-- Revisit Wasm when plugin APIs stabilize and performance/sandbox priorities increase.
-
-**Post-MVP (design only, out of Phase 1 scope):** REX is intended to use an **agnostic inference-adapter** seam for backends such as the mock engine, a future local MLX path, and **Cursor CLI** as a frontier-model gateway. See `ARCHITECTURE.md` (Inference adapters), `ADAPTERS.md`, `CACHING.md`, and the **Cursor CLI inference adapter** table in `PLUGIN_ROADMAP.md` for the phased design track. MVP does not implement these; this pointer exists so future work does not conflict with the MVP contract.
+**Design pointers:** `ARCHITECTURE.md` (inference adapters), `ADAPTERS.md`, `CACHING.md`, and the **Cursor CLI inference adapter** table in `PLUGIN_ROADMAP.md` (phased track, including cache and `model`/`mode` evolution).
 
 ## Runtime-managed sidecars (design baseline)
 
-This is the baseline for the first plugin-enabled phase after MVP.
+This is the baseline for the **gRPC sidecar** plugin-enabled phase after the **in-process** MVP slice is stable.
 
 ### High-level flow
 
@@ -127,8 +124,10 @@ This is the baseline for the first plugin-enabled phase after MVP.
 5. CLI handles short daemon startup races with bounded retry behavior.
 6. Daemon shutdown removes socket file.
 7. CLI fails clearly when daemon is unavailable.
-8. Cursor-extension bootstrap path can consume streaming completion via CLI contract.
-9. A reader can list configuration **precedence** and every **Phase 1** `REX_*` variable from `CONFIGURATION.md` (canonical with `ARCHITECTURE.md` for boundaries).
+8. Cursor-extension path can stream completions via CLI NDJSON and recover cleanly from terminal failures.
+9. The extension + CLI path is stable enough to complete routine `rex` development tasks without leaving the IDE loop.
+10. With the **Cursor CLI** inference plugin **enabled** (per `CONFIGURATION.md`), `StreamInference` routes prompts through that path and the CLI/extension still see exactly one terminal NDJSON event and bounded failure behavior.
+11. A reader can list configuration **precedence** and every **Phase 1** `REX_*` variable from `CONFIGURATION.md` (canonical with `ARCHITECTURE.md` for boundaries).
 
 ## Manual validation checklist
 
@@ -143,6 +142,7 @@ Use this list for end-to-end confidence before a release. For day-to-day automat
 - [ ] Restart daemon and confirm clean bind.
 - [ ] Verify bounded startup race handling by running `complete` while daemon starts.
 - [ ] Skim `CONFIGURATION.md` for precedence, the Phase 1 `REX_*` list, and “not implemented” items so the document stays accurate when settings change.
+- [ ] (Optional, AI-assisted path) Set `REX_INFERENCE_RUNTIME=cursor-cli` and confirm `rex-cli complete "hello" --format ndjson` streams and terminates; use a local Cursor CLI or the stub pattern from [ADAPTERS.md](ADAPTERS.md) if the real binary is not installed.
 
 ## Recommended repository structure for MVP
 

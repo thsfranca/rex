@@ -6,7 +6,7 @@ This document defines the design contract for pluggable inference backends in RE
 
 - Keep REX **agnostic** to a single vendor or engine (mock, local MLX, Cursor CLI, or a future gRPC sidecar).
 - Make **capability negotiation** explicit so context shaping, token budgets, and caching do not run blindly for every adapter.
-- Treat **Cursor CLI** as a **frontier-model gateway**: it provides account-bound models and an agentic runtime, not a pass-through. Cursor always runs its own loop; REX still owns policy, optional layered cache, and the final gRPC stream contract.
+- **MVP** includes **Cursor CLI** as an **enableable default inference plugin**: when turned on, it **forwards prompts** to the CLI for AI-assisted development; **mock** stays the default for CI and offline runs. Treat **Cursor CLI** as a **frontier-model gateway**: account-bound models and an agentic runtime, not a dumb pass-through. Cursor runs its own loop; REX still owns policy, optional layered cache, and the final gRPC stream contract.
 
 ## `InferenceRequest` (design contract)
 

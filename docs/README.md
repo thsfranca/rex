@@ -50,7 +50,7 @@ Use `README.md` at the repository root as the runnable onboarding path (understa
 - Read `docs/EXTENSION_RELEASE.md` to install the extension, enable daemon auto-start, or ship a release.
 - Read `docs/EXTENSION_LOCAL_E2E.md` for a single path from clone to a working extension plus daemon (includes macOS editor `PATH` notes).
 - Run `./scripts/install-extension.sh` from the repo root for the fastest local install into Cursor or VS Code (see that doc for prerequisites).
-- Read `docs/PLUGIN_ROADMAP.md` for post-MVP plugin sequence, Cursor CLI adapter phases, and promotion criteria.
+- Read `docs/PLUGIN_ROADMAP.md` for **MVP** inference plugins (mock default, **enableable** Cursor CLI), the **gRPC sidecar** sequence after that, and promotion criteria.
 - Read `docs/ADAPTERS.md` and `docs/CACHING.md` for the inference-adapter seam and response-cache design.
 - Read `docs/CONTEXT_EFFICIENCY.md` for context optimization architecture, capability-aware policy, and contracts.
 - Use `REX_INFERENCE_RUNTIME` and the Cursor adapter env flags documented in `docs/PLUGIN_ROADMAP.md` and `docs/DEPENDENCIES.md` to exercise the Cursor path locally; keep mock as the default in CI.

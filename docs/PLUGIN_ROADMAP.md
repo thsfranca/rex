@@ -1,22 +1,23 @@
 # Plugin Roadmap (Sidecar-First)
 
-This roadmap defines how REX should grow plugin capabilities after MVP while keeping the daemon lightweight.
+This roadmap defines how REX grows **in-process inference plugins (adapters)** in MVP and **gRPC sidecar** plugins afterward, while keeping the daemon lightweight.
 
 ## Current purpose
 
 - Deliver a local completion product that extensions can consume reliably.
 - Keep `rex-daemon` focused on core runtime responsibilities.
-- Add user-facing value through sidecars before promoting features into the daemon.
+- **MVP:** ship **enableable** **in-process** inference plugins (mock default, **Cursor CLI** to forward prompts); **post-MVP:** add user-facing value through **gRPC sidecars** before promoting features into the daemon.
+- Increase the share of requests solved on local/open models through context optimization and selective escalation.
 
-## Local extension testing with the Cursor CLI adapter
+## Cursor CLI plugin (MVP, enableable)
 
-- Set `REX_INFERENCE_RUNTIME=cursor-cli` for `rex-daemon` to route inference through the Cursor CLI adapter.
-- Default behavior remains the mock runtime when the variable is unset or set to `mock`.
+- **MVP** includes this as a **default, enableable** inference plugin: it **forwards prompts** to the Cursor CLI for AI-assisted `rex` development. Set `REX_INFERENCE_RUNTIME=cursor-cli` on `rex-daemon` to enable it.
+- **Default** when unset or `mock`: the mock runtime (CI and headless automation stay on mock unless you opt in).
 - Optional overrides:
   - `REX_CURSOR_CLI_PATH` selects the CLI binary (defaults to `cursor-agent`).
   - `REX_CURSOR_CLI_COMMAND` runs a full shell command template; use `{prompt}` for the user text.
   - `REX_CURSOR_CLI_TIMEOUT_SECS` bounds execution time (defaults to `20`).
-- Do not enable this path in CI unless the runner provides the CLI; keep mock as the default for automated checks.
+- Do not require the real Cursor CLI in **default CI**; keep **mock** as the default for automated checks unless [DEPENDENCIES.md](DEPENDENCIES.md) and workflows explicitly add the tool.
 
 ## Related implementation docs
 
@@ -30,6 +31,7 @@ This roadmap defines how REX should grow plugin capabilities after MVP while kee
 - Keep built-in scope small until evidence justifies expansion.
 - Ship in small, reviewable changes with clear acceptance criteria.
 - Keep transport and contracts stable while iterating feature logic.
+- Treat token budget as a product constraint: optimize context first, then escalate model/runtime only when quality requires it.
 
 ## Sidecar-first decision gate
 
@@ -88,7 +90,7 @@ Default outcome: keep the feature as a sidecar/plugin.
 
 ## Cursor CLI inference adapter (phased design track)
 
-This track is **post-MVP** and describes how REX routes prompts to the Cursor CLI as one `InferenceRuntime` implementation. It aligns with the **sidecar-first** gate: the same contract can later run in a **gRPC sidecar** with no change to the public client surface.
+This track describes how REX routes prompts to the Cursor CLI as one `InferenceRuntime` implementation. **MVP** covers the **in-process** adapter (enableable default plugin) and phases **1**–**2** below. **gRPC sidecar** hosting of the same contract aligns with the **sidecar-first** gate and can follow without changing the public client surface.
 
 | Phase | Outcome | Completion signal |
 |---|---|---|

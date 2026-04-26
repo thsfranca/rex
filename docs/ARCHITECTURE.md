@@ -7,6 +7,7 @@ This document defines the long-term technical direction for REX.
 - Centralize local AI inference in one daemon.
 - Keep clients thin (CLI, editor, scripts).
 - Expose one stable local protocol for all clients.
+- Increase local-first execution through context optimization and selective escalation to stronger runtimes only when needed.
 
 ## Technology stack
 
@@ -16,7 +17,7 @@ This document defines the long-term technical direction for REX.
 | Runtime language | Rust |
 | Protocol | gRPC |
 | Transport | Unix Domain Socket (`/tmp/rex.sock`) |
-| Inference direction | Apple MLX (post-MVP), mock engine in MVP |
+| Inference direction | **MVP:** mock by default; **enableable** **Cursor CLI** plugin for prompt forwarding; **post-MVP:** Apple MLX, Ollama-class adapters, and gRPC **sidecar** plugins as in [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
 
 ## Thin client, thick server
 
@@ -34,7 +35,7 @@ This document defines the long-term technical direction for REX.
 - Host process for model lifecycle and inference orchestration.
 - Enforce queueing, cancellation, and stream lifecycle.
 - Apply machine-aware policy (memory, thermal, battery) as the project evolves.
-- Manage plugin sidecar lifecycle in post-MVP phases.
+- Manage **gRPC** plugin sidecar lifecycle in post-MVP phases (MVP uses **in-process** inference plugins only; see [MVP_SPEC.md](MVP_SPEC.md)).
 
 ### `rex-proto`
 
@@ -55,7 +56,7 @@ The daemon does not hard-code a single inference engine. REX keeps prompt constr
 | Adapter (examples) | Role |
 |---|---|
 | Mock | Default for MVP: deterministic stream without a real model. |
-| Cursor CLI | **Frontier-model gateway** — use Cursor for account-bound models. Cursor runs its own agent loop; it is not a pass-through, so REX does not treat it as the only context or retrieval system. |
+| Cursor CLI | **MVP, enableable** — **frontier-model gateway**; **forwards prompts** to Cursor for account-bound models. Cursor runs its own agent loop; REX does not treat it as the only context or retrieval system. |
 | Apple MLX (future) | Local model path; REX can drive context shaping and inference together. |
 
 Adapters declare **capabilities** so the daemon can skip or apply pipeline stages (indexer, compressor, token budget, behavioral prefilter) per adapter. A future **gRPC sidecar** can implement the same `InferenceRuntime` contract without client changes.
@@ -122,7 +123,7 @@ REX adopts a runtime-managed gRPC sidecar model for early plugin phases.
 - **Daemon stdout** (local dev) uses stable `key=value` fields so you can grep failures. **Lifecycle:** `event=listen` and `event=shutdown` (with `socket=`, `inference_runtime=`, `daemon_version=` on listen) for process-level triage. **StreamInference:** `stream.request_id`, `trace_id`, `inference_runtime` (`mock` or `cursor-cli`, from `REX_INFERENCE_RUNTIME`), `stream.lifecycle`, `stream.terminal` (for example `done`, `grpc_error`, or `missing_done` when a runtime breaks the contract), plus `grpc_code` and `elapsed_ms` on error paths.
 - **Grep (examples):** `rex-daemon event=listen` to confirm the socket and active runtime; `inference_runtime=cursor-cli` to filter to the optional adapter; `stream.terminal=` to list terminal outcomes for a long capture.
 - **CLI** logs the same `trace_id` on stderr (`phase=start`, `phase=terminal`) for correlation with the daemon and with the **extension** chat log (`[chat] trace_id=...`).
-- **Optional Cursor CLI** adapter errors reference `REX_CURSOR_CLI_*` env vars and [CONFIGURATION.md](CONFIGURATION.md); default **CI** keeps the mock runtime (see [DEPENDENCIES.md](DEPENDENCIES.md)).
+- **Cursor CLI** (MVP, when enabled) adapter errors reference `REX_CURSOR_CLI_*` env vars and [CONFIGURATION.md](CONFIGURATION.md); default **CI** keeps the mock runtime (see [DEPENDENCIES.md](DEPENDENCIES.md)).
 
 ## Configuration
 
