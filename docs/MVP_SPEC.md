@@ -41,6 +41,7 @@ This document defines the first shippable slice for REX.
 - Request includes prompt text.
 - Stream response includes token text, monotonic index, and done flag.
 - Client handles abrupt stream termination without deadlock.
+- If a server implementation would end `StreamInference` without a `done = true` chunk, the REX **daemon** emits a terminal gRPC `INTERNAL` error (instead of an ambiguous empty end-of-stream) so clients can map to a single user-visible failure. Unit tests in `crates/rex-daemon` cover this path; well-behaved runtimes still end with a final `done` chunk as in the table above.
 
 ## Mock inference behavior
 

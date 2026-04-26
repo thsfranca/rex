@@ -249,6 +249,22 @@ fn shell_single_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\"'\"'"))
 }
 
+/// Test-only runtime that omits a final `done` chunk (invalid contract).
+#[cfg(test)]
+pub(crate) struct MissingDoneMockRuntime;
+
+#[cfg(test)]
+#[tonic::async_trait]
+impl InferenceRuntime for MissingDoneMockRuntime {
+    async fn build_chunks(&self, _prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>> {
+        vec![Ok(StreamInferenceResponse {
+            text: "only".to_string(),
+            index: 0,
+            done: false,
+        })]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
