@@ -8,6 +8,7 @@ import type { CliBridgeOptions } from "../runtime/cliBridge";
 import type { DaemonLifecycleState } from "../runtime/daemonLifecycle";
 import { classifyStreamError, classifyStreamErrorMessage } from "../runtime/errorTaxonomy";
 import { resolveModePolicy } from "../runtime/modePolicy";
+import type { StreamErrorCode } from "../runtime/ndjsonParser";
 import { streamComplete } from "../runtime/streamClient";
 import type {
   ApprovalDecisionPayload,
@@ -31,6 +32,8 @@ export interface ChatPanelDependencies {
   readonly ensureDaemonReady: (signal?: AbortSignal) => Promise<DaemonLifecycleState>;
   readonly getDaemonState: () => DaemonLifecycleState | undefined;
   readonly log: (message: string) => void;
+  /** Optional: surface actionable hints (PATH, daemon) without breaking NDJSON. */
+  readonly notifyStreamFailure?: (args: { code: StreamErrorCode; message: string }) => void;
 }
 
 type PendingStream = { readonly controller: AbortController };
@@ -248,7 +251,14 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
             daemonState.kind === "unavailable"
               ? daemonState.reason
               : "Daemon is still starting; try again in a moment.";
-          this.postMessage({ type: "streamError", id: message.id, message: detail });
+          this.postMessage({
+            type: "streamError",
+            id: message.id,
+            message: detail,
+            code: "daemon_unavailable",
+            retryable: true,
+          });
+          this.deps.notifyStreamFailure?.({ code: "daemon_unavailable", message: detail });
           return;
         }
       }
@@ -285,6 +295,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
           code: classified.code,
           retryable: classified.retryable,
         });
+        this.deps.notifyStreamFailure?.({ code: classified.code, message: classified.message });
       }
     } catch (error) {
       const errText = error instanceof Error ? error.message : String(error);
@@ -298,6 +309,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
         code: classified.code,
         retryable: classified.retryable,
       });
+      this.deps.notifyStreamFailure?.({ code: classified.code, message: classified.message });
     } finally {
       this.pendingStreams.delete(message.id);
     }

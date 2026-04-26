@@ -4,6 +4,7 @@ import { readSettings, onSettingsChanged, type RexSettings } from "./config/sett
 import { snapshotActiveEditor } from "./editor/context";
 import { activateCursorAdapter } from "./platform/cursorAdapter";
 import { DaemonLifecycle, type DaemonLifecycleState } from "./runtime/daemonLifecycle";
+import { streamFailureWantsSetupHint } from "./runtime/userActionableFailure";
 import { ChatPanelProvider, CHAT_VIEW_ID } from "./ui/chatPanel";
 import { createStatusBar, type StatusBar } from "./ui/statusBar";
 
@@ -45,6 +46,27 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     },
     getDaemonState: () => lastLifecycleState,
     log: (message) => output.appendLine(message),
+    notifyStreamFailure: ({ code, message }) => {
+      const firstLine = message.split("\n")[0].trim();
+      output.appendLine(`[chat] terminal_error code=${code} detail=${firstLine}`);
+      if (!streamFailureWantsSetupHint(code)) {
+        return;
+      }
+      void vscode.window
+        .showWarningMessage(
+          `REX: ${firstLine}`,
+          "How to start daemon",
+          "Open REX output",
+        )
+        .then((choice) => {
+          if (choice === "How to start daemon") {
+            void vscode.commands.executeCommand("rex.howToStartDaemon");
+          } else if (choice === "Open REX output") {
+            output.show();
+            void vscode.commands.executeCommand("rex.openOutput");
+          }
+        });
+    },
   });
   context.subscriptions.push(chatPanel.register());
 
