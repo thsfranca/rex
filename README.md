@@ -26,7 +26,7 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 
 ## Project status
 
-- MVP implementation is **in progress**; inference is **mocked** with a clean swap-in path for MLX ([`MVP_SPEC.md`](MVP_SPEC.md)).
+- MVP implementation is **in progress**; inference is **mocked** with a clean swap-in path for MLX ([`MVP_SPEC.md`](MVP_SPEC.md)). A concise **what to do next** view is in [`docs/ROADMAP.md`](docs/ROADMAP.md); [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) explains light bucketing and scoring for ordering work in a small repo.
 - Current engineering focus: **reliable daemon–client streaming** and a **stable NDJSON contract** for the extension and other consumers.
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
 - Not primary scope yet: MLX-backed models, remote networking/TLS, production auth, full plugin sidecar lifecycle.
