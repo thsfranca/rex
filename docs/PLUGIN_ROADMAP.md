@@ -7,6 +7,7 @@ This roadmap defines how REX should grow plugin capabilities after MVP while kee
 - Deliver a local completion product that extensions can consume reliably.
 - Keep `rex-daemon` focused on core runtime responsibilities.
 - Add user-facing value through sidecars before promoting features into the daemon.
+- Increase the share of requests solved on local/open models through context optimization and selective escalation.
 
 ## Local extension testing with the Cursor CLI adapter
 
@@ -30,6 +31,7 @@ This roadmap defines how REX should grow plugin capabilities after MVP while kee
 - Keep built-in scope small until evidence justifies expansion.
 - Ship in small, reviewable changes with clear acceptance criteria.
 - Keep transport and contracts stable while iterating feature logic.
+- Treat token budget as a product constraint: optimize context first, then escalate model/runtime only when quality requires it.
 
 ## Sidecar-first decision gate
 

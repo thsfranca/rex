@@ -7,6 +7,7 @@ This document defines the long-term technical direction for REX.
 - Centralize local AI inference in one daemon.
 - Keep clients thin (CLI, editor, scripts).
 - Expose one stable local protocol for all clients.
+- Increase local-first execution through context optimization and selective escalation to stronger runtimes only when needed.
 
 ## Technology stack
 
@@ -16,7 +17,7 @@ This document defines the long-term technical direction for REX.
 | Runtime language | Rust |
 | Protocol | gRPC |
 | Transport | Unix Domain Socket (`/tmp/rex.sock`) |
-| Inference direction | Apple MLX (post-MVP), mock engine in MVP |
+| Inference direction | Local/open runtimes first (Apple MLX and Ollama-class adapters post-MVP), mock engine in MVP |
 
 ## Thin client, thick server
 

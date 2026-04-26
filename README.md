@@ -7,6 +7,7 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 - **Single runtime boundary.** One long-lived process holds model/runtime policy, queueing, and shutdown semantics so every client sees the same behavior.
 - **Stable tool contract.** Scripts and editors integrate through a narrow surface (`rex-cli` today, shared protobuf types in `rex-proto`) instead of each tool embedding inference details.
 - **Streaming-first correctness.** Server-streaming RPCs, explicit terminal states (`done` / `error`), and tests around UDS races and interruption mirror what production local runtimes need before real models land.
+- **Local-first cost control.** Route bounded tasks to smaller local/open models when possible, then escalate only hard tasks to stronger runtimes.
 - **Room to grow.** Mock inference sits behind a seam intended for Apple MLX, sidecar plugins, and richer policy later—without rewriting clients first.
 
 **Configuration policy** (precedence, `REX_*` catalog, and roadmap for CLI and user config files): [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
@@ -28,8 +29,9 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 
 - MVP implementation is **in progress**; inference is **mocked** with a clean swap-in path for MLX ([`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)). A concise **what to do next** view is in [`docs/ROADMAP.md`](docs/ROADMAP.md); [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) explains light bucketing and scoring for ordering work in a small repo.
 - Current engineering focus: **reliable daemon–client streaming** and a **stable NDJSON contract** for the extension and other consumers.
+- Current product-learning focus: increase the share of requests handled by local/open runtimes through context optimization and selective escalation.
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
-- Not primary scope yet: MLX-backed models, remote networking/TLS, production auth, full plugin sidecar lifecycle.
+- Not primary scope yet: production-grade local runtime adapters (MLX/Ollama-class), remote networking/TLS, production auth, full plugin sidecar lifecycle.
 
 ## Why this shape
 

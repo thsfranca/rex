@@ -6,7 +6,7 @@ Rex is a **learning lab** and **small, testable reference** for local daemon + g
 
 ## What we are learning toward (right now)
 
-**Primary focus:** a **reliable** local path: **daemon** on a **UDS**, **gRPC** streaming, **NDJSON** for tools, **mock** inference by default, and enough **tests and docs** to repeat the same run. **Optional** paths (for example `REX_INFERENCE_RUNTIME=cursor-cli`, layered cache) stay **documented, incremental, and compatible** with the default loop and with [CI](CI.md) expectations.
+**Primary focus:** a **reliable** local path: **daemon** on a **UDS**, **gRPC** streaming, **NDJSON** for tools, **mock** inference by default, and enough **tests and docs** to repeat the same run. Build toward **local-first execution** by improving context quality-per-token and escalating to stronger runtimes only for harder tasks. **Optional** paths (for example `REX_INFERENCE_RUNTIME=cursor-cli`, layered cache) stay **documented, incremental, and compatible** with the default loop and with [CI](CI.md) expectations.
 
 ## Theme order (rough dependency mental model)
 
@@ -43,10 +43,15 @@ flowchart LR
 |----------|------------|-----------|---------------------------|---------------|
 | **Should** | L1 **exact** response cache (safe modes) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [CACHING.md](CACHING.md) | In-memory LRU + `l1_cache=hit` in daemon logs; **agent** / **plan** not served from L1 | daemon (`l1_cache` module) |
 | **Should** | Optional **mode/model** on the wire and CLI, backward compatible | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md) | Proto + `rex-cli` flags; [CONFIGURATION.md](CONFIGURATION.md) | `proto/`, `rex-proto`, `rex-cli`, daemon |
+| **Should** | Adaptive retrieval gate: retrieve only when needed, then expand context progressively | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Lower average context tokens with no quality regression on local eval set | daemon + sidecar plugin |
+| **Should** | Query-aware prompt/context compression before local inference | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADAPTERS.md](ADAPTERS.md) | Fewer input tokens per request while preserving terminal correctness and answer utility | daemon + sidecar plugin |
+| **Could** | Difficulty-based routing cascade (small local model first, escalate only hard tasks) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ARCHITECTURE.md](ARCHITECTURE.md) | Local-first path handles bounded tasks; escalation policy is explicit and testable | daemon + sidecar plugin |
 | **Could** | **One** sidecar / plugin process supervised by the daemon | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [MVP_SPEC.md](MVP_SPEC.md) (sidecar sketch) | 0 or 1 plugin, clear errors | daemon |
 | **Could** | **Context** pipeline / token-budget per [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Respects adapter capabilities; docs stay true | daemon |
 
 **Scope note (Next — L1 and mode/model):** [CACHING.md](CACHING.md) and [CONFIGURATION.md](CONFIGURATION.md) track behavior; the editor extension can pass `--model` / `--mode` in a follow-up if needed (CLI supports them; NDJSON line shape unchanged).
+
+**Scope note (Next — optimization evidence):** prioritize context-quality-per-token work backed by current evidence: adaptive retrieval ([Self-RAG](https://arxiv.org/abs/2310.11511)), prompt compression ([LLMLingua](https://arxiv.org/abs/2310.05736)), and context-order sensitivity in long prompts ([Lost in the Middle](https://aclanthology.org/2024.tacl-1.9/)). For routing/cascades, use budgeted model escalation patterns ([A Unified Approach to Routing and Cascading for LLMs](https://proceedings.mlr.press/v267/dekoninck25a.html)).
 
 ## Later — only if the core path stays healthy
 
