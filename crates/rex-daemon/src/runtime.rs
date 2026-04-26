@@ -9,6 +9,7 @@ use tokio::signal;
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::transport::Server;
 
+use crate::adapters::runtime_from_env;
 use crate::domain::SOCKET_PATH;
 use crate::service::RexDaemonService;
 
@@ -34,7 +35,8 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
             source,
         })?;
     let incoming = UnixListenerStream::new(listener);
-    let service = RexDaemonService::new(Instant::now());
+    let runtime = runtime_from_env();
+    let service = RexDaemonService::with_runtime(Instant::now(), runtime);
 
     println!("rex-daemon listening on {}", socket_path);
     Server::builder()

@@ -764,6 +764,7 @@ dependencies = [
  "async-stream",
  "hyper-util",
  "rex-proto",
+ "serde_json",
  "serial_test",
  "thiserror",
  "tokio",

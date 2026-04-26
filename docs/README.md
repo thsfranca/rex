@@ -46,6 +46,7 @@ Use `README.md` at the repository root as the runnable onboarding path (understa
 - Read `docs/PLUGIN_ROADMAP.md` for post-MVP plugin sequence, Cursor CLI adapter phases, and promotion criteria.
 - Read `docs/ADAPTERS.md` and `docs/CACHING.md` for the inference-adapter seam and response-cache design.
 - Read `docs/CONTEXT_EFFICIENCY.md` for context optimization architecture, capability-aware policy, and contracts.
+- Use `REX_INFERENCE_RUNTIME` and the Cursor adapter env flags documented in `docs/PLUGIN_ROADMAP.md` and `docs/DEPENDENCIES.md` to exercise the Cursor path locally; keep mock as the default in CI.
 - Read `docs/DEPENDENCIES.md` to set up local prerequisites.
 - Read `docs/CI.md` for CI gate and merge queue settings.
 - Follow `docs/DOCUMENTATION.md` before editing docs.

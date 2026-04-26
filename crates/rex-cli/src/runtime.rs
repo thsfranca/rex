@@ -124,6 +124,16 @@ fn map_status_error(status: tonic::Status) -> CliError {
     }
 }
 
+fn map_stream_status_error(status: tonic::Status) -> CliError {
+    match status.code() {
+        Code::DeadlineExceeded => CliError::StreamTimeout {
+            seconds: STREAM_ITEM_TIMEOUT_SECONDS,
+        },
+        Code::Unavailable => CliError::StreamInterrupted,
+        _ => CliError::Status(status),
+    }
+}
+
 async fn consume_stream(
     stream: &mut tonic::Streaming<rex_proto::rex::v1::StreamInferenceResponse>,
     format: CompleteOutputFormat,
@@ -138,10 +148,7 @@ async fn consume_stream(
             seconds: STREAM_ITEM_TIMEOUT_SECONDS,
         })?;
 
-        let maybe_chunk = next.map_err(|status| match status.code() {
-            Code::Unavailable => map_status_error(status),
-            _ => CliError::StreamInterrupted,
-        })?;
+        let maybe_chunk = next.map_err(map_stream_status_error)?;
 
         if matches!(
             classify_stream_terminal(maybe_chunk.as_ref()),
@@ -248,7 +255,8 @@ impl CliCommand {
 mod tests {
     use super::{
         classify_stream_terminal, format_ndjson_chunk_event, format_ndjson_done_event,
-        format_ndjson_error_event, ndjson_error_code, should_retry_stream_start,
+        format_ndjson_error_event, map_stream_status_error, ndjson_error_code,
+        should_retry_stream_start,
     };
     use crate::domain::StreamLifecycle;
     use crate::error::CliError;
@@ -303,11 +311,36 @@ mod tests {
             "stream_interrupted"
         );
         assert_eq!(
+            ndjson_error_code(&CliError::StreamTimeout { seconds: 2 }),
+            "stream_timeout"
+        );
+        assert_eq!(
             ndjson_error_code(&CliError::DaemonUnavailable {
                 socket_path: "/tmp/rex.sock".to_string()
             }),
             "daemon_unavailable"
         );
+    }
+
+    #[test]
+    fn stream_status_errors_map_to_typed_cli_errors() {
+        let deadline = tonic::Status::deadline_exceeded("timeout");
+        assert!(matches!(
+            map_stream_status_error(deadline),
+            CliError::StreamTimeout { .. }
+        ));
+
+        let unavailable = tonic::Status::unavailable("cursor failed");
+        assert!(matches!(
+            map_stream_status_error(unavailable),
+            CliError::StreamInterrupted
+        ));
+
+        let internal = tonic::Status::internal("boom");
+        assert!(matches!(
+            map_stream_status_error(internal),
+            CliError::Status(_)
+        ));
     }
 
     #[test]

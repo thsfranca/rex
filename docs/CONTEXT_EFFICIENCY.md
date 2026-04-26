@@ -4,6 +4,8 @@ This guide defines how REX reduces token usage and local compute for coding work
 
 **Inference adapters:** pipeline stages are **not** one-size-fits-all. Each adapter (mock, local MLX, Cursor CLI, or a future sidecar) declares `AdapterCapabilities` in `docs/ADAPTERS.md` so the daemon can skip or apply indexer, compressor, token budget, cache, and behavioral prefilter. **Cursor adapter profile (design default):** skip heavy lexical **context injection** and **token-budget truncation** of the user prompt; keep the **behavioral prefilter**; **mode-gated** response cache per `docs/CACHING.md`.
 
+**Local Cursor testing:** you can set `REX_INFERENCE_RUNTIME=cursor-cli` to exercise the in-process adapter while keeping the transport and context pipeline in place. Use `REX_CURSOR_CLI_PATH`, `REX_CURSOR_CLI_COMMAND`, and `REX_CURSOR_CLI_TIMEOUT_SECS` to control invocation and time bounds (see `docs/PLUGIN_ROADMAP.md`).
+
 ## Scope
 
 - Add token budget controls before inference.

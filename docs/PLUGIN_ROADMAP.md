@@ -8,6 +8,16 @@ This roadmap defines how REX should grow plugin capabilities after MVP while kee
 - Keep `rex-daemon` focused on core runtime responsibilities.
 - Add user-facing value through sidecars before promoting features into the daemon.
 
+## Local extension testing with the Cursor CLI adapter
+
+- Set `REX_INFERENCE_RUNTIME=cursor-cli` for `rex-daemon` to route inference through the Cursor CLI adapter.
+- Default behavior remains the mock runtime when the variable is unset or set to `mock`.
+- Optional overrides:
+  - `REX_CURSOR_CLI_PATH` selects the CLI binary (defaults to `cursor-agent`).
+  - `REX_CURSOR_CLI_COMMAND` runs a full shell command template; use `{prompt}` for the user text.
+  - `REX_CURSOR_CLI_TIMEOUT_SECS` bounds execution time (defaults to `20`).
+- Do not enable this path in CI unless the runner provides the CLI; keep mock as the default for automated checks.
+
 ## Related implementation docs
 
 - Read `docs/CONTEXT_EFFICIENCY.md` for current token budget contracts, plugin boundaries, and local telemetry defaults.

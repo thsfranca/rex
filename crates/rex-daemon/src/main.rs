@@ -1,3 +1,4 @@
+mod adapters;
 mod domain;
 mod plugins;
 mod runtime;
