@@ -79,6 +79,7 @@ impl RexService for RexDaemonService {
         let request_started = Instant::now();
         let request_id = self.request_sequence.fetch_add(1, Ordering::Relaxed);
         let trace_id = extract_trace_id(request.metadata(), request_id);
+        let inference_runtime = RuntimeKind::from_env().log_label();
         let inner = request.into_inner();
         let prompt = inner.prompt;
         let model = inner.model;
@@ -97,11 +98,11 @@ impl RexService for RexDaemonService {
             .prepare(&context_request);
         let prompt_len = prompt.chars().count();
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} prompt_len={prompt_len}",
+            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} prompt_len={prompt_len}",
             StreamLifecycle::Starting.as_str(),
         );
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
+            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
             pipeline_result.metrics.prompt_tokens,
             pipeline_result.metrics.selected_context_tokens,
             pipeline_result.metrics.context_candidates,
@@ -140,7 +141,7 @@ impl RexService for RexDaemonService {
         };
         if let Some(state) = l1_state {
             println!(
-                "stream.request_id={request_id} trace_id={trace_id} l1_cache={state} model={} mode={}",
+                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} l1_cache={state} model={} mode={}",
                 if model.trim().is_empty() {
                     ACTIVE_MODEL_ID
                 } else {
@@ -150,7 +151,7 @@ impl RexService for RexDaemonService {
             );
         }
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} chunk_count={}",
+            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} chunk_count={}",
             StreamLifecycle::Streaming.as_str(),
             chunks.len()
         );
@@ -163,7 +164,7 @@ impl RexService for RexDaemonService {
                         chunk_count += 1;
                         if chunk_count == 1 {
                             println!(
-                                "stream.request_id={request_id} trace_id={trace_id} stream.event=first_chunk index={} done={}",
+                                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.event=first_chunk index={} done={}",
                                 chunk.index,
                                 chunk.done
                             );
@@ -179,7 +180,7 @@ impl RexService for RexDaemonService {
                     }
                     Err(err) => {
                         println!(
-                            "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
+                            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
                             StreamLifecycle::Failed.as_str(),
                             err.code() as i32,
                             err.message(),
@@ -192,13 +193,13 @@ impl RexService for RexDaemonService {
             }
             if done_seen {
                 println!(
-                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.terminal=done chunks_sent={chunk_count} elapsed_ms={}",
+                    "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.terminal=done chunks_sent={chunk_count} elapsed_ms={}",
                     StreamLifecycle::Completed.as_str(),
                     request_started.elapsed().as_millis()
                 );
             } else {
                 println!(
-                    "stream.request_id={request_id} trace_id={trace_id} stream.lifecycle={} stream.event=incomplete stream.terminal=missing_done chunks_sent={chunk_count} elapsed_ms={}",
+                    "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=incomplete stream.terminal=missing_done chunks_sent={chunk_count} elapsed_ms={}",
                     StreamLifecycle::Interrupted.as_str(),
                     request_started.elapsed().as_millis()
                 );
