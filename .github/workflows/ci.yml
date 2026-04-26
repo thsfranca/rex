@@ -246,7 +246,7 @@ jobs:
 
   ci-checks:
     if: ${{ always() }}
-    needs: [rust-checks, extension-checks]
+    needs: [changes, rust-checks, extension-checks]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -262,6 +262,8 @@ jobs:
         id: run_gate
         continue-on-error: true
         env:
+          RUST_RELEVANT: ${{ needs.changes.outputs.rust_relevant }}
+          EXTENSION_RELEVANT: ${{ needs.changes.outputs.extension_relevant }}
           RUST_RESULT: ${{ needs.rust-checks.result }}
           EXTENSION_RESULT: ${{ needs.extension-checks.result }}
         run: ./scripts/ci/enforce_ci_gate.sh

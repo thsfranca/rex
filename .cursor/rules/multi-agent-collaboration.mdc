@@ -4,7 +4,7 @@ When multiple agents may touch this repository in parallel, apply shared safety 
 
 ## Required skill
 
-- Use the global skill at `~/.cursor/skills/multi-agent-collab-guardrails/SKILL.md`.
+- Use the **multi-agent collab guardrails** skill in your environment when it is available (for example a personal copy of that skill in your user settings).
 
 ## Required moments
 

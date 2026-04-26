@@ -1,0 +1,38 @@
+---
+description: How CI path filters map to jobs; keep verify and gate behavior aligned.
+---
+
+# CI Path Relevance
+
+## Goal
+
+- Run expensive **verify** jobs only when a change can affect that domain.
+- **Gate** jobs must still let `ci-checks` pass for pull requests that only touch out-of-scope paths (for example `docs/**` or documentation-only files that do not match a domain’s filters).
+
+## How filters are defined (`.github/workflows/ci.yml`)
+
+- Use **positive** path groups with `dorny/paths-filter` (a path “counts” for a domain if it matches that group’s patterns).
+- Keep each domain’s list complete for its surface area:
+  - **Rust** (`rust_changed`): `crates/**`, root `Cargo.toml` / `Cargo.lock`, and the Rust-related `scripts/*` and `scripts/ci` entries that affect the Rust verify gate.
+  - **Extension** (`extension_changed`): `extensions/rex-vscode/**` and the extension `scripts/ci` entrypoints.
+  - **CI scripts / workflow** (`ci_changed`): `.github/workflows/**`, `scripts/ci/**` (any CI change may affect enforcement or scripts).
+- **Global** (`global_changed`): `Cargo.toml`, `Cargo.lock` (affects more than one domain).
+
+## Relevance outputs (`changes` job)
+
+- **`rust_relevant`**: true if `rust_changed` or `ci_changed` or `global_changed`.
+- **`extension_relevant`**: true if `extension_changed` or `ci_changed` or `global_changed`.
+
+When editing filters or relevance logic, update **all** of the path lists and both relevance expressions together so one domain is not left running or blocking merges incorrectly.
+
+## Skipped jobs and the top-level gate
+
+- If a domain is not relevant, the corresponding **verify** job is **skipped** by GitHub Actions.
+- A domain **gate** job that `needs` that verify job may also be **skipped** by the runner (a skipped dependency still suppresses the dependent job in many cases, even with `if: always()`).
+- `scripts/ci/enforce_ci_gate.sh` receives `RUST_RELEVANT` / `EXTENSION_RELEVANT` from the `changes` job and treats upstream **`skipped`** as acceptable when that domain is not relevant, while still requiring **`success`** when the domain is relevant.
+
+When adding a new check or a new path group, confirm:
+
+1. The verify job’s `if:` matches the intended relevance.
+2. Gate jobs and `enforce_*_gate.sh` scripts stay consistent with that relevance.
+3. `ci-checks` still passes for docs-only (or other out-of-scope) pull requests: success when relevant jobs succeed, and when a domain is not relevant, either that domain’s gate reports success/skip in its script or the gate job is `skipped` and the top-level gate allows it.
