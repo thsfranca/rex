@@ -31,6 +31,14 @@ impl RuntimeKind {
             _ => Self::Mock,
         }
     }
+
+    /// Stable `key=value` token for daemon stdout; matches L1 and env vocabulary (`mock`, `cursor-cli`).
+    pub fn log_label(self) -> &'static str {
+        match self {
+            Self::Mock => "mock",
+            Self::CursorCli => "cursor-cli",
+        }
+    }
 }
 
 #[tonic::async_trait]
@@ -286,6 +294,12 @@ mod tests {
             RuntimeKind::from_setting("cursor-cli"),
             RuntimeKind::CursorCli
         );
+    }
+
+    #[test]
+    fn runtime_kind_log_label_matches_l1_vocabulary() {
+        assert_eq!(RuntimeKind::Mock.log_label(), "mock");
+        assert_eq!(RuntimeKind::CursorCli.log_label(), "cursor-cli");
     }
 
     #[test]
