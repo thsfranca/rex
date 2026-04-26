@@ -1,6 +1,6 @@
 ## Summary
 
-<!-- Why this PR exists, what outcome it delivers, and how it supports the current project purpose. 1-3 bullets. -->
+<!-- Why this PR exists: outcome and project purpose, in this repo’s terms. Keep review context here (1–3 bullets). External trackers or tickets are not required project context. -->
 - 
 
 ## Scope
@@ -29,7 +29,7 @@
 
 ## Checklist
 
-- [ ] I linked the related issue/ticket (or explained why none exists).
+- [ ] I described the change in terms of this repository (review context stays here, not in external systems).
 - [ ] I kept this PR focused on one primary concern.
 - [ ] I updated docs when behavior, setup, or operations changed.
 - [ ] I confirmed this change with tests or explicit manual verification.
