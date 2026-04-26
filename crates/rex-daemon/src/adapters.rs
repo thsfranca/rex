@@ -108,7 +108,11 @@ impl CursorCliRuntime {
         command.stdout(Stdio::piped()).stderr(Stdio::piped());
         let mut child = command
             .spawn()
-            .map_err(|err| Status::unavailable(format!("cursor runtime spawn failed: {err}")))?;
+            .map_err(|err| {
+                Status::unavailable(format!(
+                    "cursor runtime spawn failed: {err} (hint: REX_CURSOR_CLI_PATH, REX_CURSOR_CLI_COMMAND, or `docs/CONFIGURATION.md`)"
+                ))
+            })?;
 
         let mut stdout = child
             .stdout
@@ -143,7 +147,7 @@ impl CursorCliRuntime {
                 let _ = child.kill().await;
                 let _ = child.wait().await;
                 return Err(Status::deadline_exceeded(format!(
-                    "cursor runtime timed out after {}s",
+                    "cursor runtime timed out after {}s (increase REX_CURSOR_CLI_TIMEOUT_SECS; see `docs/CONFIGURATION.md`)",
                     self.timeout.as_secs()
                 )));
             }
@@ -247,6 +251,22 @@ fn extract_text_from_json_line(value: &serde_json::Value) -> Option<&str> {
 
 fn shell_single_quote(value: &str) -> String {
     format!("'{}'", value.replace('\'', "'\"'\"'"))
+}
+
+/// Test-only runtime that omits a final `done` chunk (invalid contract).
+#[cfg(test)]
+pub(crate) struct MissingDoneMockRuntime;
+
+#[cfg(test)]
+#[tonic::async_trait]
+impl InferenceRuntime for MissingDoneMockRuntime {
+    async fn build_chunks(&self, _prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>> {
+        vec![Ok(StreamInferenceResponse {
+            text: "only".to_string(),
+            index: 0,
+            done: false,
+        })]
+    }
 }
 
 #[cfg(test)]

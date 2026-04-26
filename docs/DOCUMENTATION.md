@@ -1,11 +1,11 @@
 # Documentation Standards (Project)
 
-This project follows the global documentation rule and keeps local docs concise.
+This project keeps documentation standards in this file and in the `documentation-content` project rule, without referencing editor-specific home directories.
 
 ## Source of truth
 
-- Global guideline: `~/.cursor/rules/DOCUMENTATION_GUIDELINES.md`
-- Global rule: `~/.cursor/rules/documentation-guidelines.mdc`
+- **[docs/DOCUMENTATION.md](DOCUMENTATION.md)** (this file) is the human-readable contract.
+- The **`documentation-content`** project rule (scoped to `docs/**/*.md`) repeats the same expectations for agents. If something conflicts, **this file wins**.
 
 ## Writing requirements
 

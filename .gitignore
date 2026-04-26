@@ -1,4 +1,9 @@
-# Cursor project rules (shared). Add other .cursor/ paths to gitignore if they are local-only.
-
 # Temporary local-only files
 TEMP_*
+node_modules
+
+# Rust (workspace build output)
+/target
+
+# Local CI log snapshots
+ci-observability/

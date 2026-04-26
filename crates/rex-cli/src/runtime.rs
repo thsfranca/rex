@@ -45,7 +45,12 @@ pub async fn run_cli(args: impl Iterator<Item = String>) -> ExitCode {
 async fn execute(command: CliCommand) -> Result<(), CliError> {
     match command {
         CliCommand::Status => run_status().await,
-        CliCommand::Complete { prompt, format } => run_complete(prompt, format).await,
+        CliCommand::Complete {
+            prompt,
+            model,
+            mode,
+            format,
+        } => run_complete(prompt, model, mode, format).await,
     }
 }
 
@@ -62,7 +67,12 @@ async fn run_status() -> Result<(), CliError> {
     Ok(())
 }
 
-async fn run_complete(prompt: String, format: CompleteOutputFormat) -> Result<(), CliError> {
+async fn run_complete(
+    prompt: String,
+    model: String,
+    mode: String,
+    format: CompleteOutputFormat,
+) -> Result<(), CliError> {
     let trace_id = resolve_trace_id();
     eprintln!("trace_id={trace_id} phase=start operation=complete");
     let mut attempt: u32 = 0;
@@ -78,6 +88,8 @@ async fn run_complete(prompt: String, format: CompleteOutputFormat) -> Result<()
         };
         let mut request = tonic::Request::new(StreamInferenceRequest {
             prompt: prompt.clone(),
+            model: model.clone(),
+            mode: mode.clone(),
         });
         let metadata_value =
             tonic::metadata::MetadataValue::try_from(trace_id.as_str()).map_err(|_| {
@@ -229,6 +241,21 @@ fn ndjson_error_code(err: &CliError) -> &'static str {
     }
 }
 
+/// Counts NDJSON lines whose `event` is `done` or `error` (contract: exactly one per successful parse).
+#[cfg(test)]
+fn ndjson_terminal_event_count_for_tests(output: &str) -> usize {
+    output
+        .lines()
+        .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+        .filter(|value| {
+            value
+                .get("event")
+                .and_then(|event| event.as_str())
+                .is_some_and(|name| name == "done" || name == "error")
+        })
+        .count()
+}
+
 fn resolve_trace_id() -> String {
     if let Ok(existing) = env::var("REX_TRACE_ID") {
         if !existing.trim().is_empty() {
@@ -256,7 +283,7 @@ mod tests {
     use super::{
         classify_stream_terminal, format_ndjson_chunk_event, format_ndjson_done_event,
         format_ndjson_error_event, map_stream_status_error, ndjson_error_code,
-        should_retry_stream_start,
+        ndjson_terminal_event_count_for_tests, should_retry_stream_start,
     };
     use crate::domain::StreamLifecycle;
     use crate::error::CliError;
@@ -364,6 +391,25 @@ mod tests {
         assert_eq!(
             classify_stream_terminal(Some(&terminal)),
             Some(StreamLifecycle::Completed)
+        );
+    }
+
+    #[test]
+    fn ndjson_output_has_at_most_one_done_or_error_event_in_examples() {
+        let chunk1 = r#"{"event":"chunk","index":0,"text":"a"}"#;
+        let done1 = r#"{"event":"done","index":0}"#;
+        assert_eq!(
+            ndjson_terminal_event_count_for_tests(&format!("{chunk1}\n{done1}\n")),
+            1
+        );
+        let err1 = r#"{"event":"error","message":"x","code":"y"}"#;
+        assert_eq!(
+            ndjson_terminal_event_count_for_tests(&format!("{err1}\n")),
+            1
+        );
+        assert_eq!(
+            ndjson_terminal_event_count_for_tests(&format!("{done1}\n{done1}\n")),
+            2
         );
     }
 }

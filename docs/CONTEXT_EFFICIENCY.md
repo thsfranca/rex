@@ -122,13 +122,7 @@ This contract lives in `crates/rex-daemon/src/plugins.rs`.
 
 ## Multi-agent setup
 
-Use these guardrails when more than one agent can change this repository:
-
-- Project rule: `.cursor/rules/multi-agent-collaboration.mdc`
-- Global rule: `~/.cursor/rules/multi-agent-collaboration-global.mdc`
-- Global skill: `~/.cursor/skills/multi-agent-collab-guardrails/SKILL.md`
-
-Apply the guardrails at task start, before branch or stash actions, and at handoff.
+When more than one agent can change this repository, follow the project **multi-agent collaboration** policy, plus any **global** multi-agent guardrails you keep in your own environment. Apply them at task start, before branch or stash actions, and at handoff.
 
 ## Verification checklist
 
