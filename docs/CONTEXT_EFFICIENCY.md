@@ -13,6 +13,12 @@ This guide defines how REX reduces token usage and local compute for coding work
 - Keep `rex-daemon` responsible for transport and stream correctness.
 - Keep generic byte compression as storage-only optimization.
 
+## Evidence-informed defaults
+
+- Treat context as a scarce budget and avoid over-packing prompts; long-context quality can degrade when relevant evidence is buried ([Lost in the Middle](https://aclanthology.org/2024.tacl-1.9/)).
+- Prefer retrieve-on-demand over fixed retrieval for every query when adapter capabilities allow it ([Self-RAG](https://arxiv.org/abs/2310.11511)).
+- Use query-aware compression so local models can handle more tasks within bounded token budgets ([LLMLingua](https://arxiv.org/abs/2310.05736)).
+
 ## Architecture flow
 
 ```mermaid
