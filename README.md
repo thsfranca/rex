@@ -23,15 +23,16 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 | **`rex-cli`** | `status` and `complete`; human output by default, **`--format ndjson`** for one JSON event per line (`chunk`, `done`, `error`) so extensions and CI can parse streams safely. |
 | **Startup and failure behavior** | Bounded retry when the daemon is still booting; clear CLI errors for unavailable daemon, interrupted streams, and bad stream endings. |
 | **VS Code / Cursor extension** | Activity-bar chat with streaming markdown, selection-based commands, optional **daemon auto-start**, and install/release docs—see [`extensions/rex-vscode/README.md`](extensions/rex-vscode/README.md) and [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md). |
+| **Default inference plugins** | **Mock** by default; **enable** the **Cursor CLI** plugin (for example `REX_INFERENCE_RUNTIME=cursor-cli`) to **forward prompts** for AI-assisted development—see [docs/ADAPTERS.md](docs/ADAPTERS.md) and [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
 | **Quality gates** | Workspace `cargo` checks plus UDS end-to-end tests covering failure paths, startup races, and post-interruption behavior (see [Operational checks](#operational-checks)). |
 
 ## Project status
 
-- MVP implementation is **in progress**; inference is **mocked** with a clean swap-in path for MLX ([`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)). A concise **what to do next** view is in [`docs/ROADMAP.md`](docs/ROADMAP.md); [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) explains light bucketing and scoring for ordering work in a small repo.
+- MVP implementation is **in progress**; inference defaults to **mock** with an **enableable** **Cursor CLI** plugin for real AI assistance and a later swap-in path for MLX ([`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)). A concise **what to do next** view is in [`docs/ROADMAP.md`](docs/ROADMAP.md); [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) explains light bucketing and scoring for ordering work in a small repo.
 - Current engineering focus: **reliable daemon–client streaming** and a **stable NDJSON contract** for the extension and other consumers.
 - Current product-learning focus: increase the share of requests handled by local/open runtimes through context optimization and selective escalation.
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
-- Not primary scope yet: production-grade local runtime adapters (MLX/Ollama-class), remote networking/TLS, production auth, full plugin sidecar lifecycle.
+- Not primary scope yet: production-grade local runtime adapters beyond the MVP set (for example **MLX** / Ollama-class as first-class paths), remote networking/TLS, production auth, full **gRPC** plugin sidecar lifecycle.
 
 ## Why this shape
 
@@ -137,11 +138,13 @@ In scope now:
 - Unary status RPC and server-streaming completion RPC.
 - Mock inference and shutdown lifecycle reliability.
 - **Editor path:** the VS Code/Cursor extension consumes **`rex-cli`** (including NDJSON streaming); the daemon does not host editor-specific RPCs.
+- **Dogfooding loop:** the extension + CLI path stays reliable enough to develop `rex` from inside the IDE.
+- **Default inference plugins:** **mock** by default; **enable** the **Cursor CLI** plugin to **forward prompts** (minimum for AI-assisted `rex` development in MVP).
 
 Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 
 - Apple MLX runtime integration.
-- Full plugin sidecar lifecycle in the daemon.
+- **gRPC** sidecar plugin supervision and multi-plugin orchestration in the daemon (MVP uses **in-process** inference plugins only; see [`docs/PLUGIN_ROADMAP.md`](docs/PLUGIN_ROADMAP.md)).
 - Remote networking, TLS, and production authentication.
 
 ## Documentation map
