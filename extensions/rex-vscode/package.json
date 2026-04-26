@@ -2,7 +2,7 @@
   "name": "rex-vscode",
   "displayName": "REX",
   "description": "Local AI runtime client for VS Code and Cursor, backed by the REX daemon.",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "publisher": "rex",
   "license": "MIT",
