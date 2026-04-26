@@ -129,7 +129,11 @@ impl RexService for RexDaemonService {
                         if chunk.done {
                             done_seen = true;
                         }
+                        let terminal = chunk.done;
                         yield Ok(chunk);
+                        if !terminal {
+                            sleep(Duration::from_millis(STREAM_CHUNK_DELAY_MS)).await;
+                        }
                     }
                     Err(err) => {
                         println!(
@@ -143,7 +147,6 @@ impl RexService for RexDaemonService {
                         return;
                     }
                 }
-                sleep(Duration::from_millis(STREAM_CHUNK_DELAY_MS)).await;
             }
             if done_seen {
                 println!(
@@ -157,6 +160,9 @@ impl RexService for RexDaemonService {
                     StreamLifecycle::Interrupted.as_str(),
                     request_started.elapsed().as_millis()
                 );
+                yield Err(Status::internal(
+                    "incomplete inference stream: missing final done chunk",
+                ));
             }
         };
 
@@ -242,7 +248,14 @@ mod tests {
         extract_trace_id, format_behavior_decision, format_cache_status, PromptDirectives,
         RexDaemonService,
     };
+    use crate::adapters::MissingDoneMockRuntime;
     use crate::plugins::{BehaviorDecision, CacheStatus};
+    use futures::StreamExt;
+    use rex_proto::rex::v1::rex_service_server::RexService;
+    use rex_proto::rex::v1::StreamInferenceRequest;
+    use std::sync::Arc;
+    use std::time::Instant;
+    use tonic::Request;
 
     #[test]
     fn stream_chunks_end_with_done_marker() {
@@ -300,5 +313,30 @@ mod tests {
     fn trace_id_extraction_falls_back_to_request_id() {
         let metadata = tonic::metadata::MetadataMap::new();
         assert_eq!(extract_trace_id(&metadata, 42), "request-42");
+    }
+
+    #[tokio::test]
+    async fn stream_emits_grpc_error_when_runtime_omits_done() {
+        let svc = RexDaemonService::with_runtime(Instant::now(), Arc::new(MissingDoneMockRuntime));
+        let req = Request::new(StreamInferenceRequest {
+            prompt: "x".to_string(),
+        });
+        let mut out = svc
+            .stream_inference(req)
+            .await
+            .expect("stream starts")
+            .into_inner();
+        let first = out.next().await.expect("stream item").expect("ok chunk");
+        assert!(!first.done);
+        let err = out
+            .next()
+            .await
+            .expect("second item")
+            .expect_err("terminal grpc error");
+        assert_eq!(err.code(), tonic::Code::Internal);
+        assert!(err
+            .message()
+            .contains("incomplete inference stream: missing final done chunk"));
+        assert!(out.next().await.is_none());
     }
 }

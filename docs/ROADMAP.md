@@ -33,6 +33,8 @@ flowchart LR
 | **Should** | Extension chat stays **usable** (cancel, status, clean return to idle) | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | “What remains” shrinks without breaking NDJSON | `extensions/rex-vscode` |
 | **Should** | Optional **Cursor CLI** path stays **bounded** (time limit, clear errors) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md), [CONFIGURATION.md](CONFIGURATION.md) | **Local** try path documented; **CI** stays **mock**-first per [DEPENDENCIES.md](DEPENDENCIES.md) | daemon |
 
+**Scope note (Must — core stream):** If an inference runtime omits the final `done` chunk, the daemon now yields a terminal gRPC error with a clear message. `rex-cli` has unit coverage for the NDJSON invariant (at most one `done` or `error` event per successful parse in sample outputs). Deeper UDS and interrupt coverage remains in [CI](CI.md) and `crates/rex-daemon/tests/uds_e2e.rs`. Remaining **Should** work (readability of logs, extension polish, adapter bounds) is tracked in the same table.
+
 ## Next — good follow-on topics (not all are started)
 
 | Priority | What / why | Source(s) | “Done enough” (examples) | Where to work |
