@@ -1,5 +1,8 @@
 # Temporary local-only files
 TEMP_*
+# PR / merge handoff (keep in GitHub UI, /tmp, or editor; not the repo)
+*.pr-body.md
+.pr-*.md
 node_modules
 
 # Rust (workspace build output)
