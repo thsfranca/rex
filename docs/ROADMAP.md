@@ -38,6 +38,8 @@ flowchart LR
 
 **Scope note (Should — observability / extension):** Daemon **startup and stream** stdout use `inference_runtime` and `stream.terminal` (and related) fields; [ARCHITECTURE.md](ARCHITECTURE.md) lists grep examples. The **Cursor CLI** (MVP) adapter surfaces **timeout** and **spawn** hints that point at [CONFIGURATION.md](CONFIGURATION.md); [ADAPTERS.md](ADAPTERS.md) documents **local verification** (UDS E2E can use a `printf` stub; real `cursor-agent` is optional for machines that have it). Extension **cancel and single terminal event** behavior is covered by local tests; long-running session stress remains a follow-up (see [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md)).
 
+**Scope note (operator path):** [README.md](../README.md) adds an **MVP local operator path**; [CI.md](CI.md) documents **local MVP preflight** via [scripts/verify_mvp_local.sh](../scripts/verify_mvp_local.sh); [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) includes `install-cli.sh --print-bin-path` for editor `PATH` copy-paste; the VS Code/Cursor package contributes a **Get Started** walkthrough (see [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md)).
+
 ## Next — good follow-on topics (not all are started)
 
 | Priority | What / why | Source(s) | “Done enough” (examples) | Where to work |
