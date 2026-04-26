@@ -32,6 +32,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - Each chat stream now carries a trace id across extension host -> `rex-cli` -> daemon logs, and terminal logs include elapsed latency.
 
 ### Fixed
+- Status bar: very long `unavailable` reasons are elided in the hover tooltip to keep the status surface readable.
 - `DaemonLifecycle.ensureRunning` serializes overlapping calls so concurrent chat or status work cannot spawn duplicate daemon children.
 - Optional `daemonEnv` merged only into the spawned `rex-daemon` process environment.
 
