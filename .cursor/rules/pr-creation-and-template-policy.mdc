@@ -1,0 +1,28 @@
+---
+description: Enforce PR auto-merge and template usage
+alwaysApply: true
+---
+
+# PR Creation And Template Policy
+
+## Auto-merge
+- Create PRs with auto-merge enabled when possible.
+- If auto-merge is not enabled on creation, enable it immediately after creation.
+- Treat PR creation as incomplete until auto-merge is enabled.
+
+## Template
+- Use `.github/pull_request_template.md` for every PR description.
+- Fill required sections with project-specific details.
+- Remove placeholders and irrelevant optional notes.
+- Keep template content focused on PR context (`summary`, `scope`, `validation`, `risks`), not manual operator steps.
+- Never mention auto-merge in the PR template body or checklist.
+- Handle auto-merge as an execution step after PR creation, outside the template text.
+- In `Summary`, explain how the change supports the current project purpose.
+- In `Risks`, acknowledge early-stage/small-project constraints (limited surface area, fast iteration, and pragmatic scope) and how this PR keeps risk controlled.
+- Assume this project is built by one engineer with AI assistance; prefer concise, high-signal PR descriptions over heavyweight process text.
+- Keep validation proportional to change risk: a small set of meaningful checks is enough when it demonstrates confidence.
+
+## Branch Scope Accuracy
+- Before creating a PR, fetch and compare the full branch against remote main (`git fetch origin main` and `git diff origin/main...HEAD`).
+- Ensure the PR title and description reflect all changes present in that full branch diff, not only the latest commit or staged/uncommitted files.
+- If the branch contains unrelated work, split it first or explicitly call out the extra scope in the PR text.

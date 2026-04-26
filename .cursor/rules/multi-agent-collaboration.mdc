@@ -1,0 +1,22 @@
+# Multi-Agent Collaboration Policy
+
+When multiple agents may touch this repository in parallel, apply shared safety guardrails before and during implementation.
+
+## Required skill
+
+- Use the global skill at `~/.cursor/skills/multi-agent-collab-guardrails/SKILL.md`.
+
+## Required moments
+
+- At task start.
+- Before any branch switch.
+- Before stash create/apply/drop.
+- Before destructive branch operations.
+- Before final handoff.
+
+## Required handoff fields
+
+- `branch`: current branch name.
+- `stash`: `none`, `restored`, or pending `stash@{n}`.
+- `risk`: short level with reason.
+- `next-safe-step`: one concrete safe continuation step.

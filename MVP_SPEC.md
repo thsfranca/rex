@@ -25,7 +25,7 @@ This document defines the first shippable slice for REX.
 
 - Apple MLX runtime integration.
 - Full plugin lifecycle implementation.
-- Editor extension integration.
+- Editor extension integration (as a **Phase 1** daemon/CLI deliverable; a companion [VS Code / Cursor extension](docs/EXTENSION_ROADMAP.md) now consumes the `rex-cli` NDJSON contract and does not change the core gRPC/UDS **runtime** requirements above).
 - Remote networking, TLS, and production authentication.
 - **Configuration implementation beyond env:** on-disk user config, project-local config files, `rex config` (or similar) subcommands, and **global** CLI flags on `rex-daemon` / `rex-cli` that override environment variables. These ship in a later phase; Phase 1 **documents** the policy in `docs/CONFIGURATION.md` and keeps **runtime** behavior **env + defaults** as implemented in Rust.
 

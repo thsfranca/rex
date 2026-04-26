@@ -9,6 +9,8 @@ Use `README.md` at the repository root as the runnable onboarding path (understa
 | Path | Purpose |
 |---|---|
 | `docs/README.md` | Entry point for documentation. |
+| `docs/PRIORITIZATION.md` | MoSCoW-style buckets and light R-ICE scoring for a small repo. |
+| `docs/ROADMAP.md` | One-page **Now / Next / Later** roadmap with links to design docs. |
 | `docs/DOCUMENTATION.md` | Project writing checklist and standards. |
 | `docs/DEPENDENCIES.md` | Local build and runtime dependency checklist. |
 | `docs/CI.md` | Path-aware CI strategy and `main` branch protection settings. |
@@ -36,6 +38,7 @@ Use `README.md` at the repository root as the runnable onboarding path (understa
 ## How to use this documentation
 
 - Start with `README.md` for project context.
+- Read `docs/ROADMAP.md` for what to explore next; read `docs/PRIORITIZATION.md` for light prioritization in a small repo.
 - Read `ARCHITECTURE.md` for long-term design.
 - Read `MVP_SPEC.md` for current implementation scope.
 - Read `docs/CONFIGURATION.md` for the configuration policy, `REX_*` variables, and future precedence.
