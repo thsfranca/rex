@@ -57,6 +57,11 @@ Intended use: shell out to Cursor’s CLI (for example `cursor-agent`) in **non-
 
 Risks to document in operations: some environments report `print` / headless mode not exiting; defensive timeouts and logging are required.
 
+### Local verification (Cursor CLI)
+
+- **Default CI** does not install Cursor. It keeps the mock runtime. The UDS integration test `cursor_runtime_streams_chunks_over_uds` in `crates/rex-daemon/tests/uds_e2e.rs` sets `REX_INFERENCE_RUNTIME=cursor-cli` and `REX_CURSOR_CLI_COMMAND` to a `printf` shell stub that prints one JSON line, so the adapter path is covered without a real `cursor-agent` process.
+- **Real CLI (optional, local):** install the Cursor CLI on your machine, set `REX_INFERENCE_RUNTIME=cursor-cli`, and optionally set `REX_CURSOR_CLI_PATH` or `REX_CURSOR_CLI_COMMAND` per [CONFIGURATION.md](CONFIGURATION.md). Start `rex-daemon`, then run `rex-cli complete "hello" --format ndjson` to exercise the end-to-end path. Expect bounded stderr in error `Status` messages (see [CONFIGURATION.md](CONFIGURATION.md) — Cursor CLI).
+
 ## Promotion: in-process adapter to gRPC sidecar
 
 The same logical contract (capabilities + stream semantics) can be implemented in a **separate process** that speaks gRPC, matching `docs/PLUGIN_ROADMAP.md` (plugin lifecycle baseline). REX’s clients and `rex.v1` do not need to change if the sidecar is a drop-in backend behind the `InferenceRuntime` seam.
