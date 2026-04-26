@@ -18,6 +18,8 @@ This document describes how REX layers **application-level** caching in front of
 
 REX’s **context pipeline** in `crates/rex-daemon/src/plugins.rs` also uses a small **prefix cache** for retrieved context. The **layered cache** described here is the design target for a single **response cache in front of the `InferenceRuntime` adapter**, with keys that include adapter identity, mode, and model. See [ADAPTERS.md](ADAPTERS.md) for capability flags.
 
+**Implementation status:** the daemon now runs an in-memory, LRU-bounded **L1 exact** response cache (module `l1_cache`, constant `L1_CACHE_SCHEMA` in the Rust crate) for **ask** mode only; **`plan` and `agent` do not** read or write L1. Daemon logs show `l1_cache=miss` or `l1_cache=hit` when L1 is applicable. The prompt portion of the key hashes **effective** post-pipeline text; workspace scoping uses `REX_WORKSPACE_ROOT` when set (see [CONFIGURATION.md](CONFIGURATION.md)). L2 and semantic features remain design-only.
+
 ## L1 exact-match keys
 
 A robust key should include, at minimum:

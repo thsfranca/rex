@@ -99,7 +99,7 @@ This track is **post-MVP** and describes how REX routes prompts to the Cursor CL
 | 5 — Model `auto` | Pass `auto` (or `default` mapping) into the adapter per `docs/ADAPTERS.md`. | Documented `auto` behavior; fallback path when a flag is unsupported. |
 | 6 — L2 semantic cache (optional) | **Ask mode** only; embedding similarity with threshold and guard rails. | Feature can stay off; when on, false-positive rate is within an agreed SLO. |
 
-**Status (this repo):** Phases **1** and **2** are implemented in `crates/rex-daemon` (adapter seam, mock default, `cursor-cli` profile with spawn/timeout behavior and readable error hints). Phases **3+** remain design-first until scheduled; see [CACHING.md](CACHING.md) and the **Next** section of [ROADMAP.md](ROADMAP.md).
+**Status (this repo):** Phases **1** and **2** are implemented in `crates/rex-daemon` (adapter seam, mock default, `cursor-cli` profile with spawn/timeout behavior and readable error hints). Phase **3** (L1 exact cache) and **4** (optional `model` / `mode` on the request and on `rex-cli complete`) are implemented for in-process L1 and protobuf **StreamInference** fields; L2, model `auto`, and sidecar migration remain future work. See [CACHING.md](CACHING.md) and [ROADMAP.md](ROADMAP.md).
 
 **Dependency note:** early work can run **in-process** in `rex-daemon`. Moving the adapter to a process boundary is a natural fit after **sidecar platform Phase 1 (plugin contract and lifecycle baseline)**; that step supplies supervision, health, and restarts for out-of-tree plugins.
 

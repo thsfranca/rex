@@ -41,10 +41,12 @@ flowchart LR
 
 | Priority | What / why | Source(s) | “Done enough” (examples) | Where to work |
 |----------|------------|-----------|---------------------------|---------------|
-| **Should** | L1 **exact** response cache (safe modes) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [CACHING.md](CACHING.md) | Observable hit path where implemented; **agent** path follows [CACHING.md](CACHING.md) safety rules | daemon |
-| **Should** | Optional **mode/model** on the wire and CLI, backward compatible | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md) | Old clients work; [CONFIGURATION.md](CONFIGURATION.md) updated | rex-proto, rex-cli, daemon |
+| **Should** | L1 **exact** response cache (safe modes) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [CACHING.md](CACHING.md) | In-memory LRU + `l1_cache=hit` in daemon logs; **agent** / **plan** not served from L1 | daemon (`l1_cache` module) |
+| **Should** | Optional **mode/model** on the wire and CLI, backward compatible | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md) | Proto + `rex-cli` flags; [CONFIGURATION.md](CONFIGURATION.md) | `proto/`, `rex-proto`, `rex-cli`, daemon |
 | **Could** | **One** sidecar / plugin process supervised by the daemon | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [MVP_SPEC.md](MVP_SPEC.md) (sidecar sketch) | 0 or 1 plugin, clear errors | daemon |
 | **Could** | **Context** pipeline / token-budget per [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Respects adapter capabilities; docs stay true | daemon |
+
+**Scope note (Next — L1 and mode/model):** [CACHING.md](CACHING.md) and [CONFIGURATION.md](CONFIGURATION.md) track behavior; the editor extension can pass `--model` / `--mode` in a follow-up if needed (CLI supports them; NDJSON line shape unchanged).
 
 ## Later — only if the core path stays healthy
 

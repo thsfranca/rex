@@ -36,6 +36,8 @@ This document defines the first shippable slice for REX.
 | `GetSystemStatus` | Unary | Return daemon version, uptime, and active mock model id. |
 | `StreamInference` | Server streaming | Return one or more chunks and end with `done = true`. |
 
+`StreamInferenceRequest` includes the prompt plus optional `model` and `mode` string fields. **Backward compatibility:** clients that send only `prompt` behave as before (the daemon applies defaults, for example `ask` and the active mock model id in Phase 1). The extension can adopt these fields later; they are not required for the NDJSON line contract.
+
 ## Message expectations
 
 - Request includes prompt text.
