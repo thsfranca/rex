@@ -1,6 +1,8 @@
 # REX
 
-REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns inference and stream lifecycle, while **thin clients** (CLI, VS Code/Cursor extension, scripts) talk to it over **gRPC on a Unix domain socket**. The repo is both a **learning lab** for AI infrastructure patterns and a **small, testable reference** for how to keep editor and automation surfaces stable while the engine evolves.
+**This repository is an experimental study project:** it exists to explore patterns (daemon-hosted inference, contracts, tooling, tests)—not as a finished product or supported distribution.
+
+REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns inference and stream lifecycle, while **thin clients** (CLI, VS Code/Cursor extension, scripts) talk to it over **gRPC on a Unix domain socket**. The repo is also a **learning lab** for AI infrastructure patterns and a **small, testable reference** for how to keep editor and automation surfaces stable while the engine evolves.
 
 ## Purpose
 
@@ -28,6 +30,7 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 
 ## Project status
 
+- **Experimental scope:** APIs, docs, and behavior can change as the study evolves; use this workspace for learning and prototypes, not production SLAs.
 - **Phase 1 (local operator):** the **clone → daemon → REX chat** path is **documented and preflighted** — see **MVP local operator path** above, [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), and `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). The extension includes a **Get Started** walkthrough. Inference defaults to **mock**; an **enableable** **Cursor CLI** plugin and MLX swap-in are described in [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) and [`docs/ADAPTERS.md`](docs/ADAPTERS.md). **Dogfooding** and optional **AI-assisted** paths still follow the success criteria and “what remains” notes in [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) and [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md). A **what to do next** view is in [`docs/ROADMAP.md`](docs/ROADMAP.md); [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) explains light bucketing and scoring.
 - Current engineering focus: **reliable daemon–client streaming** and a **stable NDJSON contract** for the extension and other consumers.
 - Current product-learning focus: increase the share of requests handled by local/open runtimes through context optimization and selective escalation.
