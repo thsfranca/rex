@@ -4,8 +4,24 @@ This project keeps documentation standards in this file and in the `documentatio
 
 ## Source of truth
 
-- **[docs/DOCUMENTATION.md](DOCUMENTATION.md)** (this file) is the human-readable contract.
-- The **`documentation-content`** project rule (scoped to `docs/**/*.md`) repeats the same expectations for agents. If something conflicts, **this file wins**.
+- **[docs/DOCUMENTATION.md](DOCUMENTATION.md)** (this file) is the human-readable **writing and structure** contract.
+- **[docs/PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md)** is the canonical **project purpose and operating principles**. Documentation and plans **align** with it when it exists.
+- The **`documentation-content`** project rule (scoped to `docs/**/*.md`; in this repo: `.cursor/rules/documentation-content.mdc`) repeats the same expectations for agents. If something conflicts about norms or hubs, **this file wins**; if something conflicts about **purpose or principles**, **`docs/PURPOSE_AND_PRINCIPLES.md` wins**.
+
+### Feature-area hubs
+
+- Assign **one** canonical explanation document in **`docs/`** per **major product feature** (definitions, optional design bets, and interface intent belong there).
+- **ADRs** under `docs/architecture/decisions/` hold **accepted decisions** when you record them formally; linking text elsewhere stays thin.
+- **Other** guides, roadmap rows, and the architecture overview **link** to the hub instead of copying full bullet inventories; point to MoSCoW or status in one line when useful.
+- **Example hub:** long-term memory — [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md).
+
+## Document types (portfolio)
+
+| Type | Canonical location |
+|------|-------------------|
+| **Diátaxis / role routing** | [docs/README.md](README.md) |
+| Software architecture (**SAD**-style consolidation) | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| **Architecture Decision Records** | [architecture/decisions/](architecture/decisions/) — supersede stale decisions by status + successor ADR |
 
 ## Writing requirements
 

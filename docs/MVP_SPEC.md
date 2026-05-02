@@ -4,9 +4,14 @@ This document defines the first shippable slice for REX.
 
 ## MVP goal
 
-- Enable a practical dogfooding loop: use the VS Code/Cursor extension (via `rex-cli`) to develop `rex` in the same workspace.
-- Keep that loop usable and testable with stable NDJSON streaming, explicit terminal states, and deterministic failure handling.
-- Prove local daemon–client communication over UDS and server-streaming behavior through gRPC. **Default inference plugins** (built-in `InferenceRuntime` implementations) are part of the MVP: **mock** remains the default; the **Cursor CLI** plugin can be **enabled** to **forward prompts** to Cursor’s CLI so day-to-day work is **AI-assisted**, not mock-only. Apple MLX and full sidecar processes stay out of Phase 1 (see [ADAPTERS.md](ADAPTERS.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md)).
+- Enable a practical dogfooding loop: VS Code/Cursor extension via **`rex-cli`** to develop `rex` in the same workspace ([EXTENSION.md](EXTENSION.md)).
+- Keep NDJSON streaming, explicit terminal states, and deterministic failures testable ([ARCHITECTURE.md](ARCHITECTURE.md) observability rows).
+- Prove **daemon–client** paths over **UDS** / **server-streaming gRPC**.
+- Inference: **built-in adapters** (**mock** default; **optional Cursor CLI** subprocess optional for frontier/account models). MLX + optional **supervised sidecars** post-Phase‑1 ([PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md)).
+
+## Product direction (beyond Phase 1 transport)
+
+Ship a **full REX-native development agent** so **routing, compaction, caches, metering, orchestration hooks** converge in **`rex-daemon`** ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). **Implementation is incremental**: today’s codebase centers **StreamInference plumbing + adapters**; agent loops/tooling MCP + durable memory appear on the roadmap without claiming they already behave like production agents. Durable memory **design bets** (optimization-first) live in [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md); Phase 1 does not include that store.
 
 ## In scope
 
@@ -20,7 +25,7 @@ This document defines the first shippable slice for REX.
 | Extension-facing contract | CLI `complete` supports machine-readable stream output for editor integration. |
 | Dogfooding workflow | Extension + CLI path is reliable enough for day-to-day `rex` development tasks in the IDE. |
 | Default inference plugins | Built-in runtimes the operator can turn on or off; **mock** is always available as the safe default. |
-| Cursor CLI plugin | Optional **enableable** default that **forwards prompts** to the Cursor CLI (frontier / account-bound models). When enabled, streaming and terminal NDJSON semantics match the mock path; timeouts and spawn errors are bounded and legible. Config and env: [CONFIGURATION.md](CONFIGURATION.md), [ADAPTERS.md](ADAPTERS.md). |
+| Cursor CLI adapter | Optional **enableable subprocess** invoking Cursor’s CLI (`REX_INFERENCE_RUNTIME=cursor-cli`) — not the authoritative definition of “the REX agent” ([ADAPTERS.md](ADAPTERS.md)). Streams remain terminal-correct; timeouts/spawn bounded — [CONFIGURATION.md](CONFIGURATION.md). |
 | Startup reliability | CLI retries bounded daemon-unavailable startup races before failing. |
 | Configuration policy (documentation) | `CONFIGURATION.md` defines precedence (defaults, env, and future file/CLI), the Phase 1 `REX_*` catalog, and what remains **unimplemented** until a follow-up. |
 
@@ -28,6 +33,7 @@ This document defines the first shippable slice for REX.
 
 - Apple MLX runtime integration.
 - **gRPC sidecar process supervision** and the full **multi-plugin** platform described under “Sidecar platform” in [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) (MVP uses **in-process** inference plugins/adapters only).
+- **Daemon-supervised isolated agent environments** (VM/container transports, guest–host RPC paths): conceptual only—see [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md); not required for Phase 1 acceptance.
 - Direct editor-to-daemon transport (the MVP keeps `rex-cli` as the extension boundary; no editor-specific gRPC client or daemon RPC surface is required).
 - Remote networking, TLS, and production authentication.
 - **Configuration implementation beyond env:** on-disk user config, project-local config files, `rex config` (or similar) subcommands, and **global** CLI flags on `rex-daemon` / `rex-cli` that override environment variables. These ship in a later phase; Phase 1 **documents** the policy in `CONFIGURATION.md` and keeps **runtime** behavior **env + defaults** as implemented in Rust.
@@ -64,7 +70,7 @@ This document defines the first shippable slice for REX.
 
 ## Extension consumer contract (MVP)
 
-Cursor extension work in MVP uses the CLI boundary first.
+Extension MVP uses **`rex-cli`**; authoritative consumer contract consolidated in **[EXTENSION.md](EXTENSION.md)**.
 
 | Event | Required fields | Meaning |
 |---|---|---|
@@ -78,42 +84,11 @@ Contract rules:
 - Stream must end with exactly one terminal event (`done` or `error`).
 - CLI keeps default human-readable output when `--format` is omitted.
 
-## Inference plugins in MVP vs sidecars (later)
+## Inference adapters vs optional sidecars
 
-**MVP** ships **in-process** inference plugins (adapters) behind one `InferenceRuntime` seam: **mock** (default) and an **enableable** **Cursor CLI** plugin that **forwards prompts** per [ADAPTERS.md](ADAPTERS.md). That is the minimum to **develop `rex` with AI assistance** (dogfooding) while **CI and automation** keep **mock** as the default (see [DEPENDENCIES.md](DEPENDENCIES.md), [CI.md](CI.md)).
+**Phase 1** implements **in-process** **`InferenceRuntime` adapters**: **mock** + optional Cursor CLI subprocess (`ADAPTERS.md`). **Daemon-first** caching/pipeline semantics land here first ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)).
 
-**After MVP** (or in parallel with hardening), REX can promote heavy or third-party work to **gRPC sidecar** processes; start with **gRPC sidecars** and defer **Wasm** for the same reasons as today.
-
-| Decision factor | gRPC sidecar (next for out-of-tree work) | Wasm plugin (deferred) |
-|---|---|---|
-| Team speed | Reuse existing Python/Go components quickly | Requires Wasm target setup and host ABI design |
-| Integration effort | Straightforward process + gRPC contract | Requires runtime embedding and capability model |
-| Debugging | Standard process tooling and logs | Additional Wasm host/runtime debugging layer |
-| Isolation model | OS process boundary | Strong sandbox, but more host integration work |
-
-**Design pointers:** `ARCHITECTURE.md` (inference adapters), `ADAPTERS.md`, `CACHING.md`, and the **Cursor CLI inference adapter** table in `PLUGIN_ROADMAP.md` (phased track, including cache and `model`/`mode` evolution).
-
-## Runtime-managed sidecars (design baseline)
-
-This is the baseline for the **gRPC sidecar** plugin-enabled phase after the **in-process** MVP slice is stable.
-
-### High-level flow
-
-1. Daemon reads plugin config (runtime, version, entrypoint, capabilities).
-2. Daemon starts plugin process with controlled environment variables.
-3. Plugin serves gRPC using the shared plugin contract.
-4. Daemon performs health checks and routes requests to plugin.
-5. Daemon enforces timeout, restart, and shutdown policy.
-
-### Minimal requirements
-
-| Area | Requirement |
-|---|---|
-| Runtime declaration | Plugin must declare language runtime and required version. |
-| Entry point | Plugin must declare startup command or executable path. |
-| Compatibility | Plugin must declare supported contract version. |
-| Health | Plugin must answer health checks before receiving traffic. |
-| Failure behavior | Daemon must surface clear startup and runtime errors. |
+**Future** supervised **sidecar processes** reuse the adapter contract boundary — full lifecycle checklist only in **[PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md)** and **[ARCHITECTURE.md](ARCHITECTURE.md)** (avoid duplication here).
 
 ## Success criteria
 
@@ -126,7 +101,7 @@ This is the baseline for the **gRPC sidecar** plugin-enabled phase after the **i
 7. CLI fails clearly when daemon is unavailable.
 8. Cursor-extension path can stream completions via CLI NDJSON and recover cleanly from terminal failures.
 9. The extension + CLI path is stable enough to complete routine `rex` development tasks without leaving the IDE loop.
-10. With the **Cursor CLI** inference plugin **enabled** (per `CONFIGURATION.md`), `StreamInference` routes prompts through that path and the CLI/extension still see exactly one terminal NDJSON event and bounded failure behavior.
+10. Optional **`REX_INFERENCE_RUNTIME=cursor-cli`**: prompts traverse the Cursor subprocess adapter; CLI/extension observe **exactly one** NDJSON terminal and bounded failures (**stub-supported in CI**) — [`ADAPTERS.md`](ADAPTERS.md).
 11. A reader can list configuration **precedence** and every **Phase 1** `REX_*` variable from `CONFIGURATION.md` (canonical with `ARCHITECTURE.md` for boundaries).
 
 ### Success criteria to evidence (tests and docs)
@@ -163,35 +138,4 @@ Use this list for end-to-end confidence before a release. For day-to-day automat
 - [ ] Skim `CONFIGURATION.md` for precedence, the Phase 1 `REX_*` list, and “not implemented” items so the document stays accurate when settings change.
 - [ ] (Optional, AI-assisted path) Set `REX_INFERENCE_RUNTIME=cursor-cli` and confirm `rex-cli complete "hello" --format ndjson` streams and terminates; use a local Cursor CLI or the stub pattern from [ADAPTERS.md](ADAPTERS.md) if the real binary is not installed.
 
-## Recommended repository structure for MVP
-
-```text
-.
-├── Cargo.toml
-├── README.md
-├── docs/
-│   ├── README.md
-│   ├── DOCUMENTATION.md
-│   ├── CONFIGURATION.md
-│   ├── DEPENDENCIES.md
-│   ├── EXTENSION_MVP.md
-│   ├── ARCHITECTURE.md
-│   └── MVP_SPEC.md
-├── proto/rex/v1/rex.proto
-└── crates/
-    ├── rex-proto/
-    ├── rex-daemon/
-    │   └── src/
-    │       ├── main.rs
-    │       ├── runtime.rs
-    │       ├── service.rs
-    │       └── domain.rs
-    └── rex-cli/
-        └── src/
-            ├── main.rs
-            ├── runtime.rs
-            ├── command.rs
-            ├── transport.rs
-            ├── error.rs
-            └── domain.rs
-```
+Repository layout: see **[ARCHITECTURE.md](ARCHITECTURE.md)** (canonical tree including `plugins.rs`, `l1_cache.rs`, `adapters.rs`).

@@ -4,18 +4,21 @@ This guide defines how to develop REX with AI assistance and how to design plugi
 
 ## 1) Project purpose and architecture in 2 minutes
 
-REX provides a local AI runtime with one daemon as the system authority.
+Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md).
+
+REX provides a local AI runtime with one daemon as the **system authority** for **streaming contracts, adapter policy, caches, pipelines, and the agent/economics roadmap** ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). Isolated **agent runtime environments** (when implemented) remain **supervised and policy-bound** to the daemon—see [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md).
 
 | Component | Responsibility |
 |---|---|
-| `rex-daemon` | Own model lifecycle, scheduling, policy, and stream production. |
-| `rex-cli` | Stay thin; issue commands and render responses. |
-| `rex-proto` | Define and generate the shared gRPC contract (`rex.v1`). |
+| `rex-daemon` | Model/agent **policy trajectory**, adapters, caches, **`StreamInference`** lifecycle, queues. |
+| `rex-cli` | Thin transport façade; deterministic NDJSON for editors. |
+| `rex-proto` | `rex.v1` gRPC contract. |
 
 Architecture intent:
-- Keep one stable protocol boundary for all clients.
-- Keep communication local by default (`/tmp/rex.sock` over UDS).
-- Evolve functionality behind stable contracts instead of client-specific logic.
+
+- Stable protocol boundary across clients.
+- Default local UDS transport.
+- Product logic migrates toward daemon-first economics ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)).
 
 ## 2) Setup and working modes
 
@@ -82,26 +85,29 @@ Use this review checklist before accepting AI-generated changes:
 - Documentation: setup/behavior changes are documented.
 - Verification: command-level or test-level proof is present.
 
+### Documentation conventions
+
+Major product features use **one canonical hub doc** under `docs/` plus **pointers** in roadmaps and overviews—not parallel full design lists across files. Rules and hubs live in [DOCUMENTATION.md](DOCUMENTATION.md).
+
 CI and PR expectations:
 - CI gate behavior follows `docs/CI.md`.
 - PR description follows `.github/pull_request_template.md` and stays about this repository and the change (no required coupling to external trackers for now).
 
-## 4) Plugin developer track (current and next phase)
+## 4) Extensibility developer track
 
-Current status:
-- Plugin lifecycle is not implemented in MVP.
-- Direction is runtime-managed gRPC sidecars.
+**Stable today**
 
-What plugin developers should treat as stable today:
-- gRPC/Protobuf contract patterns in `proto/rex/v1/rex.proto`.
-- Streaming completion expectations (`done = true` terminal behavior).
-- Local-runtime assumptions (daemon-centered orchestration).
+- [`proto/rex/v1/rex.proto`](../proto/rex/v1/rex.proto) unary + streaming RPC semantics.
+- `InferenceRuntime` + capability negotiation ([ADAPTERS.md](ADAPTERS.md)).
+- Daemon-owned L1/cache hooks ([CACHING.md](CACHING.md)).
 
-What remains post-MVP work:
-- Plugin manifest/config schema
-- Health handshake contract
-- Startup/restart/shutdown policy details
-- Conformance test harness for plugin implementations
+**Near roadmap**
+
+- Optional **single** supervised sidecar aligning with **[PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md)** (failure isolation—not the default economics path).
+
+**Later**
+
+- Rich multi-plugin fleets, Wasm bridges—only after sidecar MVP evidence.
 
 ## 5) Contract and compatibility policy
 
@@ -151,19 +157,19 @@ Operational baseline:
 - Keep failure messages actionable for CLI and logs.
 - Preserve CI observability conventions from `docs/CI.md`.
 
-## 8) Roadmap to plugin-ready DX
+## 8) Roadmap to extensibility-ready DX
 
-Next artifacts to build:
-1. Plugin manifest schema (`runtime`, `version`, `entrypoint`, `capabilities`, contract version).
-2. Plugin lifecycle contract (health, readiness timeout, restart policy, shutdown behavior).
-3. Plugin conformance test harness (contract and lifecycle verification).
+**Daemon-first prerequisites (higher leverage now)**
 
-Recommended order:
-- Start with manifest schema to lock integration inputs.
-- Add lifecycle contract to reduce runtime ambiguity.
-- Add conformance tests to keep compatibility enforceable.
+1. Router / metering fields landing per [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix rows.
+2. Deterministic **`InferenceRuntime`** tests + NDJSON conformance already in-tree.
 
-Plugin ecosystem reference:
+**Optional sidecar-era artifacts (defer until isolation need is proven)**
+
+- Plugin manifest (`runtime`, `entrypoint`, `capabilities`, contract semver).
+- Health + restart policy + conformance harness (`PLUGIN_ROADMAP.md` snapshot).
+
+Suggested reading for maintainers pitching integrations:
 - [VS Code Proposed API model](https://code.visualstudio.com/api/advanced-topics/using-proposed-api)
 - [Open Source Guides – Best Practices for maintainers](https://opensource.guide/best-practices/)
 - [GitHub contributing guideline discoverability](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)

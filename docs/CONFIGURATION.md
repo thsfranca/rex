@@ -43,7 +43,7 @@ The following are read in **Rust** code paths for the **daemon** or **CLI** as i
 
 | Variable | Default (if unset) | Purpose |
 |----------|--------------------|---------|
-| `REX_TRACE_ID` | (none) | If set, the CLI propagates it for request correlation. The extension sets this when it runs `rex-cli`; see [`EXTENSION_MVP.md`](EXTENSION_MVP.md). |
+| `REX_TRACE_ID` | (none) | If set, the CLI propagates it for request correlation. The extension sets this when it runs `rex-cli`; see [`EXTENSION.md`](EXTENSION.md). |
 
 **CLI flags (not environment):** `rex-cli complete` accepts optional `--model <id>` and `--mode <ask|plan|agent>` in any order with `--format`. Empty values behave like the defaults documented in the protobuf ([`MVP_SPEC.md`](MVP_SPEC.md)): unset model leaves model selection to the daemon default; empty mode is treated as **ask** on the server for inference policy (L1 only caches **ask**; see `CACHING.md`).
 
@@ -74,4 +74,4 @@ If you add any of the above, update this file **and** the precedence table in th
 - [ARCHITECTURE.md](ARCHITECTURE.md) — system shape and data flow.
 - [MVP_SPEC.md](MVP_SPEC.md) — which configuration **documentation** is in scope for Phase 1 versus which **implementation** ships later.
 - [`CACHING.md`](CACHING.md) — `REX_CACHE_BYPASS` and cache behavior.
-- [`EXTENSION_MVP.md`](EXTENSION_MVP.md) — `REX_TRACE_ID` from the editor.
+- [`EXTENSION.md`](EXTENSION.md) — trace correlation from the editor.
