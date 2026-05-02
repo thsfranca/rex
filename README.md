@@ -6,16 +6,9 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 
 ## Purpose
 
-- **Architecture + economics.** Product direction favors a **REX-owned agent/economics surface** in `rex-daemon` (routing hooks, caches, pipelines, observability)—see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/architecture/decisions/](docs/architecture/decisions/), and the **lever matrix** in [docs/CONTEXT_EFFICIENCY.md](docs/CONTEXT_EFFICIENCY.md). Longevity / durable memory bets: [docs/LONG_TERM_MEMORY.md](docs/LONG_TERM_MEMORY.md) (design only).
-- **Single runtime boundary.** One long-lived process holds model/runtime policy, queueing, and shutdown semantics so every client sees the same behavior.
-- **Stable tool contract.** Scripts and editors integrate through **`rex-cli`** and shared protobuf types in `rex-proto` instead of embedding vendor inference SDKs.
-- **Streaming-first correctness.** Server-streaming RPCs, explicit terminal states (`done` / `error`), and tests around UDS races and interruption.
-- **Local-first default.** **Mock** inference without network; optional **Cursor CLI** subprocess as one **adapter** when enabled—see [docs/ADAPTERS.md](docs/ADAPTERS.md).
-- **Room to grow.** Apple MLX, HTTP adapters, optional sidecars—without breaking `rex.v1` clients ([docs/PLUGIN_ROADMAP.md](docs/PLUGIN_ROADMAP.md)).
+Canonical **purpose and operating principles** (single source of truth): **[docs/PURPOSE_AND_PRINCIPLES.md](docs/PURPOSE_AND_PRINCIPLES.md)**.
 
 **Configuration policy** (precedence, `REX_*` catalog, and roadmap for CLI and user config files): [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
-
-**Who it is for:** engineers studying daemon-hosted inference, gRPC streaming over UDS, and editor integration patterns; anyone building toward a personal or team **local-first** assistant on Mac.
 
 ## What works today (high-value capabilities)
 

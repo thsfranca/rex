@@ -4,8 +4,9 @@ This project keeps documentation standards in this file and in the `documentatio
 
 ## Source of truth
 
-- **[docs/DOCUMENTATION.md](DOCUMENTATION.md)** (this file) is the human-readable contract.
-- The **`documentation-content`** project rule (scoped to `docs/**/*.md`; in this repo: `.cursor/rules/documentation-content.mdc`) repeats the same expectations for agents. If something conflicts, **this file wins**.
+- **[docs/DOCUMENTATION.md](DOCUMENTATION.md)** (this file) is the human-readable **writing and structure** contract.
+- **[docs/PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md)** is the canonical **project purpose and operating principles**. Documentation and plans **align** with it when it exists.
+- The **`documentation-content`** project rule (scoped to `docs/**/*.md`; in this repo: `.cursor/rules/documentation-content.mdc`) repeats the same expectations for agents. If something conflicts about norms or hubs, **this file wins**; if something conflicts about **purpose or principles**, **`docs/PURPOSE_AND_PRINCIPLES.md` wins**.
 
 ### Feature-area hubs
 

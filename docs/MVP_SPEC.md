@@ -33,6 +33,7 @@ Ship a **full REX-native development agent** so **routing, compaction, caches, m
 
 - Apple MLX runtime integration.
 - **gRPC sidecar process supervision** and the full **multi-plugin** platform described under “Sidecar platform” in [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) (MVP uses **in-process** inference plugins/adapters only).
+- **Daemon-supervised isolated agent environments** (VM/container transports, guest–host RPC paths): conceptual only—see [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md); not required for Phase 1 acceptance.
 - Direct editor-to-daemon transport (the MVP keeps `rex-cli` as the extension boundary; no editor-specific gRPC client or daemon RPC surface is required).
 - Remote networking, TLS, and production authentication.
 - **Configuration implementation beyond env:** on-disk user config, project-local config files, `rex config` (or similar) subcommands, and **global** CLI flags on `rex-daemon` / `rex-cli` that override environment variables. These ship in a later phase; Phase 1 **documents** the policy in `CONFIGURATION.md` and keeps **runtime** behavior **env + defaults** as implemented in Rust.
