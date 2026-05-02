@@ -9,6 +9,12 @@ This document is the **software architecture description (SAD)** for REX: produc
 - Keep **clients thin** (CLI, editor, scripts): one stable **gRPC** contract over **UDS** (`rex.v1`).
 - Use **inference adapters** (mock, optional Cursor CLI, future MLX/HTTP) only as **backends**; they do not define REX’s agent product boundary. See [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md).
 
+Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md).
+
+## Isolated agent runtimes (conceptual)
+
+Future **managed environments** for orchestrated agent workloads (supervision, isolation, authorized paths to the daemon) are described in [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md). **Environment ownership** vs **third-party agent code** is [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). Implementation remains **incremental**; no commitment here that a VM or sidecar supervisor is already shipped.
+
 ## Goals and constraints
 
 | Goal | Measurable signal (directional) |
@@ -65,7 +71,7 @@ flowchart LR
 | `extensions/rex-vscode` | Chat UX, modes, approvals; shells out to CLI. | `implemented` — see [EXTENSION.md](EXTENSION.md). |
 | `rex-cli` | UDS client; NDJSON façade for editors. | `implemented` |
 | `rex-daemon` | Session authority: stream contract, pipeline, cache, adapters. | `implemented` core; routing/project-memory **planned** |
-| Sidecar plugins (future) | Optional processes for isolation or foreign runtimes. | `planned` — [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
+| Sidecar / isolated runtime (future) | Optional **environment** for isolation or foreign runtimes ([ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md)). | `planned` — [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 
 ## Components inside `rex-daemon` (C4 Level 3)
 

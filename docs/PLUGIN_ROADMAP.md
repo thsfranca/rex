@@ -1,6 +1,6 @@
 # Plugin and extensibility roadmap
 
-REX grows **in-process inference adapters** first, keeps **routing/caching/pipeline policy in `rex-daemon`**, and treats **gRPC sidecars** as **optional** isolation paths — not the default home for core economics. See [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md).
+REX grows **in-process inference adapters** first, keeps **routing/caching/pipeline policy in `rex-daemon`**, and treats **optional isolated runtimes** (historically “gRPC sidecars”) as **environment** for foreign stacks or fault isolation — not the default home for core economics. See [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). Concepts and transport options: [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md).
 
 ## Current purpose
 
@@ -86,4 +86,4 @@ Defer: Wasm plugins, unmanaged multi-plugin sprawl absent operator demand.
 
 ## Related
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) · [ADAPTERS.md](ADAPTERS.md)
+- [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) · [ADAPTERS.md](ADAPTERS.md) · [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) · [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md)

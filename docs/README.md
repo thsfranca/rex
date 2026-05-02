@@ -6,18 +6,20 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 |------|----------------|
 | **Tutorials** (first success path) | [README.md](../README.md) quickstart, [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) |
 | **How-to** (task recipes) | [EXTENSION_RELEASE.md](EXTENSION_RELEASE.md), [CONFIGURATION.md](CONFIGURATION.md), [CI.md](CI.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
-| **Explanation** (design intent) | [ARCHITECTURE.md](ARCHITECTURE.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
+| **Explanation** (design intent) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [ARCHITECTURE.md](ARCHITECTURE.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | **Reference** (narrow facts) | [ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [EXTENSION.md](EXTENSION.md), `proto/rex/v1/rex.proto`, [DOCUMENTATION.md](DOCUMENTATION.md) |
 
 ## Repository map (`docs/`)
 
 | Path | Purpose |
 |------|---------|
+| [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) | Project purpose and operating principles (canonical) |
 | [DOCUMENTATION.md](DOCUMENTATION.md) | Writing checklist + doc-type norms |
 | [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) | How to contribute and gate quality |
 | [PRIORITIZATION.md](PRIORITIZATION.md) | MoSCoW + quick R-ICE |
 | [ROADMAP.md](ROADMAP.md) | Now / Next / Later + engineering backlog IDs |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | SAD + C4-style views + links to ADRs |
+| [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Isolated agent runtimes + host–guest transport concepts |
 | [architecture/decisions/](architecture/decisions/) | ADR index + template |
 | [MVP_SPEC.md](MVP_SPEC.md) | Phase 1 protocol & acceptance |
 | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Daemon-first extensibility + optional sidecars |
@@ -47,6 +49,8 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Extension UX phasing | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 | MCP-style tool interoperability (planned) | [ARCHITECTURE.md](ARCHITECTURE.md) interoperability rows, matrix in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
+| Purpose and principles | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) |
+| Isolated agent runtime (concepts) | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md) |
 
 ## Scripts (related)
 

@@ -4,6 +4,8 @@ Pluggable backends behind **`InferenceRuntime`** (`crates/rex-daemon/src/adapter
 
 Product stance: **`rex-daemon` owns agent/economics policy** over time ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)); adapters produce **completion streams** subject to **`AdapterCapabilities`**. An external CLI may **loop internally**; REX still presents **one contract** to clients and controls **caching, pipeline stages, and adapter selection**.
 
+Isolated **agent runtime environments** (future) are **orthogonal** to **`InferenceRuntime`** wiring—see [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) and [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md).
+
 ## Purpose
 
 - Stay vendor-agnostic (mock, MLX future, HTTP future, **optional** Cursor subprocess).

@@ -21,3 +21,7 @@ The **rex-daemon** owns the **development agent boundary** over time:
 - **Positive:** Single place to add routing, metering, compaction, durable project memory without forking clients.
 - **Negative:** More logic eventually lives in the daemon; subprocess adapters must respect timeouts and terminals.
 - **Risks / follow-up:** Full tool orchestration MCP loop is **not** necessarily implemented yet; roadmap must separate **intent** vs **shipping state** in [ARCHITECTURE.md](../../ARCHITECTURE.md) and [MVP_SPEC.md](../../MVP_SPEC.md).
+
+## Related
+
+- [ADR 0005](0005-rex-owns-sidecar-environment-not-agent-implementations.md) — clarifies **environment supervision** vs third-party **agent implementations**.

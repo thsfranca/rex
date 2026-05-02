@@ -10,6 +10,7 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0002](0002-inference-adapter-contract.md) | Inference adapter contract and capabilities | Accepted |
 | [0003](0003-layered-cache-agent-mode-policy.md) | Layered cache and agent mode exclusions | Accepted |
 | [0004](0004-routing-daemon-first-optional-http-gateway.md) | Routing: daemon-first, optional HTTP gateway | Accepted |
+| [0005](0005-rex-owns-sidecar-environment-not-agent-implementations.md) | Rex owns sidecar environment, not third-party agent implementations | Accepted |
 
 ## How to use
 
