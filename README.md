@@ -1,18 +1,14 @@
 # REX
 
-REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns inference and stream lifecycle, while **thin clients** (CLI, VS Code/Cursor extension, scripts) talk to it over **gRPC on a Unix domain socket**. The repo is both a **learning lab** for AI infrastructure patterns and a **small, testable reference** for how to keep editor and automation surfaces stable while the engine evolves.
+**This repository is an experimental study project:** it exists to explore patterns (daemon-hosted inference, contracts, tooling, tests)—not as a finished product or supported distribution.
+
+REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns inference and stream lifecycle, while **thin clients** (CLI, VS Code/Cursor extension, scripts) talk to it over **gRPC on a Unix domain socket**. The repo is also a **learning lab** for AI infrastructure patterns and a **small, testable reference** for how to keep editor and automation surfaces stable while the engine evolves.
 
 ## Purpose
 
-- **Single runtime boundary.** One long-lived process holds model/runtime policy, queueing, and shutdown semantics so every client sees the same behavior.
-- **Stable tool contract.** Scripts and editors integrate through a narrow surface (`rex-cli` today, shared protobuf types in `rex-proto`) instead of each tool embedding inference details.
-- **Streaming-first correctness.** Server-streaming RPCs, explicit terminal states (`done` / `error`), and tests around UDS races and interruption mirror what production local runtimes need before real models land.
-- **Local-first cost control.** Route bounded tasks to smaller local/open models when possible, then escalate only hard tasks to stronger runtimes.
-- **Room to grow.** Mock inference sits behind a seam intended for Apple MLX, sidecar plugins, and richer policy later—without rewriting clients first.
+Canonical **purpose and operating principles** (single source of truth): **[docs/PURPOSE_AND_PRINCIPLES.md](docs/PURPOSE_AND_PRINCIPLES.md)**.
 
 **Configuration policy** (precedence, `REX_*` catalog, and roadmap for CLI and user config files): [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
-
-**Who it is for:** engineers studying daemon-hosted inference, gRPC streaming over UDS, and editor integration patterns; anyone building toward a personal or team **local-first** assistant on Mac.
 
 ## What works today (high-value capabilities)
 
@@ -23,14 +19,15 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 | **`rex-cli`** | `status` and `complete`; human output by default, **`--format ndjson`** for one JSON event per line (`chunk`, `done`, `error`) so extensions and CI can parse streams safely. |
 | **Startup and failure behavior** | Bounded retry when the daemon is still booting; clear CLI errors for unavailable daemon, interrupted streams, and bad stream endings. |
 | **VS Code / Cursor extension** | Activity-bar chat with streaming markdown, selection-based commands, optional **daemon auto-start**, and install/release docs—see [`extensions/rex-vscode/README.md`](extensions/rex-vscode/README.md) and [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md). |
-| **Default inference plugins** | **Mock** by default; **enable** the **Cursor CLI** plugin (for example `REX_INFERENCE_RUNTIME=cursor-cli`) to **forward prompts** for AI-assisted development—see [docs/ADAPTERS.md](docs/ADAPTERS.md) and [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
+| **Inference adapters** | **Mock** default; optional **`REX_INFERENCE_RUNTIME=cursor-cli`** subprocess (frontier/account models)—daemon keeps stream contract and policy; see [docs/ADAPTERS.md](docs/ADAPTERS.md) and [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
 | **Quality gates** | Workspace `cargo` checks plus UDS end-to-end tests covering failure paths, startup races, and post-interruption behavior (see [Operational checks](#operational-checks)). |
 
 ## Project status
 
-- **Phase 1 (local operator):** the **clone → daemon → REX chat** path is **documented and preflighted** — see **MVP local operator path** above, [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), and `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). The extension includes a **Get Started** walkthrough. Inference defaults to **mock**; an **enableable** **Cursor CLI** plugin and MLX swap-in are described in [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) and [`docs/ADAPTERS.md`](docs/ADAPTERS.md). **Dogfooding** and optional **AI-assisted** paths still follow the success criteria and “what remains” notes in [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) and [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md). A **what to do next** view is in [`docs/ROADMAP.md`](docs/ROADMAP.md); [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) explains light bucketing and scoring.
-- Current engineering focus: **reliable daemon–client streaming** and a **stable NDJSON contract** for the extension and other consumers.
-- Current product-learning focus: increase the share of requests handled by local/open runtimes through context optimization and selective escalation.
+- **Experimental scope:** APIs, docs, and behavior can change as the study evolves; use this workspace for learning and prototypes, not production SLAs.
+- **Phase 1 (local operator):** the **clone → daemon → REX chat** path is **documented and preflighted** — **MVP local operator path** above, [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). Inference defaults **mock**; optional **Cursor CLI** adapter documented in [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md), [`docs/ADAPTERS.md`](docs/ADAPTERS.md). Roadmap/economics: [`docs/ROADMAP.md`](docs/ROADMAP.md); bucketing: [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md).
+- Engineering focus: **stream reliability** plus **stable NDJSON** across CLI/extension.
+- Product-learning focus: daemon **economics** (routing, compaction, caches, metrics per [docs/CONTEXT_EFFICIENCY.md](docs/CONTEXT_EFFICIENCY.md)); implementation incremental.
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
 - Not primary scope yet: production-grade local runtime adapters beyond the MVP set (for example **MLX** / Ollama-class as first-class paths), remote networking/TLS, production auth, full **gRPC** plugin sidecar lifecycle.
 
@@ -151,7 +148,7 @@ In scope now:
 - Mock inference and shutdown lifecycle reliability.
 - **Editor path:** the VS Code/Cursor extension consumes **`rex-cli`** (including NDJSON streaming); the daemon does not host editor-specific RPCs.
 - **Dogfooding loop:** the extension + CLI path stays reliable enough to develop `rex` from inside the IDE.
-- **Default inference plugins:** **mock** by default; **enable** the **Cursor CLI** plugin to **forward prompts** (minimum for AI-assisted `rex` development in MVP).
+- **Inference adapters:** **mock** by default; optional **Cursor CLI** subprocess when enabled (`REX_INFERENCE_RUNTIME=cursor-cli`), not treated as owning the REX agent story—[docs/MVP_SPEC.md](docs/MVP_SPEC.md).
 
 Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 
@@ -164,20 +161,21 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | Document | Purpose |
 |---|---|
 | [`docs/README.md`](docs/README.md) | Documentation index and reading order. |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture and long-term direction. |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | SAD-style architecture (C4 views, quality attributes, observability/security) + links to ADRs. |
+| [`docs/architecture/decisions/`](docs/architecture/decisions/) | ADRs (daemon/agent boundary, adapters, cache policy, routing vs gateway). |
 | [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) | Phase 1 scope, protocol, and acceptance criteria. |
-| [`docs/REFACTOR_PROPOSALS.md`](docs/REFACTOR_PROPOSALS.md) | Engineering refactor backlog (stable IDs; status and dependency lines). |
-| [`docs/EXTENSION_MVP.md`](docs/EXTENSION_MVP.md) | Cursor extension bootstrap path using CLI NDJSON streaming. |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Consolidated backlog; engineering refactor IDs (**R004**–**R008**) live in-table. |
+| [`docs/EXTENSION.md`](docs/EXTENSION.md) | NDJSON consumer contract, extension bootstrap path, component layout (replaces superseded MVP/architecture stubs). |
 | [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md) | Phased roadmap for the VS Code/Cursor extension. |
-| [`docs/EXTENSION_ARCHITECTURE.md`](docs/EXTENSION_ARCHITECTURE.md) | Extension component layout and typed message bus. |
 | [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) | Install, daemon auto-start, troubleshooting, and release pipeline for the extension. |
-| [`docs/PLUGIN_ROADMAP.md`](docs/PLUGIN_ROADMAP.md) | Sidecar-first plugin roadmap, built-in promotion gates, Cursor adapter phased track. |
+| [`docs/PLUGIN_ROADMAP.md`](docs/PLUGIN_ROADMAP.md) | Daemon-first extensibility; optional sidecars; Cursor adapter phased track. |
 | [`docs/ADAPTERS.md`](docs/ADAPTERS.md) | Inference adapter contract, capabilities, and Cursor CLI profile. |
 | [`docs/CACHING.md`](docs/CACHING.md) | Layered response cache design: keys, mode safety, bypass. |
-| [`docs/CONTEXT_EFFICIENCY.md`](docs/CONTEXT_EFFICIENCY.md) | Token budget contracts, context pipeline, capability-aware policy, telemetry defaults. |
+| [`docs/CONTEXT_EFFICIENCY.md`](docs/CONTEXT_EFFICIENCY.md) | Context pipeline + **economics lever matrix** (routing, caches, compaction, MCP, approvals, LTM linkage). |
 | [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Local build/runtime prerequisites by layer. |
 | [`docs/CI.md`](docs/CI.md) | CI strategy, gate contracts, and merge protections. |
 | [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) | Documentation checklist and writing standards. |
+| [`docs/LONG_TERM_MEMORY.md`](docs/LONG_TERM_MEMORY.md) | Long-term memory design hub (**bets**, optimization-first; not Phase 1). |
 
 ## Workspace layout
 

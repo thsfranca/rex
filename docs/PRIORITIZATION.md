@@ -15,7 +15,7 @@ Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view. Deeper lists liv
 
 | Bucket | Definition for this repo |
 |--------|--------------------------|
-| **Must** | Breaks the contract, safety, or CI, or blocks the main learning loop (daemon + UDS + streaming + NDJSON + **enableable** **Cursor CLI** prompt forwarding in MVP, when you rely on that path). |
+| **Must** | Breaks contract, safety, or CI—or blocks daemon + UDS + streaming + NDJSON; optional **`REX_INFERENCE_RUNTIME=cursor-cli`** path documented when relied on locally. Economics docs + matrix must remain coherent ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)). |
 | **Should** | Clear **learning** or “local demo” value; risk is manageable; fits [ARCHITECTURE.md](ARCHITECTURE.md) and [ADAPTERS.md](ADAPTERS.md). |
 | **Could** | A solid next step after current items; more work or groundwork first. |
 | **Won’t (now)** | **Parked** for this period. Add a **pointer** in a design doc so the idea can be picked up later with context (see [DOCUMENTATION.md](DOCUMENTATION.md) for how we write scope). |

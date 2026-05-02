@@ -2,6 +2,8 @@
 
 This document describes how REX layers **application-level** caching in front of inference. Provider-native prompt or KV cache inside a model vendor (when you do not own the runtime) is out of scope here; that behavior is a bonus, not a dependency for REX correctness.
 
+**Economics context:** see canonical lever matrix in [`CONTEXT_EFFICIENCY.md`](CONTEXT_EFFICIENCY.md) and [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md).
+
 ## Goals
 
 - Reduce **latency and cost** on repeated or near-identical work.

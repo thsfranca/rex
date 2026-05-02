@@ -1,7 +1,7 @@
 /**
  * Pure, dependency-free NDJSON line parser for `rex-cli --format ndjson` streams.
  *
- * The upstream contract defined in `docs/EXTENSION_MVP.md` is:
+ * The upstream contract defined in `docs/EXTENSION.md` is:
  * - one JSON object per stdout line;
  * - exactly one terminal event (`done` or `error`);
  * - events: `chunk` (`event`, `index`, `text`), `done` (`event`, `index`),

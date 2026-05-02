@@ -1,0 +1,15 @@
+---
+description: Markdown expectations scoped to Rex docs/DOCUMENTATION.md and docs tree
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+# Rex docs — alignment with DOCUMENTATION.md
+
+## Rules
+
+- Follow [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md) for writing norms and checklist items.
+- When [docs/PURPOSE_AND_PRINCIPLES.md](docs/PURPOSE_AND_PRINCIPLES.md) exists, **do not contradict** it in new or materially edited `docs/**/*.md` prose; prefer linking to it for project intent. Update that file when purpose or principles change.
+- For **major product features**, keep **one** canonical explanation hub under `docs/`; put definitions, bets, and interface intent **there**. ADRs under `docs/architecture/decisions/` record **accepted decisions**.
+- Prefer **links** from roadmaps and overview docs to that hub instead of repeating full bullet inventories; one-line status references (planned, implemented, bet) are acceptable.
+- If this rule and `DOCUMENTATION.md` disagree on **writing norms or hub rules**, **`DOCUMENTATION.md` wins.** If a secondary doc and `PURPOSE_AND_PRINCIPLES.md` disagree on **purpose or principles**, **`PURPOSE_AND_PRINCIPLES.md` wins** (update it deliberately when intent changes).
