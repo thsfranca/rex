@@ -1,0 +1,23 @@
+# Architecture Decision Records (ADRs)
+
+REX logs **accept/reject architectural choices** here so rationale survives chat and onboarding.
+
+## Index
+
+| ADR | Title | Status |
+|-----|-------|--------|
+| [0001](0001-daemon-owns-agent-orchestration-and-economics.md) | Daemon owns agent orchestration and economics | Accepted |
+| [0002](0002-inference-adapter-contract.md) | Inference adapter contract and capabilities | Accepted |
+| [0003](0003-layered-cache-agent-mode-policy.md) | Layered cache and agent mode exclusions | Accepted |
+| [0004](0004-routing-daemon-first-optional-http-gateway.md) | Routing: daemon-first, optional HTTP gateway | Accepted |
+
+## How to use
+
+1. Copy [TEMPLATE.md](TEMPLATE.md).
+2. Name files `NNNN-short-title.md` (sequential **number**, kebab-case **title**).
+3. Fill **Status:** `Accepted` | `Superseded by ADR XXXX` | `Deprecated`.
+4. When superseding: add a **Supersedes:** line on the new ADR and amend the superseded ADR status.
+
+## Relation to code
+
+Decisions attach to the **architecture description** in [../ARCHITECTURE.md](../ARCHITECTURE.md).

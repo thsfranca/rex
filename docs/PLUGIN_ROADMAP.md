@@ -1,188 +1,89 @@
-# Plugin Roadmap (Sidecar-First)
+# Plugin and extensibility roadmap
 
-This roadmap defines how REX grows **in-process inference plugins (adapters)** in MVP and **gRPC sidecar** plugins afterward, while keeping the daemon lightweight.
+REX grows **in-process inference adapters** first, keeps **routing/caching/pipeline policy in `rex-daemon`**, and treats **gRPC sidecars** as **optional** isolation paths — not the default home for core economics. See [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md).
 
 ## Current purpose
 
-- Deliver a local completion product that extensions can consume reliably.
-- Keep `rex-daemon` focused on core runtime responsibilities.
-- **MVP:** ship **enableable** **in-process** inference plugins (mock default, **Cursor CLI** to forward prompts); **post-MVP:** add user-facing value through **gRPC sidecars** before promoting features into the daemon.
-- Increase the share of requests solved on local/open models through context optimization and selective escalation.
+- Ship reliable **StreamInference** surfaces for extensions and CLI consumers.
+- Concentrate **cost/performance levers** ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)) in the daemon boundary.
+- Offer **mock** everywhere; **Cursor CLI** as **one optional subprocess adapter** (`REX_INFERENCE_RUNTIME=cursor-cli`).
+- Optionally supervise **foreign-runtime** workloads via sidecars **after** the single-process story is boring.
 
-## Cursor CLI plugin (MVP, enableable)
+## Optional Cursor CLI adapter (enable)
 
-- **MVP** includes this as a **default, enableable** inference plugin: it **forwards prompts** to the Cursor CLI for AI-assisted `rex` development. Set `REX_INFERENCE_RUNTIME=cursor-cli` on `rex-daemon` to enable it.
-- **Default** when unset or `mock`: the mock runtime (CI and headless automation stay on mock unless you opt in).
-- Optional overrides:
-  - `REX_CURSOR_CLI_PATH` selects the CLI binary (defaults to `cursor-agent`).
-  - `REX_CURSOR_CLI_COMMAND` runs a full shell command template; use `{prompt}` for the user text.
-  - `REX_CURSOR_CLI_TIMEOUT_SECS` bounds execution time (defaults to `20`).
-- Do not require the real Cursor CLI in **default CI**; keep **mock** as the default for automated checks unless [DEPENDENCIES.md](DEPENDENCIES.md) and workflows explicitly add the tool.
+- Env: **`REX_INFERENCE_RUNTIME=cursor-cli`** on `rex-daemon`.
+- Overrides: **`REX_CURSOR_CLI_PATH`** (defaults `cursor-agent`), **`REX_CURSOR_CLI_COMMAND`** (`{prompt}` template), **`REX_CURSOR_CLI_TIMEOUT_SECS`** (default `20`).
+- CI: keep **`mock`** default — [DEPENDENCIES.md](DEPENDENCIES.md), [CI.md](CI.md).
 
-## Related implementation docs
+## Daemon-first principle
 
-- Read `docs/CONTEXT_EFFICIENCY.md` for current token budget contracts, plugin boundaries, and local telemetry defaults.
-- Read `docs/ADAPTERS.md` for the inference adapter seam, Cursor CLI profile, and capabilities.
-- Read `docs/CACHING.md` for layered cache keys, mode safety, and bypass semantics.
+| Principle | Meaning |
+|-----------|---------|
+| Policy in-core | Routing decisions, caches, budgets, terminal stream semantics owned by **`rex-daemon`**. |
+| Adapters dumb-ish | Produce **model-facing** output from an **effective** prompt under **capability** flags — [ADAPTERS.md](ADAPTERS.md). |
+| Sidecars opt-in | Use when **process isolation**, **language ecosystem**, or **crash containment** wins over integration cost. |
 
-## Principles
+## Placement decision gate (revised)
 
-- Prefer sidecars/plugins by default.
-- Keep built-in scope small until evidence justifies expansion.
-- Ship in small, reviewable changes with clear acceptance criteria.
-- Keep transport and contracts stable while iterating feature logic.
-- Treat token budget as a product constraint: optimize context first, then escalate model/runtime only when quality requires it.
-
-## Sidecar-first decision gate
-
-Use this gate for every new feature.
-
-| Question | If yes | If no |
+| Question | Prefer **in-daemon** | Prefer **sidecar** |
 |---|---|---|
-| Does it require deep model runtime control (KV cache, memory scheduler, tokenizer internals)? | Consider built-in | Keep as plugin |
-| Must it be non-bypassable for compliance or safety? | Consider built-in | Keep as plugin |
-| Can teams benefit from fast iteration and replacement? | Keep as plugin | Consider built-in later |
-| Can it fail independently without breaking core completion flow? | Keep as plugin | Consider built-in |
+| Must every request honor it for economics/safety? | Yes | Rare exception |
+| Does it need another language runtime or ML stack you do not want in the Rust binary? | No | Yes |
+| Should a fault be contained without taking down the daemon? | No | Yes |
+| Is it pure experimentation with uncertain retention? | No (prototype behind flag) | Sometimes |
 
-Default outcome: keep the feature as a sidecar/plugin.
+**Default:** implement in **`rex-daemon`** until isolation evidence appears.
 
-## Candidate features from common local-AI pains
+### Feature placement (versus earlier sidecar-first notes)
 
-### 1) Prompt/context cache
-
-- **User pain:** repeated prompts waste time and cost.
-- **Feature:** exact + semantic cache for repeated context blocks.
-- **Default placement:** sidecar.
-- **Why now:** fast user-visible latency win with low daemon complexity.
-- **Promote to built-in when:** cache must integrate tightly with model internals.
-
-### 2) Request observability
-
-- **User pain:** teams cannot debug slow or low-quality responses quickly.
-- **Feature:** request traces, latency, token/cost counters, error taxonomy.
-- **Default placement:** sidecar.
-- **Why now:** enables quality and reliability iteration without daemon bloat.
-- **Promote to built-in when:** always-on telemetry must be guaranteed with minimal dependency surface.
-
-### 3) Context shaping
-
-- **User pain:** context slop causes irrelevant or unstable responses.
-- **Feature:** filter, rank, and trim context before inference.
-- **Default placement:** sidecar.
-- **Why now:** experimentation-heavy logic that benefits from rapid iteration.
-- **Promote to built-in when:** product requires deterministic context policy everywhere.
-
-### 4) Hybrid local/cloud routing
-
-- **User pain:** local models are cheap/private but weaker on hard tasks.
-- **Feature:** local-first routing with fallback/escalation policies.
-- **Default placement:** sidecar.
-- **Why now:** unlocks quality gains without expanding daemon core.
-- **Promote to built-in when:** routing guarantees become core product behavior.
-
-### 5) Guardrails and policy
-
-- **User pain:** risk of leaking secrets or generating unsafe code.
-- **Feature:** PII redaction, policy checks, and response filtering.
-- **Default placement:** sidecar.
-- **Why now:** policy changes often and varies by environment.
-- **Promote to built-in when:** enforcement must be mandatory and non-bypassable.
-
-## Cursor CLI inference adapter (phased design track)
-
-This track describes how REX routes prompts to the Cursor CLI as one `InferenceRuntime` implementation. **MVP** covers the **in-process** adapter (enableable default plugin) and phases **1**–**2** below. **gRPC sidecar** hosting of the same contract aligns with the **sidecar-first** gate and can follow without changing the public client surface.
-
-| Phase | Outcome | Completion signal |
+| Area | Placement | Notes |
 |---|---|---|
-| 1 — Adapter seam | A public, **streaming** `InferenceRuntime` surface, `InferenceRequest` metadata, and `AdapterCapabilities`. Mock remains default. | New adapters can be registered; stream terminal semantics preserved. |
-| 2 — Cursor adapter | `cursor-cli` profile: `ask` mode, spawn CLI with **typed output** (for example json), **timeout** and kill, no response cache. | `complete` with Cursor installed returns streamed text; hangs become terminal `error` within a bounded time. |
-| 3 — Layered cache | L1 **exact** cache in front of the runtime (keyed by adapter, model, mode, schema, workspace; **never** `agent`). | Repeated safe-mode prompts can report `cache=hit` in metrics; bypass still works. |
-| 4 — Proto and CLI | Optional `StreamInference` fields and CLI flags for `mode` and `model` (backward compatible). | `plan` and `agent` can be set explicitly; defaults unchanged for old clients. |
-| 5 — Model `auto` | Pass `auto` (or `default` mapping) into the adapter per `docs/ADAPTERS.md`. | Documented `auto` behavior; fallback path when a flag is unsupported. |
-| 6 — L2 semantic cache (optional) | **Ask mode** only; embedding similarity with threshold and guard rails. | Feature can stay off; when on, false-positive rate is within an agreed SLO. |
+| L1/L2/policy caches | **Daemon** — today L1 [`l1_cache.rs`](../crates/rex-daemon/src/l1_cache.rs) | L2 future — [CACHING.md](CACHING.md) |
+| Request tracing tokens | **Daemon** stdout fields | correlate extension / CLI |
+| Context shaping / compaction | **Daemon pipeline** hooks | isolate heavy ML in sidecar **if** ONNX/Python becomes mandatory |
+| Hybrid routing cascades | **Daemon** router (planned) | optional HTTP backends still adapters — [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
 
-**Status (this repo):** Phases **1** and **2** are implemented in `crates/rex-daemon` (adapter seam, mock default, `cursor-cli` profile with spawn/timeout behavior and readable error hints). Phase **3** (L1 exact cache) and **4** (optional `model` / `mode` on the request and on `rex-cli complete`) are implemented for in-process L1 and protobuf **StreamInference** fields; L2, model `auto`, and sidecar migration remain future work. See [CACHING.md](CACHING.md) and [ROADMAP.md](ROADMAP.md).
+## Cursor CLI adapter phases
 
-**Dependency note:** early work can run **in-process** in `rex-daemon`. Moving the adapter to a process boundary is a natural fit after **sidecar platform Phase 1 (plugin contract and lifecycle baseline)**; that step supplies supervision, health, and restarts for out-of-tree plugins.
+| Phase | Outcome |
+|---|---|---|
+| 1 — Adapter seam | `InferenceRuntime`, metadata, **`AdapterCapabilities`**. Mock default. |
+| 2 — Cursor spawn | Bounded subprocess + typed stdout → stream; terminal errors mapped. |
+| 3 — L1 cache | **`ask`**-only exact cache; **`agent`** excluded — see [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md). |
+| 4 — Proto / CLI knobs | **`model`** / **`mode`** fields already in proto; widen adapter use. |
+| 5 — Model `auto` | Document semantics per adapter profile. |
+| 6 — L2 semantic cache | **`ask`** only; strict guards. |
 
-## Sidecar platform (phased delivery)
+**Repo status:** Phases **1–3 partial** landed (adapter + L1 **`ask`** + proto fields exist). **`auto`**, semantic L2, sidecar-hosted adapter migration remain backlog.
 
-Goal: add plugin value in low-risk slices while preserving daemon simplicity.
+Hosting the Cursor adapter behind a future **process boundary** duplicates the **`InferenceRuntime`** contract without altering `rex.v1` consumers.
 
-### Phase 1: Plugin contract and lifecycle baseline
+## Optional sidecar platform (defer heavy investment)
 
-- **Outcome:** daemon can load and supervise one sidecar plugin reliably.
-- **Scope:**
-  - Define plugin metadata contract (runtime, version, entrypoint, capabilities).
-  - Add health-check and readiness handshake.
-  - Add timeout/restart/shutdown policy for one plugin process.
-- **Acceptance criteria:**
-  - Daemon starts with no plugin configured.
-  - Daemon starts and routes with one healthy plugin.
-  - Daemon surfaces clear error when plugin fails readiness.
+Incremental slices if/when justified — **failure isolation** emphasis:
 
-### Phase 2: Observability plugin
+### Phase Sidecar lifecycle baseline
 
-- **Outcome:** request-level insight for debugging and tuning.
-- **Scope:**
-  - Add sidecar that records request/response timing and terminal status.
-  - Emit structured events that CLI and extension flows can correlate.
-- **Acceptance criteria:**
-  - Each completion request has a trace id.
-  - Latency and terminal status are visible for success and failure paths.
-  - Failure events include actionable reason categories.
+Daemon supervises **0 or 1** plugin process — health probes, timeouts, restart policy.
 
-### Phase 3: Prompt/context cache plugin
+### Later optional tracks
 
-- **Outcome:** lower latency for repeated context-heavy requests.
-- **Scope:**
-  - Add sidecar cache with configurable key strategy and TTL.
-  - Support cache bypass flag for diagnostics.
-- **Acceptance criteria:**
-  - Repeated prompt segments can produce cache hits.
-  - Cache hit/miss status appears in observability output.
-  - Cache bypass reliably forces model path.
+Observation export, auxiliary cache/process for exotic ML codecs, experimentation-only context rankers — only if duplicates logic **not worth** compiling into core.
 
-### Phase 4: Context shaping plugin
+Defer: Wasm plugins, unmanaged multi-plugin sprawl absent operator demand.
 
-- **Outcome:** improve completion quality by reducing irrelevant context.
-- **Scope:**
-  - Add plugin that scores and trims candidate context blocks.
-  - Keep fallback to pass-through mode.
-- **Acceptance criteria:**
-  - Plugin can run in enforce and observe-only modes.
-  - Pass-through mode preserves MVP behavior.
-  - Extension consumer still receives valid stream terminal events.
+## What stays built-in
 
-### Phase 5: Hybrid routing plugin (optional)
+- Socket + stream lifecycle correctness.
+- `InferenceRuntime` registration + **`AdapterCapabilities`** gating ([ADR 0002](architecture/decisions/0002-inference-adapter-contract.md)).
+- Scheduling/cancellation scaffolding.
 
-- **Outcome:** balance local cost/privacy with quality on hard tasks.
-- **Scope:**
-  - Add policy-driven local-first routing with explicit fallback triggers.
-  - Add routing decision metadata to observability output.
-- **Acceptance criteria:**
-  - Local-first path remains default.
-  - Fallback is explicit, logged, and testable.
-  - Failures preserve clear terminal error semantics.
+## Success metrics
 
-## What stays built-in for now
+- Terminal stream invariant preserved (`done` XOR `error` equivalence at client).
+- Repeated safe prompts measurable via **`l1_cache=hit`**.
+- Sidecar outages (when used) downgrade gracefully without crashing daemon.
 
-- Socket lifecycle and local transport ownership.
-- Core request validation and stream terminal semantics.
-- Minimal scheduling and cancellation control.
-- Typed errors and reliability guarantees for daemon startup/shutdown.
+## Related
 
-## What to defer
-
-- Wasm plugin runtime host.
-- Full multi-plugin orchestration complexity.
-- Heavy policy engines inside daemon code.
-- Feature expansion that does not improve completion quality, reliability, or developer feedback loop.
-
-## Success metrics for roadmap execution
-
-- Median completion latency improves on repeated requests.
-- Stream terminal correctness remains stable (`done` or `error`, exactly one).
-- Plugin failures do not crash the daemon.
-- Extension consumer path stays backwards compatible.
-- Daemon code growth stays controlled relative to plugin code growth.
+- [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) · [ADAPTERS.md](ADAPTERS.md)

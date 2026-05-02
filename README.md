@@ -166,10 +166,9 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | [`docs/README.md`](docs/README.md) | Documentation index and reading order. |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System architecture and long-term direction. |
 | [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) | Phase 1 scope, protocol, and acceptance criteria. |
-| [`docs/REFACTOR_PROPOSALS.md`](docs/REFACTOR_PROPOSALS.md) | Engineering refactor backlog (stable IDs; status and dependency lines). |
-| [`docs/EXTENSION_MVP.md`](docs/EXTENSION_MVP.md) | Cursor extension bootstrap path using CLI NDJSON streaming. |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Consolidated backlog; engineering refactor IDs (**R004**–**R008**) live in-table. |
+| [`docs/EXTENSION.md`](docs/EXTENSION.md) | NDJSON consumer contract, extension bootstrap path, component layout (replaces superseded MVP/architecture stubs). |
 | [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md) | Phased roadmap for the VS Code/Cursor extension. |
-| [`docs/EXTENSION_ARCHITECTURE.md`](docs/EXTENSION_ARCHITECTURE.md) | Extension component layout and typed message bus. |
 | [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) | Install, daemon auto-start, troubleshooting, and release pipeline for the extension. |
 | [`docs/PLUGIN_ROADMAP.md`](docs/PLUGIN_ROADMAP.md) | Sidecar-first plugin roadmap, built-in promotion gates, Cursor adapter phased track. |
 | [`docs/ADAPTERS.md`](docs/ADAPTERS.md) | Inference adapter contract, capabilities, and Cursor CLI profile. |
@@ -178,6 +177,7 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Local build/runtime prerequisites by layer. |
 | [`docs/CI.md`](docs/CI.md) | CI strategy, gate contracts, and merge protections. |
 | [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) | Documentation checklist and writing standards. |
+| [`docs/LONG_TERM_MEMORY.md`](docs/LONG_TERM_MEMORY.md) | Long-term memory design hub (**bets**, optimization-first; not Phase 1). |
 
 ## Workspace layout
 

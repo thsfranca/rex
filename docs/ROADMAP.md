@@ -2,25 +2,28 @@
 
 Rex is a **learning lab** and **small, testable reference** for local daemon + gRPC + thin clients ([README.md](../README.md)). This file is a **short** “what to explore next” view; deeper design is in the linked docs. [PRIORITIZATION.md](PRIORITIZATION.md) describes **light** bucketing and R-ICE-style scoring for ordering ideas.
 
-**Spec and extension:** [MVP_SPEC.md](MVP_SPEC.md) defines the **Phase 1** protocol slice, including **enableable** default **inference plugins** (mock default, **Cursor CLI** to forward prompts); the [VS Code / Cursor extension](EXTENSION_ROADMAP.md) implements the `rex-cli` NDJSON path in the editor. Cross-links between those docs keep scope clear.
+**Spec and extension:** [MVP_SPEC.md](MVP_SPEC.md) scopes **Phase 1** protocol and shipped inference adapters; **[EXTENSION.md](EXTENSION.md)** captures the NDJSON consumer contract plus extension architecture; phased UX work stays in [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md).
 
 ## What we are learning toward (right now)
 
-**Primary focus:** a **reliable** local path: **daemon** on a **UDS**, **gRPC** streaming, **NDJSON** for tools, **mock** inference by default, and enough **tests and docs** to repeat the same run. **MVP** also includes the **enableable** **Cursor CLI** inference plugin (prompt forwarding) as the **minimum** for **AI-assisted** `rex` development; automation keeps **mock** unless opt-in. Build toward **local-first execution** by improving context quality-per-token and escalating to stronger runtimes only for harder tasks. **Optional** add-ons (for example layered cache beyond what ships) stay **documented, incremental, and compatible** with the default loop and with [CI](CI.md) expectations.
+**Primary product direction:** **`rex-daemon` owns** the development **agent economics surface** — routing hooks, caches, pipelines, observability ([ARCHITECTURE.md](ARCHITECTURE.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [architecture/decisions/](architecture/decisions/)). Equally critical with transport: **reliable UDS**, **gRPC streaming**, **NDJSON**. **mock** inference default; **`REX_INFERENCE_RUNTIME=cursor-cli`** optional adapter for frontier access — CI stays **mock** unless deliberately extended. Prefer **daemon-first** optimizations; optional **sidecars** only after core economics are legible.
 
 ## Theme order (rough dependency mental model)
 
 ```mermaid
 flowchart LR
   core[CoreStreamingAndContract]
+  econ[DaemonEconomicsAndRouting]
   cli[CliNdjson]
   ext[ExtensionReliability]
   adapter[InferenceAdapters]
-  plugins[PluginSidecars]
+  sidecars[OptionalSidecars]
   core --> cli
+  core --> econ
   core --> ext
   core --> adapter
-  adapter --> plugins
+  econ --> adapter
+  adapter --> sidecars
 ```
 
 ## Now — what matters first
@@ -28,9 +31,10 @@ flowchart LR
 | Priority | What / why | Source(s) | “Done enough” for a study cut | Where to work |
 |----------|------------|-----------|--------------------------------|---------------|
 | **Must** | UDS + gRPC + streaming **correct** under bad paths (races, cancel, errors) | [MVP_SPEC.md](MVP_SPEC.md), [ARCHITECTURE.md](ARCHITECTURE.md) | E2E/unit coverage + [CI](CI.md) green | daemon, rex-proto, rex-cli |
-| **Must** | `rex-cli complete --format ndjson` stays line-safe and has **one** terminal event | [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_MVP.md](EXTENSION_MVP.md) | Tests + `MVP_SPEC` checklist | rex-cli, docs |
+| **Must** | **Economics groundwork** documented + measurable signals started (optimization matrix **implemented**; router **planned**) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | Matrix + ADRs land; daemon logs/cache fields ready for eventual routing IDs | daemon, docs |
+| **Must** | `rex-cli complete --format ndjson` stays line-safe and has **one** terminal event | [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION.md](EXTENSION.md) | Tests + `MVP_SPEC` checklist | rex-cli, docs |
 | **Must** | IDE dogfooding loop stays usable: develop `rex` via the extension without leaving the editor path | [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | Local E2E run confirms send/cancel/retry/status flow remains stable for normal coding sessions | extension, rex-cli, daemon |
-| **Must** | **Default inference plugins:** mock default; **Cursor CLI** enableable, **forwards prompts**, bounded and terminal-correct for NDJSON | [MVP_SPEC.md](MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md) | `REX_INFERENCE_RUNTIME=cursor-cli` path documented and testable locally; default **CI** remains **mock** per [DEPENDENCIES.md](DEPENDENCIES.md) | daemon |
+| **Must** | **Inference adapters:** **mock** default; **Cursor CLI** optional subprocess, bounded + terminal-correct | [MVP_SPEC.md](MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md) | Stub + optional real CLI path documented; **CI mock** — [DEPENDENCIES.md](DEPENDENCIES.md) | daemon |
 | **Should** | Logs you can **read** when something fails (trace, terminal paths) | [ARCHITECTURE.md](ARCHITECTURE.md) | No silent hang; enough context to debug | daemon |
 | **Should** | Extension chat stays **usable** (cancel, status, clean return to idle) | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | “What remains” shrinks without breaking NDJSON | `extensions/rex-vscode` |
 
@@ -44,15 +48,16 @@ flowchart LR
 
 | Priority | What / why | Source(s) | “Done enough” (examples) | Where to work |
 |----------|------------|-----------|---------------------------|---------------|
-| **Should** | L1 **exact** response cache (safe modes) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [CACHING.md](CACHING.md) | In-memory LRU + `l1_cache=hit` in daemon logs; **agent** / **plan** not served from L1 | daemon (`l1_cache` module) |
 | **Should** | Optional **mode/model** on the wire and CLI, backward compatible | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md) | Proto + `rex-cli` flags; [CONFIGURATION.md](CONFIGURATION.md) | `proto/`, `rex-proto`, `rex-cli`, daemon |
-| **Should** | Adaptive retrieval gate: retrieve only when needed, then expand context progressively | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Lower average context tokens with no quality regression on local eval set | daemon + sidecar plugin |
-| **Should** | Query-aware prompt/context compression before local inference | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADAPTERS.md](ADAPTERS.md) | Fewer input tokens per request while preserving terminal correctness and answer utility | daemon + sidecar plugin |
-| **Could** | Difficulty-based routing cascade (small local model first, escalate only hard tasks) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ARCHITECTURE.md](ARCHITECTURE.md) | Local-first path handles bounded tasks; escalation policy is explicit and testable | daemon + sidecar plugin |
-| **Could** | **One** sidecar / plugin process supervised by the daemon | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [MVP_SPEC.md](MVP_SPEC.md) (sidecar sketch) | 0 or 1 plugin, clear errors | daemon |
+| **Should** | Adaptive retrieval gate: retrieve only when needed, then expand context progressively | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Lower average context tokens with measurable eval | daemon pipeline (optional sidecar only if justified) |
+| **Should** | Query-aware prompt/context compression before local inference | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADAPTERS.md](ADAPTERS.md) | Fewer tokens; terminal correctness preserved | daemon pipeline |
+| **Could** | Difficulty-based routing cascade (cheap local → escalate hard tasks) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ARCHITECTURE.md](ARCHITECTURE.md) | Explicit policy + logs ([ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md)) | daemon |
+| **Later** | **One** supervised sidecar process (optional isolation) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | 0 or 1 plugin, clear degraded-mode errors | daemon |
 | **Could** | **Context** pipeline / token-budget per [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Respects adapter capabilities; docs stay true | daemon |
 
-**Scope note (Next — L1 and mode/model):** [CACHING.md](CACHING.md) and [CONFIGURATION.md](CONFIGURATION.md) track behavior; the editor extension can pass `--model` / `--mode` in a follow-up if needed (CLI supports them; NDJSON line shape unchanged).
+**Scope note (L1 cache shipped):** In-process **L1 exact** cache for **`ask`** with `l1_cache=hit` logs — [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md).
+
+**Scope note (Next — mode/model):** [CACHING.md](CACHING.md) and [CONFIGURATION.md](CONFIGURATION.md) track behavior; the editor extension can pass `--model` / `--mode` in a follow-up if needed (CLI supports them; NDJSON line shape unchanged).
 
 **Scope note (Next — optimization evidence):** prioritize context-quality-per-token work backed by current evidence: adaptive retrieval ([Self-RAG](https://arxiv.org/abs/2310.11511)), prompt compression ([LLMLingua](https://arxiv.org/abs/2310.05736)), and context-order sensitivity in long prompts ([Lost in the Middle](https://aclanthology.org/2024.tacl-1.9/)). For routing/cascades, use budgeted model escalation patterns ([A Unified Approach to Routing and Cascading for LLMs](https://proceedings.mlr.press/v267/dekoninck25a.html)).
 
@@ -62,7 +67,18 @@ flowchart LR
 |----------|------|-----------|--------|
 | **Could** | L2 **semantic** cache, careful | [CACHING.md](CACHING.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Can stay off a long time |
 | **Could** | **Apple MLX** local model path | [ARCHITECTURE.md](ARCHITECTURE.md), [MVP_SPEC.md](MVP_SPEC.md) | Post-“core is boring” |
-| **Could** | More sidecars, hybrid routing | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | When one-plugin story exists |
+| **Later** | More sidecars or gateway adapters | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | After daemon router story matures |
+
+## Engineering backlog (refactor / contract IDs)
+
+Migrated from superseded **`REFACTOR_PROPOSALS`** list — IDs kept for continuity.
+
+| ID | Theme | Priority |
+|----|-------|----------|
+| R004 | CLI / extension NDJSON seam hardening | READY |
+| R005 | Cross-boundary contract conformance tests | NEW |
+| R007 | Mode orchestrator unified policy boundary | NEW |
+| R008 | Agent execution approvals / checkpoints centralized | NEW |
 
 ## Parked in design docs
 
@@ -73,6 +89,7 @@ flowchart LR
 | **On-disk** config, **`rex config`**, file precedence beyond env | **Precedence and migration** are specified and testable | [CONFIGURATION.md](CONFIGURATION.md) |
 | **Node gRPC** in the extension (vs `rex-cli`) | Extension **Non-goals** in the design are revisited | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) **Non-goals** |
 | **Large** multi-plugin orchestration | **Single-plugin** supervision is stable and documented | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
+| **Long-term / project memory** (durable store, retrieval, governance) | **Daemon economics** path is clear; treat as **design bet** until implemented | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 
 **CI:** Default automation follows [CI.md](CI.md) with **mock** / self-contained checks. **Cursor CLI** on shared runners is in scope for **required** jobs when [DEPENDENCIES.md](DEPENDENCIES.md) and the workflow **define** that path.
 
