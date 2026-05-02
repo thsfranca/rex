@@ -1,0 +1,14 @@
+---
+description: Markdown expectations scoped to Rex docs/DOCUMENTATION.md and docs tree
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+# Rex docs — alignment with DOCUMENTATION.md
+
+## Rules
+
+- Follow [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md) for writing norms and checklist items.
+- For **major product features**, keep **one** canonical explanation hub under `docs/`; put definitions, bets, and interface intent **there**. ADRs under `docs/architecture/decisions/` record **accepted decisions**.
+- Prefer **links** from roadmaps and overview docs to that hub instead of repeating full bullet inventories; one-line status references (planned, implemented, bet) are acceptable.
+- If this rule and `DOCUMENTATION.md` disagree, **`DOCUMENTATION.md` wins.**

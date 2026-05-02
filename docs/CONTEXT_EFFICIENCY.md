@@ -2,6 +2,8 @@
 
 This guide defines how REX reduces token usage and local compute for coding workflows.
 
+**Hub:** Canonical **economics lever matrix** ([below](#economics-lever-matrix-rex-vs-product-techniques)) + system views in [ARCHITECTURE.md](ARCHITECTURE.md). **ADR** rationale: [architecture/decisions/](architecture/decisions/).
+
 **Inference adapters:** pipeline stages are **not** one-size-fits-all. Each adapter (mock, local MLX, Cursor CLI, or a future sidecar) declares `AdapterCapabilities` in `docs/ADAPTERS.md` so the daemon can skip or apply indexer, compressor, token budget, cache, and behavioral prefilter. **Cursor adapter profile (design default):** skip heavy lexical **context injection** and **token-budget truncation** of the user prompt; keep the **behavioral prefilter**; **mode-gated** response cache per `docs/CACHING.md`.
 
 **Local Cursor testing:** you can set `REX_INFERENCE_RUNTIME=cursor-cli` to exercise the in-process adapter while keeping the transport and context pipeline in place. Use `REX_CURSOR_CLI_PATH`, `REX_CURSOR_CLI_COMMAND`, and `REX_CURSOR_CLI_TIMEOUT_SECS` to control invocation and time bounds (see `docs/PLUGIN_ROADMAP.md`).
@@ -9,9 +11,28 @@ This guide defines how REX reduces token usage and local compute for coding work
 ## Scope
 
 - Add token budget controls before inference.
-- Select and compress context through sidecar-like plugins.
+- Select and compress context primarily **inside `rex-daemon`**; delegate heavy experimentation to optional sidecars only when isolation dictates — [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md).
 - Keep `rex-daemon` responsible for transport and stream correctness.
 - Keep generic byte compression as storage-only optimization.
+
+## Economics lever matrix (REX vs product techniques)
+
+Single authoritative mapping. **`Status`** reflects code or documented design intent.
+
+| Technique | REX responsibility | Module / seam | Primary doc anchor | Status |
+|-----------|-------------------|---------------|--------------------|--------|
+| Model routing / escalation cascade | Daemon chooses backend + model hint before adapter | Planned `InferenceRouter`; today env selects `InferenceRuntime` | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | **planned** |
+| Context compaction — verbatim-safe packing | Daemon pipeline trims redundancy without inventing symbols | `ContextPipeline`, future packers | Responsibility map below | **partial** |
+| Context compaction — learned / small-model | Optional compressor stage or sidecar ML | Compressor hooks in `plugins.rs` | Evidence-informed defaults | **planned** |
+| Layered response cache — L1 exact | In-process LRU keyed by adapter, model, mode, schema, workspace | `l1_cache.rs`, `service.rs` | [CACHING.md](CACHING.md) | implemented (ask) |
+| Layered cache — L2 semantic | Embedding similarity **ask-only** guarded | Planned | [CACHING.md](CACHING.md) | **planned** |
+| Prefix / shared context reuse | TTL prefix cache segments in pipeline | `PrefixCache` in `plugins.rs` | Responsibility map below | **partial** |
+| Vendor KV / prompt cache hints | Depends on outbound API owning runtime | Adapter metadata future | [CACHING.md](CACHING.md) | **planned** |
+| Layered prompts (system/project stack) | Versioned assemblies to avoid duplicate client rules | Config + daemon assembly | [CONFIGURATION.md](CONFIGURATION.md) | **planned** |
+| Batching / async doc jobs | Lower priority vs interactive latency | Future RPC/job | [ROADMAP.md](ROADMAP.md) | **planned** |
+| Project memory — decisions + repo fingerprints | Reduce chat-history token pressure | Planned store (`sqlite`/files) alongside daemon | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) | **planned** |
+| MCP / standard tool interoperability | Daemon or bridge as MCP **client** | Integration TBD | [ARCHITECTURE.md](ARCHITECTURE.md) interoperability | **planned** |
+| Human approvals + sandbox for tools | Extension modes today; sandbox future | Extension + daemon policy future | [EXTENSION.md](EXTENSION.md), [ARCHITECTURE.md](ARCHITECTURE.md) security | **partial** |
 
 ## Evidence-informed defaults
 
