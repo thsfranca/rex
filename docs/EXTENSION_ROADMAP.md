@@ -4,7 +4,7 @@ This document records the phased delivery of the REX editor extension for both V
 
 ## Current purpose
 
-- Keep one hybrid VS Code and Cursor extension on the **`rex-cli` NDJSON** contract summarized in **[EXTENSION.md](EXTENSION.md)**.
+- Keep one hybrid VS Code and Cursor extension on the **`rex-cli` NDJSON** contract summarized in **[EXTENSION.md](EXTENSION.md)**; optional unary **`rex.v1`** over UDS is allowed per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)** when maintainers choose it.
 - Maintain Cursor-class chat UX (streaming markdown, highlighted code blocks, Apply-to-file with native diff) without forking per-editor code paths.
 - Keep Cursor-specific features optional behind runtime capability detection so the same VSIX installs cleanly in plain VS Code.
 - Keep daemon lifecycle user-managed by default; opt-in auto-start remains behind `rex.daemonAutoStart` (default off).
@@ -37,10 +37,10 @@ Foundation milestones (three internal delivery waves covering scaffold + chat UX
 ## Non-goals
 
 - Unattended **multi-file coordinated agent runs** **without** user approvals (thin extension cannot replace daemon-side tool policy).
-- **MCP-native tool orchestration inside the extension** until `rex-daemon` exposes an MCP-aligned endpoint (`ARCHITECTURE.md` interoperability rows).
+- **MCP-native tool orchestration inside the extension** until REX ships **brokered** MCP/tool capability via the **sidecar ↔ daemon** story ([ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md), [ARCHITECTURE.md](ARCHITECTURE.md) interoperability, [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix); formal MCP ADR when that implementation is scheduled.
 - Inline ghost-text completions.
 - Workspace @-mentions requiring bespoke indexing servers.
-- Direct Node **gRPC** transport (stay on **`rex-cli`** boundary).
+- **Node `StreamInference` streaming** replacing the NDJSON **`rex-cli`** path (would need a **future ADR**; hybrid unary-only policy is **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**).
 
 ## What remains after phase delivery
 

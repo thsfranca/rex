@@ -31,7 +31,7 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 | Layered prompts (system/project stack) | Versioned assemblies to avoid duplicate client rules | Config + daemon assembly | [CONFIGURATION.md](CONFIGURATION.md) | **planned** |
 | Batching / async doc jobs | Lower priority vs interactive latency | Future RPC/job | [ROADMAP.md](ROADMAP.md) | **planned** |
 | Project memory — decisions + repo fingerprints | Reduce chat-history token pressure | Planned store (`sqlite`/files) alongside daemon | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) | **planned** |
-| MCP / standard tool interoperability | Daemon or bridge as MCP **client** | Integration TBD | [ARCHITECTURE.md](ARCHITECTURE.md) interoperability | **planned** |
+| MCP / standard tool interoperability | **Approved design:** MCP **primarily** in **isolated sidecar**; host reach **brokered** sidecar → daemon API ([ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md)); **`rex.v1` unchanged**. Formal MCP ADR when implementation scheduled | Sidecar envelope + daemon broker | [ARCHITECTURE.md](ARCHITECTURE.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | **planned** — design accepted, implementation deferred |
 | Human approvals + sandbox for tools | Extension modes today; sandbox future | Extension + daemon policy future | [EXTENSION.md](EXTENSION.md), [ARCHITECTURE.md](ARCHITECTURE.md) security | **partial** |
 
 ## Evidence-informed defaults

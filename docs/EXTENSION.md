@@ -4,7 +4,7 @@ Consolidated reference for the VS Code / Cursor extension: **CLI consumer contra
 
 ## Part A — Goals
 
-- Stable boundary through **`rex-cli`** and NDJSON.
+- Stable boundary through **`rex-cli`** and NDJSON for streaming completion; optional unary **`rex.v1`** over UDS per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**.
 - Mode-driven UX: **`ask`**, **`plan`**, **`agent`** with deterministic guardrails and approvals where required.
 - Thin host: markdown and code-block handling stay client-side; transport contract unchanged.
 
@@ -55,7 +55,7 @@ Bounded CLI retries for daemon-unavailable races; interrupted streams terminate 
 
 ### MVP non-goals
 
-Direct extension gRPC; plugin lifecycle inside extension; fully autonomous unattended execution without approvals; coordinated multi-file agent (deferred architecture).
+Using Node gRPC for **`StreamInference`** instead of **`rex-cli` NDJSON**; **editor-only** RPCs on **`rex.v1`**; plugin lifecycle inside extension; fully autonomous unattended execution without approvals; coordinated multi-file agent (deferred architecture).
 
 ---
 
