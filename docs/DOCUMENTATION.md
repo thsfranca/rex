@@ -43,10 +43,21 @@ This project keeps documentation standards in this file and in the `documentatio
 - Use tables for comparisons, options, and mappings.
 - Use numbered lists only for ordered procedures.
 
+## Documentation scope and size (agents and retrieval)
+
+Keep each document **focused**: one dominant topic per file where practical. Prefer **hub-and-spoke** (this file’s feature hubs + links) over **monolithic** pages that mix unrelated concerns—large mixed-topic files dilute retrieval for humans and for tools that chunk by section.
+
+- **Split** when sections serve different audiences or lifecycles; **link** to ADRs for decisions instead of copying full inventories into roadmaps.
+- **Stable headings** matter: they are the natural boundaries for scanning and for retrieval-sized slices.
+- **Heuristics over hard caps:** refactor structure when a file accumulates unrelated narratives; avoid fixing only line counts.
+
+Project agents should follow the **`documentation-content`** rule for `docs/**/*.md`; contributors using shared Cursor rules should align with the **`documentation-scope-for-agents`** global rule for scope and splits (see workspace policy names—not editor install paths).
+
 ## Minimum checklist before merge
 
 - Is the document easy to scan?
 - Did you replace long narrative blocks with bullets or tables where possible?
 - Are assumptions and outcomes explicit?
 - Do examples match the current codebase and scope?
+- Is the file still **one coherent topic**, or should part of it move to a linked page?
 - Does the text **add value** on its own, or does it mostly restate what Rex does **not** do / what was **decided in conversation** without helping a future reader? If so, trim or refocus.
