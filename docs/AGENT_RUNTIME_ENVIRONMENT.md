@@ -6,7 +6,7 @@ This document is a **refinable explanation hub** for how REX can place **orchest
 
 - **`rex-daemon`** remains the **economics and stream authority** for clients (see [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)).
 - **Isolated runtimes** exist so LLM-driven processes do not receive **ambient** host access; **real work** (files, processes, model calls the project cares about) is **brokered** through the daemon or an explicit, policy-bound path.
-- **Agent implementations** (for example a Python graph) are **swappable**; REX does not need to own their source. REX **does** own the **environment contract** and **supervision** story—see [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md).
+- **Agent implementations** (for example a Python graph) are **swappable**; REX does not need to own their source. REX **does** own the **environment contract** and **supervision** story—see [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). The **brokered sidecar ↔ daemon integration surface** (separate from **`rex.v1`**) is [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
 ## Ownership model
 
@@ -70,4 +70,4 @@ flowchart LR
 
 ## Related
 
-- [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) · [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md)
+- [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) · [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md) · [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md)
