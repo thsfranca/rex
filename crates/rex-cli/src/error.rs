@@ -1,3 +1,5 @@
+use std::io;
+
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -19,4 +21,6 @@ pub enum CliError {
     StreamInterrupted,
     #[error("daemon stream ended without completion marker")]
     StreamIncomplete,
+    #[error("failed to write NDJSON to stdout: {0}")]
+    Stdout(#[from] io::Error),
 }
