@@ -1,3 +1,4 @@
+use std::io::{self, Write};
 use std::process::ExitCode;
 use std::time::Duration;
 use std::{env, process, time::SystemTime};
@@ -23,10 +24,12 @@ pub async fn run_cli(args: impl Iterator<Item = String>) -> ExitCode {
                 Ok(()) => ExitCode::SUCCESS,
                 Err(err) => {
                     if matches!(complete_format, Some(CompleteOutputFormat::Ndjson)) {
-                        println!(
-                            "{}",
-                            format_ndjson_error_event(err.to_string(), ndjson_error_code(&err))
-                        );
+                        let line =
+                            format_ndjson_error_event(err.to_string(), ndjson_error_code(&err));
+                        if let Err(io_err) = emit_ndjson_line_stdout(&line) {
+                            eprintln!("Error: {io_err}");
+                            return ExitCode::from(1);
+                        }
                     } else {
                         eprintln!("Error: {err}");
                     }
@@ -174,7 +177,8 @@ async fn consume_stream(
             match format {
                 CompleteOutputFormat::Text => print!("{}", chunk.text),
                 CompleteOutputFormat::Ndjson => {
-                    println!("{}", format_ndjson_chunk_event(chunk.index, &chunk.text));
+                    let line = format_ndjson_chunk_event(chunk.index, &chunk.text);
+                    emit_ndjson_line_stdout(&line).map_err(CliError::Stdout)?;
                 }
             }
         }
@@ -182,7 +186,8 @@ async fn consume_stream(
             match format {
                 CompleteOutputFormat::Text => println!(),
                 CompleteOutputFormat::Ndjson => {
-                    println!("{}", format_ndjson_done_event(chunk.index));
+                    let line = format_ndjson_done_event(chunk.index);
+                    emit_ndjson_line_stdout(&line).map_err(CliError::Stdout)?;
                 }
             }
             return Ok(StreamLifecycle::Completed);
@@ -202,6 +207,17 @@ fn classify_stream_terminal(
 
 fn should_retry_stream_start(error: &CliError, attempt: u32) -> bool {
     matches!(error, CliError::DaemonUnavailable { .. }) && attempt < STREAM_START_RETRY_ATTEMPTS
+}
+
+/// Emit one NDJSON line to **stdout** and flush so consumers on a pipe observe events promptly.
+fn emit_ndjson_line_stdout(payload: &str) -> io::Result<()> {
+    write_ndjson_line(&mut io::stdout().lock(), payload)
+}
+
+/// Write a single JSON object as one line and flush (`writeln!` + flush).
+fn write_ndjson_line(w: &mut impl Write, payload: &str) -> io::Result<()> {
+    writeln!(w, "{payload}")?;
+    w.flush()
 }
 
 fn format_ndjson_chunk_event(index: u64, text: &str) -> String {
@@ -238,6 +254,7 @@ fn ndjson_error_code(err: &CliError) -> &'static str {
         CliError::StreamIncomplete => "stream_incomplete",
         CliError::DaemonConnect { .. } => "daemon_unavailable",
         CliError::Endpoint(_) | CliError::Status(_) => "unknown",
+        CliError::Stdout(_) => "unknown",
     }
 }
 
@@ -280,14 +297,35 @@ impl CliCommand {
 
 #[cfg(test)]
 mod tests {
+    use std::io::{self, Write};
+
     use super::{
         classify_stream_terminal, format_ndjson_chunk_event, format_ndjson_done_event,
         format_ndjson_error_event, map_stream_status_error, ndjson_error_code,
-        ndjson_terminal_event_count_for_tests, should_retry_stream_start,
+        ndjson_terminal_event_count_for_tests, should_retry_stream_start, write_ndjson_line,
     };
     use crate::domain::StreamLifecycle;
     use crate::error::CliError;
     use rex_proto::rex::v1::StreamInferenceResponse;
+
+    /// Records how many times `flush` runs after `write` traffic (for piped-NDJSON contract).
+    #[derive(Default)]
+    struct FlushObserver {
+        buf: Vec<u8>,
+        flush_count: usize,
+    }
+
+    impl Write for FlushObserver {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.buf.extend_from_slice(buf);
+            Ok(buf.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            self.flush_count += 1;
+            Ok(())
+        }
+    }
 
     #[test]
     fn retry_policy_only_retries_daemon_unavailable_within_budget() {
@@ -391,6 +429,22 @@ mod tests {
         assert_eq!(
             classify_stream_terminal(Some(&terminal)),
             Some(StreamLifecycle::Completed)
+        );
+    }
+
+    #[test]
+    fn write_ndjson_line_flushes_after_each_line() {
+        let payload = format_ndjson_chunk_event(0, "x");
+        let mut observer = FlushObserver::default();
+        write_ndjson_line(&mut observer, &payload).expect("write_ndjson_line");
+        assert_eq!(
+            observer.flush_count, 1,
+            "each NDJSON line must flush for pipe consumers"
+        );
+        assert!(
+            observer.buf.ends_with(b"\n"),
+            "expected trailing newline, got {:?}",
+            observer.buf
         );
     }
 
