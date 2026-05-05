@@ -1,14 +1,13 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { NdjsonLineParser } from "../runtime/ndjsonParser";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// `npm test` and CI `run_extension_verify.sh` use cwd `extensions/rex-vscode`.
 const happyPathFixture = path.resolve(
-  __dirname,
-  "../../../../fixtures/ndjson_contract/happy_path.ndjson",
+  process.cwd(),
+  "../../fixtures/ndjson_contract/happy_path.ndjson",
 );
 
 describe("NDJSON cross-boundary fixture", () => {
