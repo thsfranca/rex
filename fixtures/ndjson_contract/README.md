@@ -5,6 +5,6 @@ Shared **stdout lines** for `rex-cli complete --format ndjson` ([docs/EXTENSION.
 Consumers:
 
 - `crates/rex-cli/tests/ndjson_contract_conformance.rs` — Rust integration checks.
-- `extensions/rex-vscode/src/test/ndjson_contract_fixture.test.ts` — extension parser.
+- `extensions/rex-vscode/src/test/ndjson_contract_fixture.test.ts` — extension parser (resolves the file relative to **cwd** `extensions/rex-vscode`, matching `npm test` and CI).
 
 Update these together when the wire shape changes.
