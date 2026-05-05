@@ -53,6 +53,11 @@ Keep each document **focused**: one dominant topic per file where practical. Pre
 
 Project agents should follow the **`documentation-content`** rule for `docs/**/*.md`; contributors using shared Cursor rules should align with the **`documentation-scope-for-agents`** global rule for scope and splits (see workspace policy names—not editor install paths).
 
+## Pull request descriptions
+
+- Use [`.github/pull_request_template.md`](../.github/pull_request_template.md) for every PR.
+- If a change updates **shipped behavior, setup, or operations** but the matching **`docs/`** edits are **only** in **another open pull request**, add under **Summary** a line **`Documentation:`** with a link to that PR (`#NNN` or full URL for this repository). Leave the template’s docs checklist item **unchecked** on the code-only PR until documentation is merged or included on that branch. Do not enable auto-merge until the checklist is honestly complete — see [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) (CI and PR expectations).
+
 ## Minimum checklist before merge
 
 - Is the document easy to scan?
