@@ -13,7 +13,7 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 
 ## Isolated agent runtimes (conceptual)
 
-Future **managed environments** for orchestrated agent workloads (supervision, isolation, authorized paths to the daemon) are described in [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md). **Environment ownership** vs **third-party agent code** is [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). Implementation remains **incremental**; no commitment here that a VM or sidecar supervisor is already shipped.
+Future **managed environments** for orchestrated agent workloads (supervision, isolation, authorized paths to the daemon) are described in [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md). **Environment ownership** vs **third-party agent code** is [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). The **integration surface** for sidecar ↔ daemon (distinct from **`rex.v1`**) is [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Implementation remains **incremental**; no commitment here that a VM or sidecar supervisor is already shipped.
 
 ## Goals and constraints
 
@@ -58,7 +58,7 @@ flowchart LR
 | Actor | Interaction |
 |---|---|
 | Developer | Uses IDE or terminal; owns approvals for guarded actions (extension modes). |
-| Editor extension | Thin client; invokes `rex-cli`; does not embed the model runtime. |
+| Editor extension | Thin client; **`rex-cli` + NDJSON** for streaming completion; optional unary **`rex.v1`** over UDS per [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md); does not embed the model runtime. |
 | CI / automation | Uses mock adapter by default. |
 | Optional backends | Mock process, subprocess **Cursor CLI**, future local MLX or HTTP/OpenAI-compat clients. |
 
@@ -68,10 +68,10 @@ flowchart LR
 
 | Container | Responsibility | Status |
 |---|---|---|
-| `extensions/rex-vscode` | Chat UX, modes, approvals; shells out to CLI. | `implemented` — see [EXTENSION.md](EXTENSION.md). |
+| `extensions/rex-vscode` | Chat UX, modes, approvals; **`rex-cli`** for NDJSON streaming; optional unary gRPC per [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md). | `implemented` — see [EXTENSION.md](EXTENSION.md). |
 | `rex-cli` | UDS client; NDJSON façade for editors. | `implemented` |
 | `rex-daemon` | Session authority: stream contract, pipeline, cache, adapters. | `implemented` core; routing/project-memory **planned** |
-| Sidecar / isolated runtime (future) | Optional **environment** for isolation or foreign runtimes ([ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md)). | `planned` — [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
+| Sidecar / isolated runtime (future) | Optional **environment** for isolation or foreign runtimes; brokered integration via [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) ([ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md)). | `planned` — [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 
 ## Components inside `rex-daemon` (C4 Level 3)
 
@@ -84,7 +84,7 @@ flowchart LR
 | Process lifecycle | `runtime.rs`, `main.rs` | Socket bind, shutdown, inference runtime selection. |
 | Domain constants | `domain.rs` | Version and model placeholders. |
 
-**Planned seams (not duplicate tables here):** explicit **InferenceRouter** policy layer; durable **project memory** ([LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) — design bets); MCP-style tool interoperability. Trace in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix.
+**Planned seams (not duplicate tables here):** explicit **InferenceRouter** policy layer; durable **project memory** ([LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) — design bets); MCP / tool interoperability **primarily in the isolated sidecar envelope**, with host reach **brokered** through the **sidecar ↔ daemon** API ([ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md)); formal MCP ADR when implementation is scheduled — trace in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix.
 
 ```mermaid
 flowchart LR
@@ -154,7 +154,7 @@ sequenceDiagram
 |---|---|
 | `rex.v1` gRPC | `implemented` |
 | NDJSON CLI contract | `implemented` — [EXTENSION.md](EXTENSION.md) |
-| MCP (or equivalent) for tools | `planned` — see optimization matrix in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
+| MCP (or equivalent) for tools | `planned` — **approved direction:** MCP stacks **primarily** in the **isolated sidecar**; host-affecting work **brokered** sidecar → daemon ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix). Formal ADR when implementation is scheduled. |
 | HTTP OpenAI-compat via external gateway | `optional / deferred` — [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
 
 ## Observability
@@ -190,7 +190,7 @@ sequenceDiagram
 
 ## Plugin and sidecar model (summary)
 
-**Default:** Core **routing, caching, budgets, metrics, and agent policy** stay **in-daemon**. **Sidecars** are for **optional** isolation, foreign language runtimes, or failure-contained features — see [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md). Detailed sidecar lifecycle and phases are documented there only (avoid duplication with [MVP_SPEC.md](MVP_SPEC.md)).
+**Default:** Core **routing, caching, budgets, metrics, and agent policy** stay **in-daemon**. **Sidecars** are for **optional** isolation, foreign language runtimes, or failure-contained features — see [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md). **Brokered control-plane** constraints for sidecar ↔ daemon: [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Detailed sidecar lifecycle and phases are documented there only (avoid duplication with [MVP_SPEC.md](MVP_SPEC.md)).
 
 ## Protocol contract (summary)
 
@@ -243,4 +243,5 @@ Inference and cache policy today: defaults + **`REX_*` env**. Full catalog: [CON
 - [ADAPTERS.md](ADAPTERS.md) — adapter capabilities.
 - [CACHING.md](CACHING.md) — L1 keys, bypass.
 - [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) — optional sidecars.
-- [architecture/decisions/](architecture/decisions/) — ADRs.
+- [architecture/decisions/0008-dedicated-sidecar-control-plane-api.md](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) — brokered sidecar ↔ daemon API.
+- [architecture/decisions/](architecture/decisions/) — ADR index.

@@ -54,7 +54,7 @@ flowchart LR
 | **Could** | Difficulty-based routing cascade (cheap local → escalate hard tasks) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ARCHITECTURE.md](ARCHITECTURE.md) | Explicit policy + logs ([ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md)) | daemon |
 | **Later** | **One** supervised sidecar process (optional isolation) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | 0 or 1 plugin, clear degraded-mode errors | daemon |
 | **Could** | **Context** pipeline / token-budget per [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Respects adapter capabilities; docs stay true | daemon |
-| **Could** | **Purpose/principles** SSoT and **isolated agent runtime** concepts (transport, environment ownership) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md) | One link target for intent; refinable catalog; no fake shipped VM | docs |
+| **Could** | **Purpose/principles** SSoT and **isolated agent runtime** concepts (transport, environment ownership, brokered sidecar API) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | One link target for intent; refinable catalog; no fake shipped VM | docs |
 
 **Scope note (L1 cache shipped):** In-process **L1 exact** cache for **`ask`** with `l1_cache=hit` logs — [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md).
 
@@ -88,7 +88,7 @@ Migrated from superseded **`REFACTOR_PROPOSALS`** list — IDs kept for continui
 | **Remote** networking, **TLS**, **production auth** as a first-class product | **Operator story and threat model** are in place | [MVP_SPEC.md](MVP_SPEC.md), [ARCHITECTURE.md](ARCHITECTURE.md) |
 | **Wasm** in-process plugins | **gRPC sidecar** path is mature enough to compare | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
 | **On-disk** config, **`rex config`**, file precedence beyond env | **Precedence and migration** are specified and testable | [CONFIGURATION.md](CONFIGURATION.md) |
-| **Node gRPC** in the extension (vs `rex-cli`) | Extension **Non-goals** in the design are revisited | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) **Non-goals** |
+| **Node gRPC `StreamInference`** in the extension (replace NDJSON chat path) | **New ADR** supersedes hybrid unary policy | [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | **Large** multi-plugin orchestration | **Single-plugin** supervision is stable and documented | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
 | **Long-term / project memory** (durable store, retrieval, governance) | **Daemon economics** path is clear; treat as **design bet** until implemented | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 

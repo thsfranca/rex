@@ -42,15 +42,15 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Feature area | Canonical hub |
 |---|---|
 | Inference adapters | [ADAPTERS.md](ADAPTERS.md), [ADR 0002](architecture/decisions/0002-inference-adapter-contract.md) |
-| Daemon extensibility phases (sidecars) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
+| Daemon extensibility phases (sidecars) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Layered cache policy | [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | Routing / optional gateway stance | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), economics rows in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
-| Extension NDJSON consumer contract | [EXTENSION.md](EXTENSION.md) |
+| Extension transport + NDJSON contract | [EXTENSION.md](EXTENSION.md), [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
 | Extension UX phasing | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
-| MCP-style tool interoperability (planned) | [ARCHITECTURE.md](ARCHITECTURE.md) interoperability rows, matrix in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
+| MCP-style tool interoperability (planned) | [ARCHITECTURE.md](ARCHITECTURE.md) interoperability rows, matrix in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Purpose and principles | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) |
-| Isolated agent runtime (concepts) | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md) |
+| Isolated agent runtime (concepts) | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 
 ## Scripts (related)
 

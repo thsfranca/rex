@@ -146,7 +146,7 @@ In scope now:
 - Local daemon–client communication over UDS.
 - Unary status RPC and server-streaming completion RPC.
 - Mock inference and shutdown lifecycle reliability.
-- **Editor path:** the VS Code/Cursor extension consumes **`rex-cli`** (including NDJSON streaming); the daemon does not host editor-specific RPCs.
+- **Editor path:** the VS Code/Cursor extension consumes **`rex-cli`** for NDJSON streaming completion; optional **unary `rex.v1`** over the same UDS is permitted per [ADR 0007](docs/architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md). The daemon does not host **editor-only** RPCs on `rex.v1`.
 - **Dogfooding loop:** the extension + CLI path stays reliable enough to develop `rex` from inside the IDE.
 - **Inference adapters:** **mock** by default; optional **Cursor CLI** subprocess when enabled (`REX_INFERENCE_RUNTIME=cursor-cli`), not treated as owning the REX agent story—[docs/MVP_SPEC.md](docs/MVP_SPEC.md).
 
