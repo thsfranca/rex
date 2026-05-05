@@ -76,7 +76,7 @@ Migrated from superseded **`REFACTOR_PROPOSALS`** list — IDs kept for continui
 
 | ID | Theme | Priority |
 |----|-------|----------|
-| R004 | CLI / extension NDJSON seam hardening | READY |
+| R004 | CLI / extension NDJSON seam hardening | Done — piped NDJSON line flush in `rex-cli`; contract in [EXTENSION.md](EXTENSION.md), [MVP_SPEC.md](MVP_SPEC.md) |
 | R005 | Cross-boundary contract conformance tests | NEW |
 | R007 | Mode orchestrator unified policy boundary | NEW |
 | R008 | Agent execution approvals / checkpoints centralized | NEW |

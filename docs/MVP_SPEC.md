@@ -80,7 +80,7 @@ Extension MVP uses **`rex-cli`**; authoritative consumer contract consolidated i
 
 Contract rules:
 
-- CLI emits one JSON object per line in `ndjson` mode.
+- CLI emits one JSON object per line in `ndjson` mode; piped consumers get **prompt line delivery** (flush per line — see [EXTENSION.md](EXTENSION.md) stream contract).
 - Stream must end with exactly one terminal event (`done` or `error`).
 - CLI keeps default human-readable output when `--format` is omitted.
 
