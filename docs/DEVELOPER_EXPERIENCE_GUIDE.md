@@ -95,6 +95,7 @@ Major product features use **one canonical hub doc** under `docs/` plus **pointe
 CI and PR expectations:
 - CI gate behavior follows `docs/CI.md`.
 - PR description follows `.github/pull_request_template.md` and stays about this repository and the change (no required coupling to external trackers for now).
+- When documentation for a behavior change lives **only** in another open pull request, add **`Documentation:`** under **Summary** with a link to that PR (`#NNN` or full URL). Keep the docs checklist item accurate; auto-merge stays off until the checklist is complete. The same expectation is summarized in [DOCUMENTATION.md](DOCUMENTATION.md) under **Pull request descriptions**.
 
 ## 4) Extensibility developer track
 
