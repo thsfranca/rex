@@ -1,0 +1,3 @@
+{"event":"chunk","index":0,"text":"hello "}
+{"event":"chunk","index":1,"text":"world"}
+{"event":"done","index":2}
