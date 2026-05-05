@@ -29,6 +29,7 @@ rex-cli complete "<prompt>" --format ndjson
 ```
 
 - One JSON object per stdout line (`chunk`, `done`, `error`).
+- **`rex-cli` flushes stdout after each NDJSON line** when the consumer is on a pipe (including the extension subprocess), so chunks are visible promptly instead of sitting in a block buffer.
 - Exactly **one** terminal event per request path (`done` **or** `error`).
 - `error` objects may expose stable `code` for UX routing.
 
