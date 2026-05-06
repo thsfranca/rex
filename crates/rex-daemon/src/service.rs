@@ -40,7 +40,7 @@ const STREAM_CHUNK_DELAY_MS: u64 = 35;
 
 impl RexDaemonService {
     pub fn with_runtime(started_at: Instant, runtime: Arc<dyn InferenceRuntime>) -> Self {
-        Self::with_runtime_and_policy(started_at, runtime, PolicyEngine::with_default_l1())
+        Self::with_runtime_and_policy(started_at, runtime, PolicyEngine::with_default_layers())
     }
 
     /// Test-friendly constructor: inject any `PolicyEngine` (and therefore any
