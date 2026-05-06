@@ -1,4 +1,5 @@
 mod adapters;
+mod approvals;
 mod domain;
 mod l1_cache;
 mod plugins;
