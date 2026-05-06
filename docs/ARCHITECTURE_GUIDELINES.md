@@ -69,6 +69,7 @@ Canonical **decision** owner means “writes the norm in the referenced doc / AD
 | Sidecar ↔ daemon integration | Product architecture | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | [0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Extension transport (NDJSON + optional unary gRPC) | Extension + contract docs | [EXTENSION.md](EXTENSION.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | [0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
 | Policy vs mechanism seams in code (ports, resolution-before-semantic-cache) | **TBD** — align implementation with this hub | [ROADMAP.md](ROADMAP.md) engineering backlog **R007** | See R007 note |
+| Agent execution approvals / checkpoints | `rex-daemon` policy (UX in extension) | [EXTENSION.md](EXTENSION.md), [ROADMAP.md](ROADMAP.md) backlog **R008** | [0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md) |
 
 ## When to write or update an ADR vs this file
 
