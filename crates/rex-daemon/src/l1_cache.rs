@@ -146,6 +146,16 @@ impl Default for L1ResponseCache {
     }
 }
 
+impl crate::policy::ResponseCache for L1ResponseCache {
+    fn get(&self, key: &L1Key) -> Option<Vec<StreamInferenceResponse>> {
+        L1ResponseCache::get(self, key)
+    }
+
+    fn put(&self, key: L1Key, value: Vec<StreamInferenceResponse>) {
+        L1ResponseCache::put(self, key, value)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

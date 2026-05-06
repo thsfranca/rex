@@ -2,6 +2,7 @@ mod adapters;
 mod domain;
 mod l1_cache;
 mod plugins;
+mod policy;
 mod runtime;
 mod service;
 
