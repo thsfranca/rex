@@ -10,7 +10,9 @@ use tokio_stream::wrappers::UnixListenerStream;
 use tonic::transport::Server;
 
 use crate::adapters::{runtime_from_env, RuntimeKind};
+use crate::approvals::approval_gate_from_env;
 use crate::domain::{DAEMON_VERSION, SOCKET_PATH};
+use crate::policy::PolicyEngine;
 use crate::service::RexDaemonService;
 
 #[derive(Debug, Error)]
@@ -36,7 +38,13 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
         })?;
     let incoming = UnixListenerStream::new(listener);
     let runtime = runtime_from_env();
-    let service = RexDaemonService::with_runtime(Instant::now(), runtime);
+    let approval_gate = approval_gate_from_env();
+    let service = RexDaemonService::with_components(
+        Instant::now(),
+        runtime,
+        PolicyEngine::with_default_layers(),
+        approval_gate,
+    );
 
     println!(
         "rex-daemon event=listen socket={} inference_runtime={} daemon_version={}",
