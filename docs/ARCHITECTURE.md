@@ -11,6 +11,8 @@ This document is the **software architecture description (SAD)** for REX: produc
 
 Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md).
 
+**Policies and ownership** (bounded contexts, policy vs mechanism, documentation layering): [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md).
+
 ## Isolated agent runtimes (conceptual)
 
 Future **managed environments** for orchestrated agent workloads (supervision, isolation, authorized paths to the daemon) are described in [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md). **Environment ownership** vs **third-party agent code** is [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). The **integration surface** for sidecar ↔ daemon (distinct from **`rex.v1`**) is [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Implementation remains **incremental**; no commitment here that a VM or sidecar supervisor is already shipped.
