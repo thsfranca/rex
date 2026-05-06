@@ -359,3 +359,127 @@ async fn stream_reports_terminal_error_when_daemon_interrupts() {
         }
     }
 }
+
+const APPROVALS_ENV: &str = "REX_AGENT_APPROVALS";
+
+/// With `REX_AGENT_APPROVALS=1`, an `agent`-mode request must surface a
+/// `FailedPrecondition` gRPC error matching `ENFORCEMENT_DENY_REASON` from
+/// `approvals.rs`. `ask`-mode requests on the same daemon stay successful.
+#[tokio::test]
+#[serial]
+async fn agent_mode_is_denied_when_approvals_env_is_set() {
+    if !uds_bind_supported() {
+        eprintln!("Skipping UDS e2e: sandbox does not allow unix socket bind");
+        return;
+    }
+
+    let prev = env::var(APPROVALS_ENV).ok();
+    env::set_var(APPROVALS_ENV, "1");
+
+    let socket_path = test_socket_path();
+    cleanup_socket(&socket_path);
+    let daemon_socket = socket_path.clone();
+    let daemon = tokio::spawn(async move {
+        runtime::run_daemon_on_socket(&daemon_socket)
+            .await
+            .expect("daemon runtime should run without transport error");
+    });
+    wait_for_daemon_ready(&socket_path).await;
+
+    let mut client = connect_client(&socket_path)
+        .await
+        .expect("daemon should accept connections");
+
+    let agent_err = client
+        .stream_inference(StreamInferenceRequest {
+            prompt: "agent run".to_string(),
+            mode: "agent".to_string(),
+            ..Default::default()
+        })
+        .await
+        .expect_err("agent mode must be denied when REX_AGENT_APPROVALS=1");
+    assert_eq!(agent_err.code(), tonic::Code::FailedPrecondition);
+    assert!(
+        agent_err
+            .message()
+            .contains("REX_AGENT_APPROVALS=1 and no approval context supplied for agent mode"),
+        "deny reason should match ADR 0009 wording: {}",
+        agent_err.message()
+    );
+
+    let response = client
+        .stream_inference(StreamInferenceRequest {
+            prompt: "ask run".to_string(),
+            mode: "ask".to_string(),
+            ..Default::default()
+        })
+        .await
+        .expect("ask mode must still succeed when approvals are enforced");
+    let mut stream = response.into_inner();
+    let mut saw_done = false;
+    while let Some(chunk) = stream.message().await.expect("stream read should succeed") {
+        saw_done = chunk.done;
+    }
+    assert!(saw_done, "ask stream must reach the terminal done chunk");
+
+    daemon.abort();
+    let _ = daemon.await;
+    cleanup_socket(&socket_path);
+
+    if let Some(value) = prev {
+        env::set_var(APPROVALS_ENV, value);
+    } else {
+        env::remove_var(APPROVALS_ENV);
+    }
+}
+
+/// With `REX_AGENT_APPROVALS` unset, an `agent`-mode request must succeed
+/// (preserves today's default behavior).
+#[tokio::test]
+#[serial]
+async fn agent_mode_is_allowed_when_approvals_env_is_unset() {
+    if !uds_bind_supported() {
+        eprintln!("Skipping UDS e2e: sandbox does not allow unix socket bind");
+        return;
+    }
+
+    let prev = env::var(APPROVALS_ENV).ok();
+    env::remove_var(APPROVALS_ENV);
+
+    let socket_path = test_socket_path();
+    cleanup_socket(&socket_path);
+    let daemon_socket = socket_path.clone();
+    let daemon = tokio::spawn(async move {
+        runtime::run_daemon_on_socket(&daemon_socket)
+            .await
+            .expect("daemon runtime should run without transport error");
+    });
+    wait_for_daemon_ready(&socket_path).await;
+
+    let mut client = connect_client(&socket_path)
+        .await
+        .expect("daemon should accept connections");
+
+    let response = client
+        .stream_inference(StreamInferenceRequest {
+            prompt: "agent run".to_string(),
+            mode: "agent".to_string(),
+            ..Default::default()
+        })
+        .await
+        .expect("agent mode should succeed when approvals env is unset");
+    let mut stream = response.into_inner();
+    let mut saw_done = false;
+    while let Some(chunk) = stream.message().await.expect("stream read should succeed") {
+        saw_done = chunk.done;
+    }
+    assert!(saw_done, "agent stream must reach the terminal done chunk");
+
+    daemon.abort();
+    let _ = daemon.await;
+    cleanup_socket(&socket_path);
+
+    if let Some(value) = prev {
+        env::set_var(APPROVALS_ENV, value);
+    }
+}

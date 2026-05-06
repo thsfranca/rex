@@ -21,7 +21,7 @@ use crate::adapters::InferenceRuntime;
 #[cfg(test)]
 use crate::adapters::MockInferenceRuntime;
 use crate::adapters::RuntimeKind;
-use crate::approvals::{AlwaysAllow, ApprovalContext, ApprovalDecision, ApprovalGate};
+use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::plugins::{
@@ -41,15 +41,6 @@ pub struct RexDaemonService {
 const STREAM_CHUNK_DELAY_MS: u64 = 35;
 
 impl RexDaemonService {
-    pub fn with_runtime(started_at: Instant, runtime: Arc<dyn InferenceRuntime>) -> Self {
-        Self::with_components(
-            started_at,
-            runtime,
-            PolicyEngine::with_default_layers(),
-            Arc::new(AlwaysAllow),
-        )
-    }
-
     /// Full-component constructor: inject a custom `PolicyEngine` and
     /// `ApprovalGate` for tests that need to observe cache call ordering or
     /// exercise non-`Allow` approval outcomes (R007 + R008 / ADR 0009).
@@ -414,7 +405,12 @@ mod tests {
 
     #[tokio::test]
     async fn stream_emits_grpc_error_when_runtime_omits_done() {
-        let svc = RexDaemonService::with_runtime(Instant::now(), Arc::new(MissingDoneMockRuntime));
+        let svc = RexDaemonService::with_components(
+            Instant::now(),
+            Arc::new(MissingDoneMockRuntime),
+            PolicyEngine::with_default_layers(),
+            Arc::new(crate::approvals::AlwaysAllow),
+        );
         let req = Request::new(StreamInferenceRequest {
             prompt: "x".to_string(),
             ..Default::default()
