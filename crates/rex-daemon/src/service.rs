@@ -21,6 +21,7 @@ use crate::adapters::InferenceRuntime;
 #[cfg(test)]
 use crate::adapters::MockInferenceRuntime;
 use crate::adapters::RuntimeKind;
+use crate::approvals::{AlwaysAllow, ApprovalContext, ApprovalDecision, ApprovalGate};
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::plugins::{
@@ -34,22 +35,29 @@ pub struct RexDaemonService {
     runtime: Arc<dyn InferenceRuntime>,
     request_sequence: AtomicU64,
     policy: PolicyEngine,
+    approval_gate: Arc<dyn ApprovalGate>,
 }
 
 const STREAM_CHUNK_DELAY_MS: u64 = 35;
 
 impl RexDaemonService {
     pub fn with_runtime(started_at: Instant, runtime: Arc<dyn InferenceRuntime>) -> Self {
-        Self::with_runtime_and_policy(started_at, runtime, PolicyEngine::with_default_layers())
+        Self::with_components(
+            started_at,
+            runtime,
+            PolicyEngine::with_default_layers(),
+            Arc::new(AlwaysAllow),
+        )
     }
 
-    /// Test-friendly constructor: inject any `PolicyEngine` (and therefore any
-    /// `ResponseCache`) so tests can observe cache call ordering without spinning
-    /// up the production L1 LRU.
-    pub fn with_runtime_and_policy(
+    /// Full-component constructor: inject a custom `PolicyEngine` and
+    /// `ApprovalGate` for tests that need to observe cache call ordering or
+    /// exercise non-`Allow` approval outcomes (R007 + R008 / ADR 0009).
+    pub fn with_components(
         started_at: Instant,
         runtime: Arc<dyn InferenceRuntime>,
         policy: PolicyEngine,
+        approval_gate: Arc<dyn ApprovalGate>,
     ) -> Self {
         Self {
             started_at,
@@ -57,6 +65,7 @@ impl RexDaemonService {
             runtime,
             request_sequence: AtomicU64::new(1),
             policy,
+            approval_gate,
         }
     }
 
@@ -132,6 +141,25 @@ impl RexService for RexDaemonService {
             cache_bypass,
         };
         let decision = self.policy.decide(&policy_request);
+        if normalize_mode(&mode) == "agent" {
+            let approval_ctx = ApprovalContext {
+                mode: mode.clone(),
+                runtime: policy_request.runtime,
+            };
+            match self.approval_gate.check(&approval_ctx).await {
+                ApprovalDecision::Allow | ApprovalDecision::Checkpoint { .. } => {}
+                ApprovalDecision::Deny { reason } => {
+                    println!(
+                        "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=approval_denied reason={reason} elapsed_ms={}",
+                        StreamLifecycle::Failed.as_str(),
+                        request_started.elapsed().as_millis()
+                    );
+                    return Err(Status::failed_precondition(format!(
+                        "agent execution denied by approval gate: {reason}"
+                    )));
+                }
+            }
+        }
         let mut l1_state: Option<&'static str> = None;
         let chunks: Vec<Result<StreamInferenceResponse, Status>> = match &decision {
             CacheDecision::Lookup(key) => {
@@ -315,6 +343,7 @@ mod tests {
         RexDaemonService,
     };
     use crate::adapters::{MissingDoneMockRuntime, MockInferenceRuntime};
+    use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
     use crate::l1_cache::L1Key;
     use crate::plugins::{BehaviorDecision, CacheStatus};
     use crate::policy::{PolicyEngine, ResponseCache};
@@ -441,10 +470,11 @@ mod tests {
     #[tokio::test]
     async fn cache_is_skipped_for_agent_mode() {
         let cache = Arc::new(OrderingCache::default());
-        let svc = RexDaemonService::with_runtime_and_policy(
+        let svc = RexDaemonService::with_components(
             Instant::now(),
             Arc::new(MockInferenceRuntime),
             PolicyEngine::new(cache.clone()),
+            Arc::new(crate::approvals::AlwaysAllow),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "skip-me".to_string(),
@@ -466,10 +496,11 @@ mod tests {
     #[tokio::test]
     async fn cache_is_skipped_when_prompt_requests_bypass() {
         let cache = Arc::new(OrderingCache::default());
-        let svc = RexDaemonService::with_runtime_and_policy(
+        let svc = RexDaemonService::with_components(
             Instant::now(),
             Arc::new(MockInferenceRuntime),
             PolicyEngine::new(cache.clone()),
+            Arc::new(crate::approvals::AlwaysAllow),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "[[cache:bypass]]\nhello".to_string(),
@@ -488,13 +519,152 @@ mod tests {
         );
     }
 
+    /// Records each gate invocation so tests can assert the gate is consulted
+    /// only for `agent` mode and that its decision propagates correctly.
+    struct RecordingGate {
+        decision: ApprovalDecision,
+        calls: Mutex<Vec<String>>,
+    }
+
+    impl RecordingGate {
+        fn new(decision: ApprovalDecision) -> Self {
+            Self {
+                decision,
+                calls: Mutex::new(Vec::new()),
+            }
+        }
+    }
+
+    #[tonic::async_trait]
+    impl ApprovalGate for RecordingGate {
+        async fn check(&self, ctx: &ApprovalContext) -> ApprovalDecision {
+            self.calls
+                .lock()
+                .expect("gate calls mutex")
+                .push(ctx.mode.clone());
+            self.decision.clone()
+        }
+    }
+
+    #[tokio::test]
+    async fn approval_gate_is_not_consulted_for_ask_mode() {
+        let gate = Arc::new(RecordingGate::new(ApprovalDecision::Allow));
+        let svc = RexDaemonService::with_components(
+            Instant::now(),
+            Arc::new(MockInferenceRuntime),
+            PolicyEngine::with_default_layers(),
+            gate.clone(),
+        );
+        let req = Request::new(StreamInferenceRequest {
+            prompt: "ask path".to_string(),
+            mode: "ask".to_string(),
+            ..Default::default()
+        });
+        let mut out = svc
+            .stream_inference(req)
+            .await
+            .expect("stream starts")
+            .into_inner();
+        while out.next().await.is_some() {}
+        assert!(
+            gate.calls.lock().expect("gate calls mutex").is_empty(),
+            "ask mode must never consult the approval gate (ADR 0009)"
+        );
+    }
+
+    #[tokio::test]
+    async fn approval_gate_is_consulted_for_agent_mode_and_allow_passes() {
+        let gate = Arc::new(RecordingGate::new(ApprovalDecision::Allow));
+        let svc = RexDaemonService::with_components(
+            Instant::now(),
+            Arc::new(MockInferenceRuntime),
+            PolicyEngine::with_default_layers(),
+            gate.clone(),
+        );
+        let req = Request::new(StreamInferenceRequest {
+            prompt: "agent path".to_string(),
+            mode: "agent".to_string(),
+            ..Default::default()
+        });
+        let mut out = svc
+            .stream_inference(req)
+            .await
+            .expect("stream starts when gate allows")
+            .into_inner();
+        let mut last_done = false;
+        while let Some(chunk) = out.next().await {
+            let chunk = chunk.expect("ok chunk");
+            last_done = chunk.done;
+        }
+        assert!(last_done, "stream should reach the terminal done chunk");
+        let calls = gate.calls.lock().expect("gate calls mutex").clone();
+        assert_eq!(calls, vec!["agent".to_string()]);
+    }
+
+    #[tokio::test]
+    async fn approval_gate_deny_returns_typed_grpc_error_for_agent_mode() {
+        let gate = Arc::new(RecordingGate::new(ApprovalDecision::Deny {
+            reason: "manual approval required".to_string(),
+        }));
+        let svc = RexDaemonService::with_components(
+            Instant::now(),
+            Arc::new(MockInferenceRuntime),
+            PolicyEngine::with_default_layers(),
+            gate,
+        );
+        let req = Request::new(StreamInferenceRequest {
+            prompt: "agent path".to_string(),
+            mode: "agent".to_string(),
+            ..Default::default()
+        });
+        let err = match svc.stream_inference(req).await {
+            Ok(_) => panic!("deny must surface as a typed gRPC error before streaming"),
+            Err(e) => e,
+        };
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(
+            err.message().contains("manual approval required"),
+            "error message must include gate-supplied reason: {}",
+            err.message()
+        );
+    }
+
+    #[tokio::test]
+    async fn approval_gate_checkpoint_proceeds_for_now() {
+        let gate = Arc::new(RecordingGate::new(ApprovalDecision::Checkpoint {
+            reason: "future tool gate".to_string(),
+        }));
+        let svc = RexDaemonService::with_components(
+            Instant::now(),
+            Arc::new(MockInferenceRuntime),
+            PolicyEngine::with_default_layers(),
+            gate,
+        );
+        let req = Request::new(StreamInferenceRequest {
+            prompt: "agent path".to_string(),
+            mode: "agent".to_string(),
+            ..Default::default()
+        });
+        let mut out = svc
+            .stream_inference(req)
+            .await
+            .expect("stream starts when gate returns Checkpoint (reserved variant)")
+            .into_inner();
+        let mut saw_done = false;
+        while let Some(chunk) = out.next().await {
+            saw_done = chunk.expect("ok chunk").done;
+        }
+        assert!(saw_done, "Checkpoint is reserved; must proceed for now");
+    }
+
     #[tokio::test]
     async fn ask_mode_consults_cache_then_stores() {
         let cache = Arc::new(OrderingCache::default());
-        let svc = RexDaemonService::with_runtime_and_policy(
+        let svc = RexDaemonService::with_components(
             Instant::now(),
             Arc::new(MockInferenceRuntime),
             PolicyEngine::new(cache.clone()),
+            Arc::new(crate::approvals::AlwaysAllow),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "hello cache".to_string(),

@@ -14,6 +14,9 @@ use tower::service_fn;
 #[path = "../src/adapters.rs"]
 mod adapters;
 #[allow(dead_code)]
+#[path = "../src/approvals.rs"]
+mod approvals;
+#[allow(dead_code)]
 #[path = "../src/domain.rs"]
 mod domain;
 #[path = "../src/l1_cache.rs"]
