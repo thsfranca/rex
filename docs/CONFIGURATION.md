@@ -38,6 +38,7 @@ The following are read in **Rust** code paths for the **daemon** or **CLI** as i
 | `REX_CURSOR_CLI_TIMEOUT_SECS` | `20` | Bound for the adapter subprocess, in seconds. |
 | `REX_CACHE_BYPASS` | off | Set to `1` or `true` to bypass the **L1** response cache and the context **prefix** cache (diagnostics). See [`CACHING.md`](CACHING.md). |
 | `REX_WORKSPACE_ROOT` | (default fingerprint) | Optional absolute path to the current workspace. When set, it scopes the in-memory L1 **exact** response key so a cache entry from one checkout does not match another. If unset, the daemon uses a stable default (same process always matches). |
+| `REX_AGENT_APPROVALS` | off | Set to `1` or `true` to **enforce** the daemon-side approval gate for `agent`-mode requests (ADR 0009). Today no client supplies approval context yet, so enforcement denies every `agent` request with a stable `FailedPrecondition` reason — useful as a safety lever until extension UX wires up context. `ask` and `plan` modes are unaffected. |
 
 ### `rex-cli` (client metadata)
 
@@ -54,7 +55,7 @@ The following are read in **Rust** code paths for the **daemon** or **CLI** as i
 | `REX_EXTENSION_EDITOR` | [install-extension.sh](../scripts/install-extension.sh) and [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md): path to the `cursor` or `code` CLI when the shell `PATH` is wrong. |
 | `REX_TEST_STATUS_STATE_FILE` | Test fixtures only: controls scripted `rex-cli status` success/fail sequences in the extension tests. |
 
-**Code map (audit):** Daemon keys are read in `crates/rex-daemon/src/adapters.rs` (`REX_INFERENCE_RUNTIME`, Cursor CLI trio), `crates/rex-daemon/src/service.rs` (`REX_CACHE_BYPASS`), and `crates/rex-daemon/src/l1_cache.rs` (`REX_WORKSPACE_ROOT`). The CLI reads `REX_TRACE_ID` in `crates/rex-cli/src/runtime.rs`. If you add a new `REX_*` for a binary, extend this catalog and the table above in the same change.
+**Code map (audit):** Daemon keys are read in `crates/rex-daemon/src/adapters.rs` (`REX_INFERENCE_RUNTIME`, Cursor CLI trio), `crates/rex-daemon/src/service.rs` (`REX_CACHE_BYPASS`), `crates/rex-daemon/src/l1_cache.rs` (`REX_WORKSPACE_ROOT`), and `crates/rex-daemon/src/approvals.rs` (`REX_AGENT_APPROVALS`). The CLI reads `REX_TRACE_ID` in `crates/rex-cli/src/runtime.rs`. If you add a new `REX_*` for a binary, extend this catalog and the table above in the same change.
 
 Deeper treatment of the Cursor adapter path: [`PLUGIN_ROADMAP.md`](PLUGIN_ROADMAP.md), [`DEPENDENCIES.md`](DEPENDENCIES.md), [`ADAPTERS.md`](ADAPTERS.md).
 
