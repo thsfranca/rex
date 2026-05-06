@@ -14,6 +14,7 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0006](0006-gitignored-temp-tracking-sequential-handoffs.md) | Gitignored TEMP tracking for sequential multi-agent repository work | Accepted |
 | [0007](0007-editor-extension-hybrid-transport-cli-and-grpc.md) | Editor extension hybrid transport (`rex-cli` NDJSON primary, optional unary `rex.v1`) | Accepted |
 | [0008](0008-dedicated-sidecar-control-plane-api.md) | Dedicated sidecar control-plane API (brokered integration) | Accepted |
+| [0009](0009-centralized-agent-approvals-and-checkpoints.md) | Centralized agent execution approvals and checkpoints | Accepted |
 
 ## How to use
 
