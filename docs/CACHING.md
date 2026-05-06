@@ -74,9 +74,11 @@ Use when you want hits across **paraphrase**, not just identical strings.
 
 ## Metrics and observability
 
-The daemon should be able to report per request:
+The daemon emits one `cache_decision=` field per request on stdout:
 
-- `cache=hit` | `miss_stored` | `bypass` | `uncacheable_mode` | `miss_semantic` (if L2 exists)
+- `cache_decision=hit` | `miss_stored` | `bypass` | `uncacheable_mode` | `miss_semantic` (if L2 exists)
+
+The legacy `l1_cache=hit|miss` line is also emitted for cacheable lookups so existing grep-based triage keeps working; new dashboards should prefer `cache_decision=` because it covers all four states (including `bypass` and `uncacheable_mode`, which never produced an `l1_cache=` line).
 
 ## Related
 

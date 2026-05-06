@@ -165,7 +165,8 @@ sequenceDiagram
 |---|---|---|
 | `stream.request_id`, `trace_id` | Daemon stdout | Correlate with CLI / extension. |
 | `inference_runtime` | Daemon | `mock` vs `cursor-cli`. |
-| `l1_cache=hit|miss` | Daemon | Cache effectiveness. |
+| `l1_cache=hit|miss` | Daemon | Legacy cache effectiveness signal (emitted only for cacheable lookups). |
+| `cache_decision=hit|miss_stored|bypass|uncacheable_mode` | Daemon | Per-request cache outcome covering bypass and ineligible modes (see [CACHING.md](CACHING.md) Metrics). |
 | `stream.lifecycle`, `stream.terminal`, `elapsed_ms` | Daemon | Latency and failure class. |
 | **Routing decision id** | **planned** | After router lands. |
 | **Estimated tokens / cost** | **planned** | Adapter metadata + pricing table. |
