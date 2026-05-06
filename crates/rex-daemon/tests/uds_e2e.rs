@@ -22,6 +22,9 @@ mod l1_cache;
 #[path = "../src/plugins.rs"]
 mod plugins;
 #[allow(dead_code)]
+#[path = "../src/policy.rs"]
+mod policy;
+#[allow(dead_code)]
 #[path = "../src/runtime.rs"]
 mod runtime;
 #[allow(dead_code)]

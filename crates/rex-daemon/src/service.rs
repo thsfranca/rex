@@ -22,29 +22,41 @@ use crate::adapters::InferenceRuntime;
 use crate::adapters::MockInferenceRuntime;
 use crate::adapters::RuntimeKind;
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
-use crate::l1_cache::{l1_cachable_responses, normalize_mode, L1Key, L1ResponseCache};
+use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::plugins::{
     BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
 };
+use crate::policy::{CacheDecision, PolicyEngine, PolicyRequest};
 
 pub struct RexDaemonService {
     started_at: Instant,
     pipeline: Mutex<ContextPipeline>,
     runtime: Arc<dyn InferenceRuntime>,
     request_sequence: AtomicU64,
-    l1_cache: L1ResponseCache,
+    policy: PolicyEngine,
 }
 
 const STREAM_CHUNK_DELAY_MS: u64 = 35;
 
 impl RexDaemonService {
     pub fn with_runtime(started_at: Instant, runtime: Arc<dyn InferenceRuntime>) -> Self {
+        Self::with_runtime_and_policy(started_at, runtime, PolicyEngine::with_default_l1())
+    }
+
+    /// Test-friendly constructor: inject any `PolicyEngine` (and therefore any
+    /// `ResponseCache`) so tests can observe cache call ordering without spinning
+    /// up the production L1 LRU.
+    pub fn with_runtime_and_policy(
+        started_at: Instant,
+        runtime: Arc<dyn InferenceRuntime>,
+        policy: PolicyEngine,
+    ) -> Self {
         Self {
             started_at,
             pipeline: Mutex::new(ContextPipeline::default_sidecar_like()),
             runtime,
             request_sequence: AtomicU64::new(1),
-            l1_cache: L1ResponseCache::new(),
+            policy,
         }
     }
 
@@ -112,32 +124,37 @@ impl RexService for RexDaemonService {
             format_behavior_decision(&pipeline_result.metrics.behavior_decision),
         );
         let cache_bypass = directives.cache_bypass || cache_bypass_from_env();
-        let l1_key = L1Key::try_new(
-            RuntimeKind::from_env(),
-            &model,
-            &mode,
-            &pipeline_result.effective_prompt,
+        let policy_request = PolicyRequest {
+            runtime: RuntimeKind::from_env(),
+            model: &model,
+            mode: &mode,
+            effective_prompt: &pipeline_result.effective_prompt,
             cache_bypass,
-        );
-        let mut l1_state = l1_key.as_ref().map(|_| "miss");
-        let chunks: Vec<Result<StreamInferenceResponse, Status>> = if let Some(key) = &l1_key {
-            if let Some(cached) = self.l1_cache.get(key) {
-                l1_state = Some("hit");
-                cached.into_iter().map(Ok).collect()
-            } else {
-                let built = self
-                    .runtime
-                    .build_chunks(&pipeline_result.effective_prompt)
-                    .await;
-                if let (Some(k), Some(to_store)) = (l1_key.clone(), l1_cachable_responses(&built)) {
-                    self.l1_cache.put(k, to_store);
+        };
+        let decision = self.policy.decide(&policy_request);
+        let mut l1_state: Option<&'static str> = None;
+        let chunks: Vec<Result<StreamInferenceResponse, Status>> = match &decision {
+            CacheDecision::Lookup(key) => {
+                if let Some(cached) = self.policy.get(key) {
+                    l1_state = Some("hit");
+                    cached.into_iter().map(Ok).collect()
+                } else {
+                    l1_state = Some("miss");
+                    let built = self
+                        .runtime
+                        .build_chunks(&pipeline_result.effective_prompt)
+                        .await;
+                    if let Some(to_store) = l1_cachable_responses(&built) {
+                        self.policy.put(key.clone(), to_store);
+                    }
+                    built
                 }
-                built
             }
-        } else {
-            self.runtime
-                .build_chunks(&pipeline_result.effective_prompt)
-                .await
+            CacheDecision::Bypass | CacheDecision::Uncacheable { .. } => {
+                self.runtime
+                    .build_chunks(&pipeline_result.effective_prompt)
+                    .await
+            }
         };
         if let Some(state) = l1_state {
             println!(
@@ -291,12 +308,14 @@ mod tests {
         extract_trace_id, format_behavior_decision, format_cache_status, PromptDirectives,
         RexDaemonService,
     };
-    use crate::adapters::MissingDoneMockRuntime;
+    use crate::adapters::{MissingDoneMockRuntime, MockInferenceRuntime};
+    use crate::l1_cache::L1Key;
     use crate::plugins::{BehaviorDecision, CacheStatus};
+    use crate::policy::{PolicyEngine, ResponseCache};
     use futures::StreamExt;
     use rex_proto::rex::v1::rex_service_server::RexService;
-    use rex_proto::rex::v1::StreamInferenceRequest;
-    use std::sync::Arc;
+    use rex_proto::rex::v1::{StreamInferenceRequest, StreamInferenceResponse};
+    use std::sync::{Arc, Mutex};
     use std::time::Instant;
     use tonic::Request;
 
@@ -382,5 +401,111 @@ mod tests {
             .message()
             .contains("incomplete inference stream: missing final done chunk"));
         assert!(out.next().await.is_none());
+    }
+
+    /// Records cache call ordering so the policy seam ordering rule
+    /// (`pipeline resolution -> cache decision -> runtime`) can be asserted
+    /// from a real `stream_inference` call.
+    #[derive(Default)]
+    struct OrderingCache {
+        events: Mutex<Vec<String>>,
+    }
+
+    impl ResponseCache for OrderingCache {
+        fn get(&self, key: &L1Key) -> Option<Vec<StreamInferenceResponse>> {
+            self.events
+                .lock()
+                .expect("ordering cache mutex")
+                .push(format!("get:{}", key.mode));
+            None
+        }
+
+        fn put(&self, key: L1Key, _value: Vec<StreamInferenceResponse>) {
+            self.events
+                .lock()
+                .expect("ordering cache mutex")
+                .push(format!("put:{}", key.mode));
+        }
+    }
+
+    fn drain_events(cache: &OrderingCache) -> Vec<String> {
+        cache.events.lock().expect("ordering cache mutex").clone()
+    }
+
+    #[tokio::test]
+    async fn cache_is_skipped_for_agent_mode() {
+        let cache = Arc::new(OrderingCache::default());
+        let svc = RexDaemonService::with_runtime_and_policy(
+            Instant::now(),
+            Arc::new(MockInferenceRuntime),
+            PolicyEngine::new(cache.clone()),
+        );
+        let req = Request::new(StreamInferenceRequest {
+            prompt: "skip-me".to_string(),
+            mode: "agent".to_string(),
+            ..Default::default()
+        });
+        let mut out = svc
+            .stream_inference(req)
+            .await
+            .expect("stream starts")
+            .into_inner();
+        while out.next().await.is_some() {}
+        assert!(
+            drain_events(&cache).is_empty(),
+            "agent mode must not consult the response cache"
+        );
+    }
+
+    #[tokio::test]
+    async fn cache_is_skipped_when_prompt_requests_bypass() {
+        let cache = Arc::new(OrderingCache::default());
+        let svc = RexDaemonService::with_runtime_and_policy(
+            Instant::now(),
+            Arc::new(MockInferenceRuntime),
+            PolicyEngine::new(cache.clone()),
+        );
+        let req = Request::new(StreamInferenceRequest {
+            prompt: "[[cache:bypass]]\nhello".to_string(),
+            mode: "ask".to_string(),
+            ..Default::default()
+        });
+        let mut out = svc
+            .stream_inference(req)
+            .await
+            .expect("stream starts")
+            .into_inner();
+        while out.next().await.is_some() {}
+        assert!(
+            drain_events(&cache).is_empty(),
+            "operator bypass must not consult the response cache"
+        );
+    }
+
+    #[tokio::test]
+    async fn ask_mode_consults_cache_then_stores() {
+        let cache = Arc::new(OrderingCache::default());
+        let svc = RexDaemonService::with_runtime_and_policy(
+            Instant::now(),
+            Arc::new(MockInferenceRuntime),
+            PolicyEngine::new(cache.clone()),
+        );
+        let req = Request::new(StreamInferenceRequest {
+            prompt: "hello cache".to_string(),
+            mode: "ask".to_string(),
+            ..Default::default()
+        });
+        let mut out = svc
+            .stream_inference(req)
+            .await
+            .expect("stream starts")
+            .into_inner();
+        while out.next().await.is_some() {}
+        let events = drain_events(&cache);
+        assert_eq!(
+            events,
+            vec!["get:ask".to_string(), "put:ask".to_string()],
+            "ask mode must look up the cache before storing the runtime result"
+        );
     }
 }
