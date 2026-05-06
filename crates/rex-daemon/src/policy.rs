@@ -73,6 +73,47 @@ pub trait ResponseCache: Send + Sync {
     fn put(&self, key: L1Key, value: Vec<StreamInferenceResponse>);
 }
 
+/// Observable per-request cache outcome. Vocabulary matches `docs/CACHING.md`
+/// "Metrics and observability" so daemon stdout, future dashboards, and the
+/// architecture observability table share one set of labels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CacheDecisionState {
+    /// Cacheable lookup served from the response cache.
+    Hit,
+    /// Cacheable lookup missed; runtime ran (storage attempted when result eligible).
+    MissStored,
+    /// Operator bypass — cache neither read nor written.
+    Bypass,
+    /// Mode (or other policy) ineligible for caching today.
+    UncacheableMode,
+}
+
+impl CacheDecisionState {
+    /// Stable token used in daemon stdout, mirroring `l1_cache=` style. Intended
+    /// for grep-based triage and future dashboards.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Hit => "hit",
+            Self::MissStored => "miss_stored",
+            Self::Bypass => "bypass",
+            Self::UncacheableMode => "uncacheable_mode",
+        }
+    }
+
+    /// Project a `CacheDecision` plus its lookup outcome onto the observable state.
+    /// `hit` is ignored for `Bypass` / `Uncacheable` and only meaningful for `Lookup`.
+    pub fn from_outcome(decision: &CacheDecision, hit: bool) -> Self {
+        match decision {
+            CacheDecision::Lookup(_) if hit => Self::Hit,
+            CacheDecision::Lookup(_) => Self::MissStored,
+            CacheDecision::Bypass => Self::Bypass,
+            CacheDecision::Uncacheable {
+                reason: UncacheableReason::NonAskMode,
+            } => Self::UncacheableMode,
+        }
+    }
+}
+
 /// Holds the daemon's response cache behind one boundary so the service layer
 /// does not depend on a concrete cache type. Constructed by `RexDaemonService`
 /// at startup; tests can substitute any `ResponseCache` impl.
@@ -195,6 +236,47 @@ mod tests {
         assert!(
             recorder.events.lock().expect("mutex").is_empty(),
             "decide must be pure: no cache I/O permitted"
+        );
+    }
+
+    #[test]
+    fn cache_decision_state_labels_match_docs_caching() {
+        assert_eq!(CacheDecisionState::Hit.label(), "hit");
+        assert_eq!(CacheDecisionState::MissStored.label(), "miss_stored");
+        assert_eq!(CacheDecisionState::Bypass.label(), "bypass");
+        assert_eq!(
+            CacheDecisionState::UncacheableMode.label(),
+            "uncacheable_mode"
+        );
+    }
+
+    #[test]
+    fn cache_decision_state_maps_each_decision_branch() {
+        let lookup_key = match decide(&req(RuntimeKind::Mock, "ask", false)) {
+            CacheDecision::Lookup(k) => k,
+            other => panic!("expected Lookup, got {other:?}"),
+        };
+        let lookup = CacheDecision::Lookup(lookup_key);
+        assert_eq!(
+            CacheDecisionState::from_outcome(&lookup, true),
+            CacheDecisionState::Hit
+        );
+        assert_eq!(
+            CacheDecisionState::from_outcome(&lookup, false),
+            CacheDecisionState::MissStored
+        );
+        assert_eq!(
+            CacheDecisionState::from_outcome(&CacheDecision::Bypass, false),
+            CacheDecisionState::Bypass
+        );
+        assert_eq!(
+            CacheDecisionState::from_outcome(
+                &CacheDecision::Uncacheable {
+                    reason: UncacheableReason::NonAskMode,
+                },
+                false,
+            ),
+            CacheDecisionState::UncacheableMode
         );
     }
 

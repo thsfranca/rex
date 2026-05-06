@@ -26,7 +26,7 @@ use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::plugins::{
     BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
 };
-use crate::policy::{CacheDecision, PolicyEngine, PolicyRequest};
+use crate::policy::{CacheDecision, CacheDecisionState, PolicyEngine, PolicyRequest};
 
 pub struct RexDaemonService {
     started_at: Instant,
@@ -156,17 +156,23 @@ impl RexService for RexDaemonService {
                     .await
             }
         };
+        let cache_decision_state =
+            CacheDecisionState::from_outcome(&decision, matches!(l1_state, Some("hit")));
+        let log_model = if model.trim().is_empty() {
+            ACTIVE_MODEL_ID
+        } else {
+            model.trim()
+        };
+        let log_mode = normalize_mode(&mode);
         if let Some(state) = l1_state {
             println!(
-                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} l1_cache={state} model={} mode={}",
-                if model.trim().is_empty() {
-                    ACTIVE_MODEL_ID
-                } else {
-                    model.trim()
-                },
-                normalize_mode(&mode)
+                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} l1_cache={state} model={log_model} mode={log_mode}",
             );
         }
+        println!(
+            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} cache_decision={} model={log_model} mode={log_mode}",
+            cache_decision_state.label(),
+        );
         println!(
             "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} chunk_count={}",
             StreamLifecycle::Streaming.as_str(),
