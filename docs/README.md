@@ -6,7 +6,7 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 |------|----------------|
 | **Tutorials** (first success path) | [README.md](../README.md) quickstart, [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) |
 | **How-to** (task recipes) | [EXTENSION_RELEASE.md](EXTENSION_RELEASE.md), [CONFIGURATION.md](CONFIGURATION.md), [CI.md](CI.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
-| **Explanation** (design intent) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [ARCHITECTURE.md](ARCHITECTURE.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
+| **Explanation** (design intent) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | **Reference** (narrow facts) | [ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [EXTENSION.md](EXTENSION.md), `proto/rex/v1/rex.proto`, [DOCUMENTATION.md](DOCUMENTATION.md) |
 
 ## Repository map (`docs/`)
@@ -19,6 +19,7 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 | [PRIORITIZATION.md](PRIORITIZATION.md) | MoSCoW + quick R-ICE |
 | [ROADMAP.md](ROADMAP.md) | Now / Next / Later + engineering backlog IDs |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | SAD + C4-style views + links to ADRs |
+| [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) | Architecture policies, ownership, documentation layering |
 | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Isolated agent runtimes + host–guest transport concepts |
 | [architecture/decisions/](architecture/decisions/) | ADR index + template |
 | [MVP_SPEC.md](MVP_SPEC.md) | Phase 1 protocol & acceptance |

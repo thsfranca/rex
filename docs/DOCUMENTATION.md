@@ -21,6 +21,7 @@ This project keeps documentation standards in this file and in the `documentatio
 |------|-------------------|
 | **Diátaxis / role routing** | [docs/README.md](README.md) |
 | Software architecture (**SAD**-style consolidation) | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| **Architecture guidelines** (policies, ownership, doc discipline) | [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) |
 | **Architecture Decision Records** | [architecture/decisions/](architecture/decisions/) — supersede stale decisions by status + successor ADR |
 
 ## Writing requirements

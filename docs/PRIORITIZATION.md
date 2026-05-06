@@ -10,6 +10,7 @@ Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view. Deeper lists liv
 - **Choosing what to learn or build next** in the near term → this file and the roadmap, aligned with the linked design docs.
 - **Environment variable names, defaults, and configuration semantics** → [CONFIGURATION.md](CONFIGURATION.md).
 - **A small, focused change** (for example one crate, one test) → ship the fix; a full pass through this file is **optional** unless the change shifts priorities.
+- **Architecture policy or doc precedence** (which doc wins, ownership of a boundary) → [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) before re-scoring.
 
 ## MoSCoW (horizon filter)
 
