@@ -20,7 +20,7 @@ use tonic::{Request, Response, Status};
 use crate::adapters::InferenceRuntime;
 #[cfg(test)]
 use crate::adapters::MockInferenceRuntime;
-use crate::adapters::{active_model_id_from_env, AdapterCapabilities, RuntimeKind};
+use crate::adapters::{active_model_id_from_env, AdapterCapabilities};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
 use crate::broker::broker_read_file;
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
@@ -29,6 +29,7 @@ use crate::plugins::{
     BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
 };
 use crate::policy::{CacheDecision, CacheDecisionState, PolicyEngine, PolicyRequest};
+use crate::routing::decide_route;
 use crate::sidecar_client::{connect_sidecar, map_sidecar_to_inference_chunks, run_turn_collect};
 use crate::sidecar_config::{parse_harness_only, sidecar_product_path_active};
 use crate::supervisor::{SharedSupervisor, SupervisorError};
@@ -145,13 +146,14 @@ impl RexService for RexDaemonService {
         let request_started = Instant::now();
         let request_id = self.request_sequence.fetch_add(1, Ordering::Relaxed);
         let trace_id = extract_trace_id(request.metadata(), request_id);
-        let runtime_kind = RuntimeKind::from_env();
-        let inference_runtime = runtime_kind.log_label();
-        let adapter_capabilities = AdapterCapabilities::for_runtime(runtime_kind);
         let inner = request.into_inner();
         let prompt = inner.prompt;
         let model = inner.model;
         let mode = inner.mode;
+        let route = decide_route(&mode, &model);
+        let runtime_kind = route.runtime;
+        let inference_runtime = runtime_kind.log_label();
+        let adapter_capabilities = AdapterCapabilities::for_runtime(runtime_kind);
         let directives = PromptDirectives::from_prompt(&prompt);
         let context_request = ContextRequest {
             prompt: prompt.clone(),
@@ -167,7 +169,8 @@ impl RexService for RexDaemonService {
             .prepare(&context_request, adapter_capabilities);
         let prompt_len = prompt.chars().count();
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} prompt_len={prompt_len}",
+            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} route={} stream.lifecycle={} prompt_len={prompt_len}",
+            route.label,
             StreamLifecycle::Starting.as_str(),
         );
         println!(
@@ -184,7 +187,7 @@ impl RexService for RexDaemonService {
         );
         let cache_bypass = directives.cache_bypass || cache_bypass_from_env();
         let policy_request = PolicyRequest {
-            runtime: RuntimeKind::from_env(),
+            runtime: runtime_kind,
             model: &model,
             mode: &mode,
             effective_prompt: &pipeline_result.effective_prompt,
