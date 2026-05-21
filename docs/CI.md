@@ -161,7 +161,7 @@ chmod +x ./scripts/verify_mvp_local.sh
 ./scripts/verify_mvp_local.sh
 ```
 
-That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), then [`scripts/ci/run_extension_checks.sh`](../scripts/ci/run_extension_checks.sh). It does **not** start `rex-daemon` and does **not** replace the human steps for socket checks, chat UX, or optional `REX_INFERENCE_RUNTIME=cursor-cli` validation.
+That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), then [`scripts/ci/run_extension_checks.sh`](../scripts/ci/run_extension_checks.sh). It does **not** start `rex-daemon` and does **not** replace the human steps for socket checks, sidecar health, chat UX, or **live HTTP + sidecar** validation ([MVP_SPEC.md](MVP_SPEC.md)). Rust tests set `REX_INFERENCE_RUNTIME=mock` and clear `REX_OPENAI_COMPAT_BASE_URL`. Future CI will use a **stub sidecar** for product-path tests without a live LLM.
 
 ## Local verification flow for reliability changes
 

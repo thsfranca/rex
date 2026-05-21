@@ -4,9 +4,9 @@ This document is the **canonical** policy for how REX settings work: what applie
 
 ## Why this policy exists
 
-- **Developer experience:** You can repeat the same run without retyping long `export` lines; future CLI flags and optional files will map to the same **names** as environment variables.
-- **Automation:** CI, scripts, and the editor extension inject settings through the environment. That pattern stays first-class.
-- **One catalog:** This file lists the variables the **Rust** binaries and the **core** tool flow use. Related scripts may define extra `REX_*` names; you find those next to the script in `docs/` or the script header.
+- **Developer experience:** Repeat the same run without retyping long `export` lines; future CLI flags and optional files will map to the same **names** as environment variables.
+- **Automation:** CI, scripts, and the editor extension inject settings through the environment.
+- **One catalog:** Lists variables the **Rust** binaries and core tool flow use.
 
 ## Precedence (target model)
 
@@ -15,64 +15,82 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 | Precedence (low to high) | Role |
 |--------------------------|------|
 | Built-in defaults | Used when a setting is unset. |
-| User persistent file (not implemented) | Optional file under the [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) convention, e.g. `$XDG_CONFIG_HOME/rex` with default `$HOME/.config/rex` when `XDG_CONFIG_HOME` is unset. |
-| Project-local file (not implemented) | Optional repo-local file (for example `.rex.toml`); use `.gitignore` for machine-specific files; do **not** commit secrets. |
-| Environment variables | **Primary** for parents (extension, tests, CI) and for overrides today. |
-| CLI flags (not implemented) | **Per-invocation** overrides; **document** 1:1 with env keys so shell history and `--help` stay consistent. |
+| User persistent file (not implemented) | Optional file under the [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) convention. |
+| Project-local file (not implemented) | Optional repo-local file (for example `.rex.toml`); do **not** commit secrets. |
+| Environment variables | **Primary** for parents (extension, tests, CI) and overrides today. |
+| CLI flags (partial) | `rex-cli complete` accepts `--model` and `--mode` per invocation. |
 
-**Secret values:** Do not place API keys in committed project files. Prefer environment, OS keychain, or a **local** file with correct permissions. If you add a user config file later, document redaction in logs the same way you would for env.
-
-**Boundaries:** `rex-daemon` applies **inference and cache** policy from the effective config it reads. `rex-cli` remains **thin**; it may set metadata (for example trace id) and in the future can accept **global** flags. Avoid inventing a second set of ad hoc names: extend this catalog when you add a new knob.
+**Secret values:** Prefer environment or OS keychain for API keys. Do not commit secrets to the repository.
 
 ## Phase 1: environment variables (implemented)
-
-The following are read in **Rust** code paths for the **daemon** or **CLI** as indicated.
 
 ### `rex-daemon` (inference and cache)
 
 | Variable | Default (if unset) | Purpose |
 |----------|--------------------|---------|
-| `REX_INFERENCE_RUNTIME` | `mock` (any value other than `cursor` / `cursor-cli` selects mock) | Selects the inference adapter: `mock` or Cursor CLI. |
-| `REX_CURSOR_CLI_PATH` | `cursor-agent` | Executable used when the runtime is `cursor` / `cursor-cli`. |
-| `REX_CURSOR_CLI_COMMAND` | (none) | Optional full shell command template; `{prompt}` is substituted. |
-| `REX_CURSOR_CLI_TIMEOUT_SECS` | `20` | Bound for the adapter subprocess, in seconds. |
-| `REX_CACHE_BYPASS` | off | Set to `1` or `true` to bypass the **L1** response cache and the context **prefix** cache (diagnostics). See [`CACHING.md`](CACHING.md). |
-| `REX_WORKSPACE_ROOT` | (default fingerprint) | Optional absolute path to the current workspace. When set, it scopes the in-memory L1 **exact** response key so a cache entry from one checkout does not match another. If unset, the daemon uses a stable default (same process always matches). |
-| `REX_AGENT_APPROVALS` | off | Set to `1` or `true` to **enforce** the daemon-side approval gate for `agent`-mode requests (ADR 0009). Today no client supplies approval context yet, so enforcement denies every `agent` request with a stable `FailedPrecondition` reason — useful as a safety lever until extension UX wires up context. `ask` and `plan` modes are unaffected. |
+| `REX_INFERENCE_RUNTIME` | `http-openai-compat` | Broker backend when sidecar requests inference: **`http-openai-compat`**, **`mock`** (tests/harness), **`cursor-cli`** (legacy). Direct daemon HTTP without sidecar is **harness only** for MVP acceptance. |
+| `REX_OPENAI_COMPAT_BASE_URL` | (none — **required** for HTTP runtime) | Base URL for OpenAI-compatible API (for example `http://127.0.0.1:11434/v1` for Ollama). |
+| `REX_OPENAI_COMPAT_API_KEY` | (none) | Optional `Bearer` token for remote APIs. |
+| `REX_OPENAI_COMPAT_MODEL` | `gpt-4o-mini` | Model id sent in chat/completions requests; reported on `GetSystemStatus` when HTTP runtime is active. |
+| `REX_OPENAI_COMPAT_TIMEOUT_SECS` | `120` | Upper bound for a single HTTP completion request. |
+| `REX_CURSOR_CLI_PATH` | `cursor-agent` | Executable when runtime is `cursor-cli` (non-MVP). |
+| `REX_CURSOR_CLI_COMMAND` | (none) | Optional shell template; `{prompt}` substituted (non-MVP). |
+| `REX_CURSOR_CLI_TIMEOUT_SECS` | `20` | Subprocess bound for Cursor CLI adapter. |
+| `REX_CACHE_BYPASS` | off | `1` or `true` bypasses L1 and context prefix cache — [`CACHING.md`](CACHING.md). |
+| `REX_WORKSPACE_ROOT` | (default fingerprint) | Scopes in-memory L1 exact keys per workspace checkout. |
+| `REX_AGENT_APPROVALS` | off | `1` or `true` enforces daemon `ApprovalGate` for `agent` mode ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). Extension approval context wiring is follow-on work. |
+
+### Sidecar (planned — catalog placeholder)
+
+| Variable | Default (if unset) | Purpose |
+|----------|--------------------|---------|
+| `REX_SIDECAR_BINARY` | (none) | Path to agent sidecar executable when supervision ships |
+| `REX_SIDECAR_SOCKET` | (TBD) | UDS for `rex.sidecar.v1` control plane — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) |
+| `REX_SIDECAR_ENABLED` | (TBD) | Operator toggle when auto-spawn is optional |
+
+Finalize names in the sidecar implementation PR; this table documents intent only.
 
 ### `rex-cli` (client metadata)
 
 | Variable | Default (if unset) | Purpose |
 |----------|--------------------|---------|
-| `REX_TRACE_ID` | (none) | If set, the CLI propagates it for request correlation. The extension sets this when it runs `rex-cli`; see [`EXTENSION.md`](EXTENSION.md). |
+| `REX_TRACE_ID` | (none) | Request correlation; extension sets when spawning `rex-cli` — [`EXTENSION.md`](EXTENSION.md). |
 
-**CLI flags (not environment):** `rex-cli complete` accepts optional `--model <id>` and `--mode <ask|plan|agent>` in any order with `--format`. Empty values behave like the defaults documented in the protobuf ([`MVP_SPEC.md`](MVP_SPEC.md)): unset model leaves model selection to the daemon default; empty mode is treated as **ask** on the server for inference policy (L1 only caches **ask**; see `CACHING.md`).
+**CLI flags:** `rex-cli complete` accepts `--format`, `--model <id>`, and `--mode <ask|plan|agent>`. Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
 
-### Related project scripts (not `rex-daemon` / `rex-cli` binaries)
+### Related project scripts
 
 | Variable | Where it matters |
 |----------|------------------|
-| `REX_EXTENSION_EDITOR` | [install-extension.sh](../scripts/install-extension.sh) and [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md): path to the `cursor` or `code` CLI when the shell `PATH` is wrong. |
-| `REX_TEST_STATUS_STATE_FILE` | Test fixtures only: controls scripted `rex-cli status` success/fail sequences in the extension tests. |
+| `REX_EXTENSION_EDITOR` | [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md), install scripts. |
+| `REX_TEST_STATUS_STATE_FILE` | Extension test fixtures only. |
 
-**Module map (audit):** Daemon: `adapters` (`REX_INFERENCE_RUNTIME`, Cursor CLI trio), stream service (`REX_CACHE_BYPASS`), `l1_cache` (`REX_WORKSPACE_ROOT`), `approvals` (`REX_AGENT_APPROVALS`). CLI: `runtime` (`REX_TRACE_ID`). Extend this catalog when adding keys.
+**Module map:** Daemon: `adapters`, `http_openai_compat`, `approvals`, `l1_cache`, stream service. CLI: `runtime` (`REX_TRACE_ID`).
 
-Deeper treatment of the Cursor adapter path: [`PLUGIN_ROADMAP.md`](PLUGIN_ROADMAP.md), [`DEPENDENCIES.md`](DEPENDENCIES.md), [`ADAPTERS.md`](ADAPTERS.md).
+## Operator quick start (daemon + brokered HTTP)
 
-**Cursor CLI:** On non-zero exit, the daemon may include stderr in the terminal gRPC `unavailable` message. The adapter **truncates** overlong stderr (marker ` [rex: cursor stderr truncated] `) so error payloads stay bounded. Run `cursor-agent` in a shell if you need the full transcript.
+Product MVP also requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Until spawn ships, HTTP env configures the **broker** the daemon will use for sidecar inference requests.
+
+```bash
+export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:11434/v1"   # Ollama example
+export REX_OPENAI_COMPAT_MODEL="llama3.2"
+export REX_INFERENCE_RUNTIME="http-openai-compat"
+cargo run -p rex-daemon
+```
+
+CI and unit tests set `REX_INFERENCE_RUNTIME=mock` and clear `REX_OPENAI_COMPAT_BASE_URL` — see [CI.md](CI.md).
 
 ## Not implemented yet (roadmap)
 
-- **Persistent user config** on disk (TOML or JSON under XDG paths).
-- **`rex` / `rex-daemon` global flags** that mirror the table above (same semantics as env, higher precedence than env when both are set).
-- **`rex config` subcommands** (for example get, set, path) to edit the user file without hand-editing.
-- **Project-local** `.rex.toml` (or similar) and merge rules with user + env.
-
-If you add any of the above, update this file **and** the precedence table in the same change.
+- Persistent user config on disk.
+- Global `rex-daemon` / `rex-cli` flags mirroring env keys.
+- `rex config` subcommands.
+- Project-local `.rex.toml`.
 
 ## See also
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) — system shape and data flow.
-- [MVP_SPEC.md](MVP_SPEC.md) — which configuration **documentation** is in scope for Phase 1 versus which **implementation** ships later.
-- [`CACHING.md`](CACHING.md) — `REX_CACHE_BYPASS` and cache behavior.
-- [`EXTENSION.md`](EXTENSION.md) — trace correlation from the editor.
+- [ARCHITECTURE.md](ARCHITECTURE.md)
+- [MVP_SPEC.md](MVP_SPEC.md)
+- [ADAPTERS.md](ADAPTERS.md)
+- [CACHING.md](CACHING.md)
+- [EXTENSION.md](EXTENSION.md)

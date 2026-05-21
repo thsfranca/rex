@@ -11,7 +11,7 @@ Concrete goals:
 - **Single runtime boundary.** One long-lived process holds model/runtime policy, queueing, and shutdown semantics so every client sees the same behavior.
 - **Stable tool contract.** Clients integrate through **`rex-cli`** and shared protobuf types in `rex-proto` instead of embedding vendor inference SDKs.
 - **Streaming-first correctness.** Server-streaming RPCs, explicit terminal outcomes (`done` / `error`), and tests around UDS races and interruption.
-- **Local-first default.** **Mock** inference without network by default; optional adapters (for example Cursor CLI) remain **bounded subprocesses** under daemon policy—see [ADAPTERS.md](ADAPTERS.md).
+- **Local-first default.** **Supervised sidecar agent** with **brokered OpenAI-compatible HTTP** inference (local Ollama/LM Studio or remote API); **mock** and direct daemon HTTP remain for automated tests only—see [ADAPTERS.md](ADAPTERS.md), [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md).
 - **Room to grow.** Additional adapters and optional isolated runtimes evolve **without breaking** `rex.v1` consumers—see [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md).
 
 **Configuration:** precedence and `REX_*` catalog live in [CONFIGURATION.md](CONFIGURATION.md).
@@ -30,7 +30,7 @@ Concrete goals:
 
 5. **Documentation hubs.** Keep **one** canonical explanation document per major feature area under `docs/`; use **links** plus one-line status elsewhere ([DOCUMENTATION.md](DOCUMENTATION.md)). Record accepted boundaries in **ADRs** when formalizing decisions.
 
-6. **Isolation and sidecars when justified.** Prefer logic in the daemon until **process isolation**, another runtime stack, or **fault containment** clearly outweighs integration cost ([PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md)). Optional isolated agent environments are **additive**, not a rewrite of core economics.
+6. **Sidecar agent for product path.** MVP assistant reasoning runs in a **supervised sidecar**; daemon retains economics, policy, and brokering ([PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [MVP_SPEC.md](MVP_SPEC.md)). Additional sidecars or envelopes are additive.
 
 7. **Neutral, operational naming.** Prefer function-based headings and scope descriptions in docs and plans; avoid framing whose main job is to label maturity ([DOCUMENTATION.md](DOCUMENTATION.md) norms).
 

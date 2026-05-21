@@ -6,7 +6,8 @@ Consolidated reference for the VS Code / Cursor extension: **CLI consumer contra
 
 - Stable boundary through **`rex-cli`** and NDJSON for streaming completion; optional unary **`rex.v1`** over UDS per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**.
 - Mode-driven UX: **`ask`**, **`plan`**, **`agent`** with deterministic guardrails and approvals where required.
-- Thin host: markdown and code-block handling stay client-side; transport contract unchanged.
+- **Thin client only:** the extension does **not** host the agent. Assistant reasoning runs in a **daemon-supervised sidecar**; `rex-daemon` brokers inference and tools ([MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md)).
+- Markdown and code-block handling stay client-side; transport contract unchanged.
 
 ---
 

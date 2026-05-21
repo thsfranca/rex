@@ -1,6 +1,6 @@
 # Sidecar runtime (design hub)
 
-Canonical design for Rex **optional sidecars**: a **supervised separate process** on the same Mac as `rex-daemon`, **not** a VM. **Planned** — no sidecar supervisor or `rex.sidecar.v1` proto is shipped in Phase 1.
+Canonical design for Rex **sidecar agents**: a **supervised separate process** on the same Mac as `rex-daemon`, **not** a VM. The **IDE development assistant depends on this process** for agent behavior — see [MVP_SPEC.md](MVP_SPEC.md). **Implementation:** supervisor, `rex.sidecar.v1`, and broker paths are **planned** (shipping state in MVP_SPEC).
 
 ## Role in the architecture
 
@@ -65,8 +65,32 @@ Agent code runs **inside** the sidecar; **real work** on the host goes through *
 
 ## Agent inside the sidecar
 
-- Reasoning graph, tool loop, MCP servers (planned placement) live in the guest process.
-- Inference **intent** may be expressed via sidecar API; **stream authority** for `rex.v1` clients remains daemon-side per [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
+- Reasoning graph, tool loop, and (later) MCP servers live in the guest process.
+- Inference **intent** is expressed via sidecar API; **stream authority** for `rex.v1` clients remains daemon-side per [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
+- The extension is **not** the agent — it only renders streams and enforces UX policy.
+
+## MVP sidecar slice (Phase 1)
+
+Minimum to satisfy [MVP_SPEC.md](MVP_SPEC.md):
+
+| Requirement | Acceptance |
+|-------------|------------|
+| Supervision | Daemon spawns **0 or 1** sidecar; health probes; clear error if sidecar required but down |
+| **`rex.sidecar.v1`** | Versioned API on dedicated UDS (e.g. `/tmp/rex-sidecar.sock`) — distinct from `rex.v1` |
+| **Single-turn agent** | `RunTurn` (name illustrative): prompt + mode → streamed text deltas to daemon |
+| **Brokered inference** | Sidecar requests completion; daemon invokes HTTP OpenAI-compat backend ([ADAPTERS.md](ADAPTERS.md)) |
+| **Brokered tool** | At least **`fs.read`** under workspace policy ([AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md)) |
+
+### Illustrative MVP verbs
+
+| Verb | Purpose |
+|------|---------|
+| `Health` / `GetCapabilities` | Supervision and advertised features |
+| `RunTurn` | One agent turn; stream assistant text to daemon |
+| Inference broker RPC | Folded into `RunTurn` or separate `RequestInference` — implementation choice |
+| Tool broker RPC | `RequestTool` with capability `fs.read` for MVP |
+
+Proto package **`rex.sidecar.v1`** lands in an implementation PR; this hub defines intent only.
 
 ## Plugin manifest (intent)
 

@@ -25,8 +25,8 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | Environment access policy + sandbox profiles |
 | [POLICY_ENGINE.md](POLICY_ENGINE.md) | Daemon policy pipeline (cache, approvals, access) |
 | [architecture/decisions/](architecture/decisions/) | ADR index + template |
-| [MVP_SPEC.md](MVP_SPEC.md) | Phase 1 protocol & acceptance |
-| [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Daemon-first extensibility + optional sidecars |
+| [MVP_SPEC.md](MVP_SPEC.md) | Phase 1: sidecar-dependent dev agent + brokered HTTP/tool + extension acceptance |
+| [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Sidecar agent platform + brokered inference adapters |
 | [ADAPTERS.md](ADAPTERS.md) | `InferenceRuntime` + capabilities |
 | [CACHING.md](CACHING.md) | L1/L2/prefix policy |
 | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Pipeline + **economics lever matrix** |

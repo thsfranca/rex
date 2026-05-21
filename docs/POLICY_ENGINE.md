@@ -50,6 +50,8 @@ flowchart TB
 
 **Ordering rule (shipped):** pipeline resolution → **cache decision** → runtime invocation. Tests lock this ordering.
 
+**MVP target ordering (assistant path):** envelope / access policy → **broker** (inference + tools) → **stream** to `rex.v1` clients. Sidecar requests never bypass daemon policy ([MVP_SPEC.md](MVP_SPEC.md)).
+
 ## Planned evaluation pipeline
 
 Single conceptual path per request (sidecar and in-daemon adapters converge on daemon authority):

@@ -44,7 +44,9 @@ Foundation milestones (three internal delivery waves covering scaffold + chat UX
 
 ## What remains after phase delivery
 
-- Continue **stress hardening** for very long chat sessions (output channel / queue pressure) and rare status-bar edge cases. **stderr** from `rex-cli` is **capped** for exit-code messages (`cappedString` / `streamClient`). **Status bar** `unavailable` tooltips **elide** overlong `reason` text (`src/ui/statusBar.ts` + `elideForTooltip`) so huge spawn errors or wrapped logs do not blow past reasonable tooltip size. The **core** path still enforces a single NDJSON terminal event, cancel-to-idle, and structured chat logging (see `src/runtime/streamClient.ts` and tests under `src/test/`).
+- **Daemon approval context:** wire extension approval decisions into daemon `ApprovalGate` when `REX_AGENT_APPROVALS=1` ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). Sidecar supervision and broker are **daemon/sidecar** work — not extension-owned; see [MVP_SPEC.md](MVP_SPEC.md).
+- Optional **`rex.modelId`** setting to pass `--model` on every `complete`.
+- Continue **stress hardening** for very long chat sessions and status-bar edge cases. **Core** path: single NDJSON terminal, cancel-to-idle, **`--mode`** on every `complete` (shipped).
 - Keep release automation and install docs aligned with CLI/daemon lifecycle changes.
 - Add follow-up features only when they preserve the stable CLI NDJSON boundary and keep behavior symmetric across Cursor and plain VS Code.
 

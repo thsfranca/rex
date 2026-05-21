@@ -6,24 +6,25 @@ Rex is a **learning lab** and **small, testable reference** for local daemon + g
 
 ## What we are learning toward (right now)
 
-**Primary product direction:** **`rex-daemon` owns** the development **agent economics surface** — routing hooks, caches, pipelines, observability ([ARCHITECTURE.md](ARCHITECTURE.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [architecture/decisions/](architecture/decisions/)). Equally critical with transport: **reliable UDS**, **gRPC streaming**, **NDJSON**. **mock** inference default; **`REX_INFERENCE_RUNTIME=cursor-cli`** optional adapter for frontier access — CI stays **mock** unless deliberately extended. Prefer **daemon-first** optimizations; optional **sidecars** only after core economics are legible.
+**Primary product direction:** **`rex-daemon` owns** economics — routing hooks, caches, pipelines, observability ([ARCHITECTURE.md](ARCHITECTURE.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)). **Phase 1 MVP:** basic **development agent** in the extension whose **runtime lives in a daemon-supervised sidecar** with **brokered HTTP** inference and **one brokered tool** ([MVP_SPEC.md](MVP_SPEC.md)). Transport (**UDS**, **NDJSON**) remains critical. CI uses **`mock`** / stub sidecar; product path uses sidecar + **`REX_OPENAI_COMPAT_*`**. Direct in-process HTTP without sidecar is **harness only**.
 
 ## Theme order (rough dependency mental model)
 
 ```mermaid
 flowchart LR
   core[CoreStreamingAndContract]
+  side[SidecarSupervisionAndAPI]
+  broker[BrokeredHttpAndTool]
+  ext[ExtensionAgentUX]
+  cli[CliNdjsonModeModel]
   econ[DaemonEconomicsAndRouting]
-  cli[CliNdjson]
-  ext[ExtensionReliability]
-  adapter[InferenceAdapters]
-  sidecars[OptionalSidecars]
   core --> cli
+  core --> side
+  side --> broker
+  broker --> ext
+  cli --> ext
   core --> econ
-  core --> ext
-  core --> adapter
-  econ --> adapter
-  adapter --> sidecars
+  side --> econ
 ```
 
 ## Now — what matters first
@@ -34,7 +35,13 @@ flowchart LR
 | **Must** | **Economics groundwork** documented + measurable signals started (optimization matrix **implemented**; router **planned**) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | Matrix + ADRs land; daemon logs/cache fields ready for eventual routing IDs | daemon, docs |
 | **Must** | `rex-cli complete --format ndjson` stays line-safe and has **one** terminal event | [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION.md](EXTENSION.md) | Tests + `MVP_SPEC` checklist | rex-cli, docs |
 | **Must** | IDE dogfooding loop stays usable: develop `rex` via the extension without leaving the editor path | [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | Local E2E run confirms send/cancel/retry/status flow remains stable for normal coding sessions | extension, rex-cli, daemon |
-| **Must** | **Inference adapters:** **mock** default; **Cursor CLI** optional subprocess, bounded + terminal-correct | [MVP_SPEC.md](MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md) | Stub + optional real CLI path documented; **CI mock** — [DEPENDENCIES.md](DEPENDENCIES.md) | daemon |
+| **Must** | **Sidecar supervision** (0 or 1 process; health; clear errors) | [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Sidecar stays up; product path fails clearly when required but down | daemon |
+| **Must** | **`rex.sidecar.v1` MVP verbs** + reference sidecar | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | `RunTurn` round-trip over UDS | daemon, sidecar binary |
+| **Must** | **`StreamInference` routes assistant modes through sidecar** | [MVP_SPEC.md](MVP_SPEC.md) | Extension chat streams from sidecar-sourced turns | daemon |
+| **Must** | **Brokered HTTP inference** (reuse `http_openai_compat`) | [ADAPTERS.md](ADAPTERS.md), [CONFIGURATION.md](CONFIGURATION.md) | Sidecar turn produces streamed text; **CI uses mock** | daemon |
+| **Must** | **Brokered tool** (one capability, e.g. `fs.read`) | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | Tool smoke succeeds under policy | daemon |
+| **Must** | **Extension → CLI `mode`/`model`** on every `complete` | [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION.md](EXTENSION.md) | Extension passes flags; daemon policy observes mode | extension, rex-cli |
+| **Must** | **Extension agent UX** — modes, approvals, apply, cancel | [EXTENSION.md](EXTENSION.md), [MVP_SPEC.md](MVP_SPEC.md) | [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) with sidecar + HTTP backend | extension |
 | **Should** | Logs you can **read** when something fails (trace, terminal paths) | [ARCHITECTURE.md](ARCHITECTURE.md) | No silent hang; enough context to debug | daemon |
 | **Should** | Extension chat stays **usable** (cancel, status, clean return to idle) | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | “What remains” shrinks without breaking NDJSON | `extensions/rex-vscode` |
 
@@ -50,17 +57,17 @@ flowchart LR
 
 | Priority | What / why | Source(s) | “Done enough” (examples) | Where to work |
 |----------|------------|-----------|---------------------------|---------------|
-| **Should** | Optional **mode/model** on the wire and CLI, backward compatible | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADAPTERS.md](ADAPTERS.md) | Proto + `rex-cli` flags; [CONFIGURATION.md](CONFIGURATION.md) | `proto/`, `rex-proto`, `rex-cli`, daemon |
+| **Should** | Daemon **approval context** from extension when `REX_AGENT_APPROVALS=1` | [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md) | `agent` mode allowed when user approved in UI | extension, daemon |
 | **Should** | Adaptive retrieval gate: retrieve only when needed, then expand context progressively | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Lower average context tokens with measurable eval | daemon pipeline (optional sidecar only if justified) |
 | **Should** | Query-aware prompt/context compression before local inference | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADAPTERS.md](ADAPTERS.md) | Fewer tokens; terminal correctness preserved | daemon pipeline |
 | **Could** | Difficulty-based routing cascade (cheap local → escalate hard tasks) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ARCHITECTURE.md](ARCHITECTURE.md) | Explicit policy + logs ([ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md)) | daemon |
-| **Later** | **One** supervised sidecar process (protobuf/UDS, optional OS sandbox, daemon broker) | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | 0 or 1 plugin; degraded-mode errors; **no VM default on Mac** | daemon |
+| **Harness only** | Direct daemon HTTP/mock **without** sidecar | [MVP_SPEC.md](MVP_SPEC.md) | CI and migration; not MVP product acceptance | daemon |
 | **Could** | **Context** pipeline / token-budget per [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Respects adapter capabilities; docs stay true | daemon |
 | **Done (docs)** | Sidecar/access/policy architecture hubs | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), ADRs 0005/0008/0009 | Mac-first **process** sidecar; VM/container **not** default; diagrams not source listings | docs |
 
 **Scope note (L1 cache shipped):** In-process **L1 exact** cache for **`ask`** with `l1_cache=hit` logs — [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md).
 
-**Scope note (Next — mode/model):** [CACHING.md](CACHING.md) and [CONFIGURATION.md](CONFIGURATION.md) track behavior; the editor extension can pass `--model` / `--mode` in a follow-up if needed (CLI supports them; NDJSON line shape unchanged).
+**Scope note (Next — mode/model):** Extension passes `--mode` / `--model` per [EXTENSION.md](EXTENSION.md); [CACHING.md](CACHING.md) and [CONFIGURATION.md](CONFIGURATION.md) track daemon behavior.
 
 **Scope note (Next — optimization evidence):** prioritize context-quality-per-token work backed by current evidence: adaptive retrieval ([Self-RAG](https://arxiv.org/abs/2310.11511)), prompt compression ([LLMLingua](https://arxiv.org/abs/2310.05736)), and context-order sensitivity in long prompts ([Lost in the Middle](https://aclanthology.org/2024.tacl-1.9/)). For routing/cascades, use budgeted model escalation patterns ([A Unified Approach to Routing and Cascading for LLMs](https://proceedings.mlr.press/v267/dekoninck25a.html)).
 

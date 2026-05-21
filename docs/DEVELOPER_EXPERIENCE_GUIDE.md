@@ -35,11 +35,15 @@ Prerequisites:
 Core commands:
 
 ```bash
+export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:11434/v1"  # broker backend (e.g. Ollama)
+export REX_OPENAI_COMPAT_MODEL="llama3.2"
 cargo build --workspace
-cargo run -p rex-daemon
+cargo run -p rex-daemon   # MVP: spawns/connects sidecar when implemented
 cargo run -p rex-cli -- status
-cargo run -p rex-cli -- complete "hello from rex"
+cargo run -p rex-cli -- complete "hello from rex" --format ndjson --mode agent
 ```
+
+Product MVP requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Until sidecar ships, see shipping-state table in MVP_SPEC; harness may use direct mock HTTP.
 
 ### Working modes
 
