@@ -28,6 +28,7 @@ export const CHAT_VIEW_ID = "rex.chatView";
 export interface ChatPanelDependencies {
   readonly context: vscode.ExtensionContext;
   readonly getCliOptions: () => CliBridgeOptions;
+  readonly getModelId: () => string;
   readonly getDaemonAutoStart: () => boolean;
   readonly ensureDaemonReady: (signal?: AbortSignal) => Promise<DaemonLifecycleState>;
   readonly getDaemonState: () => DaemonLifecycleState | undefined;
@@ -266,9 +267,11 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       }
 
       this.emitExecutionStep(message.id, "running", "Execution started.");
+      const configuredModel = this.deps.getModelId().trim();
       for await (const event of streamComplete(this.deps.getCliOptions(), {
         prompt: fullPrompt,
         mode: this.mode,
+        model: configuredModel.length > 0 ? configuredModel : undefined,
         approvalId: this.modePolicy().requiresExecutionApproval ? approvalId : undefined,
         signal: controller.signal,
         onLifecycle: (lifecycle) => {

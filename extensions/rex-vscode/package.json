@@ -113,6 +113,12 @@
           "default": false,
           "description": "Spawn rex-daemon automatically if it is not running. Disabled by default.",
           "scope": "machine-overridable"
+        },
+        "rex.modelId": {
+          "type": "string",
+          "default": "",
+          "description": "Optional model id passed to rex-cli as --model on every complete. Leave empty to use the daemon default.",
+          "scope": "machine-overridable"
         }
       }
     },

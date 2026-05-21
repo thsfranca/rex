@@ -4,6 +4,7 @@ export interface RexSettings {
   readonly cliPath: string;
   readonly daemonBinaryPath: string;
   readonly daemonAutoStart: boolean;
+  readonly modelId: string;
 }
 
 const SECTION = "rex";
@@ -15,6 +16,7 @@ export function readSettings(): RexSettings {
     daemonBinaryPath:
       (config.get<string>("daemonBinaryPath") ?? "rex-daemon").trim() || "rex-daemon",
     daemonAutoStart: config.get<boolean>("daemonAutoStart") ?? false,
+    modelId: (config.get<string>("modelId") ?? "").trim(),
   };
 }
 

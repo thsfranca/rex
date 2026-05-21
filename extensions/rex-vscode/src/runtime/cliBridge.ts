@@ -58,13 +58,10 @@ export interface CompleteStreamOptions {
   readonly approvalId?: string;
 }
 
-export function spawnCompleteStream(
-  options: CliBridgeOptions,
+export function buildCompleteNdjsonArgs(
   prompt: string,
-  traceId?: string,
   stream?: CompleteStreamOptions,
-): SpawnedProcess {
-  const env = buildEnv(options.env, traceId);
+): string[] {
   const args = ["complete", prompt, "--format", "ndjson"];
   if (stream?.mode !== undefined && stream.mode.length > 0) {
     args.push("--mode", stream.mode);
@@ -75,6 +72,17 @@ export function spawnCompleteStream(
   if (stream?.approvalId !== undefined && stream.approvalId.length > 0) {
     args.push("--approval-id", stream.approvalId);
   }
+  return args;
+}
+
+export function spawnCompleteStream(
+  options: CliBridgeOptions,
+  prompt: string,
+  traceId?: string,
+  stream?: CompleteStreamOptions,
+): SpawnedProcess {
+  const env = buildEnv(options.env, traceId);
+  const args = buildCompleteNdjsonArgs(prompt, stream);
   const child = spawn(options.cliPath, args, {
     cwd: options.cwd,
     env,
