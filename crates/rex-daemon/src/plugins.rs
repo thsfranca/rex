@@ -1,5 +1,8 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use crate::adapters::AdapterCapabilities;
@@ -104,6 +107,32 @@ impl LexicalWorkspaceIndexer {
             .map(|(source, text)| WorkspaceDoc { source, text })
             .collect();
         Self { docs }
+    }
+
+    /// Bounded walk of `REX_WORKSPACE_ROOT` (or cwd) for `.rs`, `.md`, `.toml` files.
+    pub fn from_workspace_root(root: &Path) -> Self {
+        const MAX_FILES: usize = 32;
+        const MAX_BYTES_PER_FILE: usize = 4_096;
+        let mut docs = Vec::new();
+        collect_workspace_docs(root, root, &mut docs, MAX_FILES, MAX_BYTES_PER_FILE);
+        if docs.is_empty() {
+            return Self::default_seeded();
+        }
+        Self::with_seed_docs(docs)
+    }
+
+    pub fn from_env() -> Self {
+        let mode = env::var("REX_INDEXER").unwrap_or_else(|_| "workspace".to_string());
+        if mode.trim().eq_ignore_ascii_case("seeded") {
+            return Self::default_seeded();
+        }
+        let root = env::var("REX_WORKSPACE_ROOT")
+            .ok()
+            .map(|v| PathBuf::from(v.trim().to_string()))
+            .filter(|p| !p.as_os_str().is_empty())
+            .or_else(|| env::current_dir().ok())
+            .unwrap_or_else(|| PathBuf::from("."));
+        Self::from_workspace_root(&root)
     }
 
     pub fn default_seeded() -> Self {
@@ -262,10 +291,15 @@ pub struct ContextPipeline {
 }
 
 impl ContextPipeline {
-    pub fn default_sidecar_like() -> Self {
+    /// Production pipeline: workspace indexer unless `REX_INDEXER=seeded`.
+    pub fn production_default() -> Self {
+        Self::with_indexer(LexicalWorkspaceIndexer::from_env())
+    }
+
+    pub(crate) fn with_indexer(indexer: LexicalWorkspaceIndexer) -> Self {
         Self {
             budget: TokenBudget::default(),
-            indexer: LexicalWorkspaceIndexer::default_seeded(),
+            indexer,
             compressor: ExtractiveContextCompressor,
             cache: ExactPrefixCache::new(Duration::from_secs(600)),
         }
@@ -392,6 +426,64 @@ impl RetrievalDecision {
     }
 }
 
+fn collect_workspace_docs(
+    root: &Path,
+    dir: &Path,
+    out: &mut Vec<(String, String)>,
+    max_files: usize,
+    max_bytes: usize,
+) {
+    if out.len() >= max_files {
+        return;
+    }
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        if out.len() >= max_files {
+            break;
+        }
+        let path = entry.path();
+        let rel = path
+            .strip_prefix(root)
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .replace('\\', "/");
+        if is_ignored_path(&rel) {
+            continue;
+        }
+        let meta = match entry.metadata() {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+        if meta.is_dir() {
+            collect_workspace_docs(root, &path, out, max_files, max_bytes);
+            continue;
+        }
+        if !is_indexable_extension(&rel) {
+            continue;
+        }
+        if meta.len() as usize > max_bytes {
+            continue;
+        }
+        let Ok(text) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let trimmed = text.chars().take(max_bytes).collect::<String>();
+        if !trimmed.is_empty() {
+            out.push((rel, trimmed));
+        }
+    }
+}
+
+fn is_indexable_extension(path: &str) -> bool {
+    path.ends_with(".rs")
+        || path.ends_with(".md")
+        || path.ends_with(".toml")
+        || path.ends_with(".proto")
+}
+
 fn is_ignored_path(path: &str) -> bool {
     let normalized = path.replace('\\', "/");
     normalized.contains("/node_modules/")
@@ -443,6 +535,28 @@ mod tests {
         LexicalWorkspaceIndexer,
     };
     use crate::adapters::{AdapterCapabilities, RuntimeKind};
+    use std::fs;
+
+    fn test_pipeline() -> ContextPipeline {
+        ContextPipeline::with_indexer(LexicalWorkspaceIndexer::default_seeded())
+    }
+
+    #[test]
+    fn workspace_indexer_reads_files_from_temp_root() {
+        let dir = std::env::temp_dir().join(format!("rex-index-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("src")).expect("mkdir");
+        fs::write(dir.join("src/a.rs"), "socket retry logic").expect("write");
+        fs::write(dir.join("README.md"), "project readme").expect("write");
+        let index = LexicalWorkspaceIndexer::from_workspace_root(&dir);
+        let hits = index.search("socket retry", 5);
+        assert!(
+            hits.iter().any(|c| c.source.contains("a.rs")),
+            "expected workspace file in hits: {:?}",
+            hits
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn lexical_index_returns_deterministic_ranked_results() {
@@ -470,7 +584,7 @@ mod tests {
 
     #[test]
     fn pipeline_reports_cache_hit_after_first_request() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
             prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
@@ -487,7 +601,7 @@ mod tests {
 
     #[test]
     fn pipeline_can_bypass_cache() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
             prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
@@ -504,7 +618,7 @@ mod tests {
 
     #[test]
     fn mock_profile_attaches_context_when_indexer_hits() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
             prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
@@ -521,7 +635,7 @@ mod tests {
 
     #[test]
     fn cursor_profile_skips_context_attachment() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
             prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
@@ -538,7 +652,7 @@ mod tests {
 
     #[test]
     fn retrieval_skipped_for_short_prompt() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
             prompt: "hi".to_string(),
             diagnostics_hint: None,
@@ -556,7 +670,7 @@ mod tests {
 
     #[test]
     fn retrieval_off_directive_skips_indexer() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
             prompt: "status stream retry integration tests".to_string(),
             diagnostics_hint: None,
@@ -573,7 +687,7 @@ mod tests {
 
     #[test]
     fn behavior_filter_can_suppress_when_user_is_in_focus_flow() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
             prompt: "complete this helper".to_string(),
             diagnostics_hint: None,
