@@ -16,6 +16,7 @@ const FIXTURE_DAEMON_SLEEP = path.join(FIXTURES_DIR, "daemon_sleep.sh");
 const FIXTURE_DAEMON_EXITS = path.join(FIXTURES_DIR, "daemon_exits.sh");
 const FIXTURE_CLI_FLAKY = path.join(FIXTURES_DIR, "cli_status_fail_twice_then_ok.sh");
 const FIXTURE_CLI_OK_THEN_FAIL = path.join(FIXTURES_DIR, "cli_status_ok_then_fail.sh");
+const FIXTURE_CLI_FAIL_THEN_OK = path.join(FIXTURES_DIR, "cli_status_fail_then_ok.sh");
 
 async function makeWorkspaceTmp(): Promise<string> {
   const base = path.resolve(__dirname, "..", "..", ".vitest-tmp");
@@ -46,6 +47,35 @@ describe("DaemonLifecycle.ensureRunning", () => {
       if (lifecycle) {
         await lifecycle.shutdown();
       }
+    }
+  });
+
+  it("probe transitions from unavailable to ready when status recovers", async () => {
+    const tmpDir = await makeWorkspaceTmp();
+    const phaseFile = path.join(tmpDir, "phase");
+    await fs.writeFile(phaseFile, "0", "utf8");
+    const kinds: DaemonLifecycleState["kind"][] = [];
+    const lifecycle = new DaemonLifecycle({
+      cli: {
+        cliPath: FIXTURE_CLI_FAIL_THEN_OK,
+        env: { REX_TEST_STATUS_PHASE_FILE: phaseFile },
+        timeoutMs: 2_000,
+      },
+      daemonBinaryPath: FIXTURE_DAEMON_SLEEP,
+      onState: (s) => kinds.push(s.kind),
+    });
+    try {
+      const first = await lifecycle.probe();
+      expect(first.kind).toBe("unavailable");
+      const second = await lifecycle.probe();
+      expect(second.kind).toBe("ready");
+      if (second.kind === "ready") {
+        expect(second.status.activeModelId).toBe("recovered");
+      }
+      expect(kinds).toEqual(["unavailable", "ready"]);
+    } finally {
+      await lifecycle.shutdown();
+      await fs.rm(tmpDir, { recursive: true, force: true });
     }
   });
 
