@@ -1,0 +1,2 @@
+{"event":"error","message":"sidecar required but unavailable: binary missing","code":"sidecar_unavailable"}
+{"event":"error","message":"inference runtime not configured: set REX_OPENAI_COMPAT_BASE_URL","code":"inference_config"}

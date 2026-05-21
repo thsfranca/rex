@@ -4,6 +4,8 @@ use serde_json::Value;
 
 const HAPPY_PATH_FIXTURE: &str =
     include_str!("../../../fixtures/ndjson_contract/happy_path.ndjson");
+const SETUP_ERRORS_FIXTURE: &str =
+    include_str!("../../../fixtures/ndjson_contract/sidecar_setup_errors.ndjson");
 
 fn terminal_event_count(lines: &str) -> usize {
     lines
@@ -66,4 +68,23 @@ fn shared_fixture_lines_match_stream_contract_fields() {
             other => panic!("unexpected event: {other}"),
         }
     }
+}
+
+#[test]
+fn setup_error_fixture_codes_are_stable() {
+    let lines: Vec<&str> = SETUP_ERRORS_FIXTURE
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .collect();
+    assert_eq!(lines.len(), 2);
+    let first: Value = serde_json::from_str(lines[0]).expect("json");
+    let second: Value = serde_json::from_str(lines[1]).expect("json");
+    assert_eq!(
+        first.get("code").and_then(|v| v.as_str()),
+        Some("sidecar_unavailable")
+    );
+    assert_eq!(
+        second.get("code").and_then(|v| v.as_str()),
+        Some("inference_config")
+    );
 }

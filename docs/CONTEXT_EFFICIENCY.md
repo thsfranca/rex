@@ -104,6 +104,21 @@ The daemon uses these contracts internally as sidecar seams:
 
 This contract lives in the daemon **context pipeline** module (`plugins`).
 
+## Routing observability (RC-09)
+
+Each `StreamInference` request logs a grep-friendly economics line at stream start:
+
+```text
+stream.request_id=… trace_id=… route=sidecar+http-openai-compat decision_id=dec-… inference_runtime=… stream.lifecycle=starting …
+```
+
+| Field | Meaning |
+|-------|---------|
+| `route=` | Resolved path label (`sidecar+<runtime>`, `harness_direct+<runtime>`, or `daemon_direct+<runtime>`) |
+| `decision_id=` | Stable per-request id (`dec-{request_id}`) for correlating logs |
+
+Broker RPCs log `broker.inference=*` and `broker.access_policy=*` separately.
+
 ## Configuration examples
 
 ### Cache bypass

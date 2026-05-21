@@ -4,12 +4,15 @@ use std::env;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
+use crate::access_policy::{AccessDecision, PolicyDeny};
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum BrokerError {
     #[error("workspace root not configured")]
     NoWorkspaceRoot,
+    #[error("access policy denied ({code}): {message}")]
+    PolicyDenied { code: String, message: String },
     #[error("path escapes workspace: {0}")]
     EscapesWorkspace(String),
     #[error("path not found: {0}")]
@@ -28,6 +31,15 @@ const MAX_WRITE_BYTES: usize = 65_536;
 const MAX_SHELL_OUTPUT_BYTES: usize = 8_192;
 const DEFAULT_SHELL_ALLOWLIST: &str = "echo,printf,true";
 
+impl From<PolicyDeny> for BrokerError {
+    fn from(deny: PolicyDeny) -> Self {
+        Self::PolicyDenied {
+            code: deny.code.to_string(),
+            message: deny.message,
+        }
+    }
+}
+
 pub fn workspace_root_from_env() -> Result<PathBuf, BrokerError> {
     let raw = env::var("REX_WORKSPACE_ROOT")
         .or_else(|_| env::current_dir().map(|p| p.display().to_string()))
@@ -40,8 +52,10 @@ pub fn workspace_root_from_env() -> Result<PathBuf, BrokerError> {
 }
 
 pub fn broker_read_file(relative_path: &str) -> Result<String, BrokerError> {
-    let capability = "fs.read";
-    let _ = capability;
+    match crate::access_policy::evaluate_fs_read(relative_path) {
+        AccessDecision::Allow => {}
+        AccessDecision::Deny(deny) => return Err(deny.into()),
+    }
     let root = workspace_root_from_env()?;
     let resolved = resolve_under_workspace(&root, relative_path)?;
     std::fs::read_to_string(&resolved).map_err(|e| {
@@ -238,6 +252,17 @@ mod tests {
         broker_write_file("out.txt", "written-by-broker").expect("write");
         let content = broker_read_file("out.txt").expect("read back");
         assert_eq!(content, "written-by-broker");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    #[serial]
+    fn denies_protected_env_file() {
+        let dir = std::env::temp_dir().join(format!("rex-broker-policy-{}", std::process::id()));
+        fs::create_dir_all(&dir).expect("tmpdir");
+        let _guard = WorkspaceRootGuard::set(dir.display().to_string());
+        let err = broker_read_file(".env").unwrap_err();
+        assert!(matches!(err, BrokerError::PolicyDenied { .. }));
         let _ = fs::remove_dir_all(&dir);
     }
 

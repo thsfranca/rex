@@ -24,3 +24,20 @@ export function appendDaemonExecutableNotFoundHint(err: unknown, message: string
   }
   return `${message} Set rex.daemonBinaryPath to the absolute path to rex-daemon (see ${EXTENSION_LOCAL_E2E_DOC_PATH} in the REX repository).`;
 }
+
+/**
+ * Appends MVP operator hints for sidecar/HTTP/daemon configuration failures.
+ */
+export function appendStreamSetupHint(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("sidecar required") || lower.includes("sidecar unavailable")) {
+    return `${message} Enable REX_SIDECAR_ENABLED=1 and ensure rex-sidecar-stub is on PATH (see ${EXTENSION_LOCAL_E2E_DOC_PATH} §3 in the REX repository).`;
+  }
+  if (lower.includes("inference runtime") || lower.includes("rex_openai_compat")) {
+    return `${message} Configure brokered HTTP: REX_OPENAI_COMPAT_BASE_URL and REX_OPENAI_COMPAT_MODEL (see ${EXTENSION_LOCAL_E2E_DOC_PATH} §3 in the REX repository).`;
+  }
+  if (lower.includes("daemon is unavailable") || lower.includes("daemon unavailable")) {
+    return `${message} Start rex-daemon with sidecar and HTTP env (see ${EXTENSION_LOCAL_E2E_DOC_PATH} in the REX repository).`;
+  }
+  return message;
+}

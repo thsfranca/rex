@@ -42,9 +42,13 @@ describe("streamComplete", () => {
         prompt: "hi",
       }),
     );
-    expect(events).toEqual([
-      { kind: "error", message: "daemon unavailable", code: "daemon_unavailable" },
-    ]);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.kind).toBe("error");
+    expect(events[0]).toMatchObject({ code: "daemon_unavailable" });
+    expect(events[0]?.kind === "error" && events[0].message).toContain("daemon unavailable");
+    expect(events[0]?.kind === "error" && events[0].message).toContain(
+      EXTENSION_LOCAL_E2E_DOC_PATH,
+    );
     expect(terminalEvents(events)).toHaveLength(1);
   });
 

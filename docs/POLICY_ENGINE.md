@@ -47,6 +47,7 @@ flowchart TB
 |------|--------|----------------|
 | **Cache / mode** | `policy.rs` — `PolicyEngine`, `decide`, `CacheDecision` | `ask` L1 lookup; `agent` uncacheable; bypass flags — [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md), [CACHING.md](CACHING.md). |
 | **Agent approvals** | `approvals.rs` — `ApprovalGate` | Opt-in `REX_AGENT_APPROVALS`; default `AlwaysAllow`; `Checkpoint` returns failed-precondition (blocks stream) — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md). |
+| **Access policy (broker)** | `access_policy.rs` — `evaluate_fs_read` | Centralized deny before `fs.read` host execution — **RC-05** / **R012** |
 
 **Ordering rule (shipped):** pipeline resolution → **cache decision** → runtime invocation. Tests lock this ordering.
 

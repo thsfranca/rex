@@ -68,8 +68,8 @@ impl HttpOpenAiCompatRuntime {
         })
     }
 
-    /// Model id reported on `GetSystemStatus` when this runtime is active.
-    async fn fetch_completion_text(&self, prompt: &str) -> Result<String, Status> {
+    /// Single completion for sidecar `BrokerInference` (assembled from SSE).
+    pub async fn fetch_completion_text(&self, prompt: &str) -> Result<String, Status> {
         let body = serde_json::json!({
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
@@ -166,6 +166,15 @@ fn parse_sse_data_line(line: &str) -> Option<String> {
                 .and_then(Value::as_str)
                 .map(str::to_string)
         })
+}
+
+/// Broker RPC entry: HTTP OpenAI-compat when env is configured.
+pub async fn broker_inference_completion(prompt: &str) -> Result<String, String> {
+    let runtime = HttpOpenAiCompatRuntime::from_env()?;
+    runtime
+        .fetch_completion_text(prompt)
+        .await
+        .map_err(|status| status.message().to_string())
 }
 
 fn truncate_body(body: &str, max: usize) -> String {

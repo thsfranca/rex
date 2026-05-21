@@ -2,7 +2,11 @@ import { appendWithByteCap } from "./cappedString";
 import { spawnCompleteStream, type CliBridgeOptions } from "./cliBridge";
 import { NdjsonLineParser, type StreamEvent } from "./ndjsonParser";
 import { classifyStreamError, classifyStreamErrorMessage } from "./errorTaxonomy";
-import { appendCliExecutableNotFoundHint } from "./spawnExecutableHints";
+import {
+  appendCliExecutableNotFoundHint,
+  appendStreamSetupHint,
+} from "./spawnExecutableHints";
+import { streamFailureWantsSetupHint } from "./userActionableFailure";
 
 /** Max stderr captured for exit-code error messages (extension process memory). */
 const STDERR_CAPTURE_MAX_BYTES = 32_768;
@@ -62,9 +66,13 @@ export async function* streamComplete(
     }
     if (event.kind === "error") {
       const classified = classifyStreamError(event);
+      let message = classified.message;
+      if (streamFailureWantsSetupHint(classified.code, message)) {
+        message = appendStreamSetupHint(message);
+      }
       event = {
         kind: "error",
-        message: classified.message,
+        message,
         code: classified.code,
       };
     }
@@ -148,7 +156,11 @@ export async function* streamComplete(
           ? "stream ended without terminal event"
           : `rex-cli exited with code ${code}${stderrTrim.length > 0 ? `: ${stderrTrim}` : ""}`;
       const classified = classifyStreamErrorMessage(message);
-      pushEvent({ kind: "error", message, code: classified.code });
+      let finalMessage = classified.message;
+      if (streamFailureWantsSetupHint(classified.code, finalMessage)) {
+        finalMessage = appendStreamSetupHint(finalMessage);
+      }
+      pushEvent({ kind: "error", message: finalMessage, code: classified.code });
     }
     wakeConsumer();
   });

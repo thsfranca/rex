@@ -33,6 +33,8 @@ export type StreamEvent = StreamChunkEvent | StreamDoneEvent | StreamErrorEvent;
 
 export type StreamErrorCode =
   | "daemon_unavailable"
+  | "sidecar_unavailable"
+  | "inference_config"
   | "stream_timeout"
   | "stream_interrupted"
   | "stream_incomplete"
@@ -133,6 +135,8 @@ function asErrorCode(value: unknown): StreamErrorCode | undefined {
   }
   if (
     value === "daemon_unavailable" ||
+    value === "sidecar_unavailable" ||
+    value === "inference_config" ||
     value === "stream_timeout" ||
     value === "stream_interrupted" ||
     value === "stream_incomplete" ||

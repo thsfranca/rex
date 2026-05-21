@@ -45,5 +45,11 @@ export function classifyStreamErrorMessage(message: string): ClassifiedStreamErr
   if (normalized.includes("failed to spawn rex-cli")) {
     return { code: "spawn_failed", message, retryable: false };
   }
+  if (normalized.includes("sidecar required")) {
+    return { code: "sidecar_unavailable", message, retryable: false };
+  }
+  if (normalized.includes("inference runtime")) {
+    return { code: "inference_config", message, retryable: false };
+  }
   return { code: "unknown", message, retryable: false };
 }

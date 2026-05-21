@@ -143,11 +143,18 @@ fn map_status_error(status: tonic::Status) -> CliError {
 }
 
 fn map_stream_status_error(status: tonic::Status) -> CliError {
+    let message = status.message().to_string();
     match status.code() {
         Code::DeadlineExceeded => CliError::StreamTimeout {
             seconds: STREAM_ITEM_TIMEOUT_SECONDS,
         },
         Code::Unavailable => CliError::StreamInterrupted,
+        Code::FailedPrecondition if message.to_ascii_lowercase().contains("sidecar required") => {
+            CliError::SidecarUnavailable { detail: message }
+        }
+        Code::FailedPrecondition if message.to_ascii_lowercase().contains("inference runtime") => {
+            CliError::InferenceConfig { detail: message }
+        }
         _ => CliError::Status(status),
     }
 }
@@ -255,6 +262,8 @@ fn ndjson_error_code(err: &CliError) -> &'static str {
         CliError::StreamTimeout { .. } => "stream_timeout",
         CliError::StreamInterrupted => "stream_interrupted",
         CliError::StreamIncomplete => "stream_incomplete",
+        CliError::SidecarUnavailable { .. } => "sidecar_unavailable",
+        CliError::InferenceConfig { .. } => "inference_config",
         CliError::DaemonConnect { .. } => "daemon_unavailable",
         CliError::Endpoint(_) | CliError::Status(_) => "unknown",
         CliError::Stdout(_) => "unknown",
@@ -375,6 +384,18 @@ mod tests {
     #[test]
     fn ndjson_error_codes_are_stable() {
         assert_eq!(
+            ndjson_error_code(&CliError::SidecarUnavailable {
+                detail: "sidecar required but unavailable: test".to_string(),
+            }),
+            "sidecar_unavailable"
+        );
+        assert_eq!(
+            ndjson_error_code(&CliError::InferenceConfig {
+                detail: "inference runtime configuration failed".to_string(),
+            }),
+            "inference_config"
+        );
+        assert_eq!(
             ndjson_error_code(&CliError::StreamInterrupted),
             "stream_interrupted"
         );
@@ -408,6 +429,12 @@ mod tests {
         assert!(matches!(
             map_stream_status_error(internal),
             CliError::Status(_)
+        ));
+
+        let sidecar = tonic::Status::failed_precondition("sidecar required but unavailable: down");
+        assert!(matches!(
+            map_stream_status_error(sidecar),
+            CliError::SidecarUnavailable { .. }
         ));
     }
 

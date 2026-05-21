@@ -11,6 +11,9 @@ use tonic::transport::Endpoint;
 use tower::service_fn;
 
 #[allow(dead_code)]
+#[path = "../src/access_policy.rs"]
+mod access_policy;
+#[allow(dead_code)]
 #[path = "../src/adapters.rs"]
 mod adapters;
 #[allow(dead_code)]

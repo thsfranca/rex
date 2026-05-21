@@ -78,8 +78,14 @@ impl SidecarSupervisor {
             self.config.binary.display(),
             self.config.socket_path
         );
+        let daemon_socket = std::env::var("REX_DAEMON_SOCKET")
+            .ok()
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| crate::domain::SOCKET_PATH.to_string());
         let child = Command::new(&self.config.binary)
             .env("REX_SIDECAR_SOCKET", &self.config.socket_path)
+            .env("REX_DAEMON_SOCKET", &daemon_socket)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .spawn()
