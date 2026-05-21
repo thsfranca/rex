@@ -120,7 +120,7 @@
       {
         "id": "rex.getStarted",
         "title": "REX: get started (local)",
-        "description": "Point the extension at **rex-cli**, run **rex-daemon** (or enable auto-start), then open chat. Mock inference is the default; no network required.",
+        "description": "Point the extension at **rex-cli**, run **rex-daemon** with brokered HTTP and an enabled sidecar for **plan/agent** modes, then open chat. **ask** mode may use mock when the daemon is configured for harness-only paths.",
         "steps": [
           {
             "id": "rex.getStarted.cli",
@@ -147,9 +147,21 @@
             ]
           },
           {
+            "id": "rex.getStarted.sidecar",
+            "title": "Configure brokered HTTP and sidecar (plan/agent)",
+            "description": "In the terminal where you start **rex-daemon**, export brokered HTTP (example Ollama):\n\n`REX_OPENAI_COMPAT_BASE_URL=http://127.0.0.1:11434/v1`\n`REX_OPENAI_COMPAT_MODEL=llama3.2`\n\nEnable the supervised sidecar:\n\n`REX_SIDECAR_ENABLED=1`\n`cargo build -p rex-sidecar-stub` (ensure `rex-sidecar-stub` is on `PATH`)\n\nDetails: **docs/EXTENSION_LOCAL_E2E.md** and **docs/CONFIGURATION.md** in the REX repo.\n\n[How to start the daemon](command:rex.howToStartDaemon)",
+            "media": {
+              "path": "media/rex-activity.svg",
+              "altText": "REX"
+            },
+            "completionEvents": [
+              "onCommand:rex.howToStartDaemon"
+            ]
+          },
+          {
             "id": "rex.getStarted.chat",
             "title": "Open REX chat and send a prompt",
-            "description": "When the status bar is **REX ready**, open the REX view and try a short prompt (mock response by default).\n\n[REX: Open Chat](command:rex.focusChat)",
+            "description": "When the status bar is **REX ready**, open the REX view. Try **ask** for a quick check; use **plan** or **agent** after HTTP + sidecar env from the previous step.\n\n[REX: Open Chat](command:rex.focusChat)",
             "media": {
               "path": "media/rex-activity.svg",
               "altText": "REX"

@@ -49,7 +49,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     notifyStreamFailure: ({ code, message }) => {
       const firstLine = message.split("\n")[0].trim();
       output.appendLine(`[chat] terminal_error code=${code} detail=${firstLine}`);
-      if (!streamFailureWantsSetupHint(code)) {
+      if (!streamFailureWantsSetupHint(code, message)) {
         return;
       }
       void vscode.window
@@ -104,7 +104,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(
     vscode.commands.registerCommand("rex.howToStartDaemon", async () => {
       const pick = await vscode.window.showInformationMessage(
-        "Start `rex-daemon` in a terminal (e.g. `cargo run -p rex-daemon`), then rerun `REX: Show Daemon Status`.",
+        "MVP agent/plan path: start rex-daemon with brokered HTTP (REX_OPENAI_COMPAT_*) and sidecar (REX_SIDECAR_ENABLED=1, rex-sidecar-stub on PATH). See docs/EXTENSION_LOCAL_E2E.md and docs/CONFIGURATION.md in the REX repository.",
         "Open Output",
       );
       if (pick === "Open Output") {
