@@ -9,6 +9,7 @@ use tokio::process::Command;
 use tonic::Status;
 
 use crate::domain::{build_mock_output, chunk_output};
+use crate::http_openai_compat::HttpOpenAiCompatRuntime;
 
 const STREAM_CHUNK_MAX_CHARS: usize = 8;
 const CURSOR_TIMEOUT_SECS_DEFAULT: u64 = 20;
@@ -18,26 +19,31 @@ const CURSOR_STDERR_TRUNC_MARKER: &str = " [rex: cursor stderr truncated] ";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RuntimeKind {
+    HttpOpenAiCompat,
     Mock,
     CursorCli,
 }
 
 impl RuntimeKind {
     pub fn from_env() -> Self {
-        let raw = env::var("REX_INFERENCE_RUNTIME").unwrap_or_else(|_| "mock".to_string());
+        let raw =
+            env::var("REX_INFERENCE_RUNTIME").unwrap_or_else(|_| "http-openai-compat".to_string());
         Self::from_setting(&raw)
     }
 
     fn from_setting(raw: &str) -> Self {
         match raw.trim().to_ascii_lowercase().as_str() {
+            "mock" => Self::Mock,
             "cursor" | "cursor-cli" => Self::CursorCli,
-            _ => Self::Mock,
+            "http-openai-compat" | "openai-compat" | "http" => Self::HttpOpenAiCompat,
+            _ => Self::HttpOpenAiCompat,
         }
     }
 
-    /// Stable `key=value` token for daemon stdout; matches L1 and env vocabulary (`mock`, `cursor-cli`).
+    /// Stable `key=value` token for daemon stdout; matches L1 and env vocabulary.
     pub fn log_label(self) -> &'static str {
         match self {
+            Self::HttpOpenAiCompat => "http-openai-compat",
             Self::Mock => "mock",
             Self::CursorCli => "cursor-cli",
         }
@@ -49,10 +55,25 @@ pub trait InferenceRuntime: Send + Sync {
     async fn build_chunks(&self, prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>>;
 }
 
-pub fn runtime_from_env() -> Arc<dyn InferenceRuntime> {
+pub fn runtime_from_env() -> Result<Arc<dyn InferenceRuntime>, String> {
     match RuntimeKind::from_env() {
-        RuntimeKind::Mock => Arc::new(MockInferenceRuntime),
-        RuntimeKind::CursorCli => Arc::new(CursorCliRuntime::from_env()),
+        RuntimeKind::HttpOpenAiCompat => HttpOpenAiCompatRuntime::from_env()
+            .map(|rt| Arc::new(rt) as Arc<dyn InferenceRuntime>)
+            .map_err(|status| status.message().to_string()),
+        RuntimeKind::Mock => Ok(Arc::new(MockInferenceRuntime)),
+        RuntimeKind::CursorCli => Ok(Arc::new(CursorCliRuntime::from_env())),
+    }
+}
+
+/// Active model id for status RPC when the HTTP runtime is selected.
+pub fn active_model_id_from_env() -> String {
+    match RuntimeKind::from_env() {
+        RuntimeKind::HttpOpenAiCompat => env::var(crate::http_openai_compat::MODEL_ENV)
+            .ok()
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| crate::http_openai_compat::MODEL_DEFAULT.to_string()),
+        _ => crate::domain::ACTIVE_MODEL_ID.to_string(),
     }
 }
 
@@ -227,7 +248,7 @@ fn truncate_detail_for_unavailable(stderr: &str, max_chars: usize) -> String {
     format!("{head_s}{CURSOR_STDERR_TRUNC_MARKER}{tail_s}")
 }
 
-fn stream_chunks_with_done(
+pub(crate) fn stream_chunks_with_done(
     content_chunks: Vec<String>,
 ) -> Vec<Result<StreamInferenceResponse, Status>> {
     let mut chunks = Vec::new();
@@ -314,8 +335,16 @@ mod tests {
     };
 
     #[test]
-    fn runtime_kind_defaults_to_mock() {
-        assert_eq!(RuntimeKind::from_setting(""), RuntimeKind::Mock);
+    fn runtime_kind_defaults_to_http_openai_compat() {
+        assert_eq!(
+            RuntimeKind::from_setting(""),
+            RuntimeKind::HttpOpenAiCompat
+        );
+    }
+
+    #[test]
+    fn runtime_kind_selects_mock_when_requested() {
+        assert_eq!(RuntimeKind::from_setting("mock"), RuntimeKind::Mock);
     }
 
     #[test]
@@ -328,6 +357,10 @@ mod tests {
 
     #[test]
     fn runtime_kind_log_label_matches_l1_vocabulary() {
+        assert_eq!(
+            RuntimeKind::HttpOpenAiCompat.log_label(),
+            "http-openai-compat"
+        );
         assert_eq!(RuntimeKind::Mock.log_label(), "mock");
         assert_eq!(RuntimeKind::CursorCli.log_label(), "cursor-cli");
     }

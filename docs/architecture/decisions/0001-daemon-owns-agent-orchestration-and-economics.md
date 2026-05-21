@@ -5,7 +5,7 @@
 
 ## Context
 
-REX aims to minimize **dependence on opaque external agent loops** for **cost, routing, and policy**, while still supporting **multiple inference backends** (local mock, subprocess CLIs, future APIs).
+REX aims to minimize **dependence on opaque external agent loops** for **cost, routing, and policy**, while still supporting **brokered inference backends** (OpenAI-compatible HTTP, mock for tests, legacy subprocess adapters) — see [MVP_SPEC.md](../../MVP_SPEC.md).
 
 Alternative: delegate the full agent (planning, tools, multi-step edits) to a third-party CLI and treat REX as a thin transport shim.
 

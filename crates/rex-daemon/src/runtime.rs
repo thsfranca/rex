@@ -17,6 +17,8 @@ use crate::service::RexDaemonService;
 
 #[derive(Debug, Error)]
 pub enum DaemonRuntimeError {
+    #[error("inference runtime configuration: {0}")]
+    InferenceConfig(String),
     #[error("failed to remove stale socket at {path}: {source}")]
     SocketCleanup { path: String, source: io::Error },
     #[error("failed to bind daemon socket at {path}: {source}")]
@@ -37,7 +39,10 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
             source,
         })?;
     let incoming = UnixListenerStream::new(listener);
-    let runtime = runtime_from_env();
+    let runtime = runtime_from_env().map_err(|message| {
+        eprintln!("rex-daemon inference runtime failed: {message}");
+        DaemonRuntimeError::InferenceConfig(message)
+    })?;
     let approval_gate = approval_gate_from_env();
     let service = RexDaemonService::with_components(
         Instant::now(),

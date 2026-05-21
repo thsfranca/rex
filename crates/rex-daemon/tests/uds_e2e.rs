@@ -14,6 +14,9 @@ use tower::service_fn;
 #[path = "../src/adapters.rs"]
 mod adapters;
 #[allow(dead_code)]
+#[path = "../src/http_openai_compat.rs"]
+mod http_openai_compat;
+#[allow(dead_code)]
 #[path = "../src/approvals.rs"]
 mod approvals;
 #[allow(dead_code)]
@@ -46,6 +49,35 @@ fn test_socket_path() -> String {
 
 fn cleanup_socket(socket_path: &str) {
     let _ = std::fs::remove_file(socket_path);
+}
+
+struct E2eInferenceEnv {
+    runtime: Option<String>,
+    base_url: Option<String>,
+}
+
+/// UDS e2e tests use the **mock** runtime so they do not require a live HTTP backend.
+fn set_e2e_mock_runtime() -> E2eInferenceEnv {
+    let saved = E2eInferenceEnv {
+        runtime: env::var("REX_INFERENCE_RUNTIME").ok(),
+        base_url: env::var("REX_OPENAI_COMPAT_BASE_URL").ok(),
+    };
+    env::set_var("REX_INFERENCE_RUNTIME", "mock");
+    env::remove_var("REX_OPENAI_COMPAT_BASE_URL");
+    saved
+}
+
+fn restore_inference_runtime(saved: E2eInferenceEnv) {
+    if let Some(value) = saved.runtime {
+        env::set_var("REX_INFERENCE_RUNTIME", value);
+    } else {
+        env::remove_var("REX_INFERENCE_RUNTIME");
+    }
+    if let Some(value) = saved.base_url {
+        env::set_var("REX_OPENAI_COMPAT_BASE_URL", value);
+    } else {
+        env::remove_var("REX_OPENAI_COMPAT_BASE_URL");
+    }
 }
 
 fn uds_bind_supported() -> bool {
@@ -98,6 +130,8 @@ async fn status_and_stream_inference_work_over_uds() {
         eprintln!("Skipping UDS e2e: sandbox does not allow unix socket bind");
         return;
     }
+
+    let prev_runtime = set_e2e_mock_runtime();
 
     let socket_path = test_socket_path();
     cleanup_socket(&socket_path);
@@ -153,6 +187,8 @@ async fn status_and_stream_inference_work_over_uds() {
     daemon.abort();
     let _ = daemon.await;
     cleanup_socket(&socket_path);
+
+    restore_inference_runtime(prev_runtime);
 }
 
 /// Covers the Cursor-CLI runtime with a **shell stub** (`REX_CURSOR_CLI_COMMAND`), not the real
@@ -256,6 +292,7 @@ async fn startup_race_recovers_and_serves_status() {
         return;
     }
 
+    let prev_runtime = set_e2e_mock_runtime();
     let socket_path = test_socket_path();
     cleanup_socket(&socket_path);
     let daemon_socket = socket_path.clone();
@@ -301,6 +338,7 @@ async fn startup_race_recovers_and_serves_status() {
     daemon.abort();
     let _ = daemon.await;
     cleanup_socket(&socket_path);
+    restore_inference_runtime(prev_runtime);
 }
 
 #[tokio::test]
@@ -311,6 +349,7 @@ async fn stream_reports_terminal_error_when_daemon_interrupts() {
         return;
     }
 
+    let prev_runtime = set_e2e_mock_runtime();
     let socket_path = test_socket_path();
     cleanup_socket(&socket_path);
     let daemon_socket = socket_path.clone();
@@ -358,6 +397,7 @@ async fn stream_reports_terminal_error_when_daemon_interrupts() {
             Err(_) => panic!("expected stream read error or termination after daemon abort"),
         }
     }
+    restore_inference_runtime(prev_runtime);
 }
 
 const APPROVALS_ENV: &str = "REX_AGENT_APPROVALS";
@@ -375,6 +415,7 @@ async fn agent_mode_is_denied_when_approvals_env_is_set() {
 
     let prev = env::var(APPROVALS_ENV).ok();
     env::set_var(APPROVALS_ENV, "1");
+    let prev_runtime = set_e2e_mock_runtime();
 
     let socket_path = test_socket_path();
     cleanup_socket(&socket_path);
@@ -431,6 +472,7 @@ async fn agent_mode_is_denied_when_approvals_env_is_set() {
     } else {
         env::remove_var(APPROVALS_ENV);
     }
+    restore_inference_runtime(prev_runtime);
 }
 
 /// With `REX_AGENT_APPROVALS` unset, an `agent`-mode request must succeed
@@ -445,6 +487,7 @@ async fn agent_mode_is_allowed_when_approvals_env_is_unset() {
 
     let prev = env::var(APPROVALS_ENV).ok();
     env::remove_var(APPROVALS_ENV);
+    let prev_runtime = set_e2e_mock_runtime();
 
     let socket_path = test_socket_path();
     cleanup_socket(&socket_path);
@@ -482,4 +525,5 @@ async fn agent_mode_is_allowed_when_approvals_env_is_unset() {
     if let Some(value) = prev {
         env::set_var(APPROVALS_ENV, value);
     }
+    restore_inference_runtime(prev_runtime);
 }

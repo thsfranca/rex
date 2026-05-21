@@ -86,6 +86,7 @@ impl L1Key {
             }
         };
         let adapter = match runtime {
+            RuntimeKind::HttpOpenAiCompat => "http-openai-compat".to_string(),
             RuntimeKind::Mock => "mock".to_string(),
             RuntimeKind::CursorCli => "cursor-cli".to_string(),
         };
