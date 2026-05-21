@@ -31,6 +31,8 @@ flowchart LR
 
 Hub detail: [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
+**Beyond Phase 1:** v1.0 SMART release criteria and SemVer tagging live in [V1_0.md](V1_0.md); [ROADMAP.md](ROADMAP.md) tracks **RC-*** progress. Phase 1 baseline is largely **Implemented** below; v1.0 adds policy-broker centralization and related hardening.
+
 ## Product direction (beyond Phase 1)
 
 Converge **routing, compaction, caches, metering, and richer tool/MCP loops** in **`rex-daemon`** and the sidecar envelope ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). Phase 1 proves **supervision + broker + IDE loop**; durable memory and multi-plugin fleets stay on the roadmap ([LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md)).

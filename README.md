@@ -26,11 +26,12 @@ Canonical **purpose and operating principles** (single source of truth): **[docs
 ## Project status
 
 - **Experimental scope:** APIs, docs, and behavior can change as the study evolves; use this workspace for learning and prototypes, not production SLAs.
-- **Phase 1 (local operator):** **clone → configure HTTP backend → daemon (sidecar) → REX chat** — [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). MVP assistant requires a **supervised sidecar** with **brokered HTTP** ([`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)). Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md); bucketing: [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md).
+- **Phase 1 (local operator):** **clone → configure HTTP backend → daemon (sidecar) → REX chat** — [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). MVP assistant requires a **supervised sidecar** with **brokered HTTP** ([`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)).
+- **v1.0 milestone:** [`docs/V1_0.md`](docs/V1_0.md) defines SMART release criteria and when to tag **`1.0.0`**; [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks progress; [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) buckets work.
 - Engineering focus: **stream reliability** plus **stable NDJSON** across CLI/extension.
 - Product-learning focus: daemon **economics** (routing, compaction, caches, metrics per [docs/CONTEXT_EFFICIENCY.md](docs/CONTEXT_EFFICIENCY.md)); implementation incremental.
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
-- Not primary scope yet: production-grade local runtime adapters beyond the MVP set (for example **MLX**), remote networking/TLS, production auth, multi-plugin sidecar fleets. **Sidecar supervision and broker** are MVP intent — see shipping state in [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md).
+- Not primary scope yet: production-grade local runtime adapters beyond the MVP set (for example **MLX**), remote networking/TLS, production auth, multi-plugin sidecar fleets. **Sidecar supervision and broker** are Phase 1 baseline — see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md); v1.0 bar in [`docs/V1_0.md`](docs/V1_0.md).
 
 ## MVP local operator path
 
@@ -166,7 +167,8 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | SAD-style architecture (C4 views, quality attributes, observability/security) + links to ADRs. |
 | [`docs/architecture/decisions/`](docs/architecture/decisions/) | ADRs (daemon/agent boundary, adapters, cache policy, routing vs gateway). |
 | [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) | Phase 1 scope, protocol, and acceptance criteria. |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Consolidated backlog; engineering refactor IDs (**R004**–**R008**) live in-table. |
+| [`docs/V1_0.md`](docs/V1_0.md) | v1.0 release criteria (**RC-***), SemVer `1.0.0` meaning, tagging gate. |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Progress toward v1.0; engineering backlog IDs (**R004**–**R012**). |
 | [`docs/EXTENSION.md`](docs/EXTENSION.md) | NDJSON consumer contract, extension bootstrap path, component layout (replaces superseded MVP/architecture stubs). |
 | [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md) | Phased roadmap for the VS Code/Cursor extension. |
 | [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) | Install, daemon auto-start, troubleshooting, and release pipeline for the extension. |

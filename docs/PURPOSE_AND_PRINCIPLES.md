@@ -38,3 +38,4 @@ Concrete goals:
 
 - **Authors:** When adding or rewriting **purpose-level** prose, **update this file** and replace long repeats elsewhere with **links** here.
 - **Readers:** Start here for intent; follow links for specs, roadmaps, and ADRs.
+- **Milestones:** Near-term delivery target is **v1.0** — SMART release criteria and SemVer meaning in [V1_0.md](V1_0.md); [ROADMAP.md](ROADMAP.md) tracks **RC-*** progress.

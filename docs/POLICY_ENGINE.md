@@ -87,4 +87,5 @@ Does **not** replace `ApprovalGate` — approvals are human/UX gates; access pol
 
 - [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)
-- [ROADMAP.md](ROADMAP.md) — backlog and Later rows
+- [V1_0.md](V1_0.md) — **RC-05** AccessPolicy broker criterion
+- [ROADMAP.md](ROADMAP.md) — **R012** and Later rows
