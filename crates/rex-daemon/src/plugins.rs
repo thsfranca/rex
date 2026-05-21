@@ -91,6 +91,7 @@ pub struct PipelineMetrics {
     pub cache_status: CacheStatus,
     pub behavior_decision: BehaviorDecision,
     pub retrieval: RetrievalDecision,
+    pub compression_strategy: &'static str,
 }
 
 #[derive(Debug, Clone)]
@@ -226,15 +227,29 @@ pub fn should_skip_retrieval(request: &ContextRequest) -> bool {
 }
 
 impl ExtractiveContextCompressor {
-    pub fn compress(&self, chunks: &[ContextChunk], budget_tokens: usize) -> (String, usize, bool) {
+    pub fn compress(
+        &self,
+        query: &str,
+        chunks: &[ContextChunk],
+        budget_tokens: usize,
+    ) -> (String, usize, bool) {
         if budget_tokens == 0 || chunks.is_empty() {
             return (String::new(), 0, !chunks.is_empty());
         }
+        let query_terms = normalized_terms(query);
+        let mut ranked = chunks
+            .iter()
+            .map(|chunk| {
+                let line = format!("[{}] {}", chunk.source, chunk.text);
+                let score = score_terms(&query_terms, &normalized_terms(&line));
+                (score, line)
+            })
+            .collect::<Vec<_>>();
+        ranked.sort_by_key(|(score, line)| (Reverse(*score), line.clone()));
         let mut out = String::new();
         let mut used = 0usize;
         let mut truncated = false;
-        for chunk in chunks {
-            let line = format!("[{}] {}", chunk.source, chunk.text);
+        for (_, line) in ranked {
             let line_tokens = estimate_tokens(&line);
             if used + line_tokens > budget_tokens {
                 truncated = true;
@@ -349,6 +364,7 @@ impl ContextPipeline {
                     cache_status: CacheStatus::Bypass,
                     behavior_decision: decision,
                     retrieval: RetrievalDecision::Skipped,
+                    compression_strategy: "none",
                 },
             };
         }
@@ -369,6 +385,7 @@ impl ContextPipeline {
                     },
                     behavior_decision: decision,
                     retrieval: RetrievalDecision::Skipped,
+                    compression_strategy: "none",
                 },
             };
         }
@@ -387,6 +404,7 @@ impl ContextPipeline {
                         cache_status: CacheStatus::Hit,
                         behavior_decision: decision,
                         retrieval: RetrievalDecision::Skipped,
+                        compression_strategy: "prefix_hit",
                     },
                 };
             }
@@ -408,9 +426,14 @@ impl ContextPipeline {
             Vec::new()
         };
         let candidate_count = candidates.len();
-        let (context, selected_tokens, truncated) = self
-            .compressor
-            .compress(&candidates, self.budget.max_context_tokens);
+        let (context, selected_tokens, truncated) =
+            self.compressor
+                .compress(&query, &candidates, self.budget.max_context_tokens);
+        let compression_strategy = if candidates.is_empty() {
+            "none"
+        } else {
+            "extractive_query"
+        };
         if !request.cache_bypass {
             self.cache.put(cache_key, context.clone());
         }
@@ -433,6 +456,7 @@ impl ContextPipeline {
                 },
                 behavior_decision: decision,
                 retrieval,
+                compression_strategy,
             },
         }
     }
@@ -552,8 +576,8 @@ fn score_terms(query_terms: &[String], doc_terms: &[String]) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{
-        stable_prefix_key, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
-        LexicalWorkspaceIndexer, TokenBudget,
+        stable_prefix_key, BehaviorSnapshot, CacheStatus, ContextChunk, ContextPipeline,
+        ContextRequest, ExtractiveContextCompressor, LexicalWorkspaceIndexer, TokenBudget,
     };
     use crate::adapters::{AdapterCapabilities, RuntimeKind};
     use std::env;
@@ -626,6 +650,28 @@ mod tests {
             hits
         );
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn extractive_compressor_prefers_query_overlapping_lines() {
+        let compressor = ExtractiveContextCompressor;
+        let chunks = vec![
+            ContextChunk {
+                source: "low.rs".to_string(),
+                text: "unrelated module documentation".to_string(),
+            },
+            ContextChunk {
+                source: "high.rs".to_string(),
+                text: "socket retry daemon lifecycle".to_string(),
+            },
+        ];
+        let (packed, _, _) = compressor.compress("socket retry", &chunks, 512);
+        let high_pos = packed.find("high.rs").expect("high.rs line");
+        let low_pos = packed.find("low.rs").expect("low.rs line");
+        assert!(
+            high_pos < low_pos,
+            "expected query-relevant chunk first: {packed}"
+        );
     }
 
     #[test]
