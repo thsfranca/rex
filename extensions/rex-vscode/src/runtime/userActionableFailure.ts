@@ -11,6 +11,8 @@ const SETUP_HINT_MESSAGE_MARKERS: readonly string[] = [
   "rex-sidecar-stub",
   "sidecar",
   "approval gate",
+  "approval checkpoint",
+  "checkpoint required",
   "REX_AGENT_APPROVALS",
   "REX_OPENAI_COMPAT",
 ];

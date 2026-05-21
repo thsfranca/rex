@@ -21,8 +21,9 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 
 | Technique | REX responsibility | Module / seam | Primary doc anchor | Status |
 |-----------|-------------------|---------------|--------------------|--------|
-| Model routing / escalation cascade | Daemon chooses backend + model hint before adapter | Planned `InferenceRouter`; today env selects `InferenceRuntime` | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | **planned** |
-| Context compaction — verbatim-safe packing | Daemon pipeline trims redundancy without inventing symbols | `ContextPipeline`, future packers | Responsibility map below | **partial** |
+| Model routing / escalation cascade | Daemon chooses backend + model hint before adapter | `routing::decide_route` (env today); logs `route=` | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | **partial** (env hook) |
+| Adaptive retrieval gate | Skip indexer for short prompts, `[[retrieve:off]]`, or focused-behavior snapshot; log `retrieval=ran\|skipped` | `plugins::should_skip_retrieval` | [CONFIGURATION.md](CONFIGURATION.md) prompt directives | **implemented** (heuristic) |
+| Context compaction — verbatim-safe packing | Query-ranked extractive line packing (`compression_strategy=extractive_query`) | `ExtractiveContextCompressor` in `plugins.rs` | Responsibility map below | **implemented** (extractive) |
 | Context compaction — learned / small-model | Optional compressor stage or sidecar ML | Context pipeline compressor hooks | Evidence-informed defaults | **planned** |
 | Layered response cache — L1 exact | In-process LRU keyed by adapter, model, mode, schema, workspace | L1 cache + policy engine — [CACHING.md](CACHING.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | implemented (ask) |
 | Layered cache — L2 semantic | Embedding similarity **ask-only** guarded | Planned | [CACHING.md](CACHING.md) | **planned** |
@@ -121,6 +122,11 @@ This contract lives in the daemon **context pipeline** module (`plugins`).
 
 - Add a focused typing hint to test behavioral prefilter path:
   - `[[behavior:focused]]`
+
+### Retrieval gate
+
+- Skip lexical retrieval for this request:
+  - `[[retrieve:off]]`
 
 ## Local behavior telemetry defaults
 

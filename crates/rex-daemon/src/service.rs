@@ -10,8 +10,9 @@ use std::{
 use async_stream::stream;
 use rex_proto::rex::v1::rex_service_server::RexService;
 use rex_proto::rex::v1::{
-    BrokerReadFileRequest, BrokerReadFileResponse, GetSystemStatusRequest, GetSystemStatusResponse,
-    StreamInferenceRequest, StreamInferenceResponse,
+    BrokerExecShellRequest, BrokerExecShellResponse, BrokerReadFileRequest, BrokerReadFileResponse,
+    BrokerWriteFileRequest, BrokerWriteFileResponse, GetSystemStatusRequest,
+    GetSystemStatusResponse, StreamInferenceRequest, StreamInferenceResponse,
 };
 use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
@@ -20,15 +21,16 @@ use tonic::{Request, Response, Status};
 use crate::adapters::InferenceRuntime;
 #[cfg(test)]
 use crate::adapters::MockInferenceRuntime;
-use crate::adapters::{active_model_id_from_env, AdapterCapabilities, RuntimeKind};
+use crate::adapters::{active_model_id_from_env, AdapterCapabilities};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
-use crate::broker::broker_read_file;
+use crate::broker::{broker_exec_shell, broker_read_file, broker_write_file};
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::plugins::{
     BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
 };
 use crate::policy::{CacheDecision, CacheDecisionState, PolicyEngine, PolicyRequest};
+use crate::routing::decide_route;
 use crate::sidecar_client::{connect_sidecar, map_sidecar_to_inference_chunks, run_turn_collect};
 use crate::sidecar_config::{parse_harness_only, sidecar_product_path_active};
 use crate::supervisor::{SharedSupervisor, SupervisorError};
@@ -58,7 +60,7 @@ impl RexDaemonService {
     ) -> Self {
         Self {
             started_at,
-            pipeline: Mutex::new(ContextPipeline::default_sidecar_like()),
+            pipeline: Mutex::new(ContextPipeline::production_default()),
             runtime,
             request_sequence: AtomicU64::new(1),
             policy,
@@ -105,6 +107,44 @@ impl RexDaemonService {
 
 #[tonic::async_trait]
 impl RexService for RexDaemonService {
+    async fn broker_exec_shell(
+        &self,
+        request: Request<BrokerExecShellRequest>,
+    ) -> Result<Response<BrokerExecShellResponse>, Status> {
+        let command = request.into_inner().command;
+        match broker_exec_shell(&command) {
+            Ok(result) => Ok(Response::new(BrokerExecShellResponse {
+                ok: true,
+                stdout: result.stdout,
+                stderr: result.stderr,
+                error: String::new(),
+            })),
+            Err(err) => Ok(Response::new(BrokerExecShellResponse {
+                ok: false,
+                stdout: String::new(),
+                stderr: String::new(),
+                error: err.to_string(),
+            })),
+        }
+    }
+
+    async fn broker_write_file(
+        &self,
+        request: Request<BrokerWriteFileRequest>,
+    ) -> Result<Response<BrokerWriteFileResponse>, Status> {
+        let inner = request.into_inner();
+        match broker_write_file(&inner.path, &inner.content) {
+            Ok(()) => Ok(Response::new(BrokerWriteFileResponse {
+                ok: true,
+                error: String::new(),
+            })),
+            Err(err) => Ok(Response::new(BrokerWriteFileResponse {
+                ok: false,
+                error: err.to_string(),
+            })),
+        }
+    }
+
     async fn broker_read_file(
         &self,
         request: Request<BrokerReadFileRequest>,
@@ -145,19 +185,21 @@ impl RexService for RexDaemonService {
         let request_started = Instant::now();
         let request_id = self.request_sequence.fetch_add(1, Ordering::Relaxed);
         let trace_id = extract_trace_id(request.metadata(), request_id);
-        let runtime_kind = RuntimeKind::from_env();
-        let inference_runtime = runtime_kind.log_label();
-        let adapter_capabilities = AdapterCapabilities::for_runtime(runtime_kind);
         let inner = request.into_inner();
         let prompt = inner.prompt;
         let model = inner.model;
         let mode = inner.mode;
+        let route = decide_route(&mode, &model);
+        let runtime_kind = route.runtime;
+        let inference_runtime = runtime_kind.log_label();
+        let adapter_capabilities = AdapterCapabilities::for_runtime(runtime_kind);
         let directives = PromptDirectives::from_prompt(&prompt);
         let context_request = ContextRequest {
             prompt: prompt.clone(),
             diagnostics_hint: directives.diagnostics_hint.clone(),
             cache_bypass: directives.cache_bypass || cache_bypass_from_env(),
             behavior_snapshot: directives.behavior_snapshot,
+            retrieve_off: directives.retrieve_off,
         };
         let pipeline_result = self
             .pipeline
@@ -166,11 +208,12 @@ impl RexService for RexDaemonService {
             .prepare(&context_request, adapter_capabilities);
         let prompt_len = prompt.chars().count();
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} prompt_len={prompt_len}",
+            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} route={} stream.lifecycle={} prompt_len={prompt_len}",
+            route.label,
             StreamLifecycle::Starting.as_str(),
         );
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
+            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={} retrieval={} compression_strategy={}",
             pipeline_result.metrics.prompt_tokens,
             pipeline_result.metrics.selected_context_tokens,
             pipeline_result.metrics.context_candidates,
@@ -178,10 +221,12 @@ impl RexService for RexDaemonService {
             pipeline_result.metrics.context_truncated,
             format_cache_status(pipeline_result.metrics.cache_status),
             format_behavior_decision(&pipeline_result.metrics.behavior_decision),
+            pipeline_result.metrics.retrieval.as_str(),
+            pipeline_result.metrics.compression_strategy,
         );
         let cache_bypass = directives.cache_bypass || cache_bypass_from_env();
         let policy_request = PolicyRequest {
-            runtime: RuntimeKind::from_env(),
+            runtime: runtime_kind,
             model: &model,
             mode: &mode,
             effective_prompt: &pipeline_result.effective_prompt,
@@ -209,8 +254,13 @@ impl RexService for RexDaemonService {
                 }
                 ApprovalDecision::Checkpoint { reason } => {
                     println!(
-                        "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} approval={approval_label} reason={reason}",
+                        "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} approval={approval_label} stream.lifecycle={} stream.event=approval_checkpoint reason={reason} elapsed_ms={}",
+                        StreamLifecycle::Failed.as_str(),
+                        request_started.elapsed().as_millis()
                     );
+                    return Err(Status::failed_precondition(format!(
+                        "agent execution checkpoint required: {reason}"
+                    )));
                 }
                 ApprovalDecision::Deny { reason } => {
                     println!(
@@ -388,6 +438,7 @@ struct PromptDirectives {
     diagnostics_hint: Option<String>,
     cache_bypass: bool,
     behavior_snapshot: BehaviorSnapshot,
+    retrieve_off: bool,
 }
 
 impl PromptDirectives {
@@ -395,6 +446,7 @@ impl PromptDirectives {
         let mut diagnostics_hint = None;
         let mut cache_bypass = false;
         let mut behavior_snapshot = BehaviorSnapshot::default();
+        let mut retrieve_off = false;
         for line in prompt.lines() {
             if let Some(value) = line
                 .strip_prefix("[[diag:")
@@ -413,12 +465,17 @@ impl PromptDirectives {
             if line.trim() == "[[behavior:focused]]" {
                 behavior_snapshot.typing_cadence_cpm = 500;
                 behavior_snapshot.pause_events_last_minute = 0;
+                continue;
+            }
+            if line.trim() == "[[retrieve:off]]" {
+                retrieve_off = true;
             }
         }
         Self {
             diagnostics_hint,
             cache_bypass,
             behavior_snapshot,
+            retrieve_off,
         }
     }
 }
@@ -754,7 +811,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn approval_gate_checkpoint_proceeds_for_now() {
+    async fn approval_gate_checkpoint_returns_failed_precondition() {
         let gate = Arc::new(RecordingGate::new(ApprovalDecision::Checkpoint {
             reason: "future tool gate".to_string(),
         }));
@@ -770,16 +827,14 @@ mod tests {
             mode: "agent".to_string(),
             ..Default::default()
         });
-        let mut out = svc
-            .stream_inference(req)
-            .await
-            .expect("stream starts when gate returns Checkpoint (reserved variant)")
-            .into_inner();
-        let mut saw_done = false;
-        while let Some(chunk) = out.next().await {
-            saw_done = chunk.expect("ok chunk").done;
-        }
-        assert!(saw_done, "Checkpoint is reserved; must proceed for now");
+        let result = svc.stream_inference(req).await;
+        assert!(result.is_err(), "checkpoint must block stream start");
+        let err = result.err().expect("status error");
+        assert!(
+            err.message().contains("checkpoint required"),
+            "unexpected message: {}",
+            err.message()
+        );
     }
 
     #[tokio::test]

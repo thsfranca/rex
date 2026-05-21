@@ -1,5 +1,8 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
+use std::env;
+use std::fs;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use crate::adapters::AdapterCapabilities;
@@ -23,6 +26,27 @@ impl Default for TokenBudget {
     }
 }
 
+impl TokenBudget {
+    pub fn from_env() -> Self {
+        let default = Self::default();
+        Self {
+            max_prompt_tokens: parse_usize_env("REX_MAX_PROMPT_TOKENS", default.max_prompt_tokens),
+            max_context_tokens: parse_usize_env(
+                "REX_MAX_CONTEXT_TOKENS",
+                default.max_context_tokens,
+            ),
+        }
+    }
+}
+
+fn parse_usize_env(name: &str, default: usize) -> usize {
+    env::var(name)
+        .ok()
+        .and_then(|v| v.trim().parse().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(default)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct BehaviorSnapshot {
     pub typing_cadence_cpm: u16,
@@ -35,12 +59,19 @@ pub enum BehaviorDecision {
     Suppress { reason: &'static str },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RetrievalDecision {
+    Ran,
+    Skipped,
+}
+
 pub struct ContextRequest {
     pub prompt: String,
     pub diagnostics_hint: Option<String>,
     pub cache_bypass: bool,
     pub behavior_snapshot: BehaviorSnapshot,
+    /// When true, skip lexical retrieval (directive or gate).
+    pub retrieve_off: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,6 +90,8 @@ pub struct PipelineMetrics {
     pub context_truncated: bool,
     pub cache_status: CacheStatus,
     pub behavior_decision: BehaviorDecision,
+    pub retrieval: RetrievalDecision,
+    pub compression_strategy: &'static str,
 }
 
 #[derive(Debug, Clone)]
@@ -96,6 +129,32 @@ impl LexicalWorkspaceIndexer {
             .map(|(source, text)| WorkspaceDoc { source, text })
             .collect();
         Self { docs }
+    }
+
+    /// Bounded walk of `REX_WORKSPACE_ROOT` (or cwd) for `.rs`, `.md`, `.toml` files.
+    pub fn from_workspace_root(root: &Path) -> Self {
+        const MAX_FILES: usize = 32;
+        const MAX_BYTES_PER_FILE: usize = 4_096;
+        let mut docs = Vec::new();
+        collect_workspace_docs(root, root, &mut docs, MAX_FILES, MAX_BYTES_PER_FILE);
+        if docs.is_empty() {
+            return Self::default_seeded();
+        }
+        Self::with_seed_docs(docs)
+    }
+
+    pub fn from_env() -> Self {
+        let mode = env::var("REX_INDEXER").unwrap_or_else(|_| "workspace".to_string());
+        if mode.trim().eq_ignore_ascii_case("seeded") {
+            return Self::default_seeded();
+        }
+        let root = env::var("REX_WORKSPACE_ROOT")
+            .ok()
+            .map(|v| PathBuf::from(v.trim().to_string()))
+            .filter(|p| !p.as_os_str().is_empty())
+            .or_else(|| env::current_dir().ok())
+            .unwrap_or_else(|| PathBuf::from("."));
+        Self::from_workspace_root(&root)
     }
 
     pub fn default_seeded() -> Self {
@@ -152,16 +211,45 @@ impl LexicalWorkspaceIndexer {
 #[derive(Debug, Clone)]
 pub struct ExtractiveContextCompressor;
 
+const RETRIEVAL_SKIP_MAX_PROMPT_CHARS: usize = 48;
+
+pub fn should_skip_retrieval(request: &ContextRequest) -> bool {
+    if request.retrieve_off {
+        return true;
+    }
+    if request.prompt.chars().count() <= RETRIEVAL_SKIP_MAX_PROMPT_CHARS {
+        return true;
+    }
+    matches!(
+        BehavioralPrefilter::evaluate(request.behavior_snapshot),
+        BehaviorDecision::Suppress { .. }
+    )
+}
+
 impl ExtractiveContextCompressor {
-    pub fn compress(&self, chunks: &[ContextChunk], budget_tokens: usize) -> (String, usize, bool) {
+    pub fn compress(
+        &self,
+        query: &str,
+        chunks: &[ContextChunk],
+        budget_tokens: usize,
+    ) -> (String, usize, bool) {
         if budget_tokens == 0 || chunks.is_empty() {
             return (String::new(), 0, !chunks.is_empty());
         }
+        let query_terms = normalized_terms(query);
+        let mut ranked = chunks
+            .iter()
+            .map(|chunk| {
+                let line = format!("[{}] {}", chunk.source, chunk.text);
+                let score = score_terms(&query_terms, &normalized_terms(&line));
+                (score, line)
+            })
+            .collect::<Vec<_>>();
+        ranked.sort_by_key(|(score, line)| (Reverse(*score), line.clone()));
         let mut out = String::new();
         let mut used = 0usize;
         let mut truncated = false;
-        for chunk in chunks {
-            let line = format!("[{}] {}", chunk.source, chunk.text);
+        for (_, line) in ranked {
             let line_tokens = estimate_tokens(&line);
             if used + line_tokens > budget_tokens {
                 truncated = true;
@@ -219,7 +307,7 @@ impl ExactPrefixCache {
 pub struct BehavioralPrefilter;
 
 impl BehavioralPrefilter {
-    pub fn evaluate(&self, snapshot: BehaviorSnapshot) -> BehaviorDecision {
+    pub fn evaluate(snapshot: BehaviorSnapshot) -> BehaviorDecision {
         if snapshot.typing_cadence_cpm > 420 && snapshot.pause_events_last_minute == 0 {
             BehaviorDecision::Suppress {
                 reason: "focused-typing-window",
@@ -236,17 +324,20 @@ pub struct ContextPipeline {
     indexer: LexicalWorkspaceIndexer,
     compressor: ExtractiveContextCompressor,
     cache: ExactPrefixCache,
-    behavior: BehavioralPrefilter,
 }
 
 impl ContextPipeline {
-    pub fn default_sidecar_like() -> Self {
+    /// Production pipeline: workspace indexer unless `REX_INDEXER=seeded`.
+    pub fn production_default() -> Self {
+        Self::with_indexer(LexicalWorkspaceIndexer::from_env())
+    }
+
+    pub(crate) fn with_indexer(indexer: LexicalWorkspaceIndexer) -> Self {
         Self {
-            budget: TokenBudget::default(),
-            indexer: LexicalWorkspaceIndexer::default_seeded(),
+            budget: TokenBudget::from_env(),
+            indexer,
             compressor: ExtractiveContextCompressor,
             cache: ExactPrefixCache::new(Duration::from_secs(600)),
-            behavior: BehavioralPrefilter,
         }
     }
 
@@ -260,7 +351,7 @@ impl ContextPipeline {
         } else {
             request.prompt.clone()
         };
-        let decision = self.behavior.evaluate(request.behavior_snapshot);
+        let decision = BehavioralPrefilter::evaluate(request.behavior_snapshot);
         if let BehaviorDecision::Suppress { .. } = decision {
             return PipelineResult {
                 effective_prompt: bounded_prompt.clone(),
@@ -272,6 +363,8 @@ impl ContextPipeline {
                     context_truncated: false,
                     cache_status: CacheStatus::Bypass,
                     behavior_decision: decision,
+                    retrieval: RetrievalDecision::Skipped,
+                    compression_strategy: "none",
                 },
             };
         }
@@ -291,6 +384,8 @@ impl ContextPipeline {
                         CacheStatus::MissStored
                     },
                     behavior_decision: decision,
+                    retrieval: RetrievalDecision::Skipped,
+                    compression_strategy: "none",
                 },
             };
         }
@@ -308,21 +403,37 @@ impl ContextPipeline {
                         context_truncated: false,
                         cache_status: CacheStatus::Hit,
                         behavior_decision: decision,
+                        retrieval: RetrievalDecision::Skipped,
+                        compression_strategy: "prefix_hit",
                     },
                 };
             }
         }
 
+        let retrieval = if should_skip_retrieval(request) {
+            RetrievalDecision::Skipped
+        } else {
+            RetrievalDecision::Ran
+        };
         let mut query = bounded_prompt.clone();
         if let Some(diagnostics) = &request.diagnostics_hint {
             query.push(' ');
             query.push_str(diagnostics);
         }
-        let candidates = self.indexer.search(&query, 5);
+        let candidates = if retrieval == RetrievalDecision::Ran {
+            self.indexer.search(&query, 5)
+        } else {
+            Vec::new()
+        };
         let candidate_count = candidates.len();
-        let (context, selected_tokens, truncated) = self
-            .compressor
-            .compress(&candidates, self.budget.max_context_tokens);
+        let (context, selected_tokens, truncated) =
+            self.compressor
+                .compress(&query, &candidates, self.budget.max_context_tokens);
+        let compression_strategy = if candidates.is_empty() {
+            "none"
+        } else {
+            "extractive_query"
+        };
         if !request.cache_bypass {
             self.cache.put(cache_key, context.clone());
         }
@@ -344,9 +455,78 @@ impl ContextPipeline {
                     CacheStatus::MissStored
                 },
                 behavior_decision: decision,
+                retrieval,
+                compression_strategy,
             },
         }
     }
+}
+
+impl RetrievalDecision {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Ran => "ran",
+            Self::Skipped => "skipped",
+        }
+    }
+}
+
+fn collect_workspace_docs(
+    root: &Path,
+    dir: &Path,
+    out: &mut Vec<(String, String)>,
+    max_files: usize,
+    max_bytes: usize,
+) {
+    if out.len() >= max_files {
+        return;
+    }
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries.flatten() {
+        if out.len() >= max_files {
+            break;
+        }
+        let path = entry.path();
+        let rel = path
+            .strip_prefix(root)
+            .unwrap_or(&path)
+            .to_string_lossy()
+            .replace('\\', "/");
+        if is_ignored_path(&rel) {
+            continue;
+        }
+        let meta = match entry.metadata() {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+        if meta.is_dir() {
+            collect_workspace_docs(root, &path, out, max_files, max_bytes);
+            continue;
+        }
+        if !is_indexable_extension(&rel) {
+            continue;
+        }
+        if meta.len() as usize > max_bytes {
+            continue;
+        }
+        let Ok(text) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let trimmed = text.chars().take(max_bytes).collect::<String>();
+        if !trimmed.is_empty() {
+            out.push((rel, trimmed));
+        }
+    }
+}
+
+fn is_indexable_extension(path: &str) -> bool {
+    path.ends_with(".rs")
+        || path.ends_with(".md")
+        || path.ends_with(".toml")
+        || path.ends_with(".proto")
 }
 
 fn is_ignored_path(path: &str) -> bool {
@@ -396,10 +576,103 @@ fn score_terms(query_terms: &[String], doc_terms: &[String]) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{
-        stable_prefix_key, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
-        LexicalWorkspaceIndexer,
+        stable_prefix_key, BehaviorSnapshot, CacheStatus, ContextChunk, ContextPipeline,
+        ContextRequest, ExtractiveContextCompressor, LexicalWorkspaceIndexer, TokenBudget,
     };
     use crate::adapters::{AdapterCapabilities, RuntimeKind};
+    use std::env;
+    use std::fs;
+
+    fn test_pipeline() -> ContextPipeline {
+        ContextPipeline::with_indexer(LexicalWorkspaceIndexer::default_seeded())
+    }
+
+    #[test]
+    fn token_budget_from_env_overrides_defaults() {
+        let _guard = EnvGuard::set("REX_MAX_PROMPT_TOKENS", "64");
+        let budget = TokenBudget::from_env();
+        assert_eq!(budget.max_prompt_tokens, 64);
+    }
+
+    #[test]
+    fn prompt_budget_truncates_when_env_limits_tokens() {
+        let _guard = EnvGuard::set("REX_MAX_PROMPT_TOKENS", "4");
+        let mut pipeline = ContextPipeline::with_indexer(LexicalWorkspaceIndexer::default_seeded());
+        let long = "a".repeat(200);
+        let request = ContextRequest {
+            prompt: long.clone(),
+            diagnostics_hint: None,
+            cache_bypass: true,
+            behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: true,
+        };
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::Mock),
+        );
+        assert!(result.effective_prompt.chars().count() <= 16);
+    }
+
+    struct EnvGuard {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: &str) -> Self {
+            let previous = env::var(key).ok();
+            env::set_var(key, value);
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            match &self.previous {
+                Some(v) => env::set_var(self.key, v),
+                None => env::remove_var(self.key),
+            }
+        }
+    }
+
+    #[test]
+    fn workspace_indexer_reads_files_from_temp_root() {
+        let dir = std::env::temp_dir().join(format!("rex-index-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("src")).expect("mkdir");
+        fs::write(dir.join("src/a.rs"), "socket retry logic").expect("write");
+        fs::write(dir.join("README.md"), "project readme").expect("write");
+        let index = LexicalWorkspaceIndexer::from_workspace_root(&dir);
+        let hits = index.search("socket retry", 5);
+        assert!(
+            hits.iter().any(|c| c.source.contains("a.rs")),
+            "expected workspace file in hits: {:?}",
+            hits
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn extractive_compressor_prefers_query_overlapping_lines() {
+        let compressor = ExtractiveContextCompressor;
+        let chunks = vec![
+            ContextChunk {
+                source: "low.rs".to_string(),
+                text: "unrelated module documentation".to_string(),
+            },
+            ContextChunk {
+                source: "high.rs".to_string(),
+                text: "socket retry daemon lifecycle".to_string(),
+            },
+        ];
+        let (packed, _, _) = compressor.compress("socket retry", &chunks, 512);
+        let high_pos = packed.find("high.rs").expect("high.rs line");
+        let low_pos = packed.find("low.rs").expect("low.rs line");
+        assert!(
+            high_pos < low_pos,
+            "expected query-relevant chunk first: {packed}"
+        );
+    }
 
     #[test]
     fn lexical_index_returns_deterministic_ranked_results() {
@@ -427,12 +700,13 @@ mod tests {
 
     #[test]
     fn pipeline_reports_cache_hit_after_first_request() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
-            prompt: "status stream retry".to_string(),
+            prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
             cache_bypass: false,
             behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
         };
         let caps = AdapterCapabilities::for_runtime(RuntimeKind::Mock);
         let first = pipeline.prepare(&request, caps);
@@ -443,12 +717,13 @@ mod tests {
 
     #[test]
     fn pipeline_can_bypass_cache() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
-            prompt: "status stream retry".to_string(),
+            prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
         };
         let result = pipeline.prepare(
             &request,
@@ -459,12 +734,13 @@ mod tests {
 
     #[test]
     fn mock_profile_attaches_context_when_indexer_hits() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
-            prompt: "status stream retry".to_string(),
+            prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
         };
         let result = pipeline.prepare(
             &request,
@@ -475,12 +751,13 @@ mod tests {
 
     #[test]
     fn cursor_profile_skips_context_attachment() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
-            prompt: "status stream retry".to_string(),
+            prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
         };
         let result = pipeline.prepare(
             &request,
@@ -490,8 +767,43 @@ mod tests {
     }
 
     #[test]
+    fn retrieval_skipped_for_short_prompt() {
+        let mut pipeline = test_pipeline();
+        let request = ContextRequest {
+            prompt: "hi".to_string(),
+            diagnostics_hint: None,
+            cache_bypass: true,
+            behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
+        };
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::Mock),
+        );
+        assert_eq!(result.metrics.retrieval, super::RetrievalDecision::Skipped);
+        assert_eq!(result.metrics.context_candidates, 0);
+    }
+
+    #[test]
+    fn retrieval_off_directive_skips_indexer() {
+        let mut pipeline = test_pipeline();
+        let request = ContextRequest {
+            prompt: "status stream retry integration tests".to_string(),
+            diagnostics_hint: None,
+            cache_bypass: true,
+            behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: true,
+        };
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::Mock),
+        );
+        assert_eq!(result.metrics.retrieval, super::RetrievalDecision::Skipped);
+    }
+
+    #[test]
     fn behavior_filter_can_suppress_when_user_is_in_focus_flow() {
-        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let mut pipeline = test_pipeline();
         let request = ContextRequest {
             prompt: "complete this helper".to_string(),
             diagnostics_hint: None,
@@ -500,6 +812,7 @@ mod tests {
                 typing_cadence_cpm: 500,
                 pause_events_last_minute: 0,
             },
+            retrieve_off: false,
         };
         let result = pipeline.prepare(
             &request,
