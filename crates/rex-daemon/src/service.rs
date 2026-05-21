@@ -10,8 +10,9 @@ use std::{
 use async_stream::stream;
 use rex_proto::rex::v1::rex_service_server::RexService;
 use rex_proto::rex::v1::{
-    BrokerReadFileRequest, BrokerReadFileResponse, GetSystemStatusRequest, GetSystemStatusResponse,
-    StreamInferenceRequest, StreamInferenceResponse,
+    BrokerReadFileRequest, BrokerReadFileResponse, BrokerWriteFileRequest, BrokerWriteFileResponse,
+    GetSystemStatusRequest, GetSystemStatusResponse, StreamInferenceRequest,
+    StreamInferenceResponse,
 };
 use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
@@ -22,7 +23,7 @@ use crate::adapters::InferenceRuntime;
 use crate::adapters::MockInferenceRuntime;
 use crate::adapters::{active_model_id_from_env, AdapterCapabilities};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
-use crate::broker::broker_read_file;
+use crate::broker::{broker_read_file, broker_write_file};
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::plugins::{
@@ -106,6 +107,23 @@ impl RexDaemonService {
 
 #[tonic::async_trait]
 impl RexService for RexDaemonService {
+    async fn broker_write_file(
+        &self,
+        request: Request<BrokerWriteFileRequest>,
+    ) -> Result<Response<BrokerWriteFileResponse>, Status> {
+        let inner = request.into_inner();
+        match broker_write_file(&inner.path, &inner.content) {
+            Ok(()) => Ok(Response::new(BrokerWriteFileResponse {
+                ok: true,
+                error: String::new(),
+            })),
+            Err(err) => Ok(Response::new(BrokerWriteFileResponse {
+                ok: false,
+                error: err.to_string(),
+            })),
+        }
+    }
+
     async fn broker_read_file(
         &self,
         request: Request<BrokerReadFileRequest>,
