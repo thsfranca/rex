@@ -74,8 +74,8 @@ The cache and each pipeline stage can be **skipped** when the active adapter’s
 | `CompressorPlugin` | Applies extractive compression and token-budget packing. |
 | `ContextPrefixCache` | Reuses stable context segments inside the REX context pipeline (today `PrefixCache` in the daemon) with TTL and bypass. |
 | `BehaviorPrefilterPlugin` | Optionally suppresses low-value invocations using local behavior snapshots. |
-| Sidecar agent runtime | Development agent loop, tool **intent** | **MVP planned** — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) |
-| `InferenceRuntime` (broker) | **HTTP OpenAI-compat** when sidecar requests completion; mock (tests); MLX/Cursor CLI (legacy) | Broker **implemented**; sidecar routing **planned** — `docs/ADAPTERS.md` |
+| Sidecar agent runtime | Development agent loop, tool **intent** | **Implemented** — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md); v1.0 [RC-03](V1_0.md) |
+| `InferenceRuntime` (broker) | **HTTP OpenAI-compat** when sidecar requests completion; mock (tests); MLX/Cursor CLI (legacy) | Broker **implemented**; sidecar routing **implemented** — [ADAPTERS.md](ADAPTERS.md) |
 
 | Adapter (design) | REX context pipeline (default) |
 |---|---|

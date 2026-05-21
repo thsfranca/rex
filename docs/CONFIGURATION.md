@@ -70,7 +70,7 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 
 ## Operator quick start (daemon + brokered HTTP)
 
-Product MVP also requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Until spawn ships, HTTP env configures the **broker** the daemon will use for sidecar inference requests.
+Product MVP requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Enable with `REX_SIDECAR_ENABLED=1` and related vars in the table above ([SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md)). HTTP env configures the **broker** the daemon uses for sidecar inference requests.
 
 ```bash
 export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:11434/v1"   # Ollama example

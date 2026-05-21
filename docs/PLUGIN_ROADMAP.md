@@ -13,12 +13,12 @@ REX keeps **routing/caching/pipeline policy in `rex-daemon`**, runs the **develo
 
 | Slice | Outcome | Status |
 |-------|---------|--------|
-| **Sidecar lifecycle** | Daemon supervises **0 or 1** process; health, timeout, restart | Planned |
-| **`rex.sidecar.v1`** | Control-plane API on UDS; MVP verbs in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | Planned |
-| **Reference sidecar** | Minimal agent binary (any stack per ADR 0005) | Planned |
-| **`StreamInference` routing** | Assistant completions via sidecar turn, not direct daemon HTTP | Planned |
-| **Brokered HTTP** | Reuse `http_openai_compat` when sidecar requests inference | Mechanism **implemented** |
-| **Brokered `fs.read`** | One tool path for workspace files | Planned |
+| **Sidecar lifecycle** | Daemon supervises **0 or 1** process; health, timeout, restart | **Implemented** — [RC-03](V1_0.md) |
+| **`rex.sidecar.v1`** | Control-plane API on UDS; MVP verbs in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | **Implemented** |
+| **Reference sidecar** | Minimal agent binary (any stack per ADR 0005) | **Implemented** — `rex-sidecar-stub` |
+| **`StreamInference` routing** | Assistant completions via sidecar turn, not direct daemon HTTP | **Implemented** |
+| **Brokered HTTP** | Reuse `http_openai_compat` when sidecar requests inference | **Implemented** — [RC-04](V1_0.md) |
+| **Brokered `fs.read`** | One tool path for workspace files | **Implemented** — centralized AccessPolicy broker: [RC-05](V1_0.md) **Not met** |
 
 ## Brokered HTTP (daemon mechanism)
 
@@ -63,7 +63,7 @@ REX keeps **routing/caching/pipeline policy in `rex-daemon`**, runs the **develo
 | 4 — Proto / CLI knobs | **`model`** / **`mode`** on wire |
 | 5+ | L2, `auto`, sidecar-only routing | Backlog |
 
-**Repo status:** HTTP broker module landed; **sidecar routing** and **tool broker** are MVP backlog.
+**Repo status:** Phase 1 sidecar platform **implemented**. v1.0 gap: centralized **AccessPolicy broker** ([V1_0.md](V1_0.md) **RC-05**, backlog **R012** in [ROADMAP.md](ROADMAP.md)).
 
 ## Later optional tracks
 
