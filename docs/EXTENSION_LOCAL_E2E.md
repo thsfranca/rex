@@ -133,7 +133,16 @@ Pass through extra flags to `install-extension.sh`, for example:
 - Command **REX: Show Daemon Status** returns a snapshot.
 - Output channel **REX** logs activation and probe/auto-start decisions.
 
-Open **REX: Open Chat**, select **agent** or **plan** mode, send a short prompt, and confirm streaming completes **via the sidecar path** (daemon logs should show sidecar turn + broker when implemented). Exercise **cancel** and **Apply** on a code block (approval in non-ask modes). When the tool broker ships, verify a prompt that triggers **`fs.read`** on a workspace file.
+Open **REX: Open Chat**, select **agent** or **plan** mode, send a short prompt, and confirm streaming completes **via the sidecar path** (daemon logs should show sidecar turn + broker). Exercise **cancel** and **Apply** on a code block (approval in non-ask modes). Verify a prompt that triggers brokered **`fs.read`** on a workspace file.
+
+## Long-session stress (manual)
+
+Use this checklist after the steps above when hardening chat reliability:
+
+- [ ] Send **10+ prompts** in one session without reloading the window.
+- [ ] **Cancel** mid-stream at least twice; confirm the composer returns to idle (no stuck “streaming” state).
+- [ ] Switch **ask → plan → agent** between turns and send one prompt per mode.
+- [ ] Stop `rex-daemon` while the extension is open; confirm the status bar shows **unavailable**, then returns to **ready** after restart.
 
 ## Terminal works, editor does not
 

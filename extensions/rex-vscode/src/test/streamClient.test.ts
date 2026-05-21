@@ -96,6 +96,10 @@ describe("streamComplete", () => {
     );
     expect(events.some((event) => event.kind === "error" && event.code === "cancelled")).toBe(true);
     expect(terminalEvents(events)).toHaveLength(1);
+    const terminalIndex = events.findIndex(
+      (event) => event.kind === "done" || event.kind === "error",
+    );
+    expect(events.slice(terminalIndex + 1)).toEqual([]);
   });
 
   it("includes onboarding hint when rex-cli executable is missing", async () => {
