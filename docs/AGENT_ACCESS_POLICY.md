@@ -7,7 +7,7 @@ Canonical **architecture-level** design for how Rex constrains **agent workloads
 | Capability | MVP | Notes |
 |------------|-----|-------|
 | **`fs.read`** | **Required** (recommended default) | Workspace paths; proves agent can inspect repo via broker |
-| **`fs.write`** | Should | Extension apply may cover many mutations first |
+| **`fs.write`** | **Implemented** (broker RPC) | Bounded write under `REX_WORKSPACE_ROOT`; sidecar stub `__rex_write:` directive |
 | **`exec.shell`** | Should / or alternate MVP tool | Pick **one** for implementation PR if `fs.read` alone is insufficient |
 | **`net.fetch`** | Won't (now) | Default deny |
 

@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use hyper_util::rt::TokioIo;
 use rex_proto::rex::v1::rex_service_client::RexServiceClient;
-use rex_proto::rex::v1::BrokerReadFileRequest;
+use rex_proto::rex::v1::{BrokerReadFileRequest, BrokerWriteFileRequest};
 use tokio::net::UnixStream;
 use tonic::transport::Endpoint;
 use tower::service_fn;
@@ -72,6 +72,16 @@ impl SidecarService for StubSidecar {
                 }
             }
         }
+        if let Some((path, content)) = parse_write_directive(&inner.prompt) {
+            match broker_write_file(&path, &content).await {
+                Ok(()) => {
+                    text.push_str(&format!("\n\n[fs.write:{path}] ok"));
+                }
+                Err(err) => {
+                    text.push_str(&format!("\n\n[fs.write error:{err}]"));
+                }
+            }
+        }
         let chunks = chunk_text(&text, 8);
         let terminal_index = chunks.len() as u64;
         let stream = async_stream::stream! {
@@ -93,6 +103,35 @@ impl SidecarService for StubSidecar {
     }
 }
 
+fn daemon_socket_path() -> String {
+    env::var("REX_DAEMON_SOCKET")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| "/tmp/rex.sock".to_string())
+}
+
+async fn connect_daemon(
+    socket: &str,
+) -> Result<RexServiceClient<tonic::transport::Channel>, String> {
+    let endpoint = Endpoint::try_from("http://[::]:50051")
+        .map_err(|e| e.to_string())?
+        .connect_timeout(Duration::from_secs(2));
+    let path_socket = socket.to_string();
+    let channel = endpoint
+        .connect_with_connector(service_fn(move |_: tonic::transport::Uri| {
+            let path_socket = path_socket.clone();
+            async move {
+                UnixStream::connect(path_socket)
+                    .await
+                    .map(TokioIo::new)
+                    .map_err(std::io::Error::other)
+            }
+        }))
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(RexServiceClient::new(channel))
+}
+
 fn parse_read_directive(prompt: &str) -> Option<String> {
     let marker = "__rex_read:";
     let start = prompt.find(marker)? + marker.len();
@@ -109,28 +148,39 @@ fn parse_read_directive(prompt: &str) -> Option<String> {
     }
 }
 
-async fn broker_read_file(path: &str) -> Result<String, String> {
-    let socket = env::var("REX_DAEMON_SOCKET")
-        .ok()
-        .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| "/tmp/rex.sock".to_string());
-    let endpoint = Endpoint::try_from("http://[::]:50051")
-        .map_err(|e| e.to_string())?
-        .connect_timeout(Duration::from_secs(2));
-    let path_socket = socket.clone();
-    let channel = endpoint
-        .connect_with_connector(service_fn(move |_: tonic::transport::Uri| {
-            let path_socket = path_socket.clone();
-            async move {
-                UnixStream::connect(path_socket)
-                    .await
-                    .map(TokioIo::new)
-                    .map_err(std::io::Error::other)
-            }
-        }))
+fn parse_write_directive(prompt: &str) -> Option<(String, String)> {
+    let marker = "__rex_write:";
+    let start = prompt.find(marker)? + marker.len();
+    let rest = prompt[start..].trim_start();
+    let (path, content) = rest.split_once('\n')?;
+    let path = path.trim();
+    if path.is_empty() {
+        return None;
+    }
+    Some((path.to_string(), content.to_string()))
+}
+
+async fn broker_write_file(path: &str, content: &str) -> Result<(), String> {
+    let socket = daemon_socket_path();
+    let mut client = connect_daemon(&socket).await?;
+    let response = client
+        .broker_write_file(BrokerWriteFileRequest {
+            path: path.to_string(),
+            content: content.to_string(),
+        })
         .await
-        .map_err(|e| e.to_string())?;
-    let mut client = RexServiceClient::new(channel);
+        .map_err(|e| e.to_string())?
+        .into_inner();
+    if response.ok {
+        Ok(())
+    } else {
+        Err(response.error)
+    }
+}
+
+async fn broker_read_file(path: &str) -> Result<String, String> {
+    let socket = daemon_socket_path();
+    let mut client = connect_daemon(&socket).await?;
     let response = client
         .broker_read_file(BrokerReadFileRequest {
             path: path.to_string(),
