@@ -26,4 +26,30 @@ describe("buildCompleteNdjsonArgs", () => {
       "llama3.2",
     ]);
   });
+
+  it("includes --approval-id when approvalId is set", () => {
+    expect(
+      buildCompleteNdjsonArgs("hi", { mode: "agent", approvalId: "apr-msg-1" }),
+    ).toEqual([
+      "complete",
+      "hi",
+      "--format",
+      "ndjson",
+      "--mode",
+      "agent",
+      "--approval-id",
+      "apr-msg-1",
+    ]);
+  });
+
+  it("omits --approval-id when approvalId is empty", () => {
+    expect(buildCompleteNdjsonArgs("hi", { mode: "agent", approvalId: "" })).toEqual([
+      "complete",
+      "hi",
+      "--format",
+      "ndjson",
+      "--mode",
+      "agent",
+    ]);
+  });
 });

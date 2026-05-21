@@ -135,6 +135,17 @@ Pass through extra flags to `install-extension.sh`, for example:
 
 Open **REX: Open Chat**, select **agent** or **plan** mode, send a short prompt, and confirm streaming completes **via the sidecar path** (daemon logs should show sidecar turn + broker). Exercise **cancel** and **Apply** on a code block (approval in non-ask modes). Verify a prompt that triggers brokered **`fs.read`** on a workspace file.
 
+## Automated vs manual verification
+
+| Area | CI / unit tests | Manual checklist |
+|------|-----------------|------------------|
+| NDJSON terminal contract | `rex-cli` conformance tests; extension `ndjson_contract_fixture` and `streamClient` tests | — |
+| Cancel → idle | `streamClient.test.ts` | Optional smoke in chat |
+| Daemon probe **ready → unavailable** | `daemonLifecycle.test.ts` (fixture `cli_status_ok_then_fail.sh`) | Stop daemon while extension open |
+| Daemon probe **unavailable → ready** | `daemonLifecycle.test.ts` (fixture `cli_status_fail_then_ok.sh`) | Restart daemon after stop |
+| `--approval-id` on `complete` | `cliBridgeArgs.test.ts` | Agent send with `REX_AGENT_APPROVALS=1` |
+| Long multi-turn session | — | Checklist below |
+
 ## Long-session stress (manual)
 
 Use this checklist after the steps above when hardening chat reliability:
@@ -142,7 +153,7 @@ Use this checklist after the steps above when hardening chat reliability:
 - [ ] Send **10+ prompts** in one session without reloading the window.
 - [ ] **Cancel** mid-stream at least twice; confirm the composer returns to idle (no stuck “streaming” state).
 - [ ] Switch **ask → plan → agent** between turns and send one prompt per mode.
-- [ ] Stop `rex-daemon` while the extension is open; confirm the status bar shows **unavailable**, then returns to **ready** after restart.
+- [ ] Stop `rex-daemon` while the extension is open; confirm the status bar shows **unavailable**, then returns to **ready** after restart (also covered by automated probe recovery tests when using fixtures).
 
 ## Terminal works, editor does not
 
