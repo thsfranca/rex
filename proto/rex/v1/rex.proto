@@ -5,6 +5,8 @@ package rex.v1;
 service RexService {
   rpc GetSystemStatus(GetSystemStatusRequest) returns (GetSystemStatusResponse);
   rpc StreamInference(StreamInferenceRequest) returns (stream StreamInferenceResponse);
+  // Sidecar broker: workspace file read (MVP `fs.read`).
+  rpc BrokerReadFile(BrokerReadFileRequest) returns (BrokerReadFileResponse);
 }
 
 message GetSystemStatusRequest {}
@@ -21,6 +23,18 @@ message StreamInferenceRequest {
   string model = 2;
   // Optional. Empty string is treated as "ask". Values are normalized server-side.
   string mode = 3;
+  // Optional. Set when extension approved agent execution (ADR 0009).
+  string approval_id = 4;
+}
+
+message BrokerReadFileRequest {
+  string path = 1;
+}
+
+message BrokerReadFileResponse {
+  bool ok = 1;
+  string content = 2;
+  string error = 3;
 }
 
 message StreamInferenceResponse {

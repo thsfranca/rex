@@ -43,11 +43,11 @@ Converge **routing, compaction, caches, metering, and richer tool/MCP loops** in
 | Extension agent UX (modes, approvals, apply) | Must | **Implemented** (extension-side policy) |
 | **`--mode` / `--model` on extension → CLI → daemon** | Must | **Implemented** |
 | **Brokered HTTP adapter** (daemon mechanism) | Must | **Implemented** (`http_openai_compat`) — used as **broker backend**, not as “the agent” |
-| **Sidecar supervision** (0 or 1 process) | Must | **Planned** |
-| **`rex.sidecar.v1` + reference sidecar** | Must | **Planned** |
-| **`StreamInference` via sidecar** | Must | **Planned** (today: in-process adapter in `service.rs`) |
-| **Brokered tool** (`fs.read` MVP default) | Must | **Planned** |
-| Daemon approval context from extension | Should | **Planned** ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)) |
+| **Sidecar supervision** (0 or 1 process) | Must | **Implemented** |
+| **`rex.sidecar.v1` + reference sidecar** | Must | **Implemented** (`rex-sidecar-stub`) |
+| **`StreamInference` via sidecar** | Must | **Implemented** (harness: `REX_SIDECAR_HARNESS=direct`) |
+| **Brokered tool** (`fs.read` MVP default) | Must | **Implemented** (`BrokerReadFile`, stub `__rex_read:` directive) |
+| Daemon approval context from extension | Should | **Implemented** (`approval_id` / `--approval-id`) |
 | Direct daemon HTTP/mock **without sidecar** | Harness only | **Implemented** (CI, migration) |
 
 ## In scope

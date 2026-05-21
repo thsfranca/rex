@@ -17,6 +17,9 @@ mod adapters;
 #[path = "../src/approvals.rs"]
 mod approvals;
 #[allow(dead_code)]
+#[path = "../src/broker.rs"]
+mod broker;
+#[allow(dead_code)]
 #[path = "../src/domain.rs"]
 mod domain;
 #[allow(dead_code)]
@@ -36,6 +39,15 @@ mod runtime;
 #[allow(dead_code)]
 #[path = "../src/service.rs"]
 mod service;
+#[allow(dead_code)]
+#[path = "../src/sidecar_client.rs"]
+mod sidecar_client;
+#[allow(dead_code)]
+#[path = "../src/sidecar_config.rs"]
+mod sidecar_config;
+#[allow(dead_code)]
+#[path = "../src/supervisor.rs"]
+mod supervisor;
 
 const READINESS_TIMEOUT: Duration = Duration::from_secs(4);
 const CONNECT_TIMEOUT: Duration = Duration::from_millis(250);
@@ -63,6 +75,8 @@ fn set_e2e_mock_runtime() -> E2eInferenceEnv {
         base_url: env::var("REX_OPENAI_COMPAT_BASE_URL").ok(),
     };
     env::set_var("REX_INFERENCE_RUNTIME", "mock");
+    env::set_var("REX_SIDECAR_HARNESS", "direct");
+    env::set_var("REX_SIDECAR_ENABLED", "0");
     env::remove_var("REX_OPENAI_COMPAT_BASE_URL");
     saved
 }
@@ -73,6 +87,8 @@ fn restore_inference_runtime(saved: E2eInferenceEnv) {
     } else {
         env::remove_var("REX_INFERENCE_RUNTIME");
     }
+    env::remove_var("REX_SIDECAR_HARNESS");
+    env::remove_var("REX_SIDECAR_ENABLED");
     if let Some(value) = saved.base_url {
         env::set_var("REX_OPENAI_COMPAT_BASE_URL", value);
     } else {
@@ -462,6 +478,60 @@ async fn agent_mode_is_denied_when_approvals_env_is_set() {
         saw_done = chunk.done;
     }
     assert!(saw_done, "ask stream must reach the terminal done chunk");
+
+    daemon.abort();
+    let _ = daemon.await;
+    cleanup_socket(&socket_path);
+
+    if let Some(value) = prev {
+        env::set_var(APPROVALS_ENV, value);
+    } else {
+        env::remove_var(APPROVALS_ENV);
+    }
+    restore_inference_runtime(prev_runtime);
+}
+
+#[tokio::test]
+#[serial]
+async fn agent_mode_succeeds_with_approval_id_when_enforced() {
+    if !uds_bind_supported() {
+        eprintln!("Skipping UDS e2e: sandbox does not allow unix socket bind");
+        return;
+    }
+
+    let prev = env::var(APPROVALS_ENV).ok();
+    env::set_var(APPROVALS_ENV, "1");
+    let prev_runtime = set_e2e_mock_runtime();
+
+    let socket_path = test_socket_path();
+    cleanup_socket(&socket_path);
+    let daemon_socket = socket_path.clone();
+    let daemon = tokio::spawn(async move {
+        runtime::run_daemon_on_socket(&daemon_socket)
+            .await
+            .expect("daemon runtime should run without transport error");
+    });
+    wait_for_daemon_ready(&socket_path).await;
+
+    let mut client = connect_client(&socket_path)
+        .await
+        .expect("daemon should accept connections");
+
+    let response = client
+        .stream_inference(StreamInferenceRequest {
+            prompt: "agent approved".to_string(),
+            mode: "agent".to_string(),
+            approval_id: "apr-e2e-1".to_string(),
+            ..Default::default()
+        })
+        .await
+        .expect("agent with approval_id should succeed");
+    let mut stream = response.into_inner();
+    let mut saw_done = false;
+    while let Some(chunk) = stream.message().await.expect("stream read") {
+        saw_done = chunk.done;
+    }
+    assert!(saw_done);
 
     daemon.abort();
     let _ = daemon.await;

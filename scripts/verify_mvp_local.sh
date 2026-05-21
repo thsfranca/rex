@@ -9,6 +9,9 @@ cd "${ROOT_DIR}"
 echo "==> cargo build --workspace"
 cargo build --workspace
 
+echo "==> Sidecar stub package builds"
+cargo build -p rex-sidecar-stub --quiet
+
 echo "==> Rust verify (fmt, clippy, tests) — see scripts/ci/run_rust_verify.sh"
 "${ROOT_DIR}/scripts/ci/run_rust_verify.sh"
 

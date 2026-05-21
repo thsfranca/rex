@@ -10,8 +10,8 @@ use std::{
 use async_stream::stream;
 use rex_proto::rex::v1::rex_service_server::RexService;
 use rex_proto::rex::v1::{
-    GetSystemStatusRequest, GetSystemStatusResponse, StreamInferenceRequest,
-    StreamInferenceResponse,
+    BrokerReadFileRequest, BrokerReadFileResponse, GetSystemStatusRequest, GetSystemStatusResponse,
+    StreamInferenceRequest, StreamInferenceResponse,
 };
 use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
@@ -22,12 +22,16 @@ use crate::adapters::InferenceRuntime;
 use crate::adapters::MockInferenceRuntime;
 use crate::adapters::{active_model_id_from_env, RuntimeKind};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
+use crate::broker::broker_read_file;
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::plugins::{
     BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
 };
 use crate::policy::{CacheDecision, CacheDecisionState, PolicyEngine, PolicyRequest};
+use crate::sidecar_client::{connect_sidecar, map_sidecar_to_inference_chunks, run_turn_collect};
+use crate::sidecar_config::{parse_harness_only, sidecar_product_path_active};
+use crate::supervisor::{SharedSupervisor, SupervisorError};
 
 pub struct RexDaemonService {
     started_at: Instant,
@@ -36,6 +40,7 @@ pub struct RexDaemonService {
     request_sequence: AtomicU64,
     policy: PolicyEngine,
     approval_gate: Arc<dyn ApprovalGate>,
+    sidecar: SharedSupervisor,
 }
 
 const STREAM_CHUNK_DELAY_MS: u64 = 35;
@@ -49,6 +54,7 @@ impl RexDaemonService {
         runtime: Arc<dyn InferenceRuntime>,
         policy: PolicyEngine,
         approval_gate: Arc<dyn ApprovalGate>,
+        sidecar: SharedSupervisor,
     ) -> Self {
         Self {
             started_at,
@@ -57,7 +63,36 @@ impl RexDaemonService {
             request_sequence: AtomicU64::new(1),
             policy,
             approval_gate,
+            sidecar,
         }
+    }
+
+    async fn resolve_inference_chunks(
+        &self,
+        effective_prompt: &str,
+        mode: &str,
+        inference_runtime: &str,
+    ) -> Result<Vec<Result<StreamInferenceResponse, Status>>, Status> {
+        if parse_harness_only().is_some() || !sidecar_product_path_active() {
+            return Ok(self.runtime.build_chunks(effective_prompt).await);
+        }
+        self.sidecar
+            .ensure_running()
+            .await
+            .map_err(|err| sidecar_error_to_status(&err, self.sidecar.config().required))?;
+        let socket = self.sidecar.config().socket_path.clone();
+        let mut client = connect_sidecar(&socket)
+            .await
+            .map_err(|e| Status::unavailable(format!("sidecar connect failed: {e}")))?;
+        let sidecar_chunks = run_turn_collect(&mut client, effective_prompt, mode)
+            .await
+            .map_err(|e| Status::internal(format!("sidecar RunTurn failed: {e}")))?;
+        println!(
+            "stream.sidecar=ok inference_runtime=sidecar sidecar_socket={socket} mode={}",
+            normalize_mode(mode)
+        );
+        let _ = inference_runtime;
+        Ok(map_sidecar_to_inference_chunks(sidecar_chunks))
     }
 
     #[cfg(test)]
@@ -70,6 +105,25 @@ impl RexDaemonService {
 
 #[tonic::async_trait]
 impl RexService for RexDaemonService {
+    async fn broker_read_file(
+        &self,
+        request: Request<BrokerReadFileRequest>,
+    ) -> Result<Response<BrokerReadFileResponse>, Status> {
+        let path = request.into_inner().path;
+        match broker_read_file(&path) {
+            Ok(content) => Ok(Response::new(BrokerReadFileResponse {
+                ok: true,
+                content,
+                error: String::new(),
+            })),
+            Err(err) => Ok(Response::new(BrokerReadFileResponse {
+                ok: false,
+                content: String::new(),
+                error: err.to_string(),
+            })),
+        }
+    }
+
     async fn get_system_status(
         &self,
         _request: Request<GetSystemStatusRequest>,
@@ -133,9 +187,15 @@ impl RexService for RexDaemonService {
         };
         let decision = self.policy.decide(&policy_request);
         if normalize_mode(&mode) == "agent" {
+            let approval_id = inner.approval_id.trim();
             let approval_ctx = ApprovalContext {
                 mode: mode.clone(),
                 runtime: policy_request.runtime,
+                approval_id: if approval_id.is_empty() {
+                    None
+                } else {
+                    Some(approval_id.to_string())
+                },
             };
             match self.approval_gate.check(&approval_ctx).await {
                 ApprovalDecision::Allow | ApprovalDecision::Checkpoint { .. } => {}
@@ -160,9 +220,12 @@ impl RexService for RexDaemonService {
                 } else {
                     l1_state = Some("miss");
                     let built = self
-                        .runtime
-                        .build_chunks(&pipeline_result.effective_prompt)
-                        .await;
+                        .resolve_inference_chunks(
+                            &pipeline_result.effective_prompt,
+                            &mode,
+                            inference_runtime,
+                        )
+                        .await?;
                     if let Some(to_store) = l1_cachable_responses(&built) {
                         self.policy.put(key.clone(), to_store);
                     }
@@ -170,9 +233,12 @@ impl RexService for RexDaemonService {
                 }
             }
             CacheDecision::Bypass | CacheDecision::Uncacheable { .. } => {
-                self.runtime
-                    .build_chunks(&pipeline_result.effective_prompt)
-                    .await
+                self.resolve_inference_chunks(
+                    &pipeline_result.effective_prompt,
+                    &mode,
+                    inference_runtime,
+                )
+                .await?
             }
         };
         let cache_decision_state =
@@ -280,6 +346,15 @@ fn format_cache_status(status: CacheStatus) -> &'static str {
     }
 }
 
+fn sidecar_error_to_status(err: &SupervisorError, required: bool) -> Status {
+    let message = err.to_string();
+    if required {
+        Status::failed_precondition(format!("sidecar required but unavailable: {message}"))
+    } else {
+        Status::unavailable(format!("sidecar unavailable: {message}"))
+    }
+}
+
 fn format_behavior_decision(decision: &BehaviorDecision) -> &'static str {
     match decision {
         BehaviorDecision::Allow => "allow",
@@ -329,11 +404,24 @@ impl PromptDirectives {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::{
         extract_trace_id, format_behavior_decision, format_cache_status, PromptDirectives,
         RexDaemonService,
     };
     use crate::adapters::{MissingDoneMockRuntime, MockInferenceRuntime};
+    use crate::sidecar_config::SidecarConfig;
+    use crate::supervisor::{SharedSupervisor, SidecarSupervisor};
+
+    fn disabled_sidecar() -> SharedSupervisor {
+        std::sync::Arc::new(SidecarSupervisor::new(SidecarConfig {
+            enabled: false,
+            required: false,
+            binary: PathBuf::from("rex-sidecar-stub"),
+            socket_path: "/tmp/rex-test-sidecar.sock".to_string(),
+        }))
+    }
     use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
     use crate::l1_cache::L1Key;
     use crate::plugins::{BehaviorDecision, CacheStatus};
@@ -410,6 +498,7 @@ mod tests {
             Arc::new(MissingDoneMockRuntime),
             PolicyEngine::with_default_layers(),
             Arc::new(crate::approvals::AlwaysAllow),
+            disabled_sidecar(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "x".to_string(),
@@ -471,6 +560,7 @@ mod tests {
             Arc::new(MockInferenceRuntime),
             PolicyEngine::new(cache.clone()),
             Arc::new(crate::approvals::AlwaysAllow),
+            disabled_sidecar(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "skip-me".to_string(),
@@ -497,6 +587,7 @@ mod tests {
             Arc::new(MockInferenceRuntime),
             PolicyEngine::new(cache.clone()),
             Arc::new(crate::approvals::AlwaysAllow),
+            disabled_sidecar(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "[[cache:bypass]]\nhello".to_string(),
@@ -550,6 +641,7 @@ mod tests {
             Arc::new(MockInferenceRuntime),
             PolicyEngine::with_default_layers(),
             gate.clone(),
+            disabled_sidecar(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "ask path".to_string(),
@@ -576,6 +668,7 @@ mod tests {
             Arc::new(MockInferenceRuntime),
             PolicyEngine::with_default_layers(),
             gate.clone(),
+            disabled_sidecar(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "agent path".to_string(),
@@ -607,6 +700,7 @@ mod tests {
             Arc::new(MockInferenceRuntime),
             PolicyEngine::with_default_layers(),
             gate,
+            disabled_sidecar(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "agent path".to_string(),
@@ -635,6 +729,7 @@ mod tests {
             Arc::new(MockInferenceRuntime),
             PolicyEngine::with_default_layers(),
             gate,
+            disabled_sidecar(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "agent path".to_string(),
@@ -661,6 +756,7 @@ mod tests {
             Arc::new(MockInferenceRuntime),
             PolicyEngine::new(cache.clone()),
             Arc::new(crate::approvals::AlwaysAllow),
+            disabled_sidecar(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "hello cache".to_string(),

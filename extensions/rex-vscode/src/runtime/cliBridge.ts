@@ -55,6 +55,7 @@ export async function fetchStatus(
 export interface CompleteStreamOptions {
   readonly mode?: string;
   readonly model?: string;
+  readonly approvalId?: string;
 }
 
 export function spawnCompleteStream(
@@ -70,6 +71,9 @@ export function spawnCompleteStream(
   }
   if (stream?.model !== undefined && stream.model.length > 0) {
     args.push("--model", stream.model);
+  }
+  if (stream?.approvalId !== undefined && stream.approvalId.length > 0) {
+    args.push("--approval-id", stream.approvalId);
   }
   const child = spawn(options.cliPath, args, {
     cwd: options.cwd,

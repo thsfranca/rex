@@ -27,6 +27,8 @@ pub struct ApprovalContext {
     pub mode: String,
     /// Inference runtime selected for this request.
     pub runtime: RuntimeKind,
+    /// Client-supplied approval id when the user approved in the extension UI.
+    pub approval_id: Option<String>,
 }
 
 /// Outcome of an approval check. `Checkpoint` is **reserved** for future
@@ -75,7 +77,15 @@ pub const ENFORCEMENT_DENY_REASON: &str =
 
 #[tonic::async_trait]
 impl ApprovalGate for EnforceWithoutContext {
-    async fn check(&self, _ctx: &ApprovalContext) -> ApprovalDecision {
+    async fn check(&self, ctx: &ApprovalContext) -> ApprovalDecision {
+        if ctx
+            .approval_id
+            .as_ref()
+            .map(|s| !s.trim().is_empty())
+            .unwrap_or(false)
+        {
+            return ApprovalDecision::Allow;
+        }
         ApprovalDecision::Deny {
             reason: ENFORCEMENT_DENY_REASON.to_string(),
         }
@@ -103,6 +113,7 @@ mod tests {
         ApprovalContext {
             mode: mode.to_string(),
             runtime: RuntimeKind::Mock,
+            approval_id: None,
         }
     }
 
@@ -152,12 +163,25 @@ mod tests {
         let decision = runtime.block_on(gate.check(&ApprovalContext {
             mode: "agent".to_string(),
             runtime: RuntimeKind::Mock,
+            approval_id: None,
         }));
         assert_eq!(decision, ApprovalDecision::Allow);
 
         if let Some(value) = prev {
             env::set_var(APPROVALS_ENV, value);
         }
+    }
+
+    #[test]
+    fn enforce_allows_when_approval_id_present() {
+        let gate = EnforceWithoutContext;
+        let runtime = tokio::runtime::Runtime::new().expect("runtime");
+        let decision = runtime.block_on(gate.check(&ApprovalContext {
+            mode: "agent".to_string(),
+            runtime: RuntimeKind::Mock,
+            approval_id: Some("apr-test-1".to_string()),
+        }));
+        assert_eq!(decision, ApprovalDecision::Allow);
     }
 
     #[test]
@@ -171,6 +195,7 @@ mod tests {
             let decision = runtime.block_on(gate.check(&ApprovalContext {
                 mode: "agent".to_string(),
                 runtime: RuntimeKind::Mock,
+                approval_id: None,
             }));
             assert_eq!(
                 decision,
@@ -199,6 +224,7 @@ mod tests {
             let decision = runtime.block_on(gate.check(&ApprovalContext {
                 mode: "agent".to_string(),
                 runtime: RuntimeKind::Mock,
+                approval_id: None,
             }));
             assert_eq!(
                 decision,

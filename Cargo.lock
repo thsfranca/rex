@@ -1178,6 +1178,7 @@ dependencies = [
  "lru",
  "reqwest",
  "rex-proto",
+ "rex-sidecar-stub",
  "serde_json",
  "serial_test",
  "thiserror",
@@ -1194,6 +1195,19 @@ dependencies = [
  "prost",
  "tonic",
  "tonic-build",
+]
+
+[[package]]
+name = "rex-sidecar-stub"
+version = "0.1.0"
+dependencies = [
+ "async-stream",
+ "hyper-util",
+ "rex-proto",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tower 0.5.3",
 ]
 
 [[package]]

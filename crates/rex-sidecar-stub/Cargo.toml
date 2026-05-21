@@ -1,0 +1,23 @@
+[package]
+name = "rex-sidecar-stub"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "rex_sidecar_stub"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rex-sidecar-stub"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true, features = ["macros", "net", "rt-multi-thread", "signal"] }
+tonic.workspace = true
+tokio-stream = { version = "0.1", features = ["net"] }
+async-stream = "0.3"
+hyper-util = { version = "0.1", features = ["tokio"] }
+rex-proto = { path = "../rex-proto" }
+tower = "0.5"

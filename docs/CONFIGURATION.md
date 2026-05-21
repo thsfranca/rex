@@ -37,18 +37,19 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 | `REX_CURSOR_CLI_COMMAND` | (none) | Optional shell template; `{prompt}` substituted (non-MVP). |
 | `REX_CURSOR_CLI_TIMEOUT_SECS` | `20` | Subprocess bound for Cursor CLI adapter. |
 | `REX_CACHE_BYPASS` | off | `1` or `true` bypasses L1 and context prefix cache — [`CACHING.md`](CACHING.md). |
-| `REX_WORKSPACE_ROOT` | (default fingerprint) | Scopes in-memory L1 exact keys per workspace checkout. |
-| `REX_AGENT_APPROVALS` | off | `1` or `true` enforces daemon `ApprovalGate` for `agent` mode ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). Extension approval context wiring is follow-on work. |
+| `REX_WORKSPACE_ROOT` | (cwd) | L1 fingerprint scope and brokered `fs.read` workspace root ([CACHING.md](CACHING.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md)). |
+| `REX_AGENT_APPROVALS` | off | `1` or `true` enforces daemon `ApprovalGate` for `agent` mode ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). Pass `approval_id` on `StreamInference` (via `rex-cli --approval-id`) after extension approval. |
 
-### Sidecar (planned — catalog placeholder)
+### Sidecar supervision and harness
 
 | Variable | Default (if unset) | Purpose |
 |----------|--------------------|---------|
-| `REX_SIDECAR_BINARY` | (none) | Path to agent sidecar executable when supervision ships |
-| `REX_SIDECAR_SOCKET` | (TBD) | UDS for `rex.sidecar.v1` control plane — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) |
-| `REX_SIDECAR_ENABLED` | (TBD) | Operator toggle when auto-spawn is optional |
-
-Finalize names in the sidecar implementation PR; this table documents intent only.
+| `REX_SIDECAR_ENABLED` | off | `1`/`true` enables spawn; product path uses sidecar when enabled |
+| `REX_SIDECAR_REQUIRED` | on when enabled | `0` makes sidecar optional (daemon starts without hard fail) |
+| `REX_SIDECAR_BINARY` | `rex-sidecar-stub` on `PATH` | Sidecar executable for supervision |
+| `REX_SIDECAR_SOCKET` | `/tmp/rex-sidecar.sock` | UDS for `rex.sidecar.v1` — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) |
+| `REX_SIDECAR_HARNESS` | (none) | `direct` forces in-process inference (CI/tests); not MVP product acceptance |
+| `REX_DAEMON_SOCKET` | `/tmp/rex.sock` | Daemon UDS for stub `BrokerReadFile` during tool turns |
 
 ### `rex-cli` (client metadata)
 
@@ -56,7 +57,7 @@ Finalize names in the sidecar implementation PR; this table documents intent onl
 |----------|--------------------|---------|
 | `REX_TRACE_ID` | (none) | Request correlation; extension sets when spawning `rex-cli` — [`EXTENSION.md`](EXTENSION.md). |
 
-**CLI flags:** `rex-cli complete` accepts `--format`, `--model <id>`, and `--mode <ask|plan|agent>`. Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
+**CLI flags:** `rex-cli complete` accepts `--format`, `--model <id>`, `--mode <ask|plan|agent>`, and `--approval-id <id>`. Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
 
 ### Related project scripts
 

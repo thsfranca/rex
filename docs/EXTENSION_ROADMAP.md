@@ -44,7 +44,7 @@ Foundation milestones (three internal delivery waves covering scaffold + chat UX
 
 ## What remains after phase delivery
 
-- **Daemon approval context:** wire extension approval decisions into daemon `ApprovalGate` when `REX_AGENT_APPROVALS=1` ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). Sidecar supervision and broker are **daemon/sidecar** work — not extension-owned; see [MVP_SPEC.md](MVP_SPEC.md).
+- **Daemon approval context:** shipped — extension passes `--approval-id` on approved `plan`/`agent` sends when `REX_AGENT_APPROVALS=1` ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)).
 - Optional **`rex.modelId`** setting to pass `--model` on every `complete`.
 - Continue **stress hardening** for very long chat sessions and status-bar edge cases. **Core** path: single NDJSON terminal, cancel-to-idle, **`--mode`** on every `complete` (shipped).
 - Keep release automation and install docs aligned with CLI/daemon lifecycle changes.

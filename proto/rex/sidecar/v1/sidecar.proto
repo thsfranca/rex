@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package rex.sidecar.v1;
+
+service SidecarService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
+  rpc RunTurn(RunTurnRequest) returns (stream RunTurnChunk);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  bool healthy = 1;
+  string version = 2;
+}
+
+message GetCapabilitiesRequest {}
+
+message GetCapabilitiesResponse {
+  repeated string capabilities = 1;
+}
+
+message RunTurnRequest {
+  string prompt = 1;
+  string mode = 2;
+}
+
+message RunTurnChunk {
+  string text = 1;
+  uint64 index = 2;
+  bool done = 3;
+}

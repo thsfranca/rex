@@ -52,8 +52,9 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
             prompt,
             model,
             mode,
+            approval_id,
             format,
-        } => run_complete(prompt, model, mode, format).await,
+        } => run_complete(prompt, model, mode, approval_id, format).await,
     }
 }
 
@@ -74,6 +75,7 @@ async fn run_complete(
     prompt: String,
     model: String,
     mode: String,
+    approval_id: String,
     format: CompleteOutputFormat,
 ) -> Result<(), CliError> {
     let trace_id = resolve_trace_id();
@@ -93,6 +95,7 @@ async fn run_complete(
             prompt: prompt.clone(),
             model: model.clone(),
             mode: mode.clone(),
+            approval_id: approval_id.clone(),
         });
         let metadata_value =
             tonic::metadata::MetadataValue::try_from(trace_id.as_str()).map_err(|_| {
