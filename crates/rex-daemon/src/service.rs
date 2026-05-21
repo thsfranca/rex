@@ -215,8 +215,13 @@ impl RexService for RexDaemonService {
                 }
                 ApprovalDecision::Checkpoint { reason } => {
                     println!(
-                        "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} approval={approval_label} reason={reason}",
+                        "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} approval={approval_label} stream.lifecycle={} stream.event=approval_checkpoint reason={reason} elapsed_ms={}",
+                        StreamLifecycle::Failed.as_str(),
+                        request_started.elapsed().as_millis()
                     );
+                    return Err(Status::failed_precondition(format!(
+                        "agent execution checkpoint required: {reason}"
+                    )));
                 }
                 ApprovalDecision::Deny { reason } => {
                     println!(
@@ -767,7 +772,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn approval_gate_checkpoint_proceeds_for_now() {
+    async fn approval_gate_checkpoint_returns_failed_precondition() {
         let gate = Arc::new(RecordingGate::new(ApprovalDecision::Checkpoint {
             reason: "future tool gate".to_string(),
         }));
@@ -783,16 +788,14 @@ mod tests {
             mode: "agent".to_string(),
             ..Default::default()
         });
-        let mut out = svc
-            .stream_inference(req)
-            .await
-            .expect("stream starts when gate returns Checkpoint (reserved variant)")
-            .into_inner();
-        let mut saw_done = false;
-        while let Some(chunk) = out.next().await {
-            saw_done = chunk.expect("ok chunk").done;
-        }
-        assert!(saw_done, "Checkpoint is reserved; must proceed for now");
+        let result = svc.stream_inference(req).await;
+        assert!(result.is_err(), "checkpoint must block stream start");
+        let err = result.err().expect("status error");
+        assert!(
+            err.message().contains("checkpoint required"),
+            "unexpected message: {}",
+            err.message()
+        );
     }
 
     #[tokio::test]
