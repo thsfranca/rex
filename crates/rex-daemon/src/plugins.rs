@@ -35,12 +35,19 @@ pub enum BehaviorDecision {
     Suppress { reason: &'static str },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RetrievalDecision {
+    Ran,
+    Skipped,
+}
+
 pub struct ContextRequest {
     pub prompt: String,
     pub diagnostics_hint: Option<String>,
     pub cache_bypass: bool,
     pub behavior_snapshot: BehaviorSnapshot,
+    /// When true, skip lexical retrieval (directive or gate).
+    pub retrieve_off: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,6 +66,7 @@ pub struct PipelineMetrics {
     pub context_truncated: bool,
     pub cache_status: CacheStatus,
     pub behavior_decision: BehaviorDecision,
+    pub retrieval: RetrievalDecision,
 }
 
 #[derive(Debug, Clone)]
@@ -152,6 +160,21 @@ impl LexicalWorkspaceIndexer {
 #[derive(Debug, Clone)]
 pub struct ExtractiveContextCompressor;
 
+const RETRIEVAL_SKIP_MAX_PROMPT_CHARS: usize = 48;
+
+pub fn should_skip_retrieval(request: &ContextRequest) -> bool {
+    if request.retrieve_off {
+        return true;
+    }
+    if request.prompt.chars().count() <= RETRIEVAL_SKIP_MAX_PROMPT_CHARS {
+        return true;
+    }
+    matches!(
+        BehavioralPrefilter::evaluate(request.behavior_snapshot),
+        BehaviorDecision::Suppress { .. }
+    )
+}
+
 impl ExtractiveContextCompressor {
     pub fn compress(&self, chunks: &[ContextChunk], budget_tokens: usize) -> (String, usize, bool) {
         if budget_tokens == 0 || chunks.is_empty() {
@@ -219,7 +242,7 @@ impl ExactPrefixCache {
 pub struct BehavioralPrefilter;
 
 impl BehavioralPrefilter {
-    pub fn evaluate(&self, snapshot: BehaviorSnapshot) -> BehaviorDecision {
+    pub fn evaluate(snapshot: BehaviorSnapshot) -> BehaviorDecision {
         if snapshot.typing_cadence_cpm > 420 && snapshot.pause_events_last_minute == 0 {
             BehaviorDecision::Suppress {
                 reason: "focused-typing-window",
@@ -236,7 +259,6 @@ pub struct ContextPipeline {
     indexer: LexicalWorkspaceIndexer,
     compressor: ExtractiveContextCompressor,
     cache: ExactPrefixCache,
-    behavior: BehavioralPrefilter,
 }
 
 impl ContextPipeline {
@@ -246,7 +268,6 @@ impl ContextPipeline {
             indexer: LexicalWorkspaceIndexer::default_seeded(),
             compressor: ExtractiveContextCompressor,
             cache: ExactPrefixCache::new(Duration::from_secs(600)),
-            behavior: BehavioralPrefilter,
         }
     }
 
@@ -260,7 +281,7 @@ impl ContextPipeline {
         } else {
             request.prompt.clone()
         };
-        let decision = self.behavior.evaluate(request.behavior_snapshot);
+        let decision = BehavioralPrefilter::evaluate(request.behavior_snapshot);
         if let BehaviorDecision::Suppress { .. } = decision {
             return PipelineResult {
                 effective_prompt: bounded_prompt.clone(),
@@ -272,6 +293,7 @@ impl ContextPipeline {
                     context_truncated: false,
                     cache_status: CacheStatus::Bypass,
                     behavior_decision: decision,
+                    retrieval: RetrievalDecision::Skipped,
                 },
             };
         }
@@ -291,6 +313,7 @@ impl ContextPipeline {
                         CacheStatus::MissStored
                     },
                     behavior_decision: decision,
+                    retrieval: RetrievalDecision::Skipped,
                 },
             };
         }
@@ -308,17 +331,27 @@ impl ContextPipeline {
                         context_truncated: false,
                         cache_status: CacheStatus::Hit,
                         behavior_decision: decision,
+                        retrieval: RetrievalDecision::Skipped,
                     },
                 };
             }
         }
 
+        let retrieval = if should_skip_retrieval(request) {
+            RetrievalDecision::Skipped
+        } else {
+            RetrievalDecision::Ran
+        };
         let mut query = bounded_prompt.clone();
         if let Some(diagnostics) = &request.diagnostics_hint {
             query.push(' ');
             query.push_str(diagnostics);
         }
-        let candidates = self.indexer.search(&query, 5);
+        let candidates = if retrieval == RetrievalDecision::Ran {
+            self.indexer.search(&query, 5)
+        } else {
+            Vec::new()
+        };
         let candidate_count = candidates.len();
         let (context, selected_tokens, truncated) = self
             .compressor
@@ -344,7 +377,17 @@ impl ContextPipeline {
                     CacheStatus::MissStored
                 },
                 behavior_decision: decision,
+                retrieval,
             },
+        }
+    }
+}
+
+impl RetrievalDecision {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Ran => "ran",
+            Self::Skipped => "skipped",
         }
     }
 }
@@ -429,10 +472,11 @@ mod tests {
     fn pipeline_reports_cache_hit_after_first_request() {
         let mut pipeline = ContextPipeline::default_sidecar_like();
         let request = ContextRequest {
-            prompt: "status stream retry".to_string(),
+            prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
             cache_bypass: false,
             behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
         };
         let caps = AdapterCapabilities::for_runtime(RuntimeKind::Mock);
         let first = pipeline.prepare(&request, caps);
@@ -445,10 +489,11 @@ mod tests {
     fn pipeline_can_bypass_cache() {
         let mut pipeline = ContextPipeline::default_sidecar_like();
         let request = ContextRequest {
-            prompt: "status stream retry".to_string(),
+            prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
         };
         let result = pipeline.prepare(
             &request,
@@ -461,10 +506,11 @@ mod tests {
     fn mock_profile_attaches_context_when_indexer_hits() {
         let mut pipeline = ContextPipeline::default_sidecar_like();
         let request = ContextRequest {
-            prompt: "status stream retry".to_string(),
+            prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
         };
         let result = pipeline.prepare(
             &request,
@@ -477,16 +523,52 @@ mod tests {
     fn cursor_profile_skips_context_attachment() {
         let mut pipeline = ContextPipeline::default_sidecar_like();
         let request = ContextRequest {
-            prompt: "status stream retry".to_string(),
+            prompt: "status stream retry integration tests daemon lifecycle".to_string(),
             diagnostics_hint: None,
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
         };
         let result = pipeline.prepare(
             &request,
             AdapterCapabilities::for_runtime(RuntimeKind::CursorCli),
         );
         assert!(!result.effective_prompt.contains("[context]"));
+    }
+
+    #[test]
+    fn retrieval_skipped_for_short_prompt() {
+        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let request = ContextRequest {
+            prompt: "hi".to_string(),
+            diagnostics_hint: None,
+            cache_bypass: true,
+            behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
+        };
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::Mock),
+        );
+        assert_eq!(result.metrics.retrieval, super::RetrievalDecision::Skipped);
+        assert_eq!(result.metrics.context_candidates, 0);
+    }
+
+    #[test]
+    fn retrieval_off_directive_skips_indexer() {
+        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let request = ContextRequest {
+            prompt: "status stream retry integration tests".to_string(),
+            diagnostics_hint: None,
+            cache_bypass: true,
+            behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: true,
+        };
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::Mock),
+        );
+        assert_eq!(result.metrics.retrieval, super::RetrievalDecision::Skipped);
     }
 
     #[test]
@@ -500,6 +582,7 @@ mod tests {
                 typing_cadence_cpm: 500,
                 pause_events_last_minute: 0,
             },
+            retrieve_off: false,
         };
         let result = pipeline.prepare(
             &request,

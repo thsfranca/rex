@@ -158,6 +158,7 @@ impl RexService for RexDaemonService {
             diagnostics_hint: directives.diagnostics_hint.clone(),
             cache_bypass: directives.cache_bypass || cache_bypass_from_env(),
             behavior_snapshot: directives.behavior_snapshot,
+            retrieve_off: directives.retrieve_off,
         };
         let pipeline_result = self
             .pipeline
@@ -170,7 +171,7 @@ impl RexService for RexDaemonService {
             StreamLifecycle::Starting.as_str(),
         );
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={}",
+            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={} retrieval={}",
             pipeline_result.metrics.prompt_tokens,
             pipeline_result.metrics.selected_context_tokens,
             pipeline_result.metrics.context_candidates,
@@ -178,6 +179,7 @@ impl RexService for RexDaemonService {
             pipeline_result.metrics.context_truncated,
             format_cache_status(pipeline_result.metrics.cache_status),
             format_behavior_decision(&pipeline_result.metrics.behavior_decision),
+            pipeline_result.metrics.retrieval.as_str(),
         );
         let cache_bypass = directives.cache_bypass || cache_bypass_from_env();
         let policy_request = PolicyRequest {
@@ -388,6 +390,7 @@ struct PromptDirectives {
     diagnostics_hint: Option<String>,
     cache_bypass: bool,
     behavior_snapshot: BehaviorSnapshot,
+    retrieve_off: bool,
 }
 
 impl PromptDirectives {
@@ -395,6 +398,7 @@ impl PromptDirectives {
         let mut diagnostics_hint = None;
         let mut cache_bypass = false;
         let mut behavior_snapshot = BehaviorSnapshot::default();
+        let mut retrieve_off = false;
         for line in prompt.lines() {
             if let Some(value) = line
                 .strip_prefix("[[diag:")
@@ -413,12 +417,17 @@ impl PromptDirectives {
             if line.trim() == "[[behavior:focused]]" {
                 behavior_snapshot.typing_cadence_cpm = 500;
                 behavior_snapshot.pause_events_last_minute = 0;
+                continue;
+            }
+            if line.trim() == "[[retrieve:off]]" {
+                retrieve_off = true;
             }
         }
         Self {
             diagnostics_hint,
             cache_bypass,
             behavior_snapshot,
+            retrieve_off,
         }
     }
 }
