@@ -115,7 +115,7 @@ Coverage includes:
 
 ## Install as terminal commands
 
-Install or reinstall local binaries:
+Install or reinstall local binaries (from source):
 
 ```bash
 chmod +x scripts/install-cli.sh
@@ -123,6 +123,8 @@ chmod +x scripts/install-cli.sh
 ```
 
 The script reinstalls with `--force` and does not modify shell dotfiles by default.
+
+Prebuilt binaries for `rex-cli`, `rex-daemon`, and `rex-sidecar-stub` are attached to GitHub Releases tagged `vX.Y.Z` after merging the release-plz Release PR. See [`docs/RELEASE.md`](docs/RELEASE.md).
 
 If you want automatic `zsh` PATH configuration:
 
@@ -171,7 +173,8 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Progress toward v1.0; engineering backlog IDs (**R004**–**R012**). |
 | [`docs/EXTENSION.md`](docs/EXTENSION.md) | NDJSON consumer contract, extension bootstrap path, component layout (replaces superseded MVP/architecture stubs). |
 | [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md) | Phased roadmap for the VS Code/Cursor extension. |
-| [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) | Install, daemon auto-start, troubleshooting, and release pipeline for the extension. |
+| [`docs/RELEASE.md`](docs/RELEASE.md) | Core and extension release automation (Release PRs, tags, binaries, VSIX). |
+| [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) | Install, daemon auto-start, troubleshooting, and extension release pipeline. |
 | [`docs/PLUGIN_ROADMAP.md`](docs/PLUGIN_ROADMAP.md) | Sidecar agent platform; brokered inference adapters. |
 | [`docs/ADAPTERS.md`](docs/ADAPTERS.md) | Inference adapter contract, capabilities, and Cursor CLI profile. |
 | [`docs/CACHING.md`](docs/CACHING.md) | Layered response cache design: keys, mode safety, bypass. |

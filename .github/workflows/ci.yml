@@ -43,6 +43,11 @@ jobs:
             ci_changed:
               - '.github/workflows/**'
               - 'scripts/ci/**'
+              - 'scripts/release/**'
+              - 'release-plz.toml'
+              - 'release-please-config.json'
+              - '.release-please-manifest.json'
+              - 'dist-workspace.toml'
             global_changed:
               - 'Cargo.toml'
               - 'Cargo.lock'

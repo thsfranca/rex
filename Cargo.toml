@@ -11,6 +11,7 @@ resolver = "2"
 edition = "2021"
 version = "1.0.0"
 license = "MIT"
+repository = "https://github.com/thsfranca/rex"
 
 [workspace.dependencies]
 tonic = { version = "0.12", features = ["transport"] }

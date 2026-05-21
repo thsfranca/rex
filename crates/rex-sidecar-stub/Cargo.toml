@@ -3,7 +3,11 @@ name = "rex-sidecar-stub"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 publish = false
+
+[package.metadata.dist]
+dist = true
 
 [lib]
 name = "rex_sidecar_stub"

@@ -146,6 +146,35 @@ When a domain is non-relevant, leaf jobs skip and that domain gate exits with `r
 
 Docs-only and README-only pull requests are treated as out-of-scope for both domain verify jobs. In those cases, `rust-checks`, `extension-checks`, and `ci-checks` still run and pass through the gate scripts.
 
+## Release workflows
+
+Release automation is documented in [RELEASE.md](RELEASE.md). Workflows:
+
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `release-plz.yml` | Push to `main`, `workflow_dispatch` | Open/update core Release PR; tag `v*` and GitHub Release notes on merge |
+| `core-release.yml` | Push tag `v[0-9]+.*`, PR (dist plan) | Build binary archives with cargo-dist after `run_rust_verify.sh` |
+| `release-please-extension.yml` | Push to `main`, `workflow_dispatch` | Open/update extension Release PR; tag `rex-vscode-v*` on merge |
+| `extension-release.yml` | Push tag `rex-vscode-v*`, `workflow_dispatch` | Build VSIX and optional marketplace publish |
+| `pr-title-lint.yml` | Pull request | Conventional Commits on PR titles |
+
+### Release workflow permissions
+
+- **release-plz** and **release-please-extension:** `contents: write`, `pull-requests: write`.
+- **core-release** and **extension-release:** `contents: write` (GitHub Release assets).
+
+### Release failure codes (baseline)
+
+Use the same `CI_SIGNAL` pattern when adding release-specific scripts:
+
+- `RELEASE_BUILD_FAIL` — cargo-dist build failed after verify
+- `RELEASE_VERIFY_FAIL` — `run_rust_verify.sh` failed in core-release plan job
+
+### Maintainer notes
+
+- Re-running `dist generate` may recreate `.github/workflows/release.yml`; merge into `core-release.yml` per [RELEASE.md](RELEASE.md).
+- Do not enable auto-merge on Release PRs until [V1_0.md](V1_0.md) gates are satisfied for `1.0.0`.
+
 ## Why this setup
 
 - Avoids duplicate CI runs from branch `push` + `pull_request` (workflow is PR-scoped).
@@ -194,3 +223,8 @@ When adding a new CI job, verify all items:
 - [ ] Sets `timeout-minutes`.
 - [ ] Uses `scripts/ci/` for non-trivial check logic instead of long inline `run` blocks.
 - [ ] Uses concise, context-free step names (action-first, no process/chat wording).
+
+Release workflows additionally:
+
+- [ ] Tag filters exclude the other plane (`v*` vs `rex-vscode-v*`).
+- [ ] Core release runs `run_rust_verify.sh` before dist build on tag pushes.

@@ -97,13 +97,17 @@ Open the `REX` output channel (`REX: Open Output Channel`) for details on every 
 
 ## Release pipeline
 
-The extension is released independently of the REX daemon. Tags prefixed with `rex-vscode-v` drive the workflow at `.github/workflows/extension-release.yml`.
+The extension is released independently of the REX core workspace. Overview of both planes: [RELEASE.md](RELEASE.md).
+
+**Version and changelog:** [release-please](https://github.com/googleapis/release-please) opens a Release PR on `main` (workflow `.github/workflows/release-please-extension.yml`, label `release-extension`). Merge that PR when ready; it bumps `package.json`, updates `CHANGELOG.md`, and creates the `rex-vscode-vX.Y.Z` tag.
+
+**Build and publish:** Tags drive `.github/workflows/extension-release.yml`.
 
 ### Release checklist
 
-1. Decide the next semantic version `X.Y.Z` and update `extensions/rex-vscode/package.json` plus `extensions/rex-vscode/CHANGELOG.md` in a PR.
-2. After the PR merges, tag the release commit: `git tag rex-vscode-vX.Y.Z && git push origin rex-vscode-vX.Y.Z`.
-3. The workflow runs:
+1. Merge feature PRs with [Conventional Commits](../CONTRIBUTING.md) (extension-relevant changes under `feat(extension):` or similar scope when helpful).
+2. Review and merge the **release-please** Release PR for `extensions/rex-vscode`.
+3. On tag push, the **Extension Release** workflow runs:
    - Lint, typecheck, and unit tests.
    - `vsce package --no-dependencies --out rex-vscode-<version>.vsix`.
    - VSIX validation without publishing: `unzip -t` on the archive and `vsce generate-manifest --packagePath <vsix>` (the Open VSX CLI does not ship a publish dry-run flag).
@@ -131,5 +135,6 @@ Without either publish secret the pipeline still builds, tests, packages, valida
 
 ## Changelog discipline
 
-- Every user-visible change adds an entry under `## [Unreleased]` in `extensions/rex-vscode/CHANGELOG.md`.
-- On release, rename the `Unreleased` heading to the new version and the date, then start a fresh `Unreleased` block in the next PR.
+- Use Conventional Commits on `main` so release-please can group changes into `extensions/rex-vscode/CHANGELOG.md`.
+- For notable user-visible work, you may still add bullets under `## [Unreleased]` before the Release PR lands; release-please consolidates on release.
+- After merging the Release PR, start documenting the next changes on `main` (release-please opens a new `Unreleased` section as needed).

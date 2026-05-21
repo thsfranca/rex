@@ -1,0 +1,45 @@
+[workspace]
+changelog_update = true
+git_release_enable = true
+git_tag_name = "v{{ version }}"
+git_only = true
+publish = false
+pr_labels = ["release-core"]
+pr_name = "chore: release {{ version }}"
+repo_url = "https://github.com/thsfranca/rex"
+semver_check = false
+
+[[package]]
+name = "rex-cli"
+version_group = "rex"
+changelog_path = "CHANGELOG.md"
+
+[[package]]
+name = "rex-daemon"
+version_group = "rex"
+
+[[package]]
+name = "rex-sidecar-stub"
+version_group = "rex"
+
+[[package]]
+name = "rex-proto"
+version_group = "rex"
+
+[changelog]
+header = "# Changelog\n\nAll notable changes to the REX workspace (Rust daemon, CLI, sidecar stub, and `rex.v1` contract) are documented here.\n\nThe format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions use git tags `vX.Y.Z` on `main`.\n"
+tag_pattern = "v[0-9].*"
+commit_parsers = [
+  { message = "^feat", group = "Added" },
+  { message = "^fix", group = "Fixed" },
+  { message = "^doc", group = "Documentation" },
+  { message = "^perf", group = "Changed" },
+  { message = "^refactor", group = "Changed" },
+  { message = "^chore", group = "Other" },
+  { message = "^ci", group = "Other" },
+  { message = "^test", group = "Other" },
+  { message = "^.*", group = "Other" },
+]
+commit_preprocessors = [
+  { pattern = '\\(#([0-9]+)\\)', replace = "([#${1}](https://github.com/thsfranca/rex/pull/${1}))" },
+]
