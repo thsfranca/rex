@@ -9,16 +9,18 @@ REX keeps **routing/caching/pipeline policy in `rex-daemon`**, runs the **develo
 - Concentrate **cost/performance levers** ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)) in the daemon boundary.
 - **Harness only:** direct in-process **mock** / HTTP without sidecar for CI and migration.
 
-## Phase 1 MVP — sidecar agent platform
+## Phase 1 platform shape (see [MVP_SPEC.md](MVP_SPEC.md))
 
-| Slice | Outcome | Status |
-|-------|---------|--------|
-| **Sidecar lifecycle** | Daemon supervises **0 or 1** process; health, timeout, restart | **Implemented** — [RC-03](V1_0.md) |
-| **`rex.sidecar.v1`** | Control-plane API on UDS; MVP verbs in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | **Implemented** |
-| **Reference sidecar** | Minimal agent binary (any stack per ADR 0005) | **Implemented** — `rex-sidecar-stub` |
-| **`StreamInference` routing** | Assistant completions via sidecar turn, not direct daemon HTTP | **Implemented** |
-| **Brokered HTTP** | Reuse `http_openai_compat` when sidecar requests inference | **Implemented** — [RC-04](V1_0.md) |
-| **Brokered `fs.read`** | One tool path for workspace files | **Implemented** — centralized AccessPolicy broker: [RC-05](V1_0.md) **Not met** |
+Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
+
+| Slice | Outcome | RC-* (status in v1 hub) |
+|-------|---------|-------------------------|
+| **Sidecar lifecycle** | Daemon supervises **0 or 1** process; health, timeout, restart | RC-03 Met |
+| **`rex.sidecar.v1`** | Control-plane API on UDS; verbs in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | RC-03 Met |
+| **Reference sidecar** | Minimal agent binary (any stack per ADR 0005) | RC-03 Met — `rex-sidecar-stub` |
+| **`StreamInference` routing** | Assistant completions via sidecar turn, not direct daemon HTTP | RC-03 Met |
+| **Brokered HTTP** | Reuse `http_openai_compat` when sidecar requests inference | RC-04 Met |
+| **Brokered `fs.read`** | One tool path for workspace files | RC-04 Met; RC-05 Not met (centralized AccessPolicy broker) |
 
 ## Brokered HTTP (daemon mechanism)
 
@@ -63,7 +65,7 @@ REX keeps **routing/caching/pipeline policy in `rex-daemon`**, runs the **develo
 | 4 — Proto / CLI knobs | **`model`** / **`mode`** on wire |
 | 5+ | L2, `auto`, sidecar-only routing | Backlog |
 
-**Repo status:** Phase 1 sidecar platform **implemented**. v1.0 gap: centralized **AccessPolicy broker** ([V1_0.md](V1_0.md) **RC-05**, backlog **R012** in [ROADMAP.md](ROADMAP.md)).
+**Status:** See [V1_0.md](V1_0.md) **RC-*** (canonical). Open engineering item: **R012** / **RC-05** AccessPolicy broker centralization.
 
 ## Later optional tracks
 

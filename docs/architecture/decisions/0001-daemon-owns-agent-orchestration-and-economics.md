@@ -20,7 +20,7 @@ The **rex-daemon** owns the **development agent boundary** over time:
 
 - **Positive:** Single place to add routing, metering, compaction, durable project memory without forking clients.
 - **Negative:** More logic eventually lives in the daemon; subprocess adapters must respect timeouts and terminals.
-- **Risks / follow-up:** Phase 1 **shipping** is the **sidecar agent slice** (supervision, `rex.sidecar.v1`, brokered HTTP + one tool) — [MVP_SPEC.md](../../MVP_SPEC.md). Full MCP/tool fleet remains deferred; separate **intent** vs **shipping state** in [ARCHITECTURE.md](../../ARCHITECTURE.md).
+- **Risks / follow-up:** Phase 1 **shape** is the sidecar agent slice (supervision, `rex.sidecar.v1`, brokered HTTP + tool) — [MVP_SPEC.md](../../MVP_SPEC.md). **Done** is [V1_0.md](../../V1_0.md) **RC-***. Full MCP/tool fleet remains deferred.
 
 ## Related
 

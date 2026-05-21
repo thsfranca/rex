@@ -26,23 +26,23 @@ Canonical **purpose and operating principles** (single source of truth): **[docs
 ## Project status
 
 - **Experimental scope:** APIs, docs, and behavior can change as the study evolves; use this workspace for learning and prototypes, not production SLAs.
-- **Phase 1 (local operator):** **clone → configure HTTP backend → daemon (sidecar) → REX chat** — [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). MVP assistant requires a **supervised sidecar** with **brokered HTTP** ([`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)).
-- **v1.0 milestone:** [`docs/V1_0.md`](docs/V1_0.md) defines SMART release criteria and when to tag **`1.0.0`**; [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks progress; [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) buckets work.
+- **Local operator path:** **clone → configure HTTP backend → daemon (sidecar) → REX chat** — [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). Product shape: [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md).
+- **Done / v1.0:** [`docs/V1_0.md`](docs/V1_0.md) (**RC-*** release criteria, **`1.0.0`** tag gate); [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks open gaps; [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) buckets work.
 - Engineering focus: **stream reliability** plus **stable NDJSON** across CLI/extension.
 - Product-learning focus: daemon **economics** (routing, compaction, caches, metrics per [docs/CONTEXT_EFFICIENCY.md](docs/CONTEXT_EFFICIENCY.md)); implementation incremental.
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
-- Not primary scope yet: production-grade local runtime adapters beyond the MVP set (for example **MLX**), remote networking/TLS, production auth, multi-plugin sidecar fleets. **Sidecar supervision and broker** are Phase 1 baseline — see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md); v1.0 bar in [`docs/V1_0.md`](docs/V1_0.md).
+- Not primary scope yet: production-grade local runtime adapters beyond the Phase 1 shape (for example **MLX**), remote networking/TLS, production auth, multi-plugin sidecar fleets. See [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) (scope) and [`docs/V1_0.md`](docs/V1_0.md) (done).
 
-## MVP local operator path
+## Local operator path
 
 Linear recipe from a clone to **REX** chat in the editor (requires **HTTP backend** for brokered inference and a **sidecar agent** per [docs/MVP_SPEC.md](docs/MVP_SPEC.md)):
 
 1. **Build** the Rust workspace: `cargo build --workspace` — or one shot: `chmod +x ./scripts/dev-rex-extension.sh && ./scripts/dev-rex-extension.sh`.
 2. **Put** `rex-cli` (and the daemon if you use auto-start) where the **editor** can find them — [`scripts/install-cli.sh`](scripts/install-cli.sh).
-3. **Configure** brokered HTTP (example Ollama): `export REX_OPENAI_COMPAT_BASE_URL=http://127.0.0.1:11434/v1` and `REX_OPENAI_COMPAT_MODEL=…` — [docs/CONFIGURATION.md](docs/CONFIGURATION.md). Configure sidecar when `REX_SIDECAR_*` lands — [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md).
-4. **Run** the daemon (spawns or connects to sidecar when implemented) with those env vars. Socket: `/tmp/rex.sock`.
+3. **Configure** brokered HTTP (example Ollama): `export REX_OPENAI_COMPAT_BASE_URL=http://127.0.0.1:11434/v1` and `REX_OPENAI_COMPAT_MODEL=…` — [docs/CONFIGURATION.md](docs/CONFIGURATION.md). Enable the supervised sidecar: `export REX_SIDECAR_ENABLED=1` and ensure `rex-sidecar-stub` is on `PATH` (or set `REX_SIDECAR_BINARY`) — [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md).
+4. **Run** `rex-daemon` with those env vars (supervisor spawns the sidecar when enabled). Socket: `/tmp/rex.sock` (override with `REX_DAEMON_SOCKET` for the stub broker path).
 5. **Install** the extension — [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md).
-6. **In the editor:** **REX: Open Chat**, try **agent** mode, send a prompt, cancel once, and apply a code block with approval. Verify sidecar health and at least one brokered tool when the sidecar slice ships.
+6. **In the editor:** **REX: Open Chat**, try **agent** mode, send a prompt, cancel once, and apply a code block with approval. Verify sidecar health in daemon logs and brokered `fs.read` via a prompt containing `__rex_read:<path>`.
 
 Details: [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
 
@@ -142,9 +142,9 @@ source ~/.zshrc
 - `rex-cli complete --format ndjson` emits one JSON event per line with terminal `done` or `error`.
 - `rex-daemon` emits request-scoped stream lifecycle logs (`starting`, `streaming`, `completed`, `interrupted`, `failed`) plus `request_id` and first-chunk markers for troubleshooting.
 
-## MVP boundaries
+## Phase 1 boundaries
 
-In scope now:
+In scope for the first product shape:
 
 - Local daemon–client communication over UDS.
 - Unary status RPC and server-streaming completion RPC.
@@ -166,7 +166,7 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | [`docs/README.md`](docs/README.md) | Documentation index and reading order. |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | SAD-style architecture (C4 views, quality attributes, observability/security) + links to ADRs. |
 | [`docs/architecture/decisions/`](docs/architecture/decisions/) | ADRs (daemon/agent boundary, adapters, cache policy, routing vs gateway). |
-| [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) | Phase 1 scope, protocol, and acceptance criteria. |
+| [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) | Phase 1 product architecture and scope (done: [`docs/V1_0.md`](docs/V1_0.md) only). |
 | [`docs/V1_0.md`](docs/V1_0.md) | v1.0 release criteria (**RC-***), SemVer `1.0.0` meaning, tagging gate. |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Progress toward v1.0; engineering backlog IDs (**R004**–**R012**). |
 | [`docs/EXTENSION.md`](docs/EXTENSION.md) | NDJSON consumer contract, extension bootstrap path, component layout (replaces superseded MVP/architecture stubs). |

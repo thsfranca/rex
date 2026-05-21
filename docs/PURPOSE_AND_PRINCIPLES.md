@@ -24,13 +24,13 @@ Concrete goals:
 
 2. **Daemon-first economics and contracts.** Stream semantics, modes, caches, capability-aware pipelines, and adapter selection/configuration converge in **`rex-daemon`** ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). Inference backends produce output **under** that envelope.
 
-3. **Incremental implementation.** Ship narrow, testable slices; separate **intent** from **shipping state** using [MVP_SPEC.md](MVP_SPEC.md), [ROADMAP.md](ROADMAP.md), and MoSCoW-style deferrals in [PRIORITIZATION.md](PRIORITIZATION.md). Do not describe future work as shipped.
+3. **Incremental implementation.** Ship narrow, testable slices; separate **intent** ([MVP_SPEC.md](MVP_SPEC.md) scope) from **done** ([V1_0.md](V1_0.md) **RC-***, tracked in [ROADMAP.md](ROADMAP.md)) and MoSCoW deferrals in [PRIORITIZATION.md](PRIORITIZATION.md). Do not describe future work as shipped.
 
 4. **Stable external contract.** Preserve **`rex.v1`** and deterministic **`rex-cli --format ndjson`** behavior for integrations unless a versioned migration is intentional.
 
 5. **Documentation hubs.** Keep **one** canonical explanation document per major feature area under `docs/`; use **links** plus one-line status elsewhere ([DOCUMENTATION.md](DOCUMENTATION.md)). Record accepted boundaries in **ADRs** when formalizing decisions.
 
-6. **Sidecar agent for product path.** MVP assistant reasoning runs in a **supervised sidecar**; daemon retains economics, policy, and brokering ([PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [MVP_SPEC.md](MVP_SPEC.md)). Additional sidecars or envelopes are additive.
+6. **Sidecar agent for product path.** Assistant reasoning runs in a **supervised sidecar**; daemon retains economics, policy, and brokering ([PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [MVP_SPEC.md](MVP_SPEC.md)). Additional sidecars or envelopes are additive.
 
 7. **Neutral, operational naming.** Prefer function-based headings and scope descriptions in docs and plans; avoid framing whose main job is to label maturity ([DOCUMENTATION.md](DOCUMENTATION.md) norms).
 
@@ -38,4 +38,4 @@ Concrete goals:
 
 - **Authors:** When adding or rewriting **purpose-level** prose, **update this file** and replace long repeats elsewhere with **links** here.
 - **Readers:** Start here for intent; follow links for specs, roadmaps, and ADRs.
-- **Milestones:** Near-term delivery target is **v1.0** — SMART release criteria and SemVer meaning in [V1_0.md](V1_0.md); [ROADMAP.md](ROADMAP.md) tracks **RC-*** progress.
+- **Done / milestones:** Only [V1_0.md](V1_0.md) (**RC-***) defines completion; [ROADMAP.md](ROADMAP.md) tracks gaps. [MVP_SPEC.md](MVP_SPEC.md) is Phase 1 architecture, not a second done list.

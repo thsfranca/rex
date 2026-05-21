@@ -70,5 +70,5 @@ Revisit the monorepo decision if any of the following become true:
 ## Related documents
 
 - [ARCHITECTURE.md](ARCHITECTURE.md): REX system architecture.
-- [MVP_SPEC.md](MVP_SPEC.md): phase 1 protocol and acceptance criteria.
+- [MVP_SPEC.md](MVP_SPEC.md): Phase 1 product architecture; done: [V1_0.md](V1_0.md).
 - **[EXTENSION.md](EXTENSION.md)**: consolidated extension contract + component layout.
