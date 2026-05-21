@@ -42,12 +42,16 @@ Foundation milestones (three internal delivery waves covering scaffold + chat UX
 - Workspace @-mentions requiring bespoke indexing servers.
 - **Node `StreamInference` streaming** replacing the NDJSON **`rex-cli`** path (would need a **future ADR**; hybrid unary-only policy is **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**).
 
+## Shipped (foundation + recent slices)
+
+- **Daemon approval context:** extension passes `--approval-id` on **agent** sends when execution approval is required and `REX_AGENT_APPROVALS=1` ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). **Plan** mode uses in-UI mutation approvals only (no `--approval-id` on the CLI path).
+- Get Started walkthrough documents **sidecar + HTTP** env for plan/agent.
+- **`rex.modelId`** setting passes `--model` on every `complete` when non-empty.
+- **Core** path: single NDJSON terminal, cancel-to-idle, **`--mode`** on every `complete`.
+
 ## What remains after phase delivery
 
-- **Daemon approval context:** shipped — extension passes `--approval-id` on approved `plan`/`agent` sends when `REX_AGENT_APPROVALS=1` ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)).
-- Get Started walkthrough documents **sidecar + HTTP** env for plan/agent (shipped in extension slice after docs sync).
-- Optional **`rex.modelId`** setting to pass `--model` on every `complete`.
-- Continue **stress hardening** for very long chat sessions and status-bar edge cases. **Core** path: single NDJSON terminal, cancel-to-idle, **`--mode`** on every `complete` (shipped).
+- Continue **stress hardening** for very long chat sessions and status-bar edge cases (automated coverage expanding; long-session checklist stays manual in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md)).
 - Keep release automation and install docs aligned with CLI/daemon lifecycle changes.
 - Add follow-up features only when they preserve the stable CLI NDJSON boundary and keep behavior symmetric across Cursor and plain VS Code.
 

@@ -5,7 +5,7 @@
 
 ## Context
 
-`rex-daemon` already owns **stream lifecycle**, **adapter envelope**, and now (**R007**) the **policy seam** that decides cache outcomes ([`docs/ARCHITECTURE_GUIDELINES.md`](../../ARCHITECTURE_GUIDELINES.md), [`docs/CACHING.md`](../../CACHING.md)). **Agent-mode** safety, however, lives only in the **extension UX**: today's "approval" rules and mode guardrails are described in [`docs/EXTENSION.md`](../../EXTENSION.md) (`ask` / `plan` / `agent` modes), [`docs/ARCHITECTURE.md`](../../ARCHITECTURE.md) (security viewpoint, "Elevation"), and [`docs/CONTEXT_EFFICIENCY.md`](../../CONTEXT_EFFICIENCY.md) (`Human approvals + sandbox for tools` row, marked **partial**).
+`rex-daemon` already owns **stream lifecycle**, **adapter envelope**, and (**R007**) the **policy seam** that decides cache outcomes ([`docs/ARCHITECTURE_GUIDELINES.md`](../../ARCHITECTURE_GUIDELINES.md), [`docs/CACHING.md`](../../CACHING.md)). **Agent-mode** enforcement now includes a daemon **`ApprovalGate`** ([`crates/rex-daemon/src/approvals.rs`](../../../crates/rex-daemon/src/approvals.rs)) with opt-in `REX_AGENT_APPROVALS=1`; the **extension** still owns approval **UX** and passes `--approval-id` / `StreamInferenceRequest.approval_id` when required. Mode guardrails remain in [`docs/EXTENSION.md`](../../EXTENSION.md); full tool **sandbox** broker matrix is **partial** ([`docs/CONTEXT_EFFICIENCY.md`](../../CONTEXT_EFFICIENCY.md)).
 
 Pressures forcing this decision:
 
@@ -40,10 +40,10 @@ Pressures forcing this decision:
   - Default `AlwaysAllow` keeps the introduction PR a true no-op for existing tests and dogfood flows.
 - **Negative:**
   - Adds a second policy concern (`ApprovalGate`) alongside `ResponseCache` in `policy.rs`; module grows and may eventually want a sub-module split.
-  - Real enforcement requires a way for clients to ship approval context; the extension UX wiring is parked as follow-up after the daemon trait lands.
+  - **Shipped:** `rex-cli` and the extension pass `approval_id`; daemon logs `approval=allow|deny|checkpoint` on agent-mode streams.
 - **Risks / follow-up:**
-  - Defining what counts as a "checkpoint" beyond simple allow/deny will drive further design (likely tied to future tool-execution work). Treat `Checkpoint { reason }` as **reserved** until that design exists.
-  - `REX_AGENT_APPROVALS` becomes a new entry in the [`docs/CONFIGURATION.md`](../../CONFIGURATION.md) `REX_*` catalog when enforcement ships.
+  - Defining what counts as a "checkpoint" beyond simple allow/deny will drive further design (tool / write-step gating). Today `Checkpoint { reason }` is **reserved** and proceeds without blocking the stream until phase-2 semantics land.
+  - `REX_AGENT_APPROVALS` is cataloged in [`docs/CONFIGURATION.md`](../../CONFIGURATION.md).
 
 ## Related
 

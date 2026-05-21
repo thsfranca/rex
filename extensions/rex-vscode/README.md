@@ -87,6 +87,7 @@ npm run package
 | `rex.cliPath` | `rex-cli` | Resolvable path or name for `rex-cli`. |
 | `rex.daemonBinaryPath` | `rex-daemon` | Resolvable path or name for `rex-daemon`. |
 | `rex.daemonAutoStart` | `false` | Opt-in extension-managed daemon lifecycle. |
+| `rex.modelId` | *(empty)* | When set, passed as `--model` on every `rex-cli complete`. |
 
 ## License
 
