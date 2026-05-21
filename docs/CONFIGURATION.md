@@ -55,7 +55,7 @@ The following are read in **Rust** code paths for the **daemon** or **CLI** as i
 | `REX_EXTENSION_EDITOR` | [install-extension.sh](../scripts/install-extension.sh) and [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md): path to the `cursor` or `code` CLI when the shell `PATH` is wrong. |
 | `REX_TEST_STATUS_STATE_FILE` | Test fixtures only: controls scripted `rex-cli status` success/fail sequences in the extension tests. |
 
-**Code map (audit):** Daemon keys are read in `crates/rex-daemon/src/adapters.rs` (`REX_INFERENCE_RUNTIME`, Cursor CLI trio), `crates/rex-daemon/src/service.rs` (`REX_CACHE_BYPASS`), `crates/rex-daemon/src/l1_cache.rs` (`REX_WORKSPACE_ROOT`), and `crates/rex-daemon/src/approvals.rs` (`REX_AGENT_APPROVALS`). The CLI reads `REX_TRACE_ID` in `crates/rex-cli/src/runtime.rs`. If you add a new `REX_*` for a binary, extend this catalog and the table above in the same change.
+**Module map (audit):** Daemon: `adapters` (`REX_INFERENCE_RUNTIME`, Cursor CLI trio), stream service (`REX_CACHE_BYPASS`), `l1_cache` (`REX_WORKSPACE_ROOT`), `approvals` (`REX_AGENT_APPROVALS`). CLI: `runtime` (`REX_TRACE_ID`). Extend this catalog when adding keys.
 
 Deeper treatment of the Cursor adapter path: [`PLUGIN_ROADMAP.md`](PLUGIN_ROADMAP.md), [`DEPENDENCIES.md`](DEPENDENCIES.md), [`ADAPTERS.md`](ADAPTERS.md).
 

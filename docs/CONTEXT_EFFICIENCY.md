@@ -23,16 +23,16 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 |-----------|-------------------|---------------|--------------------|--------|
 | Model routing / escalation cascade | Daemon chooses backend + model hint before adapter | Planned `InferenceRouter`; today env selects `InferenceRuntime` | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | **planned** |
 | Context compaction — verbatim-safe packing | Daemon pipeline trims redundancy without inventing symbols | `ContextPipeline`, future packers | Responsibility map below | **partial** |
-| Context compaction — learned / small-model | Optional compressor stage or sidecar ML | Compressor hooks in `plugins.rs` | Evidence-informed defaults | **planned** |
-| Layered response cache — L1 exact | In-process LRU keyed by adapter, model, mode, schema, workspace | `l1_cache.rs`, `service.rs` | [CACHING.md](CACHING.md) | implemented (ask) |
+| Context compaction — learned / small-model | Optional compressor stage or sidecar ML | Context pipeline compressor hooks | Evidence-informed defaults | **planned** |
+| Layered response cache — L1 exact | In-process LRU keyed by adapter, model, mode, schema, workspace | L1 cache + policy engine — [CACHING.md](CACHING.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | implemented (ask) |
 | Layered cache — L2 semantic | Embedding similarity **ask-only** guarded | Planned | [CACHING.md](CACHING.md) | **planned** |
-| Prefix / shared context reuse | TTL prefix cache segments in pipeline | `PrefixCache` in `plugins.rs` | Responsibility map below | **partial** |
+| Prefix / shared context reuse | TTL prefix cache segments in pipeline | `PrefixCache` in context pipeline | Responsibility map below | **partial** |
 | Vendor KV / prompt cache hints | Depends on outbound API owning runtime | Adapter metadata future | [CACHING.md](CACHING.md) | **planned** |
 | Layered prompts (system/project stack) | Versioned assemblies to avoid duplicate client rules | Config + daemon assembly | [CONFIGURATION.md](CONFIGURATION.md) | **planned** |
 | Batching / async doc jobs | Lower priority vs interactive latency | Future RPC/job | [ROADMAP.md](ROADMAP.md) | **planned** |
 | Project memory — decisions + repo fingerprints | Reduce chat-history token pressure | Planned store (`sqlite`/files) alongside daemon | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) | **planned** |
 | MCP / standard tool interoperability | **Approved design:** MCP **primarily** in **isolated sidecar**; host reach **brokered** sidecar → daemon API ([ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md)); **`rex.v1` unchanged**. Formal MCP ADR when implementation scheduled | Sidecar envelope + daemon broker | [ARCHITECTURE.md](ARCHITECTURE.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | **planned** — design accepted, implementation deferred |
-| Human approvals + sandbox for tools | Extension modes today; sandbox future | Extension + daemon policy future | [EXTENSION.md](EXTENSION.md), [ARCHITECTURE.md](ARCHITECTURE.md) security | **partial** |
+| Human approvals + sandbox for tools | Extension modes today; daemon `ApprovalGate`; access policy hub | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [EXTENSION.md](EXTENSION.md) | **partial** — approvals seam shipped; full sandbox broker **planned** |
 
 ## Evidence-informed defaults
 
@@ -100,7 +100,7 @@ The daemon uses these contracts internally as sidecar seams:
 - `PipelineResult`: effective prompt plus per-request metrics.
 - `PipelineMetrics`: prompt tokens, context tokens, candidate/selected counts, truncation, cache status, behavior decision.
 
-This contract lives in `crates/rex-daemon/src/plugins.rs`.
+This contract lives in the daemon **context pipeline** module (`plugins`).
 
 ## Configuration examples
 

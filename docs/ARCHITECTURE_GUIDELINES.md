@@ -66,9 +66,11 @@ Canonical **decision** owner means “writes the norm in the referenced doc / AD
 | Layered cache / mode and `ask` vs `agent` | `rex-daemon` policy | [CACHING.md](CACHING.md) | [0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | Inference adapter contract | `rex-daemon` + adapters | [ADAPTERS.md](ADAPTERS.md) | [0002](architecture/decisions/0002-inference-adapter-contract.md) |
 | Routing / optional HTTP gateway stance | Product architecture | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | 0004 |
-| Sidecar ↔ daemon integration | Product architecture | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | [0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
+| Sidecar ↔ daemon integration | Product architecture | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | [0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
+| Agent environment access policy | `rex-daemon` broker | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | [0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md), [0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md) |
+| Policy engine (cache, approvals, access) | `rex-daemon` | [POLICY_ENGINE.md](POLICY_ENGINE.md) | [0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md), [0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md) |
 | Extension transport (NDJSON + optional unary gRPC) | Extension + contract docs | [EXTENSION.md](EXTENSION.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | [0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
-| Policy vs mechanism seams in code (ports, resolution-before-semantic-cache) | `rex-daemon` implementation | [ROADMAP.md](ROADMAP.md) engineering backlog **R007** (Done) | `crates/rex-daemon/src/policy.rs` — `PolicyEngine`, `ResponseCache`, `LayeredCache` / `NullL2`; ordering covered by tests |
+| Policy vs mechanism seams in code (ports, resolution-before-semantic-cache) | `rex-daemon` implementation | [POLICY_ENGINE.md](POLICY_ENGINE.md), [ROADMAP.md](ROADMAP.md) **R007** (Done) | `PolicyEngine`, `ResponseCache`, `LayeredCache` / `NullL2` in `policy` module |
 | Agent execution approvals / checkpoints | `rex-daemon` policy (UX in extension) | [EXTENSION.md](EXTENSION.md), [ROADMAP.md](ROADMAP.md) backlog **R008** | [0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md) |
 
 ## When to write or update an ADR vs this file
@@ -101,6 +103,7 @@ Align with [DOCUMENTATION.md](DOCUMENTATION.md) and arc42-style documentation go
 - [ARCHITECTURE.md](ARCHITECTURE.md) — structure and runtime views.
 - [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) — contribution workflow and contracts.
 - [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) — daemon-first extensibility and sidecar phasing.
+- [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)
 - [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — economics lever matrix.
 - [DOCUMENTATION.md](DOCUMENTATION.md) — writing norms and doc-type portfolio.
 

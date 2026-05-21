@@ -15,7 +15,7 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 
 ## Isolated agent runtimes (conceptual)
 
-Future **managed environments** for orchestrated agent workloads (supervision, isolation, authorized paths to the daemon) are described in [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md). **Environment ownership** vs **third-party agent code** is [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). The **integration surface** for sidecar ↔ daemon (distinct from **`rex.v1`**) is [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Implementation remains **incremental**; no commitment here that a VM or sidecar supervisor is already shipped.
+**Mac-first path:** supervised **process sidecar** + optional OS sandbox + daemon broker — hubs [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md). **VM/container** envelopes are **not** the default (deferred catalog: [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md)). **Environment ownership** vs agent code: [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). Sidecar ↔ daemon API: [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Sidecar supervisor is **planned**, not shipped.
 
 ## Goals and constraints
 
@@ -73,7 +73,7 @@ flowchart LR
 | `extensions/rex-vscode` | Chat UX, modes, approvals; **`rex-cli`** for NDJSON streaming; optional unary gRPC per [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md). | `implemented` — see [EXTENSION.md](EXTENSION.md). |
 | `rex-cli` | UDS client; NDJSON façade for editors. | `implemented` |
 | `rex-daemon` | Session authority: stream contract, pipeline, cache, adapters. | `implemented` core; routing/project-memory **planned** |
-| Sidecar / isolated runtime (future) | Optional **environment** for isolation or foreign runtimes; brokered integration via [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) ([ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md)). | `planned` — [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
+| Sidecar / isolated runtime (future) | Supervised **process** + brokered API; foreign language agents — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). | `planned` — [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
 
 ## Components inside `rex-daemon` (C4 Level 3)
 
@@ -147,7 +147,7 @@ sequenceDiagram
 | **Repudiation** | Structured logs with `request_id`, `trace_id` **implemented**. |
 | **Information disclosure** | Optional Cursor adapter sends prompt off-machine when enabled — operator choice. |
 | **Denial of service** | Subprocess **timeouts**, bounded CLI retry **implemented**; future rate limits **planned**. |
-| **Elevation** | Future: sandbox for tool execution; extension **approval** gates for mutations **implemented** in UX policy. |
+| **Elevation** | Access policy + broker **planned** — [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md); `ApprovalGate` for `agent` mode — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md); extension approval UX **implemented**. |
 | **Prompt injection** from repo | **planned** hardening: classifiers, allowlists; today: operator awareness. |
 
 ## Interoperability
@@ -193,7 +193,7 @@ sequenceDiagram
 
 ## Plugin and sidecar model (summary)
 
-**Default:** Core **routing, caching, budgets, metrics, and agent policy** stay **in-daemon**. **Sidecars** are for **optional** isolation, foreign language runtimes, or failure-contained features — see [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md). **Brokered control-plane** constraints for sidecar ↔ daemon: [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Detailed sidecar lifecycle and phases are documented there only (avoid duplication with [MVP_SPEC.md](MVP_SPEC.md)).
+**Default:** Core **routing, caching, budgets, metrics, and agent policy** stay **in-daemon**. **Sidecars** are a **supervised process** on Mac (protobuf/UDS, optional OS sandbox, daemon broker) — **not** a VM default — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
 ## Protocol contract (summary)
 
@@ -212,27 +212,15 @@ Inference and cache policy today: defaults + **`REX_*` env**. Full catalog: [CON
 - Bounded buffering; clear errors on connection and stream failures.
 - Subprocess adapters: mandatory timeouts — [ADAPTERS.md](ADAPTERS.md).
 
-## Directory structure (canonical)
+## Repository layout (summary)
 
-```text
-.
-├── proto/rex/v1/rex.proto
-├── crates/
-│   ├── rex-proto/
-│   ├── rex-daemon/src/
-│   │   ├── main.rs
-│   │   ├── runtime.rs
-│   │   ├── service.rs
-│   │   ├── domain.rs
-│   │   ├── adapters.rs
-│   │   ├── plugins.rs
-│   │   └── l1_cache.rs
-│   └── rex-cli/src/
-├── extensions/rex-vscode/
-└── docs/
-    ├── ARCHITECTURE.md
-    └── architecture/decisions/
-```
+| Area | Role |
+|------|------|
+| `proto/rex/v1/` | `rex.v1` gRPC contract |
+| `crates/rex-daemon/` | Daemon — components in [Components](#components-inside-rex-daemon-c4-level-3) |
+| `crates/rex-cli/` | NDJSON + UDS client |
+| `extensions/rex-vscode/` | Editor host |
+| `docs/` | Architecture hubs and ADRs |
 
 ## Non-goals in this document
 
@@ -245,6 +233,7 @@ Inference and cache policy today: defaults + **`REX_*` env**. Full catalog: [CON
 - [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — optimization lever matrix.
 - [ADAPTERS.md](ADAPTERS.md) — adapter capabilities.
 - [CACHING.md](CACHING.md) — L1 keys, bypass.
+- [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)
 - [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) — optional sidecars.
 - [architecture/decisions/0008-dedicated-sidecar-control-plane-api.md](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) — brokered sidecar ↔ daemon API.
 - [architecture/decisions/](architecture/decisions/) — ADR index.

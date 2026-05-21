@@ -6,7 +6,7 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 |------|----------------|
 | **Tutorials** (first success path) | [README.md](../README.md) quickstart, [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) |
 | **How-to** (task recipes) | [EXTENSION_RELEASE.md](EXTENSION_RELEASE.md), [CONFIGURATION.md](CONFIGURATION.md), [CI.md](CI.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
-| **Explanation** (design intent) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
+| **Explanation** (design intent) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | **Reference** (narrow facts) | [ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [EXTENSION.md](EXTENSION.md), `proto/rex/v1/rex.proto`, [DOCUMENTATION.md](DOCUMENTATION.md) |
 
 ## Repository map (`docs/`)
@@ -20,7 +20,10 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 | [ROADMAP.md](ROADMAP.md) | Now / Next / Later + engineering backlog IDs |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | SAD + C4-style views + links to ADRs |
 | [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) | Architecture policies, ownership, documentation layering |
-| [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Isolated agent runtimes + host–guest transport concepts |
+| [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Deferred VM/container transport catalog |
+| [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | Process sidecar: spawn, `rex.sidecar.v1`, UDS gRPC |
+| [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | Environment access policy + sandbox profiles |
+| [POLICY_ENGINE.md](POLICY_ENGINE.md) | Daemon policy pipeline (cache, approvals, access) |
 | [architecture/decisions/](architecture/decisions/) | ADR index + template |
 | [MVP_SPEC.md](MVP_SPEC.md) | Phase 1 protocol & acceptance |
 | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Daemon-first extensibility + optional sidecars |
@@ -43,7 +46,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Feature area | Canonical hub |
 |---|---|
 | Inference adapters | [ADAPTERS.md](ADAPTERS.md), [ADR 0002](architecture/decisions/0002-inference-adapter-contract.md) |
-| Daemon extensibility phases (sidecars) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
+| Daemon extensibility / sidecars | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Layered cache policy | [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | Routing / optional gateway stance | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), economics rows in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
 | Extension transport + NDJSON contract | [EXTENSION.md](EXTENSION.md), [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
@@ -51,7 +54,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 | MCP-style tool interoperability (planned) | [ARCHITECTURE.md](ARCHITECTURE.md) interoperability rows, matrix in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Purpose and principles | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) |
-| Isolated agent runtime (concepts) | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
+| Agent access + sidecar runtime | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 
 ## Scripts (related)
 

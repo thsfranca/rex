@@ -11,7 +11,7 @@ Alternative: adapters are undocumented black boxes invoked from the daemon with 
 
 ## Decision
 
-Expose an **`InferenceRuntime` trait seam** (`crates/rex-daemon/src/adapters.rs`) with documented **`AdapterCapabilities`** (concept in [ADAPTERS.md](../../ADAPTERS.md)):
+Expose an **`InferenceRuntime` trait seam** (daemon `adapters` module) with documented **`AdapterCapabilities`** (concept in [ADAPTERS.md](../../ADAPTERS.md)):
 
 - **Per-backend** switches for context injection, token budgets, timeouts, cacheable modes.
 

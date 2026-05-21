@@ -63,6 +63,13 @@ Use these as short confidence cues when ranking optimization proposals:
 - Long prompts remain position-sensitive; high-value context packing and ordering matter for quality ([Lost in the Middle](https://aclanthology.org/2024.tacl-1.9/)).
 - Routing/cascades provide a practical quality-cost tradeoff by escalating only harder requests ([A Unified Approach to Routing and Cascading for LLMs](https://proceedings.mlr.press/v267/dekoninck25a.html)).
 
+## Won't (now) — sidecar envelope (reference)
+
+| Item | Pointer |
+|------|---------|
+| VM/container as default Mac dev-agent envelope | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [ROADMAP.md](ROADMAP.md) parked table |
+| Always-on Colima/Docker/Firecracker for local agents | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) deferred catalog |
+
 ## Related
 
 - [ROADMAP.md](ROADMAP.md) — one-page study roadmap
