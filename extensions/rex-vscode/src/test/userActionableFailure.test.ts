@@ -14,4 +14,20 @@ describe("streamFailureWantsSetupHint", () => {
     expect(streamFailureWantsSetupHint("invalid_response")).toBe(false);
     expect(streamFailureWantsSetupHint("unknown")).toBe(false);
   });
+
+  it("is true when message mentions sidecar or approval setup", () => {
+    expect(
+      streamFailureWantsSetupHint(
+        "unknown",
+        "sidecar required but REX_SIDECAR_ENABLED is off",
+      ),
+    ).toBe(true);
+    expect(
+      streamFailureWantsSetupHint(
+        "invalid_response",
+        "agent execution denied by approval gate",
+      ),
+    ).toBe(true);
+    expect(streamFailureWantsSetupHint("unknown", "unrelated parse failure")).toBe(false);
+  });
 });
