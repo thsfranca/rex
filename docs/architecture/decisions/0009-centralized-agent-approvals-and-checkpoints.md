@@ -30,7 +30,7 @@ Pressures forcing this decision:
 |----|--------|
 | Add the gate behind the existing policy seam (R007) so the gRPC service stays a thin wiring layer | Hardcode approval branches inside stream handling |
 | Make `AlwaysAllow` the default so the trait can land before any UX wiring | Default-deny `agent` mode without giving clients a way to express approval |
-| Emit a stable observability label for gate decisions (planned: `approval=allow|deny|checkpoint`) when enforcement is active | Silently drop denied requests; always surface a typed gRPC error |
+| Emit a stable observability label for gate decisions (`approval=allow|deny|checkpoint` on agent-mode requests) | Silently drop denied requests; always surface a typed gRPC error |
 
 ## Consequences
 

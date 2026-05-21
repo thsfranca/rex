@@ -197,11 +197,22 @@ impl RexService for RexDaemonService {
                     Some(approval_id.to_string())
                 },
             };
-            match self.approval_gate.check(&approval_ctx).await {
-                ApprovalDecision::Allow | ApprovalDecision::Checkpoint { .. } => {}
+            let approval_outcome = self.approval_gate.check(&approval_ctx).await;
+            let approval_label = format_approval_decision(&approval_outcome);
+            match &approval_outcome {
+                ApprovalDecision::Allow => {
+                    println!(
+                        "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} approval={approval_label}",
+                    );
+                }
+                ApprovalDecision::Checkpoint { reason } => {
+                    println!(
+                        "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} approval={approval_label} reason={reason}",
+                    );
+                }
                 ApprovalDecision::Deny { reason } => {
                     println!(
-                        "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=approval_denied reason={reason} elapsed_ms={}",
+                        "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} approval={approval_label} stream.lifecycle={} stream.event=approval_denied reason={reason} elapsed_ms={}",
                         StreamLifecycle::Failed.as_str(),
                         request_started.elapsed().as_millis()
                     );
@@ -362,6 +373,14 @@ fn format_behavior_decision(decision: &BehaviorDecision) -> &'static str {
     }
 }
 
+fn format_approval_decision(decision: &ApprovalDecision) -> &'static str {
+    match decision {
+        ApprovalDecision::Allow => "allow",
+        ApprovalDecision::Deny { .. } => "deny",
+        ApprovalDecision::Checkpoint { .. } => "checkpoint",
+    }
+}
+
 #[derive(Debug, Clone)]
 struct PromptDirectives {
     diagnostics_hint: Option<String>,
@@ -407,8 +426,8 @@ mod tests {
     use std::path::PathBuf;
 
     use super::{
-        extract_trace_id, format_behavior_decision, format_cache_status, PromptDirectives,
-        RexDaemonService,
+        extract_trace_id, format_approval_decision, format_behavior_decision, format_cache_status,
+        PromptDirectives, RexDaemonService,
     };
     use crate::adapters::{MissingDoneMockRuntime, MockInferenceRuntime};
     use crate::sidecar_config::SidecarConfig;
@@ -482,6 +501,19 @@ mod tests {
         assert_eq!(
             format_behavior_decision(&BehaviorDecision::Suppress { reason: "x" }),
             "suppress"
+        );
+        assert_eq!(format_approval_decision(&ApprovalDecision::Allow), "allow");
+        assert_eq!(
+            format_approval_decision(&ApprovalDecision::Deny {
+                reason: "x".to_string(),
+            }),
+            "deny"
+        );
+        assert_eq!(
+            format_approval_decision(&ApprovalDecision::Checkpoint {
+                reason: "y".to_string(),
+            }),
+            "checkpoint"
         );
     }
 

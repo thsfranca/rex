@@ -172,6 +172,7 @@ sequenceDiagram
 | `l1_cache=hit|miss` | Daemon | Legacy cache effectiveness signal (emitted only for cacheable lookups). |
 | `cache_decision=hit|miss_stored|bypass|uncacheable_mode` | Daemon | Per-request cache outcome covering bypass and ineligible modes (see [CACHING.md](CACHING.md) Metrics). |
 | `stream.lifecycle`, `stream.terminal`, `elapsed_ms` | Daemon | Latency and failure class. |
+| `approval=allow|deny|checkpoint` | Daemon | Agent-mode gate outcome ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). |
 | **Routing decision id** | **planned** | After router lands. |
 | **Estimated tokens / cost** | **planned** | Adapter metadata + pricing table. |
 
