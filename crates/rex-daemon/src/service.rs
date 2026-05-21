@@ -58,7 +58,7 @@ impl RexDaemonService {
     ) -> Self {
         Self {
             started_at,
-            pipeline: Mutex::new(ContextPipeline::default_sidecar_like()),
+            pipeline: Mutex::new(ContextPipeline::production_default()),
             runtime,
             request_sequence: AtomicU64::new(1),
             policy,
