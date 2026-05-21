@@ -26,6 +26,27 @@ impl Default for TokenBudget {
     }
 }
 
+impl TokenBudget {
+    pub fn from_env() -> Self {
+        let default = Self::default();
+        Self {
+            max_prompt_tokens: parse_usize_env("REX_MAX_PROMPT_TOKENS", default.max_prompt_tokens),
+            max_context_tokens: parse_usize_env(
+                "REX_MAX_CONTEXT_TOKENS",
+                default.max_context_tokens,
+            ),
+        }
+    }
+}
+
+fn parse_usize_env(name: &str, default: usize) -> usize {
+    env::var(name)
+        .ok()
+        .and_then(|v| v.trim().parse().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(default)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct BehaviorSnapshot {
     pub typing_cadence_cpm: u16,
@@ -298,7 +319,7 @@ impl ContextPipeline {
 
     pub(crate) fn with_indexer(indexer: LexicalWorkspaceIndexer) -> Self {
         Self {
-            budget: TokenBudget::default(),
+            budget: TokenBudget::from_env(),
             indexer,
             compressor: ExtractiveContextCompressor,
             cache: ExactPrefixCache::new(Duration::from_secs(600)),
@@ -532,13 +553,62 @@ fn score_terms(query_terms: &[String], doc_terms: &[String]) -> usize {
 mod tests {
     use super::{
         stable_prefix_key, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
-        LexicalWorkspaceIndexer,
+        LexicalWorkspaceIndexer, TokenBudget,
     };
     use crate::adapters::{AdapterCapabilities, RuntimeKind};
+    use std::env;
     use std::fs;
 
     fn test_pipeline() -> ContextPipeline {
         ContextPipeline::with_indexer(LexicalWorkspaceIndexer::default_seeded())
+    }
+
+    #[test]
+    fn token_budget_from_env_overrides_defaults() {
+        let _guard = EnvGuard::set("REX_MAX_PROMPT_TOKENS", "64");
+        let budget = TokenBudget::from_env();
+        assert_eq!(budget.max_prompt_tokens, 64);
+    }
+
+    #[test]
+    fn prompt_budget_truncates_when_env_limits_tokens() {
+        let _guard = EnvGuard::set("REX_MAX_PROMPT_TOKENS", "4");
+        let mut pipeline = ContextPipeline::with_indexer(LexicalWorkspaceIndexer::default_seeded());
+        let long = "a".repeat(200);
+        let request = ContextRequest {
+            prompt: long.clone(),
+            diagnostics_hint: None,
+            cache_bypass: true,
+            behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: true,
+        };
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::Mock),
+        );
+        assert!(result.effective_prompt.chars().count() <= 16);
+    }
+
+    struct EnvGuard {
+        key: &'static str,
+        previous: Option<String>,
+    }
+
+    impl EnvGuard {
+        fn set(key: &'static str, value: &str) -> Self {
+            let previous = env::var(key).ok();
+            env::set_var(key, value);
+            Self { key, previous }
+        }
+    }
+
+    impl Drop for EnvGuard {
+        fn drop(&mut self) {
+            match &self.previous {
+                Some(v) => env::set_var(self.key, v),
+                None => env::remove_var(self.key),
+            }
+        }
     }
 
     #[test]
