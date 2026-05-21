@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use hyper_util::rt::TokioIo;
 use rex_proto::rex::v1::rex_service_client::RexServiceClient;
-use rex_proto::rex::v1::{BrokerReadFileRequest, BrokerWriteFileRequest};
+use rex_proto::rex::v1::{BrokerExecShellRequest, BrokerReadFileRequest, BrokerWriteFileRequest};
 use tokio::net::UnixStream;
 use tonic::transport::Endpoint;
 use tower::service_fn;
@@ -69,6 +69,19 @@ impl SidecarService for StubSidecar {
                 }
                 Err(err) => {
                     text.push_str(&format!("\n\n[fs.read error:{err}]"));
+                }
+            }
+        }
+        if let Some(command) = parse_exec_directive(&inner.prompt) {
+            match broker_exec_shell(&command).await {
+                Ok(out) => {
+                    text.push_str(&format!(
+                        "\n\n[exec.shell:{command}]\nstdout={}\nstderr={}",
+                        out.stdout, out.stderr
+                    ));
+                }
+                Err(err) => {
+                    text.push_str(&format!("\n\n[exec.shell error:{err}]"));
                 }
             }
         }
@@ -146,6 +159,42 @@ fn parse_read_directive(prompt: &str) -> Option<String> {
     } else {
         Some(path.to_string())
     }
+}
+
+fn parse_exec_directive(prompt: &str) -> Option<String> {
+    let marker = "__rex_exec:";
+    let start = prompt.find(marker)? + marker.len();
+    let command = prompt[start..].lines().next()?.trim();
+    if command.is_empty() {
+        None
+    } else {
+        Some(command.to_string())
+    }
+}
+
+async fn broker_exec_shell(command: &str) -> Result<ShellOut, String> {
+    let socket = daemon_socket_path();
+    let mut client = connect_daemon(&socket).await?;
+    let response = client
+        .broker_exec_shell(BrokerExecShellRequest {
+            command: command.to_string(),
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .into_inner();
+    if response.ok {
+        Ok(ShellOut {
+            stdout: response.stdout,
+            stderr: response.stderr,
+        })
+    } else {
+        Err(response.error)
+    }
+}
+
+struct ShellOut {
+    stdout: String,
+    stderr: String,
 }
 
 fn parse_write_directive(prompt: &str) -> Option<(String, String)> {

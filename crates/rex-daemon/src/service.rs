@@ -10,9 +10,9 @@ use std::{
 use async_stream::stream;
 use rex_proto::rex::v1::rex_service_server::RexService;
 use rex_proto::rex::v1::{
-    BrokerReadFileRequest, BrokerReadFileResponse, BrokerWriteFileRequest, BrokerWriteFileResponse,
-    GetSystemStatusRequest, GetSystemStatusResponse, StreamInferenceRequest,
-    StreamInferenceResponse,
+    BrokerExecShellRequest, BrokerExecShellResponse, BrokerReadFileRequest, BrokerReadFileResponse,
+    BrokerWriteFileRequest, BrokerWriteFileResponse, GetSystemStatusRequest,
+    GetSystemStatusResponse, StreamInferenceRequest, StreamInferenceResponse,
 };
 use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
@@ -23,7 +23,7 @@ use crate::adapters::InferenceRuntime;
 use crate::adapters::MockInferenceRuntime;
 use crate::adapters::{active_model_id_from_env, AdapterCapabilities};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
-use crate::broker::{broker_read_file, broker_write_file};
+use crate::broker::{broker_exec_shell, broker_read_file, broker_write_file};
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::plugins::{
@@ -107,6 +107,27 @@ impl RexDaemonService {
 
 #[tonic::async_trait]
 impl RexService for RexDaemonService {
+    async fn broker_exec_shell(
+        &self,
+        request: Request<BrokerExecShellRequest>,
+    ) -> Result<Response<BrokerExecShellResponse>, Status> {
+        let command = request.into_inner().command;
+        match broker_exec_shell(&command) {
+            Ok(result) => Ok(Response::new(BrokerExecShellResponse {
+                ok: true,
+                stdout: result.stdout,
+                stderr: result.stderr,
+                error: String::new(),
+            })),
+            Err(err) => Ok(Response::new(BrokerExecShellResponse {
+                ok: false,
+                stdout: String::new(),
+                stderr: String::new(),
+                error: err.to_string(),
+            })),
+        }
+    }
+
     async fn broker_write_file(
         &self,
         request: Request<BrokerWriteFileRequest>,

@@ -8,6 +8,7 @@ service RexService {
   // Sidecar broker: workspace file read (MVP `fs.read`).
   rpc BrokerReadFile(BrokerReadFileRequest) returns (BrokerReadFileResponse);
   rpc BrokerWriteFile(BrokerWriteFileRequest) returns (BrokerWriteFileResponse);
+  rpc BrokerExecShell(BrokerExecShellRequest) returns (BrokerExecShellResponse);
 }
 
 message GetSystemStatusRequest {}
@@ -46,6 +47,17 @@ message BrokerWriteFileRequest {
 message BrokerWriteFileResponse {
   bool ok = 1;
   string error = 2;
+}
+
+message BrokerExecShellRequest {
+  string command = 1;
+}
+
+message BrokerExecShellResponse {
+  bool ok = 1;
+  string stdout = 2;
+  string stderr = 3;
+  string error = 4;
 }
 
 message StreamInferenceResponse {

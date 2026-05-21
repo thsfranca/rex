@@ -60,7 +60,6 @@ flowchart LR
 | **Could** | **MCP** interoperability (design accepted; implementation deferred) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | Formal MCP ADR when scheduled |
 | **Could** | Learned / small-model compression; batching/async doc jobs | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Matrix **planned** rows |
 | **Could** | Layered prompts (system/project stack) | [CONFIGURATION.md](CONFIGURATION.md) | **planned** |
-| **Could** | Adaptive retrieval + extractive compression | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Evidence-informed defaults |
 | **Could** | Difficulty-based routing cascade (ML escalation) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | Beyond **RC-09** env hook |
 | **Harness only** | Direct daemon HTTP/mock without sidecar | [MVP_SPEC.md](MVP_SPEC.md) | CI only |
 
@@ -81,6 +80,9 @@ flowchart LR
 | R005 | Cross-boundary NDJSON conformance tests | Done |
 | R007 | Policy engine / cache seams | Done |
 | R008 | Centralized agent approvals | Done |
+| R009 | Extension contract tests (approval-id, probe recovery) | Done |
+| R010 | Broker `fs.write` | Done |
+| R011 | Broker `exec.shell` allowlist | Done |
 | **R012** | **AccessPolicy broker centralization** (RC-05) | **Open** |
 
 ## Parked in design docs

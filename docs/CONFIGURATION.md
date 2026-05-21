@@ -41,6 +41,7 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 | `REX_INDEXER` | `workspace` | `workspace` walks the workspace (bounded); `seeded` uses deterministic in-memory docs (CI/tests). |
 | `REX_MAX_PROMPT_TOKENS` | `512` | Context pipeline max prompt tokens (char heuristic ÷4). |
 | `REX_MAX_CONTEXT_TOKENS` | `192` | Context pipeline max injected context tokens. |
+| `REX_BROKER_SHELL_ALLOWLIST` | `echo,printf,true` | Comma-separated programs `exec.shell` broker may run (workspace cwd). |
 | `REX_AGENT_APPROVALS` | off | `1` or `true` enforces daemon `ApprovalGate` for `agent` mode ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). Pass `approval_id` on `StreamInference` (via `rex-cli --approval-id`) after extension approval. |
 
 ### Sidecar supervision and harness

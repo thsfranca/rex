@@ -8,10 +8,10 @@ Canonical **architecture-level** design for how Rex constrains **agent workloads
 |------------|-----|-------|
 | **`fs.read`** | **Required** (recommended default) | Workspace paths; proves agent can inspect repo via broker |
 | **`fs.write`** | **Implemented** (broker RPC) | Bounded write under `REX_WORKSPACE_ROOT`; sidecar stub `__rex_write:` directive |
-| **`exec.shell`** | Should / or alternate MVP tool | Pick **one** for implementation PR if `fs.read` alone is insufficient |
+| **`exec.shell`** | **Implemented** (broker RPC) | Allowlisted programs only (`REX_BROKER_SHELL_ALLOWLIST`); sidecar stub `__rex_exec:` directive |
 | **`net.fetch`** | Won't (now) | Default deny |
 
-**Daemon RPC surface today:** [`proto/rex/v1/rex.proto`](../proto/rex/v1/rex.proto) exposes **`BrokerReadFile`** and **`BrokerWriteFile`**; `exec.shell` remains design/backlog until a versioned broker expansion lands.
+**Daemon RPC surface today:** [`proto/rex/v1/rex.proto`](../proto/rex/v1/rex.proto) exposes **`BrokerReadFile`**, **`BrokerWriteFile`**, and **`BrokerExecShell`** (allowlisted programs).
 
 Acceptance: sidecar successfully reads a file under policy; denial paths logged for protected locations.
 
