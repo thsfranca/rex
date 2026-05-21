@@ -14,6 +14,7 @@ use crate::approvals::approval_gate_from_env;
 use crate::domain::{DAEMON_VERSION, SOCKET_PATH};
 use crate::policy::PolicyEngine;
 use crate::service::RexDaemonService;
+use crate::supervisor::{supervisor_from_env, SupervisorError};
 
 #[derive(Debug, Error)]
 pub enum DaemonRuntimeError {
@@ -25,6 +26,8 @@ pub enum DaemonRuntimeError {
     SocketBind { path: String, source: io::Error },
     #[error("daemon transport failure: {0}")]
     Transport(#[from] tonic::transport::Error),
+    #[error("sidecar supervisor: {0}")]
+    Sidecar(#[from] SupervisorError),
 }
 
 pub async fn run_daemon() -> Result<(), DaemonRuntimeError> {
@@ -44,11 +47,22 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
         DaemonRuntimeError::InferenceConfig(message)
     })?;
     let approval_gate = approval_gate_from_env();
+    let sidecar = supervisor_from_env();
+    if sidecar.config().enabled {
+        if let Err(err) = sidecar.ensure_running().await {
+            let config = sidecar.config();
+            if config.required {
+                return Err(DaemonRuntimeError::Sidecar(err));
+            }
+            eprintln!("rex-daemon sidecar optional start failed: {err}");
+        }
+    }
     let service = RexDaemonService::with_components(
         Instant::now(),
         runtime,
         PolicyEngine::with_default_layers(),
         approval_gate,
+        sidecar.clone(),
     );
 
     println!(

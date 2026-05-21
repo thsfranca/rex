@@ -35,11 +35,11 @@ flowchart LR
 | **Must** | **Economics groundwork** documented + measurable signals started (optimization matrix **implemented**; router **planned**) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | Matrix + ADRs land; daemon logs/cache fields ready for eventual routing IDs | daemon, docs |
 | **Must** | `rex-cli complete --format ndjson` stays line-safe and has **one** terminal event | [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION.md](EXTENSION.md) | Tests + `MVP_SPEC` checklist | rex-cli, docs |
 | **Must** | IDE dogfooding loop stays usable: develop `rex` via the extension without leaving the editor path | [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | Local E2E run confirms send/cancel/retry/status flow remains stable for normal coding sessions | extension, rex-cli, daemon |
-| **Must** | **Sidecar supervision** (0 or 1 process; health; clear errors) | [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Sidecar stays up; product path fails clearly when required but down | daemon |
-| **Must** | **`rex.sidecar.v1` MVP verbs** + reference sidecar | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | `RunTurn` round-trip over UDS | daemon, sidecar binary |
-| **Must** | **`StreamInference` routes assistant modes through sidecar** | [MVP_SPEC.md](MVP_SPEC.md) | Extension chat streams from sidecar-sourced turns | daemon |
-| **Must** | **Brokered HTTP inference** (reuse `http_openai_compat`) | [ADAPTERS.md](ADAPTERS.md), [CONFIGURATION.md](CONFIGURATION.md) | Sidecar turn produces streamed text; **CI uses mock** | daemon |
-| **Must** | **Brokered tool** (one capability, e.g. `fs.read`) | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | Tool smoke succeeds under policy | daemon |
+| **Must** | **Sidecar supervision** (0 or 1 process; health; clear errors) | [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | **Implemented** — `supervisor.rs`, `REX_SIDECAR_*` | daemon |
+| **Must** | **`rex.sidecar.v1` MVP verbs** + reference sidecar | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | **Implemented** — `rex-sidecar-stub`, roundtrip test | daemon, sidecar |
+| **Must** | **`StreamInference` routes assistant modes through sidecar** | [MVP_SPEC.md](MVP_SPEC.md) | **Implemented** (product path); CI: `REX_SIDECAR_HARNESS=direct` | daemon |
+| **Must** | **Brokered HTTP inference** (reuse `http_openai_compat`) | [ADAPTERS.md](ADAPTERS.md) | Mechanism **implemented**; sidecar product path uses supervisor | daemon |
+| **Must** | **Brokered tool** (`fs.read`) | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | **Implemented** — `BrokerReadFile`, stub `__rex_read:` | daemon |
 | **Must** | **Extension → CLI `mode`/`model`** on every `complete` | [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION.md](EXTENSION.md) | Extension passes flags; daemon policy observes mode | extension, rex-cli |
 | **Must** | **Extension agent UX** — modes, approvals, apply, cancel | [EXTENSION.md](EXTENSION.md), [MVP_SPEC.md](MVP_SPEC.md) | [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) with sidecar + HTTP backend | extension |
 | **Should** | Logs you can **read** when something fails (trace, terminal paths) | [ARCHITECTURE.md](ARCHITECTURE.md) | No silent hang; enough context to debug | daemon |
@@ -57,7 +57,7 @@ flowchart LR
 
 | Priority | What / why | Source(s) | “Done enough” (examples) | Where to work |
 |----------|------------|-----------|---------------------------|---------------|
-| **Should** | Daemon **approval context** from extension when `REX_AGENT_APPROVALS=1` | [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md) | `agent` mode allowed when user approved in UI | extension, daemon |
+| **Done** | Daemon **approval context** from extension when `REX_AGENT_APPROVALS=1` | [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md) | `--approval-id` / `StreamInferenceRequest.approval_id` | extension, daemon |
 | **Should** | Adaptive retrieval gate: retrieve only when needed, then expand context progressively | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Lower average context tokens with measurable eval | daemon pipeline (optional sidecar only if justified) |
 | **Should** | Query-aware prompt/context compression before local inference | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADAPTERS.md](ADAPTERS.md) | Fewer tokens; terminal correctness preserved | daemon pipeline |
 | **Could** | Difficulty-based routing cascade (cheap local → escalate hard tasks) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ARCHITECTURE.md](ARCHITECTURE.md) | Explicit policy + logs ([ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md)) | daemon |

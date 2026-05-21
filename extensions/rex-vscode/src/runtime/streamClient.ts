@@ -11,6 +11,7 @@ export interface StreamRequest {
   readonly prompt: string;
   readonly mode?: string;
   readonly model?: string;
+  readonly approvalId?: string;
   readonly signal?: AbortSignal;
   readonly onLifecycle?: (event: StreamLifecycleEvent) => void;
 }
@@ -42,6 +43,7 @@ export async function* streamComplete(
   const { child, dispose } = spawnCompleteStream(options, request.prompt, traceId, {
     mode: request.mode,
     model: request.model,
+    approvalId: request.approvalId,
   });
   const parser = new NdjsonLineParser();
   const queue: StreamEvent[] = [];

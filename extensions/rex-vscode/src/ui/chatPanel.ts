@@ -225,8 +225,10 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     this.emitExecutionStep(message.id, "queued", `Request queued in ${this.mode.toUpperCase()} mode.`);
 
     try {
+      const approvalId = `apr-${message.id}`;
       if (this.modePolicy().requiresExecutionApproval) {
         const approved = await this.requestApproval(
+          approvalId,
           "execution",
           "Approve execution",
           `Run this request in ${this.mode.toUpperCase()} mode?`,
@@ -267,6 +269,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       for await (const event of streamComplete(this.deps.getCliOptions(), {
         prompt: fullPrompt,
         mode: this.mode,
+        approvalId: this.modePolicy().requiresExecutionApproval ? approvalId : undefined,
         signal: controller.signal,
         onLifecycle: (lifecycle) => {
           if (lifecycle.phase === "start") {
@@ -341,6 +344,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     }
     if (policy.requiresMutationApproval) {
       const approved = await this.requestApproval(
+        `apr-mut-${message.id}`,
         "mutation",
         "Approve file mutation",
         "Apply this code block to the active editor?",
@@ -376,6 +380,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     }
     if (policy.requiresMutationApproval) {
       const approved = await this.requestApproval(
+        `apr-ins-${Date.now()}`,
         "mutation",
         "Approve insertion",
         "Insert this code block in the active editor?",
@@ -436,8 +441,12 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     return resolveModePolicy(this.mode);
   }
 
-  private async requestApproval(scope: ApprovalScope, title: string, detail: string): Promise<boolean> {
-    const id = `${scope}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  private async requestApproval(
+    id: string,
+    scope: ApprovalScope,
+    title: string,
+    detail: string,
+  ): Promise<boolean> {
     this.emitExecutionStep(id, "awaiting_approval", `${title}: ${detail}`);
     this.postMessage({
       type: "approvalRequested",
