@@ -15,7 +15,7 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 
 ## Isolated agent runtimes (conceptual)
 
-**Mac-first path:** supervised **process sidecar** + optional OS sandbox + daemon broker — **required for MVP assistant** ([MVP_SPEC.md](MVP_SPEC.md)). Hubs: [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md). **VM/container** envelopes are **not** the default. **Environment ownership** vs agent code: [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). Sidecar ↔ daemon API: [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Supervisor and `rex.sidecar.v1` are **planned** (HTTP broker module **implemented**).
+**Mac-first path:** supervised **process sidecar** + optional OS sandbox + daemon broker — **required for MVP assistant** ([MVP_SPEC.md](MVP_SPEC.md)). Hubs: [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md). **VM/container** envelopes are **not** the default. **Environment ownership** vs agent code: [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). Sidecar ↔ daemon API: [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Supervisor, `rex.sidecar.v1`, and brokered inference/tools are **implemented** ([SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [MVP_SPEC.md](MVP_SPEC.md)).
 
 ## Goals and constraints
 
@@ -76,8 +76,8 @@ flowchart LR
 |---|---|---|
 | `extensions/rex-vscode` | Chat UX, modes, approvals; **`rex-cli`** for NDJSON streaming; optional unary gRPC per [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md). | `implemented` — see [EXTENSION.md](EXTENSION.md). |
 | `rex-cli` | UDS client; NDJSON façade for editors. | `implemented` |
-| `rex-daemon` | Session authority: stream contract, pipeline, cache, **broker** for sidecar inference/tools. | `implemented` core; sidecar route + tool broker **planned** |
-| Agent sidecar | Supervised **process** + `rex.sidecar.v1`; agent implementation pluggable — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). | `planned` — [MVP_SPEC.md](MVP_SPEC.md) |
+| `rex-daemon` | Session authority: stream contract, pipeline, cache, **broker** for sidecar inference/tools. | `implemented` |
+| Agent sidecar | Supervised **process** + `rex.sidecar.v1`; agent implementation pluggable — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). | `implemented` (stub + supervisor); [MVP_SPEC.md](MVP_SPEC.md) |
 
 ## Components inside `rex-daemon` (C4 Level 3)
 

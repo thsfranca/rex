@@ -51,7 +51,7 @@ flowchart LR
 
 **Scope note (operator path):** [README.md](../README.md) documents the **MVP local operator path**; [CI.md](CI.md) points at **local MVP preflight** via [scripts/verify_mvp_local.sh](../scripts/verify_mvp_local.sh); [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) covers install, `install-cli.sh --print-bin-path`, and editor verification; the extension contributes a **Get Started** walkthrough (see [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md)). Track progress here and in those linked docs—**not** in committed per-PR or per-merge-train files (see **How to refresh** below).
 
-**Scope note (architecture policy hub):** Cross-cutting **policies and ownership** (bounded contexts, policy vs mechanism, doc layering) live in [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md). Backlog rows **R007** and **R008** are **Done** — daemon policy seams (`policy.rs`, layered cache, `cache_decision=` observability) and agent approvals (`approvals.rs`, `REX_AGENT_APPROVALS`) landed with tests; extension UX wiring for approval context remains follow-on work per [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md).
+**Scope note (architecture policy hub):** Cross-cutting **policies and ownership** (bounded contexts, policy vs mechanism, doc layering) live in [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md). Backlog rows **R007** and **R008** are **Done** — daemon policy seams (`policy.rs`, layered cache, `cache_decision=` observability) and agent approvals (`approvals.rs`, `REX_AGENT_APPROVALS`) with extension `--approval-id` / `StreamInferenceRequest.approval_id` per [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md).
 
 ## Next — good follow-on topics (not all are started)
 
@@ -89,7 +89,7 @@ Migrated from superseded **`REFACTOR_PROPOSALS`** list — IDs kept for continui
 | R004 | CLI / extension NDJSON seam hardening | Done — piped NDJSON line flush in `rex-cli`; contract in [EXTENSION.md](EXTENSION.md), [MVP_SPEC.md](MVP_SPEC.md) |
 | R005 | Cross-boundary contract conformance tests | Done — shared [fixtures/ndjson_contract/](../fixtures/ndjson_contract/README.md), `crates/rex-cli/tests/ndjson_contract_conformance.rs`, extension `ndjson_contract_fixture.test.ts`; contract [EXTENSION.md](EXTENSION.md) |
 | R007 | Mode orchestrator unified policy boundary; policy/mechanism seams per [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) | Done — [POLICY_ENGINE.md](POLICY_ENGINE.md); `cache_decision=` per [CACHING.md](CACHING.md) |
-| R008 | Agent execution approvals / checkpoints centralized | Done — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md), [POLICY_ENGINE.md](POLICY_ENGINE.md); `REX_AGENT_APPROVALS`; extension approval context not wired yet |
+| R008 | Agent execution approvals / checkpoints centralized | Done — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md), [POLICY_ENGINE.md](POLICY_ENGINE.md); `REX_AGENT_APPROVALS`; extension `--approval-id` wired |
 
 ## Parked in design docs
 

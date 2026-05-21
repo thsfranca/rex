@@ -43,7 +43,7 @@ cargo run -p rex-cli -- status
 cargo run -p rex-cli -- complete "hello from rex" --format ndjson --mode agent
 ```
 
-Product MVP requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Until sidecar ships, see shipping-state table in MVP_SPEC; harness may use direct mock HTTP.
+Product MVP requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Enable `REX_SIDECAR_ENABLED=1` and `rex-sidecar-stub` on `PATH`; set `REX_OPENAI_COMPAT_*` for brokered HTTP. CI may use `REX_SIDECAR_HARNESS=direct` (harness only).
 
 ### Working modes
 
