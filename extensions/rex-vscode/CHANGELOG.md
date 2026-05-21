@@ -19,6 +19,7 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ### Added
 
+- **`rex.modelId`** setting: passes `--model` on every chat `complete` when non-empty.
 - Get Started walkthrough step for **brokered HTTP** and **sidecar** env (`REX_OPENAI_COMPAT_*`, `REX_SIDECAR_ENABLED`).
 - Setup hints for stream errors whose messages mention sidecar, approval gate, or OpenAI-compat configuration.
 - Foundations scaffold: extension host entry, typed message bus contracts, settings accessor, NDJSON stream client, daemon lifecycle probe, capability detection, editor context snapshot.

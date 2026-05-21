@@ -33,6 +33,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const chatPanel = new ChatPanelProvider({
     context,
     getCliOptions: () => ({ cliPath: resources?.settings.cliPath ?? settings.cliPath }),
+    getModelId: () => resources?.settings.modelId ?? settings.modelId,
     getDaemonAutoStart: () => resources?.settings.daemonAutoStart ?? settings.daemonAutoStart,
     ensureDaemonReady: (signal) => {
       const r = resources;
