@@ -29,5 +29,11 @@ describe("streamFailureWantsSetupHint", () => {
       ),
     ).toBe(true);
     expect(streamFailureWantsSetupHint("unknown", "unrelated parse failure")).toBe(false);
+    expect(
+      streamFailureWantsSetupHint(
+        "invalid_response",
+        "agent execution checkpoint required: tool step",
+      ),
+    ).toBe(true);
   });
 });
