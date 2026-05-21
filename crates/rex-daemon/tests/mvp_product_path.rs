@@ -10,11 +10,13 @@ use hyper_util::rt::TokioIo;
 use rex_proto::rex::v1::rex_service_client::RexServiceClient;
 use rex_proto::rex::v1::StreamInferenceRequest;
 use serial_test::serial;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::{TcpListener, UnixStream};
+use tokio::net::UnixStream;
 use tokio::time::{sleep, timeout, Instant};
 use tonic::transport::Endpoint;
 use tower::service_fn;
+
+mod support;
+use support::openai_compat_sse::spawn_loopback_openai_compat_sse_fixture;
 
 #[allow(dead_code)]
 #[path = "../src/access_policy.rs"]
@@ -169,33 +171,6 @@ fn configure_product_path_env(
     std::env::set_var("REX_WORKSPACE_ROOT", workspace);
 }
 
-async fn spawn_openai_compat_sse_fixture() -> SocketAddr {
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("bind fixture");
-    let addr = listener.local_addr().expect("fixture addr");
-    let body = "data: {\"choices\":[{\"delta\":{\"content\":\"hello stub\"}}]}\n\n\
-                data: [DONE]\n\n";
-    tokio::spawn(async move {
-        loop {
-            let Ok((mut stream, _)) = listener.accept().await else {
-                break;
-            };
-            let body = body.to_string();
-            tokio::spawn(async move {
-                let mut buf = [0u8; 4096];
-                let _ = stream.read(&mut buf).await;
-                let response = format!(
-                    "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\n\r\n{body}",
-                    body.len()
-                );
-                let _ = stream.write_all(response.as_bytes()).await;
-            });
-        }
-    });
-    addr
-}
-
 async fn connect_client(
     socket_path: &str,
 ) -> Result<RexServiceClient<tonic::transport::Channel>, tonic::transport::Error> {
@@ -267,7 +242,7 @@ async fn mvp_product_path_sidecar_stream_and_brokered_read() {
     fs::create_dir_all(&workspace).expect("workspace dir");
     fs::write(workspace.join("hello.txt"), "broker-read-ok").expect("fixture file");
 
-    let http_addr = spawn_openai_compat_sse_fixture().await;
+    let http_addr = spawn_loopback_openai_compat_sse_fixture().await;
     let http_base = format!("http://{http_addr}");
     configure_product_path_env(
         &daemon_socket,

@@ -146,6 +146,19 @@ Open **REX: Open Chat**, select **agent** or **plan** mode, send a short prompt,
 | `--approval-id` on `complete` | `cliBridgeArgs.test.ts` | Agent send with `REX_AGENT_APPROVALS=1` |
 | Long multi-turn session | — | Checklist below |
 
+## 8) Operator live HTTP dogfood (RC-02; not CI)
+
+After `./scripts/verify_mvp_local.sh` passes, validate the **product path** against a **live** OpenAI-compatible server (Ollama, LM Studio, etc.). CI uses loopback fixtures and harness env; this section is required for operator acceptance per [MVP_SPEC.md](./MVP_SPEC.md).
+
+Prerequisites: HTTP server running (example Ollama: `ollama serve`), `REX_OPENAI_COMPAT_*` and `REX_SIDECAR_*` set on the **same** `rex-daemon` process as in steps 3–4.
+
+- [ ] Daemon logs show sidecar spawn/health and `broker.inference=ok` on agent turns (not stub echo-only text).
+- [ ] **REX: Open Chat** → **agent** mode: response text comes from the **live model** (not `sidecar-stub[agent]:` echo).
+- [ ] **Cancel** mid-stream twice; composer returns to idle (no stuck streaming state).
+- [ ] **Apply** on a code block with approval in agent/plan mode.
+- [ ] Prompt with `__rex_read:<workspace-file>` returns file content; `__rex_read:.env` is **denied** (policy).
+- [ ] Stop `rex-daemon`; status bar shows unavailable until restart.
+
 ## Long-session stress (manual)
 
 Use this checklist after the steps above when hardening chat reliability:
