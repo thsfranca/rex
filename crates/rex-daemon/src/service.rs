@@ -20,7 +20,7 @@ use tonic::{Request, Response, Status};
 use crate::adapters::InferenceRuntime;
 #[cfg(test)]
 use crate::adapters::MockInferenceRuntime;
-use crate::adapters::RuntimeKind;
+use crate::adapters::{active_model_id_from_env, RuntimeKind};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
@@ -77,7 +77,7 @@ impl RexService for RexDaemonService {
         Ok(Response::new(GetSystemStatusResponse {
             daemon_version: DAEMON_VERSION.to_string(),
             uptime_seconds: self.started_at.elapsed().as_secs(),
-            active_model_id: ACTIVE_MODEL_ID.to_string(),
+            active_model_id: active_model_id_from_env(),
         }))
     }
 

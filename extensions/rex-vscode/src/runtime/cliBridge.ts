@@ -52,13 +52,26 @@ export async function fetchStatus(
   return parseStatusOutput(stdout);
 }
 
+export interface CompleteStreamOptions {
+  readonly mode?: string;
+  readonly model?: string;
+}
+
 export function spawnCompleteStream(
   options: CliBridgeOptions,
   prompt: string,
   traceId?: string,
+  stream?: CompleteStreamOptions,
 ): SpawnedProcess {
   const env = buildEnv(options.env, traceId);
-  const child = spawn(options.cliPath, ["complete", prompt, "--format", "ndjson"], {
+  const args = ["complete", prompt, "--format", "ndjson"];
+  if (stream?.mode !== undefined && stream.mode.length > 0) {
+    args.push("--mode", stream.mode);
+  }
+  if (stream?.model !== undefined && stream.model.length > 0) {
+    args.push("--model", stream.model);
+  }
+  const child = spawn(options.cliPath, args, {
     cwd: options.cwd,
     env,
     stdio: ["ignore", "pipe", "pipe"],

@@ -26,9 +26,11 @@ Rules: one active mode per session; visible transitions; insert/apply respect mo
 ### Stream contract
 
 ```bash
-rex-cli complete "<prompt>" --format ndjson
+rex-cli complete "<prompt>" --format ndjson --mode <ask|plan|agent> [--model <id>]
 ```
 
+- Extension passes **`--mode`** matching the active session mode on every `complete` call.
+- Optional **`--model`** when the user configures a model id (otherwise daemon default applies).
 - One JSON object per stdout line (`chunk`, `done`, `error`).
 - **`rex-cli` flushes stdout after each NDJSON line** when the consumer is on a pipe (including the extension subprocess), so chunks are visible promptly instead of sitting in a block buffer.
 - Exactly **one** terminal event per request path (`done` **or** `error`).
@@ -49,7 +51,20 @@ Current `error.code` taxonomy:
 
 ### Bootstrap flow
 
-1. User selects mode. 2. Extension captures prompt/context. 3. Policy + approvals. 4. Spawn `rex-cli complete … --format ndjson`. 5. Parse lines. 6. Route `chunk` / `done` / `error` to UI.
+1. User selects mode. 2. Extension captures prompt/context. 3. Policy + approvals. 4. Spawn `rex-cli complete … --format ndjson --mode <mode>`. 5. Parse lines. 6. Route `chunk` / `done` / `error` to UI.
+
+### MVP agent behaviors (extension-owned)
+
+| Behavior | MVP expectation |
+|----------|-----------------|
+| Mode selector | `ask` / `plan` / `agent` with visible policy summary |
+| Execution approval | Required in **`agent`** before streaming starts |
+| Mutation approval | Required for apply/insert in **`plan`** and **`agent`** |
+| Apply to file | Diff + `WorkspaceEdit` after approval |
+| Cancel | Returns UI to idle; terminal `error` with `cancelled` when applicable |
+| Daemon status | Status bar reflects `ready` / `starting` / `unavailable` |
+
+Daemon-side approval **context** over gRPC is **Should** follow-on ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)); extension policy satisfies Phase 1 acceptance in [MVP_SPEC.md](MVP_SPEC.md).
 
 ### Reliability and trace correlation
 

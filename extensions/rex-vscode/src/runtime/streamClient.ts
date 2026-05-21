@@ -9,6 +9,8 @@ const STDERR_CAPTURE_MAX_BYTES = 32_768;
 
 export interface StreamRequest {
   readonly prompt: string;
+  readonly mode?: string;
+  readonly model?: string;
   readonly signal?: AbortSignal;
   readonly onLifecycle?: (event: StreamLifecycleEvent) => void;
 }
@@ -37,7 +39,10 @@ export async function* streamComplete(
   const traceId = createTraceId();
   const startedAt = Date.now();
   request.onLifecycle?.({ traceId, phase: "start" });
-  const { child, dispose } = spawnCompleteStream(options, request.prompt, traceId);
+  const { child, dispose } = spawnCompleteStream(options, request.prompt, traceId, {
+    mode: request.mode,
+    model: request.model,
+  });
   const parser = new NdjsonLineParser();
   const queue: StreamEvent[] = [];
   let pendingResolve: (() => void) | undefined;

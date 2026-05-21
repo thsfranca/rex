@@ -266,6 +266,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       this.emitExecutionStep(message.id, "running", "Execution started.");
       for await (const event of streamComplete(this.deps.getCliOptions(), {
         prompt: fullPrompt,
+        mode: this.mode,
         signal: controller.signal,
         onLifecycle: (lifecycle) => {
           if (lifecycle.phase === "start") {

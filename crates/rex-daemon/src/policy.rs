@@ -217,7 +217,11 @@ mod tests {
 
     #[test]
     fn ask_mode_resolves_to_lookup_for_each_runtime() {
-        for runtime in [RuntimeKind::Mock, RuntimeKind::CursorCli] {
+        for runtime in [
+            RuntimeKind::HttpOpenAiCompat,
+            RuntimeKind::Mock,
+            RuntimeKind::CursorCli,
+        ] {
             let decision = decide(&req(runtime, "ask", false));
             match decision {
                 CacheDecision::Lookup(_) => {}
