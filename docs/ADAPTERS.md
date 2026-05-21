@@ -1,76 +1,93 @@
 # Inference adapters
 
-Pluggable backends behind **`InferenceRuntime`** (daemon `adapters` module). The daemon remains **transport- and stream-authoritative**. Adapters emit **chunks** ending in a single **`done`** semantics or map failures to observable terminal errors ([MVP_SPEC.md](MVP_SPEC.md), NDJSON facade).
+Pluggable backends behind **`InferenceRuntime`** (daemon `adapters` + `http_openai_compat` modules). The daemon remains **transport- and stream-authoritative**. Adapters emit **chunks** ending in a single **`done`** semantics or map failures to observable terminal errors ([MVP_SPEC.md](MVP_SPEC.md), NDJSON facade).
 
-Product stance: **`rex-daemon` owns agent/economics policy** over time ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)); adapters produce **completion streams** subject to **`AdapterCapabilities`**. An external CLI may **loop internally**; REX still presents **one contract** to clients and controls **caching, pipeline stages, and adapter selection**.
-
-Isolated **agent runtime environments** (future) are **orthogonal** to **`InferenceRuntime`** wiring—see [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) and [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md).
+Product stance: **`rex-daemon` owns economics, policy, and brokering** ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)); the **agent loop** runs in a **sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Adapters are **broker mechanisms** — they produce completion streams when the daemon fulfills a sidecar inference request (or in harness-only direct paths).
 
 ## Purpose
 
-- Stay vendor-agnostic (mock, MLX future, HTTP future, **optional** Cursor subprocess).
-- Avoid applying pipeline stages that **break** or **duplicate** a backend’s expectations.
-- Trace optimization levers: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix · [CACHING.md](CACHING.md).
+- **MVP broker backend:** OpenAI-compatible **HTTP** chat/completions (`http_openai_compat`).
+- **Harness / legacy:** in-process **mock** and optional **Cursor CLI** subprocess — CI and migration; **not** MVP product acceptance without sidecar.
+- Trace optimization levers: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) · [CACHING.md](CACHING.md).
 
 ## `InferenceRequest` (design contract)
 
 | Field | Purpose |
 |---|---|
 | `prompt` | User-visible task after optional pipeline rewriting. |
-| `mode` | `ask`, `plan`, `agent` (+ future) driving cacheability (`CACHING.md`). |
-| `model_hint` | Optional id / **`auto`** when supported. |
-| `trace_id` | Correlation across daemon + CLI + extension. |
-| `metadata` | Opaque adapter hints — keep `rex.v1` vendor-neutral. |
+| `mode` | `ask`, `plan`, `agent` driving cacheability ([CACHING.md](CACHING.md)). |
+| `model_hint` | Optional id from client; HTTP runtime uses env default when unset. |
+| `trace_id` | Correlation across daemon, CLI, extension. |
 
 **Invariant:** exactly **one terminal client-visible outcome** per `StreamInference` attempt.
 
 ## Streaming response shape
 
-Chunks carry incremental `text`, monotonic `index`, terminating `done` chunk **or** gRPC/internal error surfaced as terminal **`error`** on NDJSON CLI path.
+Chunks carry incremental `text`, monotonic `index`, terminating `done` chunk **or** gRPC/internal error surfaced as terminal **`error`** on the NDJSON CLI path.
 
-## `AdapterCapabilities`
-
-| Capability | Meaning |
-|---|---|
-| `wants_context_injection` | If **false**, skip heavy lexical injection (Cursor subprocess profile historically **false** for `[context]`). |
-| `cacheable_modes` | Subset permitted for response cache (**never unchecked `agent` writes**). |
-| `max_prompt_tokens` / `max_context_tokens` | Optional pipeline clamp; `0` → daemon defaults. |
-| `default_timeout` | Subprocess watchdog budget. |
-| `supported_modes` | Adapter refuses unsupported combos early + clearly. |
-
-Pipeline consultation: **`ContextPipeline`** + future router — [`CONTEXT_EFFICIENCY.md`](CONTEXT_EFFICIENCY.md).
-
-## Cursor CLI subprocess profile (**optional backend**)
-
-Spawns **`cursor-agent`** (or templated **`REX_CURSOR_CLI_COMMAND`**) non-interactively with typed stdout (project-specific flags evolve — consult current Cursor CLI docs).
+## HTTP OpenAI-compat profile (broker)
 
 | Aspect | Policy |
 |---|---|
-| Product role | **Account-bound frontier access** helper — **not** the definition of the REX agent story. |
-| Context stacking | Typically **skip** injecting an extra heavy `[context]` lexical blob on top — adapter may leverage its own tooling. |
-| Invocations | **Stateless boundary** preferred; pass fresh prompt each **`StreamInference`** unless explicit session bridging appears later. |
-| Safety | Mandatory **timeouts / kill**; stderr surfaced bounded — [CONFIGURATION.md](CONFIGURATION.md). |
+| Runtime id | `http-openai-compat` (`REX_INFERENCE_RUNTIME`) |
+| Endpoint | `POST {base}/chat/completions` with `stream: true` (SSE) |
+| Configuration | [CONFIGURATION.md](CONFIGURATION.md) — `REX_OPENAI_COMPAT_*` |
+| Context injection | **On** — daemon `ContextPipeline` may shape prompt before HTTP call |
+| Cacheable modes | **`ask`** only (same as mock; **`agent`** never cached) |
+| Timeouts | `REX_OPENAI_COMPAT_TIMEOUT_SECS` (default 120s) |
 
-### Local verification
+### Operator profiles (examples)
 
-- CI / default automation: **`mock`** only; UDS harness runs **`cursor-cli`** path via **`printf` stub** (`uds_e2e.rs`).
-- Real binary: configure env vars, **`rex-cli complete "hello" --format ndjson`**, watch terminal + daemon logs.
+| Backend | Typical `REX_OPENAI_COMPAT_BASE_URL` |
+|---------|--------------------------------------|
+| Ollama (local) | `http://127.0.0.1:11434/v1` |
+| LM Studio | `http://127.0.0.1:1234/v1` |
+| OpenAI API | `https://api.openai.com/v1` (+ `REX_OPENAI_COMPAT_API_KEY`) |
+
+### Verification
+
+- Local: configure env, start daemon, `rex-cli complete "hello" --format ndjson`.
+- Automated: `http_openai_compat` unit test with in-process TCP SSE stub; UDS e2e uses **`mock`** — [CI.md](CI.md).
+
+## Mock profile (test harness)
+
+| Aspect | Policy |
+|---|---|
+| Runtime id | `mock` |
+| Role | Deterministic chunks for CI, UDS e2e, extension fixtures — **not** the MVP product backend |
+| Output | `mock: {prompt}` style text via `domain::build_mock_output` |
+
+## Cursor CLI subprocess profile (legacy / non-MVP)
+
+Optional subprocess via `REX_INFERENCE_RUNTIME=cursor-cli`. Not the REX agent product boundary. See [CONFIGURATION.md](CONFIGURATION.md) for `REX_CURSOR_CLI_*`.
+
+CI exercises this path with a **`printf` stub** in `uds_e2e.rs`, not the real `cursor-agent` binary.
+
+## `AdapterCapabilities` (design)
+
+| Capability | Meaning |
+|---|---|
+| `wants_context_injection` | Pipeline may inject context (HTTP + mock: yes; Cursor CLI: typically no). |
+| `cacheable_modes` | Subset permitted for L1 (**`ask`** only today). |
+| `max_prompt_tokens` / `max_context_tokens` | Optional clamps. |
+| `default_timeout` | Adapter-specific watchdog. |
+| `supported_modes` | Early rejection of unsupported mode strings. |
 
 ## In-process adapter → optional gRPC drop-in
 
-Same capability + streaming contract implemented out-of-process per [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) lifecycle — **clients unchanged**.
+Same contract may run out-of-process per [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) — **`rex.v1` clients unchanged**.
 
 ## New adapter checklist
 
-1. Declare capabilities + safe cache modes (**`agent` caution** — [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md)).
-2. Guarantee single terminal semantics (no duplicate `done`).
-3. Subprocess adapters: cwd workspace, SIGKILL/timeout hygiene.
-4. Key caches + metrics via **adapter id** + resolved **model** id.
-5. Document profile subsection here.
-6. Update `PLUGIN_ROADMAP.md` if lifecycle / phase shifts.
+1. Declare capabilities + safe cache modes ([ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md)).
+2. Guarantee single terminal semantics.
+3. Document env catalog in [CONFIGURATION.md](CONFIGURATION.md).
+4. Add profile subsection here.
+5. Update [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) if placement shifts.
 
 ## Related
 
 - [ARCHITECTURE.md](ARCHITECTURE.md)
+- [MVP_SPEC.md](MVP_SPEC.md)
 - [CACHING.md](CACHING.md)
 - [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)

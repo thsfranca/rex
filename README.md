@@ -19,29 +19,31 @@ Canonical **purpose and operating principles** (single source of truth): **[docs
 | **`rex-cli`** | `status` and `complete`; human output by default, **`--format ndjson`** for one JSON event per line (`chunk`, `done`, `error`) so extensions and CI can parse streams safely. |
 | **Startup and failure behavior** | Bounded retry when the daemon is still booting; clear CLI errors for unavailable daemon, interrupted streams, and bad stream endings. |
 | **VS Code / Cursor extension** | Activity-bar chat with streaming markdown, selection-based commands, optional **daemon auto-start**, and install/release docs—see [`extensions/rex-vscode/README.md`](extensions/rex-vscode/README.md) and [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md). |
-| **Inference adapters** | **Mock** default; optional **`REX_INFERENCE_RUNTIME=cursor-cli`** subprocess (frontier/account models)—daemon keeps stream contract and policy; see [docs/ADAPTERS.md](docs/ADAPTERS.md) and [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
+| **Development agent (extension)** | Chat with **`ask` / `plan` / `agent`**, guarded apply/insert, NDJSON via **`rex-cli`** — assistant runtime in a **daemon-supervised sidecar** ([docs/EXTENSION.md](docs/EXTENSION.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md)). |
+| **Brokered HTTP inference** | Daemon invokes **OpenAI-compatible** backend on behalf of the sidecar (`REX_OPENAI_COMPAT_*`); **mock** / **cursor-cli** for tests only — [docs/ADAPTERS.md](docs/ADAPTERS.md), [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
 | **Quality gates** | Workspace `cargo` checks plus UDS end-to-end tests covering failure paths, startup races, and post-interruption behavior (see [Operational checks](#operational-checks)). |
 
 ## Project status
 
 - **Experimental scope:** APIs, docs, and behavior can change as the study evolves; use this workspace for learning and prototypes, not production SLAs.
-- **Phase 1 (local operator):** the **clone → daemon → REX chat** path is **documented and preflighted** — **MVP local operator path** above, [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). Inference defaults **mock**; optional **Cursor CLI** adapter documented in [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md), [`docs/ADAPTERS.md`](docs/ADAPTERS.md). Roadmap/economics: [`docs/ROADMAP.md`](docs/ROADMAP.md); bucketing: [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md).
+- **Phase 1 (local operator):** **clone → configure HTTP backend → daemon (sidecar) → REX chat** — [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). MVP assistant requires a **supervised sidecar** with **brokered HTTP** ([`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)). Roadmap: [`docs/ROADMAP.md`](docs/ROADMAP.md); bucketing: [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md).
 - Engineering focus: **stream reliability** plus **stable NDJSON** across CLI/extension.
 - Product-learning focus: daemon **economics** (routing, compaction, caches, metrics per [docs/CONTEXT_EFFICIENCY.md](docs/CONTEXT_EFFICIENCY.md)); implementation incremental.
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
-- Not primary scope yet: production-grade local runtime adapters beyond the MVP set (for example **MLX** / Ollama-class as first-class paths), remote networking/TLS, production auth, full **gRPC** plugin sidecar lifecycle.
+- Not primary scope yet: production-grade local runtime adapters beyond the MVP set (for example **MLX**), remote networking/TLS, production auth, multi-plugin sidecar fleets. **Sidecar supervision and broker** are MVP intent — see shipping state in [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md).
 
 ## MVP local operator path
 
-Linear recipe from a clone to **REX** chat in the editor (**mock** inference is the default; no extra runtimes required):
+Linear recipe from a clone to **REX** chat in the editor (requires **HTTP backend** for brokered inference and a **sidecar agent** per [docs/MVP_SPEC.md](docs/MVP_SPEC.md)):
 
-1. **Build** the Rust workspace: `cargo build --workspace` — or one shot: `chmod +x ./scripts/dev-rex-extension.sh && ./scripts/dev-rex-extension.sh` (also installs `rex-cli` / `rex-daemon` and packages or installs the VSIX per [`scripts/install-cli.sh`](scripts/install-cli.sh) and [`scripts/install-extension.sh`](scripts/install-extension.sh)).
-2. **Put** `rex-cli` (and the daemon if you use auto-start) where the **editor** can find them. Recommended: [`scripts/install-cli.sh`](scripts/install-cli.sh) so both land in Cargo’s `bin` directory. If the GUI-launched app has a smaller `PATH` than your shell, set absolute paths in **REX: Cli Path** / **REX: Daemon Binary Path** (see step 2 in [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md)).
-3. **Run** the daemon: in a separate terminal, `cargo run -p rex-daemon` (or `rex-daemon` after install). Alternatively set `rex.daemonAutoStart: true` so the extension can spawn the daemon. Socket: `/tmp/rex.sock`.
-4. **Install** the extension if you did not use `dev-rex-extension.sh`: `chmod +x ./scripts/install-extension.sh && ./scripts/install-extension.sh` (see [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md#5-install-the-extension)). Reload the window if prompted.
-5. **In the editor:** run **REX: Open Chat**, send a short prompt, and confirm streaming output (see step 6 in [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md)).
+1. **Build** the Rust workspace: `cargo build --workspace` — or one shot: `chmod +x ./scripts/dev-rex-extension.sh && ./scripts/dev-rex-extension.sh`.
+2. **Put** `rex-cli` (and the daemon if you use auto-start) where the **editor** can find them — [`scripts/install-cli.sh`](scripts/install-cli.sh).
+3. **Configure** brokered HTTP (example Ollama): `export REX_OPENAI_COMPAT_BASE_URL=http://127.0.0.1:11434/v1` and `REX_OPENAI_COMPAT_MODEL=…` — [docs/CONFIGURATION.md](docs/CONFIGURATION.md). Configure sidecar when `REX_SIDECAR_*` lands — [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md).
+4. **Run** the daemon (spawns or connects to sidecar when implemented) with those env vars. Socket: `/tmp/rex.sock`.
+5. **Install** the extension — [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md).
+6. **In the editor:** **REX: Open Chat**, try **agent** mode, send a prompt, cancel once, and apply a code block with approval. Verify sidecar health and at least one brokered tool when the sidecar slice ships.
 
-Deeper install, `PATH` troubleshooting, and optional **Cursor CLI** inference are in [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md), [docs/EXTENSION_RELEASE.md](docs/EXTENSION_RELEASE.md), and [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
+Details: [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
 
 ## Why this shape
 
@@ -145,10 +147,10 @@ In scope now:
 
 - Local daemon–client communication over UDS.
 - Unary status RPC and server-streaming completion RPC.
-- Mock inference and shutdown lifecycle reliability.
-- **Editor path:** the VS Code/Cursor extension consumes **`rex-cli`** for NDJSON streaming completion; optional **unary `rex.v1`** over the same UDS is permitted per [ADR 0007](docs/architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md). The daemon does not host **editor-only** RPCs on `rex.v1`.
-- **Dogfooding loop:** the extension + CLI path stays reliable enough to develop `rex` from inside the IDE.
-- **Inference adapters:** **mock** by default; optional **Cursor CLI** subprocess when enabled (`REX_INFERENCE_RUNTIME=cursor-cli`), not treated as owning the REX agent story—[docs/MVP_SPEC.md](docs/MVP_SPEC.md).
+- **HTTP OpenAI-compat** inference and shutdown lifecycle reliability.
+- **Editor path:** extension + **`rex-cli` NDJSON**; modes and guarded apply — [docs/EXTENSION.md](docs/EXTENSION.md).
+- **Dogfooding loop:** develop `rex` from the IDE against a live HTTP backend.
+- **Test harness:** `REX_INFERENCE_RUNTIME=mock` for CI only — [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
 
 Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 
@@ -168,7 +170,7 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | [`docs/EXTENSION.md`](docs/EXTENSION.md) | NDJSON consumer contract, extension bootstrap path, component layout (replaces superseded MVP/architecture stubs). |
 | [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md) | Phased roadmap for the VS Code/Cursor extension. |
 | [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) | Install, daemon auto-start, troubleshooting, and release pipeline for the extension. |
-| [`docs/PLUGIN_ROADMAP.md`](docs/PLUGIN_ROADMAP.md) | Daemon-first extensibility; optional sidecars; Cursor adapter phased track. |
+| [`docs/PLUGIN_ROADMAP.md`](docs/PLUGIN_ROADMAP.md) | Sidecar agent platform; brokered inference adapters. |
 | [`docs/ADAPTERS.md`](docs/ADAPTERS.md) | Inference adapter contract, capabilities, and Cursor CLI profile. |
 | [`docs/CACHING.md`](docs/CACHING.md) | Layered response cache design: keys, mode safety, bypass. |
 | [`docs/CONTEXT_EFFICIENCY.md`](docs/CONTEXT_EFFICIENCY.md) | Context pipeline + **economics lever matrix** (routing, caches, compaction, MCP, approvals, LTM linkage). |

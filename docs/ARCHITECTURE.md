@@ -7,7 +7,7 @@ This document is the **software architecture description (SAD)** for REX: produc
 - Deliver a **REX-native development agent** (modes, policy, and future tool orchestration) so **cost and performance** stay under **daemon** control.
 - Centralize **streaming inference**, **layered caching**, and **capability-aware context shaping** in [`rex-daemon`](../crates/rex-daemon).
 - Keep **clients thin** (CLI, editor, scripts): one stable **gRPC** contract over **UDS** (`rex.v1`).
-- Use **inference adapters** (mock, optional Cursor CLI, future MLX/HTTP) only as **backends**; they do not define REX’s agent product boundary. See [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md).
+- Run the **development agent** in a **supervised sidecar**; use **inference adapters** (HTTP OpenAI-compat, mock, legacy Cursor CLI) as **broker mechanisms** only. See [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md), [MVP_SPEC.md](MVP_SPEC.md).
 
 Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md).
 
@@ -15,7 +15,7 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 
 ## Isolated agent runtimes (conceptual)
 
-**Mac-first path:** supervised **process sidecar** + optional OS sandbox + daemon broker — hubs [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md). **VM/container** envelopes are **not** the default (deferred catalog: [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md)). **Environment ownership** vs agent code: [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). Sidecar ↔ daemon API: [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Sidecar supervisor is **planned**, not shipped.
+**Mac-first path:** supervised **process sidecar** + optional OS sandbox + daemon broker — **required for MVP assistant** ([MVP_SPEC.md](MVP_SPEC.md)). Hubs: [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md). **VM/container** envelopes are **not** the default. **Environment ownership** vs agent code: [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). Sidecar ↔ daemon API: [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Supervisor and `rex.sidecar.v1` are **planned** (HTTP broker module **implemented**).
 
 ## Goals and constraints
 
@@ -49,20 +49,24 @@ flowchart LR
   ide[EditorExtension]
   ci[CIOrScripts]
   rex[REX_daemon]
-  opt[OptionalInferenceBackends]
+  side[Agent_sidecar]
+  llm[HTTP_LLM_backend]
   dev --> ide
   dev --> ci
   ide -->|"rex-cli_UDS"| rex
   ci -->|"rex-cli_UDS"| rex
-  rex -->|"InferenceRuntime"| opt
+  rex -->|supervise| side
+  side -->|rex_sidecar_v1| rex
+  rex -->|broker_inference| llm
 ```
 
 | Actor | Interaction |
 |---|---|
 | Developer | Uses IDE or terminal; owns approvals for guarded actions (extension modes). |
-| Editor extension | Thin client; **`rex-cli` + NDJSON** for streaming completion; optional unary **`rex.v1`** over UDS per [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md); does not embed the model runtime. |
-| CI / automation | Uses mock adapter by default. |
-| Optional backends | Mock process, subprocess **Cursor CLI**, future local MLX or HTTP/OpenAI-compat clients. |
+| Editor extension | Thin client; **`rex-cli` + NDJSON**; does **not** host the agent ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)). |
+| CI / automation | **Mock** runtime and/or stub sidecar — harness only. |
+| Agent sidecar | Reasoning loop + tool **requests**; daemon **brokers** inference and host reach. |
+| HTTP LLM backend | OpenAI-compatible API invoked by daemon on sidecar’s behalf ([ADAPTERS.md](ADAPTERS.md)). |
 
 **Trust boundary:** Assume **non-hostile local user**. The daemon must still handle **ambiguous subprocess behavior**, **timeouts**, and **misbehaving adapters** safely.
 
@@ -72,8 +76,8 @@ flowchart LR
 |---|---|---|
 | `extensions/rex-vscode` | Chat UX, modes, approvals; **`rex-cli`** for NDJSON streaming; optional unary gRPC per [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md). | `implemented` — see [EXTENSION.md](EXTENSION.md). |
 | `rex-cli` | UDS client; NDJSON façade for editors. | `implemented` |
-| `rex-daemon` | Session authority: stream contract, pipeline, cache, adapters. | `implemented` core; routing/project-memory **planned** |
-| Sidecar / isolated runtime (future) | Supervised **process** + brokered API; foreign language agents — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). | `planned` — [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
+| `rex-daemon` | Session authority: stream contract, pipeline, cache, **broker** for sidecar inference/tools. | `implemented` core; sidecar route + tool broker **planned** |
+| Agent sidecar | Supervised **process** + `rex.sidecar.v1`; agent implementation pluggable — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). | `planned` — [MVP_SPEC.md](MVP_SPEC.md) |
 
 ## Components inside `rex-daemon` (C4 Level 3)
 
@@ -82,7 +86,7 @@ flowchart LR
 | gRPC service | `service.rs` | `StreamInference`, `GetSystemStatus`; orchestrates cache → pipeline → adapter. |
 | L1 response cache | `l1_cache.rs` | Exact-match cache; **ask** mode only by policy. |
 | Context pipeline | `plugins.rs` | `ContextPipeline`, token budget, prefix cache, behavioral prefilter. |
-| Inference adapters | `adapters.rs` | `InferenceRuntime` trait; mock, `cursor-cli`. |
+| Inference adapters | `adapters.rs`, `http_openai_compat.rs` | `InferenceRuntime`; **http-openai-compat**, mock, `cursor-cli`. |
 | Process lifecycle | `runtime.rs`, `main.rs` | Socket bind, shutdown, inference runtime selection. |
 | Domain constants | `domain.rs` | Version and model placeholders. |
 
@@ -179,14 +183,14 @@ sequenceDiagram
 | Runtime language | Rust |
 | Protocol | gRPC |
 | Transport | Unix Domain Socket (`/tmp/rex.sock`) |
-| Inference | **Adapters** behind `InferenceRuntime`: **mock** default; **optional** Cursor CLI subprocess; future MLX / HTTP. Product **agent and economics** stay in daemon per ADR 0001. |
+| Inference | **Broker adapters** (`http_openai_compat`, mock, legacy Cursor CLI). **Agent loop** in supervised **sidecar**; economics in daemon per [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md). |
 
 ## Thin client, thick server
 
 | Concern | Thin client | REX daemon |
 |---|---|---|
 | UX rendering | Owns | Does not own |
-| Model / agent **policy** | Does not own | Owns (target); modes + future tool policy |
+| Model / agent **policy** | Does not own | Owns modes, approvals, broker policy; **agent runtime** in sidecar |
 | Cost/routing policy | Does not own | Owns (target) |
 | Streaming contract | Consumes | Produces |
 | Inference backend selection | Does not own | Owns configuration of adapters |
@@ -234,6 +238,6 @@ Inference and cache policy today: defaults + **`REX_*` env**. Full catalog: [CON
 - [ADAPTERS.md](ADAPTERS.md) — adapter capabilities.
 - [CACHING.md](CACHING.md) — L1 keys, bypass.
 - [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)
-- [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) — optional sidecars.
+- [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) — sidecar agent platform + brokered adapters.
 - [architecture/decisions/0008-dedicated-sidecar-control-plane-api.md](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) — brokered sidecar ↔ daemon API.
 - [architecture/decisions/](architecture/decisions/) — ADR index.

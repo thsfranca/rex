@@ -31,11 +31,17 @@ brew install protobuf
 | Unix-like OS with Unix Domain Socket support | Daemon and CLI communicate through `/tmp/rex.sock`. | macOS works out of the box. |
 | Local process execution | `rex-daemon` and `rex-cli` run as local processes. | No external DB/cache/broker required in MVP. |
 
-### Optional: Cursor CLI adapter (local only)
+### MVP: sidecar agent + brokered HTTP
 
-- Install Cursor and ensure the CLI is available on your `PATH` when you set `REX_INFERENCE_RUNTIME=cursor-cli`.
-- Default CI and headless tests keep the mock runtime; do not require Cursor in automated environments unless the runner already provides it.
-- You can also point `REX_CURSOR_CLI_PATH` or `REX_CURSOR_CLI_COMMAND` at a test stub for deterministic local runs.
+- **Sidecar binary** (reference or operator-built) supervised by `rex-daemon` — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [MVP_SPEC.md](MVP_SPEC.md).
+- Reachable **chat/completions** endpoint for brokered inference (Ollama, LM Studio, vLLM, OpenAI API, or compatible proxy).
+- Configure `REX_OPENAI_COMPAT_*` — [CONFIGURATION.md](CONFIGURATION.md). Sidecar env (`REX_SIDECAR_*`) when supervision lands.
+
+### Test harness (non-MVP product path)
+
+- `REX_INFERENCE_RUNTIME=mock` for CI and UDS e2e — no network; no live sidecar required until stub harness exists.
+- Legacy `cursor-cli` subprocess optional.
+- Direct daemon HTTP/mock **without** sidecar — harness only per [MVP_SPEC.md](MVP_SPEC.md).
 
 ## 3) Dev quality/tooling dependencies
 
@@ -77,9 +83,11 @@ cargo clippy --version
 cargo build --workspace
 ```
 
-2. Start daemon:
+2. Configure HTTP backend (see [CONFIGURATION.md](CONFIGURATION.md)), then start daemon:
 
 ```bash
+export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:11434/v1"
+export REX_OPENAI_COMPAT_MODEL="llama3.2"
 cargo run -p rex-daemon
 ```
 
@@ -87,7 +95,7 @@ cargo run -p rex-daemon
 
 ```bash
 cargo run -p rex-cli -- status
-cargo run -p rex-cli -- complete "hello from rex"
+cargo run -p rex-cli -- complete "hello from rex" --format ndjson --mode ask
 ```
 
 Readiness note:

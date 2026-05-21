@@ -1,91 +1,88 @@
 # Plugin and extensibility roadmap
 
-REX grows **in-process inference adapters** first, keeps **routing/caching/pipeline policy in `rex-daemon`**, and treats **optional sidecars** as a **supervised process** (protobuf/gRPC over UDS, optional OS sandbox, daemon broker) — **not** a VM default on Mac. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Deferred VM/container transport: [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md).
+REX keeps **routing/caching/pipeline policy in `rex-daemon`**, runs the **development agent in a supervised sidecar process**, and uses **in-process inference adapters only as broker mechanisms** (HTTP OpenAI-compat today) — **not** as a substitute for the sidecar agent. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [MVP_SPEC.md](MVP_SPEC.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), ADRs [0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md), [0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
 ## Current purpose
 
-- Ship reliable **StreamInference** surfaces for extensions and CLI consumers.
+- Ship reliable **`rex.v1`** streaming for extensions and CLI.
+- **MVP product path:** daemon-supervised **sidecar agent** + **brokered** HTTP inference + **one brokered tool**.
 - Concentrate **cost/performance levers** ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)) in the daemon boundary.
-- Offer **mock** everywhere; **Cursor CLI** as **one optional subprocess adapter** (`REX_INFERENCE_RUNTIME=cursor-cli`).
-- Optionally supervise **foreign-runtime** workloads via sidecars **after** the single-process story is boring.
+- **Harness only:** direct in-process **mock** / HTTP without sidecar for CI and migration.
 
-## Optional Cursor CLI adapter (enable)
+## Phase 1 MVP — sidecar agent platform
 
-- Env: **`REX_INFERENCE_RUNTIME=cursor-cli`** on `rex-daemon`.
-- Overrides: **`REX_CURSOR_CLI_PATH`** (defaults `cursor-agent`), **`REX_CURSOR_CLI_COMMAND`** (`{prompt}` template), **`REX_CURSOR_CLI_TIMEOUT_SECS`** (default `20`).
-- CI: keep **`mock`** default — [DEPENDENCIES.md](DEPENDENCIES.md), [CI.md](CI.md).
+| Slice | Outcome | Status |
+|-------|---------|--------|
+| **Sidecar lifecycle** | Daemon supervises **0 or 1** process; health, timeout, restart | Planned |
+| **`rex.sidecar.v1`** | Control-plane API on UDS; MVP verbs in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | Planned |
+| **Reference sidecar** | Minimal agent binary (any stack per ADR 0005) | Planned |
+| **`StreamInference` routing** | Assistant completions via sidecar turn, not direct daemon HTTP | Planned |
+| **Brokered HTTP** | Reuse `http_openai_compat` when sidecar requests inference | Mechanism **implemented** |
+| **Brokered `fs.read`** | One tool path for workspace files | Planned |
+
+## Brokered HTTP (daemon mechanism)
+
+- Env: **`REX_OPENAI_COMPAT_*`** — [CONFIGURATION.md](CONFIGURATION.md).
+- **Not** the product agent: the sidecar requests inference; the daemon executes the HTTP adapter.
+- **Legacy:** `REX_INFERENCE_RUNTIME=cursor-cli` subprocess — non-MVP.
+- CI: **`mock`** or stub sidecar — [CI.md](CI.md).
 
 ## Daemon-first principle
 
 | Principle | Meaning |
 |-----------|---------|
-| Policy in-core | Routing decisions, caches, budgets, terminal stream semantics owned by **`rex-daemon`**. |
-| Adapters dumb-ish | Produce **model-facing** output from an **effective** prompt under **capability** flags — [ADAPTERS.md](ADAPTERS.md). |
-| Sidecars opt-in | Use when **process isolation**, **language ecosystem**, or **crash containment** wins over integration cost. |
+| Policy in-core | Routing, caches, budgets, terminals owned by **`rex-daemon`**. |
+| Agent in sidecar | Reasoning loop and tool **requests** live in the guest process. |
+| Broker executes | Host FS, shell, and HTTP inference run **only** through daemon policy. |
 
-## Placement decision gate (revised)
+## Placement decision gate
 
 | Question | Prefer **in-daemon** | Prefer **sidecar** |
 |---|---|---|
-| Must every request honor it for economics/safety? | Yes | Rare exception |
-| Does it need another language runtime or ML stack you do not want in the Rust binary? | No | Yes |
-| Should a fault be contained without taking down the daemon? | No | Yes |
-| Is it pure experimentation with uncertain retention? | No (prototype behind flag) | Sometimes |
+| Agent reasoning / tool loop | No | **Yes** |
+| Stream contract for clients | **Yes** | No (guest uses `rex.sidecar.v1`) |
+| HTTP call to LLM API | **Yes** (broker) | Intent only |
+| Another language ML stack | No | Yes |
 
-**Default:** implement in **`rex-daemon`** until isolation evidence appears.
-
-### Feature placement (versus earlier sidecar-first notes)
+### Feature placement
 
 | Area | Placement | Notes |
 |---|---|---|
-| L1/L2/policy caches | **Daemon** — today L1 in-process — [CACHING.md](CACHING.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | L2 future |
-| Request tracing tokens | **Daemon** stdout fields | correlate extension / CLI |
-| Context shaping / compaction | **Daemon pipeline** hooks | isolate heavy ML in sidecar **if** ONNX/Python becomes mandatory |
-| Hybrid routing cascades | **Daemon** router (planned) | optional HTTP backends still adapters — [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
+| L1/policy caches | **Daemon** | [CACHING.md](CACHING.md) |
+| Context pipeline (pre-sidecar) | **Daemon** | Before delegating to sidecar |
+| Agent turn + tools | **Sidecar** | MVP |
+| Hybrid routing cascade | **Daemon** router (planned) | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
 
-## Cursor CLI adapter phases
+## Inference adapter phases (broker layer)
 
 | Phase | Outcome |
-|---|---|---|
-| 1 — Adapter seam | `InferenceRuntime`, metadata, **`AdapterCapabilities`**. Mock default. |
-| 2 — Cursor spawn | Bounded subprocess + typed stdout → stream; terminal errors mapped. |
-| 3 — L1 cache | **`ask`**-only exact cache; **`agent`** excluded — see [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md). |
-| 4 — Proto / CLI knobs | **`model`** / **`mode`** fields already in proto; widen adapter use. |
-| 5 — Model `auto` | Document semantics per adapter profile. |
-| 6 — L2 semantic cache | **`ask`** only; strict guards. |
+|---|---|
+| 1 — Adapter seam | `InferenceRuntime`, `AdapterCapabilities` |
+| 2 — HTTP OpenAI-compat | Broker backend for sidecar — **implemented** |
+| 3 — L1 cache | **`ask`** only — [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
+| 4 — Proto / CLI knobs | **`model`** / **`mode`** on wire |
+| 5+ | L2, `auto`, sidecar-only routing | Backlog |
 
-**Repo status:** Phases **1–3 partial** landed (adapter + L1 **`ask`** + proto fields exist). **`auto`**, semantic L2, sidecar-hosted adapter migration remain backlog.
+**Repo status:** HTTP broker module landed; **sidecar routing** and **tool broker** are MVP backlog.
 
-Hosting the Cursor adapter behind a future **process boundary** duplicates the **`InferenceRuntime`** contract without altering `rex.v1` consumers.
+## Later optional tracks
 
-## Optional sidecar platform (defer heavy investment)
-
-Design hub: [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). **No VM** as Mac-first envelope; access policy: [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md).
-
-Incremental slices if/when justified — **failure isolation** emphasis:
-
-### Phase Sidecar lifecycle baseline
-
-Daemon supervises **0 or 1** plugin process (spawn interpreter or binary per plugin manifest) — health probes, timeouts, restart policy; **gRPC over UDS** to daemon.
-
-### Later optional tracks
-
-Observation export, auxiliary cache/process for exotic ML codecs, experimentation-only context rankers — only if duplicates logic **not worth** compiling into core.
-
-Defer: Wasm plugins, unmanaged multi-plugin sprawl absent operator demand.
+- Multi-plugin fleets, Wasm, VM envelope (server/fleet).
+- Observation export, exotic ML codecs in sidecar.
+- Full MCP catalog in guest.
 
 ## What stays built-in
 
-- Socket + stream lifecycle correctness.
-- `InferenceRuntime` registration + **`AdapterCapabilities`** gating ([ADR 0002](architecture/decisions/0002-inference-adapter-contract.md)).
-- Scheduling/cancellation scaffolding.
+- Socket + stream lifecycle for `rex.v1`.
+- Sidecar supervisor + broker.
+- `InferenceRuntime` as **broker implementation** ([ADR 0002](architecture/decisions/0002-inference-adapter-contract.md)).
 
 ## Success metrics
 
-- Terminal stream invariant preserved (`done` XOR `error` equivalence at client).
-- Repeated safe prompts measurable via **`l1_cache=hit`**.
-- Sidecar outages (when used) downgrade gracefully without crashing daemon.
+- Terminal stream invariant preserved for clients.
+- Sidecar outage: clear client error on product path; daemon stays up.
+- At least one successful brokered `fs.read` in MVP acceptance.
 
 ## Related
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) · [ADAPTERS.md](ADAPTERS.md) · [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md) · [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md)
+- [MVP_SPEC.md](MVP_SPEC.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [ADAPTERS.md](ADAPTERS.md) · [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)

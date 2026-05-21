@@ -42,11 +42,25 @@ source ~/.zshrc
 
 Then **fully quit and reopen** Cursor or VS Code (not only Reload Window).
 
-## 3) Run `rex-daemon`
+## 3) Configure brokered HTTP and sidecar (MVP)
+
+Phase 1 expects a **daemon-supervised sidecar agent** plus **brokered OpenAI-compatible HTTP** ([MVP_SPEC.md](./MVP_SPEC.md), [SIDECAR_RUNTIME.md](./SIDECAR_RUNTIME.md), [CONFIGURATION.md](./CONFIGURATION.md)). Example with **Ollama**:
+
+```bash
+export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:11434/v1"
+export REX_OPENAI_COMPAT_MODEL="llama3.2"
+export REX_INFERENCE_RUNTIME="http-openai-compat"
+```
+
+For automated preflight only (no live LLM), CI uses `REX_INFERENCE_RUNTIME=mock` and/or a stub sidecar — not the product MVP path.
+
+**Sidecar:** When supervision ships, the daemon spawns **0 or 1** sidecar or connects to a configured binary (`REX_SIDECAR_*` — see [CONFIGURATION.md](./CONFIGURATION.md)). Until then, treat [MVP_SPEC.md](./MVP_SPEC.md) shipping-state table as source of truth.
+
+## 4) Run `rex-daemon`
 
 **User-managed (default extension behavior)**
 
-In a separate terminal from the repo root:
+In a separate terminal from the repo root (with HTTP env from step 3):
 
 ```bash
 cargo run -p rex-daemon
@@ -64,7 +78,7 @@ The daemon listens on **`/tmp/rex.sock`**.
 
 In editor settings, set `"rex.daemonAutoStart": true`. The extension spawns `rex.daemonBinaryPath` (default `rex-daemon`). If `rex-daemon` is not on the editor `PATH`, set `rex.daemonBinaryPath` to an **absolute path** (same idea as `rex.cliPath` below).
 
-## 4) Verify from a terminal
+## 5) Verify from a terminal
 
 ```bash
 rex-cli status
@@ -78,7 +92,7 @@ cargo run -p rex-cli -- status
 
 You should see daemon fields (version, uptime, model id). If this fails, fix the daemon or socket before opening the extension.
 
-## 5) Install the extension
+## 6) Install the extension
 
 From the repo root:
 
@@ -104,13 +118,13 @@ Pass through extra flags to `install-extension.sh`, for example:
 ./scripts/dev-rex-extension.sh --verify
 ```
 
-## 6) Verify in the editor
+## 7) Verify in the editor
 
 - Status bar shows **REX ready** (or **REX starting** briefly).
 - Command **REX: Show Daemon Status** returns a snapshot.
 - Output channel **REX** logs activation and probe/auto-start decisions.
 
-Open **REX: Open Chat** and send a short prompt; streaming should complete with mock content.
+Open **REX: Open Chat**, select **agent** or **plan** mode, send a short prompt, and confirm streaming completes **via the sidecar path** (daemon logs should show sidecar turn + broker when implemented). Exercise **cancel** and **Apply** on a code block (approval in non-ask modes). When the tool broker ships, verify a prompt that triggers **`fs.read`** on a workspace file.
 
 ## Terminal works, editor does not
 
