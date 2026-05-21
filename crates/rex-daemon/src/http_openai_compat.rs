@@ -4,9 +4,9 @@ use std::env;
 use std::time::Duration;
 
 use futures::StreamExt;
-use rex_proto::rex::v1::StreamInferenceResponse;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Client;
+use rex_proto::rex::v1::StreamInferenceResponse;
 use serde_json::Value;
 use tonic::Status;
 
@@ -32,15 +32,13 @@ pub struct HttpOpenAiCompatRuntime {
 }
 
 impl HttpOpenAiCompatRuntime {
-    pub fn from_env() -> Result<Self, Status> {
+    pub fn from_env() -> Result<Self, String> {
         let base = env::var(BASE_URL_ENV)
             .ok()
             .map(|v| v.trim().to_string())
             .filter(|v| !v.is_empty())
             .ok_or_else(|| {
-                Status::failed_precondition(format!(
-                    "HTTP inference requires {BASE_URL_ENV} (see docs/CONFIGURATION.md)"
-                ))
+                format!("HTTP inference requires {BASE_URL_ENV} (see docs/CONFIGURATION.md)")
             })?;
         let chat_completions_url = normalize_chat_completions_url(&base);
         let api_key = env::var(API_KEY_ENV)
@@ -60,7 +58,7 @@ impl HttpOpenAiCompatRuntime {
         let client = Client::builder()
             .timeout(timeout)
             .build()
-            .map_err(|err| Status::internal(format!("http client build failed: {err}")))?;
+            .map_err(|err| format!("http client build failed: {err}"))?;
         Ok(Self {
             client,
             chat_completions_url,
@@ -96,10 +94,7 @@ impl HttpOpenAiCompatRuntime {
             .map_err(|err| Status::unavailable(format!("http inference request failed: {err}")))?;
         if !response.status().is_success() {
             let status = response.status();
-            let detail = response
-                .text()
-                .await
-                .unwrap_or_default();
+            let detail = response.text().await.unwrap_or_default();
             return Err(Status::unavailable(format!(
                 "http inference failed: status={status} body={}",
                 truncate_body(&detail, 512)

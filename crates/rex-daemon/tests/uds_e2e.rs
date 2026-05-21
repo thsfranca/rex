@@ -14,14 +14,14 @@ use tower::service_fn;
 #[path = "../src/adapters.rs"]
 mod adapters;
 #[allow(dead_code)]
-#[path = "../src/http_openai_compat.rs"]
-mod http_openai_compat;
-#[allow(dead_code)]
 #[path = "../src/approvals.rs"]
 mod approvals;
 #[allow(dead_code)]
 #[path = "../src/domain.rs"]
 mod domain;
+#[allow(dead_code)]
+#[path = "../src/http_openai_compat.rs"]
+mod http_openai_compat;
 #[path = "../src/l1_cache.rs"]
 mod l1_cache;
 #[allow(dead_code)]

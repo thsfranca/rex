@@ -57,9 +57,9 @@ pub trait InferenceRuntime: Send + Sync {
 
 pub fn runtime_from_env() -> Result<Arc<dyn InferenceRuntime>, String> {
     match RuntimeKind::from_env() {
-        RuntimeKind::HttpOpenAiCompat => HttpOpenAiCompatRuntime::from_env()
-            .map(|rt| Arc::new(rt) as Arc<dyn InferenceRuntime>)
-            .map_err(|status| status.message().to_string()),
+        RuntimeKind::HttpOpenAiCompat => {
+            HttpOpenAiCompatRuntime::from_env().map(|rt| Arc::new(rt) as Arc<dyn InferenceRuntime>)
+        }
         RuntimeKind::Mock => Ok(Arc::new(MockInferenceRuntime)),
         RuntimeKind::CursorCli => Ok(Arc::new(CursorCliRuntime::from_env())),
     }
@@ -336,10 +336,7 @@ mod tests {
 
     #[test]
     fn runtime_kind_defaults_to_http_openai_compat() {
-        assert_eq!(
-            RuntimeKind::from_setting(""),
-            RuntimeKind::HttpOpenAiCompat
-        );
+        assert_eq!(RuntimeKind::from_setting(""), RuntimeKind::HttpOpenAiCompat);
     }
 
     #[test]
