@@ -1,9 +1,8 @@
 //! Daemon-owned agent execution approval seam (ADR 0009 / R008).
 //!
 //! `ApprovalGate` is the single decision point for whether an `agent`-mode
-//! request is allowed to proceed. The default impl `AlwaysAllow` keeps the
-//! seam behavior-preserving until enforcement ships behind
-//! `REX_AGENT_APPROVALS` (R008 PR B2). See
+//! request is allowed to proceed. Default `AlwaysAllow`; opt-in enforcement
+//! via `REX_AGENT_APPROVALS` and client `approval_id` (extension/CLI). See
 //! [`docs/architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md`].
 
 use std::env;
@@ -31,11 +30,8 @@ pub struct ApprovalContext {
     pub approval_id: Option<String>,
 }
 
-/// Outcome of an approval check. `Checkpoint` is **reserved** for future
-/// tool-step gating per ADR 0009; today no shipped gate emits it. The bin
-/// build only constructs `Allow` via `AlwaysAllow`, so the other variants
-/// look dead until R008 PR B2 ships an enforcement gate; the variants are
-/// already pattern-matched by `service.rs` and exercised by tests.
+/// Outcome of an approval check. `Checkpoint` is reserved for future tool-step
+/// gating per ADR 0009; pattern-matched in `service.rs` and covered by tests.
 #[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApprovalDecision {
@@ -63,11 +59,9 @@ impl ApprovalGate for AlwaysAllow {
     }
 }
 
-/// Enforcement gate selected by `REX_AGENT_APPROVALS=1`. Today no client
-/// supplies approval context yet, so the gate denies every `agent` request
-/// with a stable reason matching ADR 0009. When the extension wires up
-/// approval context, this gate (or its successor) reads it from the
-/// `ApprovalContext` and returns `Allow` for permitted runs.
+/// Enforcement gate selected by `REX_AGENT_APPROVALS=1`. Denies `agent` requests
+/// without a non-empty `approval_id` in `ApprovalContext`; allows when the
+/// client supplied approval context (extension/CLI).
 pub struct EnforceWithoutContext;
 
 /// Stable deny reason returned by `EnforceWithoutContext`. Kept as a constant

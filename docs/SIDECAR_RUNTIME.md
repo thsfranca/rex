@@ -1,6 +1,6 @@
 # Sidecar runtime (design hub)
 
-Canonical design for Rex **sidecar agents**: a **supervised separate process** on the same Mac as `rex-daemon`, **not** a VM. The **IDE development assistant depends on this process** for agent behavior — see [MVP_SPEC.md](MVP_SPEC.md). **Implementation:** supervisor, `rex.sidecar.v1`, and broker paths are **planned** (shipping state in MVP_SPEC).
+Canonical design for Rex **sidecar agents**: a **supervised separate process** on the same Mac as `rex-daemon`, **not** a VM. The **IDE development assistant depends on this process** for agent behavior — see [MVP_SPEC.md](MVP_SPEC.md). **Implementation:** supervisor, `rex.sidecar.v1`, brokered HTTP inference, and `BrokerReadFile` are **implemented** — see [MVP_SPEC.md](MVP_SPEC.md) and [CONFIGURATION.md](CONFIGURATION.md) (`REX_SIDECAR_*`).
 
 ## Role in the architecture
 

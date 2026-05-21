@@ -131,21 +131,21 @@ When sidecar is required but absent, clients must get a **clear error**, not sil
 
 ### Success criteria to evidence
 
-| Criterion | Evidence (when implemented) | Today |
+| Criterion | Evidence | Status |
 |---|---|---|
-| 1 Sidecar health | Sidecar supervisor tests; E2E with stub process | Planned |
-| 2 Sidecar turn + stream | `rex.sidecar.v1` integration tests | Planned — transport tests in `uds_e2e.rs` |
-| 3 Brokered tool | Tool broker unit test | Planned |
-| 4 Extension E2E | [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) | Partial (UX only; no sidecar) |
-| 5 Degraded error | Daemon test when sidecar down | Planned |
+| 1 Sidecar health | `sidecar_roundtrip.rs`; supervisor in `rex-daemon` | **Implemented** |
+| 2 Sidecar turn + stream | `rex.sidecar.v1` `RunTurn`; product-path `StreamInference` | **Implemented** |
+| 3 Brokered tool | `broker.rs` tests; stub `__rex_read:` directive | **Implemented** |
+| 4 Extension E2E | [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md); `--approval-id` when `REX_AGENT_APPROVALS=1` | **Implemented** (operator path) |
+| 5 Degraded error | Clear failure when sidecar required but unavailable | **Implemented** |
 | 6 NDJSON | `rex-cli`, extension tests | **Implemented** |
-| 7 CI | [CI.md](CI.md) stub sidecar | Harness: mock direct path |
+| 7 CI | [CI.md](CI.md); `REX_SIDECAR_HARNESS=direct` for harness | **Implemented** |
 
 ## Manual validation checklist
 
 **Preflight:** [`scripts/verify_mvp_local.sh`](../scripts/verify_mvp_local.sh) ([CI.md](CI.md)).
 
-- [ ] Configure `REX_OPENAI_COMPAT_*` and sidecar command (when implemented — [CONFIGURATION.md](CONFIGURATION.md)).
+- [ ] Configure `REX_OPENAI_COMPAT_*` and `REX_SIDECAR_*` ([CONFIGURATION.md](CONFIGURATION.md)).
 - [ ] Build: `cargo build --workspace`.
 - [ ] Start `rex-daemon` (spawns or attaches sidecar per config).
 - [ ] Confirm sidecar health (logs or status).

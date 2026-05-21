@@ -54,7 +54,16 @@ export REX_INFERENCE_RUNTIME="http-openai-compat"
 
 For automated preflight only (no live LLM), CI uses `REX_INFERENCE_RUNTIME=mock` and/or a stub sidecar — not the product MVP path.
 
-**Sidecar:** When supervision ships, the daemon spawns **0 or 1** sidecar or connects to a configured binary (`REX_SIDECAR_*` — see [CONFIGURATION.md](./CONFIGURATION.md)). Until then, treat [MVP_SPEC.md](./MVP_SPEC.md) shipping-state table as source of truth.
+**Sidecar (product path):** enable supervision and install the stub binary:
+
+```bash
+export REX_SIDECAR_ENABLED=1
+export REX_SIDECAR_BINARY=rex-sidecar-stub   # or absolute path after cargo install
+cargo build -p rex-sidecar-stub
+# ensure target/debug or install path is on PATH when starting rex-daemon
+```
+
+See [CONFIGURATION.md](./CONFIGURATION.md) for `REX_SIDECAR_REQUIRED`, socket path, and harness `REX_SIDECAR_HARNESS=direct` (CI/tests only).
 
 ## 4) Run `rex-daemon`
 
