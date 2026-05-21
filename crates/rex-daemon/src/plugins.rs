@@ -2,6 +2,8 @@ use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
+use crate::adapters::AdapterCapabilities;
+
 pub fn estimate_tokens(text: &str) -> usize {
     text.chars().count().div_ceil(4)
 }
@@ -248,8 +250,16 @@ impl ContextPipeline {
         }
     }
 
-    pub fn prepare(&mut self, request: &ContextRequest) -> PipelineResult {
-        let bounded_prompt = apply_prompt_budget(&request.prompt, self.budget.max_prompt_tokens);
+    pub fn prepare(
+        &mut self,
+        request: &ContextRequest,
+        capabilities: AdapterCapabilities,
+    ) -> PipelineResult {
+        let bounded_prompt = if capabilities.truncate_prompt {
+            apply_prompt_budget(&request.prompt, self.budget.max_prompt_tokens)
+        } else {
+            request.prompt.clone()
+        };
         let decision = self.behavior.evaluate(request.behavior_snapshot);
         if let BehaviorDecision::Suppress { .. } = decision {
             return PipelineResult {
@@ -261,6 +271,25 @@ impl ContextPipeline {
                     context_selected: 0,
                     context_truncated: false,
                     cache_status: CacheStatus::Bypass,
+                    behavior_decision: decision,
+                },
+            };
+        }
+
+        if !capabilities.attach_context {
+            return PipelineResult {
+                effective_prompt: bounded_prompt.clone(),
+                metrics: PipelineMetrics {
+                    prompt_tokens: estimate_tokens(&bounded_prompt),
+                    selected_context_tokens: 0,
+                    context_candidates: 0,
+                    context_selected: 0,
+                    context_truncated: false,
+                    cache_status: if request.cache_bypass {
+                        CacheStatus::Bypass
+                    } else {
+                        CacheStatus::MissStored
+                    },
                     behavior_decision: decision,
                 },
             };
@@ -370,6 +399,7 @@ mod tests {
         stable_prefix_key, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
         LexicalWorkspaceIndexer,
     };
+    use crate::adapters::{AdapterCapabilities, RuntimeKind};
 
     #[test]
     fn lexical_index_returns_deterministic_ranked_results() {
@@ -404,9 +434,10 @@ mod tests {
             cache_bypass: false,
             behavior_snapshot: BehaviorSnapshot::default(),
         };
-        let first = pipeline.prepare(&request);
+        let caps = AdapterCapabilities::for_runtime(RuntimeKind::Mock);
+        let first = pipeline.prepare(&request, caps);
         assert_eq!(first.metrics.cache_status, CacheStatus::MissStored);
-        let second = pipeline.prepare(&request);
+        let second = pipeline.prepare(&request, caps);
         assert_eq!(second.metrics.cache_status, CacheStatus::Hit);
     }
 
@@ -419,8 +450,43 @@ mod tests {
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
         };
-        let result = pipeline.prepare(&request);
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::Mock),
+        );
         assert_eq!(result.metrics.cache_status, CacheStatus::Bypass);
+    }
+
+    #[test]
+    fn mock_profile_attaches_context_when_indexer_hits() {
+        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let request = ContextRequest {
+            prompt: "status stream retry".to_string(),
+            diagnostics_hint: None,
+            cache_bypass: true,
+            behavior_snapshot: BehaviorSnapshot::default(),
+        };
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::Mock),
+        );
+        assert!(result.effective_prompt.contains("[context]"));
+    }
+
+    #[test]
+    fn cursor_profile_skips_context_attachment() {
+        let mut pipeline = ContextPipeline::default_sidecar_like();
+        let request = ContextRequest {
+            prompt: "status stream retry".to_string(),
+            diagnostics_hint: None,
+            cache_bypass: true,
+            behavior_snapshot: BehaviorSnapshot::default(),
+        };
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::CursorCli),
+        );
+        assert!(!result.effective_prompt.contains("[context]"));
     }
 
     #[test]
@@ -435,7 +501,10 @@ mod tests {
                 pause_events_last_minute: 0,
             },
         };
-        let result = pipeline.prepare(&request);
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::Mock),
+        );
         assert!(matches!(
             result.metrics.behavior_decision,
             super::BehaviorDecision::Suppress { .. }

@@ -24,6 +24,30 @@ pub enum RuntimeKind {
     CursorCli,
 }
 
+/// Per-runtime context pipeline policy ([`docs/ADAPTERS.md`](../../docs/ADAPTERS.md)).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AdapterCapabilities {
+    /// When false, skip lexical retrieval and `[context]` suffix (Cursor CLI profile).
+    pub attach_context: bool,
+    /// When false, do not truncate the user prompt before inference (Cursor CLI profile).
+    pub truncate_prompt: bool,
+}
+
+impl AdapterCapabilities {
+    pub fn for_runtime(kind: RuntimeKind) -> Self {
+        match kind {
+            RuntimeKind::CursorCli => Self {
+                attach_context: false,
+                truncate_prompt: false,
+            },
+            RuntimeKind::Mock | RuntimeKind::HttpOpenAiCompat => Self {
+                attach_context: true,
+                truncate_prompt: true,
+            },
+        }
+    }
+}
+
 impl RuntimeKind {
     pub fn from_env() -> Self {
         let raw =
