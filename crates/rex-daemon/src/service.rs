@@ -20,7 +20,7 @@ use tonic::{Request, Response, Status};
 use crate::adapters::InferenceRuntime;
 #[cfg(test)]
 use crate::adapters::MockInferenceRuntime;
-use crate::adapters::{active_model_id_from_env, RuntimeKind};
+use crate::adapters::{active_model_id_from_env, AdapterCapabilities, RuntimeKind};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
 use crate::broker::broker_read_file;
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
@@ -145,7 +145,9 @@ impl RexService for RexDaemonService {
         let request_started = Instant::now();
         let request_id = self.request_sequence.fetch_add(1, Ordering::Relaxed);
         let trace_id = extract_trace_id(request.metadata(), request_id);
-        let inference_runtime = RuntimeKind::from_env().log_label();
+        let runtime_kind = RuntimeKind::from_env();
+        let inference_runtime = runtime_kind.log_label();
+        let adapter_capabilities = AdapterCapabilities::for_runtime(runtime_kind);
         let inner = request.into_inner();
         let prompt = inner.prompt;
         let model = inner.model;
@@ -161,7 +163,7 @@ impl RexService for RexDaemonService {
             .pipeline
             .lock()
             .expect("context pipeline mutex should not be poisoned")
-            .prepare(&context_request);
+            .prepare(&context_request, adapter_capabilities);
         let prompt_len = prompt.chars().count();
         println!(
             "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} prompt_len={prompt_len}",

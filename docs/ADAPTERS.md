@@ -63,13 +63,19 @@ Optional subprocess via `REX_INFERENCE_RUNTIME=cursor-cli`. Not the REX agent pr
 
 CI exercises this path with a **`printf` stub** in `uds_e2e.rs`, not the real `cursor-agent` binary.
 
-## `AdapterCapabilities` (design)
+## `AdapterCapabilities` (implemented)
 
-| Capability | Meaning |
+Rust struct in `crates/rex-daemon/src/adapters.rs`; passed into `ContextPipeline::prepare`.
+
+| Field | HTTP / mock | Cursor CLI |
+|---|---|---|
+| `attach_context` | `true` — lexical `[context]` when indexer hits | `false` — no `[context]` suffix |
+| `truncate_prompt` | `true` — token budget on user prompt | `false` — full prompt to subprocess |
+
+| Capability (planned) | Meaning |
 |---|---|
-| `wants_context_injection` | Pipeline may inject context (HTTP + mock: yes; Cursor CLI: typically no). |
 | `cacheable_modes` | Subset permitted for L1 (**`ask`** only today). |
-| `max_prompt_tokens` / `max_context_tokens` | Optional clamps. |
+| `max_prompt_tokens` / `max_context_tokens` | Optional per-adapter clamps beyond pipeline defaults. |
 | `default_timeout` | Adapter-specific watchdog. |
 | `supported_modes` | Early rejection of unsupported mode strings. |
 
