@@ -56,5 +56,5 @@ Requirements gathered from product architecture discussion:
 ## Related
 
 - [ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md) · [ADR 0005](0005-rex-owns-sidecar-environment-not-agent-implementations.md) · [ADR 0007](0007-editor-extension-hybrid-transport-cli-and-grpc.md)
-- [ARCHITECTURE.md](../../ARCHITECTURE.md) · [AGENT_RUNTIME_ENVIRONMENT.md](../../AGENT_RUNTIME_ENVIRONMENT.md) · [PLUGIN_ROADMAP.md](../../PLUGIN_ROADMAP.md)
+- [ARCHITECTURE.md](../../ARCHITECTURE.md) · [SIDECAR_RUNTIME.md](../../SIDECAR_RUNTIME.md) · [AGENT_ACCESS_POLICY.md](../../AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](../../POLICY_ENGINE.md) · [AGENT_RUNTIME_ENVIRONMENT.md](../../AGENT_RUNTIME_ENVIRONMENT.md) · [PLUGIN_ROADMAP.md](../../PLUGIN_ROADMAP.md)
 - [README.md](README.md) (index)

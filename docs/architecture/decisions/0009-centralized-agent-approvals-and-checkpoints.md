@@ -10,7 +10,7 @@
 Pressures forcing this decision:
 
 1. **Multiple clients, one safety surface.** `rex-cli`, the VS Code / Cursor extension, and any future scripted client all reach the same `rex.v1` daemon. Approval logic that lives only in one client cannot enforce safety for the others ([`docs/EXTENSION_ROADMAP.md`](../../EXTENSION_ROADMAP.md) explicitly excludes "unattended multi-file coordinated agent runs without user approvals" because the thin extension cannot replace daemon-side tool policy).
-2. **Backlog row R008** in [`docs/ROADMAP.md`](../../ROADMAP.md) calls for **centralized** agent execution approvals / checkpoints. The R007 policy seam (`crates/rex-daemon/src/policy.rs`) gives the daemon a single, tested place for `agent`-mode-specific code paths to hook in without re-touching `service.rs`.
+2. **Backlog row R008** in [`docs/ROADMAP.md`](../../ROADMAP.md) calls for **centralized** agent execution approvals / checkpoints. The R007 policy seam ([`POLICY_ENGINE.md`](../../POLICY_ENGINE.md)) gives the daemon a single, tested place for `agent`-mode-specific code paths without widening the stream service surface.
 3. **Architecture guidelines layering.** [`docs/ARCHITECTURE_GUIDELINES.md`](../../ARCHITECTURE_GUIDELINES.md) "When to write or update an ADR vs this file" requires a new ADR for a yes/no boundary decision before code lands; this is that decision.
 
 ## Decision
@@ -24,11 +24,11 @@ Pressures forcing this decision:
    - **Default impl:** `AlwaysAllow` so introducing the gate is a behavior-preserving refactor.
 4. **Activation is opt-in via env.** Enforcement of `agent`-mode denial when no approval context is present ships behind an environment flag (e.g. `REX_AGENT_APPROVALS=1`), following the precedence catalog in [`docs/CONFIGURATION.md`](../../CONFIGURATION.md). Default off; existing flows unchanged until a client supplies approval context.
 5. **`ask` and `plan` are out of scope.** The gate is consulted only when policy already routes a request through the `agent` branch of [`docs/architecture/decisions/0003-layered-cache-agent-mode-policy.md`](0003-layered-cache-agent-mode-policy.md). `ask` and `plan` keep today's behavior.
-6. **Anti-patterns.** Reject: per-client approval logic that diverges between `rex-cli` and the extension; ambient "auto-approve everything" environment switches with no observability; bypassing the policy seam to hardcode approval inside `service.rs`.
+6. **Anti-patterns.** Reject: per-client approval logic that diverges between `rex-cli` and the extension; ambient "auto-approve everything" environment switches with no observability; bypassing the policy seam to hardcode approval in the stream service layer.
 
 | Do | Do not |
 |----|--------|
-| Add the gate behind the existing `policy.rs` seam (R007) so `service.rs` stays a thin wiring layer | Hardcode approval branches inside `stream_inference` |
+| Add the gate behind the existing policy seam (R007) so the gRPC service stays a thin wiring layer | Hardcode approval branches inside stream handling |
 | Make `AlwaysAllow` the default so the trait can land before any UX wiring | Default-deny `agent` mode without giving clients a way to express approval |
 | Emit a stable observability label for gate decisions (planned: `approval=allow|deny|checkpoint`) when enforcement is active | Silently drop denied requests; always surface a typed gRPC error |
 
@@ -51,4 +51,5 @@ Pressures forcing this decision:
 - [ADR 0003](0003-layered-cache-agent-mode-policy.md) — `agent` mode is the explicit boundary this gate guards.
 - [`docs/ARCHITECTURE_GUIDELINES.md`](../../ARCHITECTURE_GUIDELINES.md) — policy vs mechanism, ownership matrix.
 - [`docs/EXTENSION.md`](../../EXTENSION.md) — extension owns the approval UX surface.
+- [`docs/POLICY_ENGINE.md`](../../POLICY_ENGINE.md) · [`docs/AGENT_ACCESS_POLICY.md`](../../AGENT_ACCESS_POLICY.md) — policy pipeline and access capabilities.
 - [`docs/ROADMAP.md`](../../ROADMAP.md) — backlog row **R008**.

@@ -1,6 +1,6 @@
 # Inference adapters
 
-Pluggable backends behind **`InferenceRuntime`** (`crates/rex-daemon/src/adapters.rs`). The daemon remains **transport- and stream-authoritative**. Adapters emit **chunks** ending in a single **`done`** semantics or map failures to observable terminal errors (`MVP_SPEC.md`, NDJSON facade).
+Pluggable backends behind **`InferenceRuntime`** (daemon `adapters` module). The daemon remains **transport- and stream-authoritative**. Adapters emit **chunks** ending in a single **`done`** semantics or map failures to observable terminal errors ([MVP_SPEC.md](MVP_SPEC.md), NDJSON facade).
 
 Product stance: **`rex-daemon` owns agent/economics policy** over time ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)); adapters produce **completion streams** subject to **`AdapterCapabilities`**. An external CLI may **loop internally**; REX still presents **one contract** to clients and controls **caching, pipeline stages, and adapter selection**.
 

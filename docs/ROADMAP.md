@@ -54,9 +54,9 @@ flowchart LR
 | **Should** | Adaptive retrieval gate: retrieve only when needed, then expand context progressively | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Lower average context tokens with measurable eval | daemon pipeline (optional sidecar only if justified) |
 | **Should** | Query-aware prompt/context compression before local inference | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADAPTERS.md](ADAPTERS.md) | Fewer tokens; terminal correctness preserved | daemon pipeline |
 | **Could** | Difficulty-based routing cascade (cheap local → escalate hard tasks) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ARCHITECTURE.md](ARCHITECTURE.md) | Explicit policy + logs ([ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md)) | daemon |
-| **Later** | **One** supervised sidecar process (optional isolation) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | 0 or 1 plugin, clear degraded-mode errors | daemon |
+| **Later** | **One** supervised sidecar process (protobuf/UDS, optional OS sandbox, daemon broker) | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | 0 or 1 plugin; degraded-mode errors; **no VM default on Mac** | daemon |
 | **Could** | **Context** pipeline / token-budget per [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Respects adapter capabilities; docs stay true | daemon |
-| **Could** | **Purpose/principles** SSoT and **isolated agent runtime** concepts (transport, environment ownership, brokered sidecar API) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | One link target for intent; refinable catalog; no fake shipped VM | docs |
+| **Done (docs)** | Sidecar/access/policy architecture hubs | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), ADRs 0005/0008/0009 | Mac-first **process** sidecar; VM/container **not** default; diagrams not source listings | docs |
 
 **Scope note (L1 cache shipped):** In-process **L1 exact** cache for **`ask`** with `l1_cache=hit` logs — [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md).
 
@@ -71,6 +71,7 @@ flowchart LR
 | **Could** | L2 **semantic** cache, careful | [CACHING.md](CACHING.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Can stay off a long time |
 | **Could** | **Apple MLX** local model path | [ARCHITECTURE.md](ARCHITECTURE.md), [MVP_SPEC.md](MVP_SPEC.md) | Post-“core is boring” |
 | **Later** | More sidecars or gateway adapters | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | After daemon router story matures |
+| **Won't (now)** | VM/container as **default Mac** sidecar envelope (Colima/Firecracker always-on) | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) deferred catalog | Process + sandbox + broker instead | — |
 
 ## Engineering backlog (refactor / contract IDs)
 
@@ -80,8 +81,8 @@ Migrated from superseded **`REFACTOR_PROPOSALS`** list — IDs kept for continui
 |----|-------|----------|
 | R004 | CLI / extension NDJSON seam hardening | Done — piped NDJSON line flush in `rex-cli`; contract in [EXTENSION.md](EXTENSION.md), [MVP_SPEC.md](MVP_SPEC.md) |
 | R005 | Cross-boundary contract conformance tests | Done — shared [fixtures/ndjson_contract/](../fixtures/ndjson_contract/README.md), `crates/rex-cli/tests/ndjson_contract_conformance.rs`, extension `ndjson_contract_fixture.test.ts`; contract [EXTENSION.md](EXTENSION.md) |
-| R007 | Mode orchestrator unified policy boundary; policy/mechanism seams per [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) (explicit cache/execution seams when multiple backends exist; resolution-before-semantic-cache rules in code) | Done — `crates/rex-daemon/src/policy.rs` (`PolicyEngine`, `ResponseCache`, `LayeredCache` + `NullL2`), `cache_decision=` stdout per [CACHING.md](CACHING.md); tests lock ordering (`pipeline resolution → cache decision → runtime`) |
-| R008 | Agent execution approvals / checkpoints centralized | Done — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md); `crates/rex-daemon/src/approvals.rs` (`ApprovalGate`, opt-in `REX_AGENT_APPROVALS` enforcement); extension-supplied approval context not wired yet |
+| R007 | Mode orchestrator unified policy boundary; policy/mechanism seams per [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) | Done — [POLICY_ENGINE.md](POLICY_ENGINE.md); `cache_decision=` per [CACHING.md](CACHING.md) |
+| R008 | Agent execution approvals / checkpoints centralized | Done — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md), [POLICY_ENGINE.md](POLICY_ENGINE.md); `REX_AGENT_APPROVALS`; extension approval context not wired yet |
 
 ## Parked in design docs
 
@@ -93,6 +94,7 @@ Migrated from superseded **`REFACTOR_PROPOSALS`** list — IDs kept for continui
 | **Node gRPC `StreamInference`** in the extension (replace NDJSON chat path) | **New ADR** supersedes hybrid unary policy | [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | **Large** multi-plugin orchestration | **Single-plugin** supervision is stable and documented | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
 | **Long-term / project memory** (durable store, retrieval, governance) | **Daemon economics** path is clear; treat as **design bet** until implemented | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
+| **VM/container sidecar envelope** (server/fleet only) | **Mac product path** uses process sidecar; pull when Linux deployment needs stronger isolation | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) deferred catalog |
 
 **CI:** Default automation follows [CI.md](CI.md) with **mock** / self-contained checks. **Cursor CLI** on shared runners is in scope for **required** jobs when [DEPENDENCIES.md](DEPENDENCIES.md) and the workflow **define** that path.
 

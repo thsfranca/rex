@@ -1,6 +1,6 @@
 # Plugin and extensibility roadmap
 
-REX grows **in-process inference adapters** first, keeps **routing/caching/pipeline policy in `rex-daemon`**, and treats **optional isolated runtimes** (historically “gRPC sidecars”) as **environment** for foreign stacks or fault isolation — not the default home for core economics. See [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Concepts and transport options: [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md).
+REX grows **in-process inference adapters** first, keeps **routing/caching/pipeline policy in `rex-daemon`**, and treats **optional sidecars** as a **supervised process** (protobuf/gRPC over UDS, optional OS sandbox, daemon broker) — **not** a VM default on Mac. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). Deferred VM/container transport: [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md).
 
 ## Current purpose
 
@@ -38,7 +38,7 @@ REX grows **in-process inference adapters** first, keeps **routing/caching/pipel
 
 | Area | Placement | Notes |
 |---|---|---|
-| L1/L2/policy caches | **Daemon** — today L1 [`l1_cache.rs`](../crates/rex-daemon/src/l1_cache.rs) | L2 future — [CACHING.md](CACHING.md) |
+| L1/L2/policy caches | **Daemon** — today L1 in-process — [CACHING.md](CACHING.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | L2 future |
 | Request tracing tokens | **Daemon** stdout fields | correlate extension / CLI |
 | Context shaping / compaction | **Daemon pipeline** hooks | isolate heavy ML in sidecar **if** ONNX/Python becomes mandatory |
 | Hybrid routing cascades | **Daemon** router (planned) | optional HTTP backends still adapters — [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
@@ -60,11 +60,13 @@ Hosting the Cursor adapter behind a future **process boundary** duplicates the *
 
 ## Optional sidecar platform (defer heavy investment)
 
+Design hub: [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). **No VM** as Mac-first envelope; access policy: [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md).
+
 Incremental slices if/when justified — **failure isolation** emphasis:
 
 ### Phase Sidecar lifecycle baseline
 
-Daemon supervises **0 or 1** plugin process — health probes, timeouts, restart policy.
+Daemon supervises **0 or 1** plugin process (spawn interpreter or binary per plugin manifest) — health probes, timeouts, restart policy; **gRPC over UDS** to daemon.
 
 ### Later optional tracks
 
@@ -86,4 +88,4 @@ Defer: Wasm plugins, unmanaged multi-plugin sprawl absent operator demand.
 
 ## Related
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) · [ADAPTERS.md](ADAPTERS.md) · [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) · [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md)
+- [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) · [ADAPTERS.md](ADAPTERS.md) · [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md) · [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md)

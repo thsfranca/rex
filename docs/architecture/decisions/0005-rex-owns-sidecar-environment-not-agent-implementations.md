@@ -27,4 +27,4 @@ Project **purpose and principles** are canonical in [../../PURPOSE_AND_PRINCIPLE
 
 ## Related
 
-- [ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md) · [../../AGENT_RUNTIME_ENVIRONMENT.md](../../AGENT_RUNTIME_ENVIRONMENT.md) · [../../PURPOSE_AND_PRINCIPLES.md](../../PURPOSE_AND_PRINCIPLES.md)
+- [ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md) · [../../SIDECAR_RUNTIME.md](../../SIDECAR_RUNTIME.md) · [../../AGENT_ACCESS_POLICY.md](../../AGENT_ACCESS_POLICY.md) · [../../AGENT_RUNTIME_ENVIRONMENT.md](../../AGENT_RUNTIME_ENVIRONMENT.md) · [../../PURPOSE_AND_PRINCIPLES.md](../../PURPOSE_AND_PRINCIPLES.md)

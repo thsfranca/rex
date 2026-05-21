@@ -54,6 +54,18 @@ Keep each document **focused**: one dominant topic per file where practical. Pre
 
 Project agents should follow the **`documentation-content`** rule for `docs/**/*.md`; contributors using shared Cursor rules should align with the **`documentation-scope-for-agents`** global rule for scope and splits (see workspace policy names—not editor install paths).
 
+## Technical architecture documentation
+
+Architecture hubs, ADRs, and design-intent roadmaps follow the **`technical-architecture-documentation`** global rule unless this project’s **`documentation-content`** rule overrides it (**project wins** on conflict for Rex `docs/`).
+
+| Requirement | Meaning for Rex |
+|-------------|-----------------|
+| **Architecture-level prose** | Describe components, trust zones, and contracts—not crate walkthroughs. |
+| **Diagrams over source** | Prefer **mermaid** for flows and boundaries; avoid Rust/TypeScript function listings in `docs/`. |
+| **Named references** | Cite modules (for example `policy.rs`, `approvals.rs`) and proto packages by name; link to code in the repo, do not paste implementations. |
+| **Allowed fenced blocks** | Short proto/API excerpts, config examples, operator shell commands—when needed for reproduction. |
+| **ADRs** | Decision + consequences + links; narrative detail lives in **hub** docs ([AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), …). |
+
 ## Pull request descriptions
 
 - Use [`.github/pull_request_template.md`](../.github/pull_request_template.md) for every PR.
@@ -67,3 +79,4 @@ Project agents should follow the **`documentation-content`** rule for `docs/**/*
 - Do examples match the current codebase and scope?
 - Is the file still **one coherent topic**, or should part of it move to a linked page?
 - Does the text **add value** on its own, or does it mostly restate what Rex does **not** do / what was **decided in conversation** without helping a future reader? If so, trim or refocus.
+- For architecture/design docs: prefer **diagrams** over source listings; see **Technical architecture documentation** above.
