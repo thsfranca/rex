@@ -449,14 +449,26 @@ fn format_cache_status(status: CacheStatus) -> &'static str {
     }
 }
 
-fn resolve_route_label(inference_runtime: &str) -> String {
-    if parse_harness_only().is_some() {
+pub(crate) fn resolve_route_label_for(
+    inference_runtime: &str,
+    harness_only: bool,
+    sidecar_product_path: bool,
+) -> String {
+    if harness_only {
         return format!("harness_direct+{inference_runtime}");
     }
-    if sidecar_product_path_active() {
+    if sidecar_product_path {
         return format!("sidecar+{inference_runtime}");
     }
     format!("daemon_direct+{inference_runtime}")
+}
+
+pub(crate) fn resolve_route_label(inference_runtime: &str) -> String {
+    resolve_route_label_for(
+        inference_runtime,
+        parse_harness_only().is_some(),
+        sidecar_product_path_active(),
+    )
 }
 
 fn sidecar_error_to_status(err: &SupervisorError, required: bool) -> Status {
@@ -536,7 +548,7 @@ mod tests {
 
     use super::{
         extract_trace_id, format_approval_decision, format_behavior_decision, format_cache_status,
-        PromptDirectives, RexDaemonService,
+        resolve_route_label_for, PromptDirectives, RexDaemonService,
     };
     use crate::adapters::{MissingDoneMockRuntime, MockInferenceRuntime};
     use crate::sidecar_config::SidecarConfig;
@@ -623,6 +635,26 @@ mod tests {
                 reason: "y".to_string(),
             }),
             "checkpoint"
+        );
+    }
+
+    #[test]
+    fn resolve_route_label_sidecar_and_harness_modes() {
+        assert_eq!(
+            resolve_route_label_for("http-openai-compat", false, true),
+            "sidecar+http-openai-compat"
+        );
+        assert_eq!(
+            resolve_route_label_for("mock", true, false),
+            "harness_direct+mock"
+        );
+        assert_eq!(
+            resolve_route_label_for("mock", true, true),
+            "harness_direct+mock"
+        );
+        assert_eq!(
+            resolve_route_label_for("mock", false, false),
+            "daemon_direct+mock"
         );
     }
 

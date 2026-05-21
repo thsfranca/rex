@@ -310,6 +310,20 @@ async fn mvp_product_path_sidecar_stream_and_brokered_read() {
         "expected brokered fs.read content, got: {read_text}"
     );
 
+    fs::write(workspace.join(".env"), "secret").expect("write secrets");
+    let deny_prompt = "inspect __rex_read:.env".to_string();
+    let deny_text = timeout(
+        STREAM_TIMEOUT,
+        collect_stream_text(&mut client, &deny_prompt, "agent"),
+    )
+    .await
+    .expect("policy deny stream timed out");
+    assert!(
+        deny_text.to_ascii_lowercase().contains("protected_path")
+            || deny_text.contains("fs.read error"),
+        "expected access policy deny for .env, got: {deny_text}"
+    );
+
     daemon.abort();
     let _ = daemon.await;
     cleanup_socket(&daemon_socket);
