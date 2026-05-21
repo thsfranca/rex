@@ -1,8 +1,5 @@
-# Editor / AI local config (not shared) — exception: Rex documents one shared rule under .cursor/rules/
-.cursor/**/*
-!.cursor/rules/
-.cursor/rules/*
-!.cursor/rules/documentation-content.mdc
+# Editor / AI local config (not shared; keep rules in user or machine-local editor config)
+.cursor/
 
 # Temporary local-only files
 TEMP_*
