@@ -34,6 +34,9 @@ mod plugins;
 #[path = "../src/policy.rs"]
 mod policy;
 #[allow(dead_code)]
+#[path = "../src/routing.rs"]
+mod routing;
+#[allow(dead_code)]
 #[path = "../src/runtime.rs"]
 mod runtime;
 #[allow(dead_code)]
