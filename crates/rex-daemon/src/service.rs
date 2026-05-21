@@ -171,7 +171,7 @@ impl RexService for RexDaemonService {
             StreamLifecycle::Starting.as_str(),
         );
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={} retrieval={}",
+            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={} retrieval={} compression_strategy={}",
             pipeline_result.metrics.prompt_tokens,
             pipeline_result.metrics.selected_context_tokens,
             pipeline_result.metrics.context_candidates,
@@ -180,6 +180,7 @@ impl RexService for RexDaemonService {
             format_cache_status(pipeline_result.metrics.cache_status),
             format_behavior_decision(&pipeline_result.metrics.behavior_decision),
             pipeline_result.metrics.retrieval.as_str(),
+            pipeline_result.metrics.compression_strategy,
         );
         let cache_bypass = directives.cache_bypass || cache_bypass_from_env();
         let policy_request = PolicyRequest {
