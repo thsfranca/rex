@@ -102,6 +102,7 @@ CI and PR expectations:
 - CI gate behavior follows `docs/CI.md`.
 - PR description follows `.github/pull_request_template.md` and stays about this repository and the change (no required coupling to external trackers for now).
 - When documentation for a behavior change lives **only** in another open pull request, add **`Documentation:`** under **Summary** with a link to that PR (`#NNN` or full URL). Keep the docs checklist item accurate; auto-merge stays off until the checklist is complete. The same expectation is summarized in [DOCUMENTATION.md](DOCUMENTATION.md) under **Pull request descriptions**.
+- **Pre-open slice gate:** before push or opening a PR, compare `git diff origin/main...HEAD` to the **current slice only**. Multi-PR plans use one branch per slice; do not open the next PR while a prior slice is still open. If the diff bundles multiple planned slices, split before opening or record an explicit user waiver in **Summary** (`PR slice: waived — <reason>`). For series work, keep gitignored `TEMP_*.md` **PR series** fields current ([ADR 0006](architecture/decisions/0006-gitignored-temp-tracking-sequential-handoffs.md)).
 
 ## 4) Extensibility developer track
 
