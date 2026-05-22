@@ -2,7 +2,6 @@
 //! Complements `uds_e2e` (harness/direct) and `sidecar_roundtrip` (sidecar only).
 
 use std::fs;
-use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -44,6 +43,9 @@ mod plugins;
 #[allow(dead_code)]
 #[path = "../src/policy.rs"]
 mod policy;
+#[allow(dead_code)]
+#[path = "../src/routing.rs"]
+mod routing;
 #[allow(dead_code)]
 #[path = "../src/runtime.rs"]
 mod runtime;

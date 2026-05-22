@@ -247,9 +247,9 @@ impl RexService for RexDaemonService {
             .expect("context pipeline mutex should not be poisoned")
             .prepare(&context_request, adapter_capabilities);
         let prompt_len = prompt.chars().count();
+        let route_label = resolve_route_label(inference_runtime);
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} route={} decision_id={decision_id} stream.lifecycle={} prompt_len={prompt_len}",
-            route.label,
+            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} route={route_label} decision_id={decision_id} stream.lifecycle={} prompt_len={prompt_len}",
             StreamLifecycle::Starting.as_str(),
         );
         println!(
