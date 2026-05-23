@@ -8,6 +8,8 @@
 export type StreamId = string;
 export type StreamErrorCode =
   | "daemon_unavailable"
+  | "sidecar_unavailable"
+  | "inference_config"
   | "stream_timeout"
   | "stream_interrupted"
   | "stream_incomplete"

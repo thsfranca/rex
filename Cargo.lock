@@ -1157,7 +1157,7 @@ dependencies = [
 
 [[package]]
 name = "rex-cli"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "hyper-util",
  "rex-proto",
@@ -1170,7 +1170,7 @@ dependencies = [
 
 [[package]]
 name = "rex-daemon"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-stream",
  "futures",
@@ -1190,7 +1190,7 @@ dependencies = [
 
 [[package]]
 name = "rex-proto"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "prost",
  "tonic",
@@ -1199,7 +1199,7 @@ dependencies = [
 
 [[package]]
 name = "rex-sidecar-stub"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "async-stream",
  "hyper-util",

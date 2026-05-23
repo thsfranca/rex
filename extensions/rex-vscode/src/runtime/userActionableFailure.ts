@@ -2,6 +2,8 @@ import type { StreamErrorCode } from "./ndjsonParser";
 
 const SETUP_HINT_CODES: ReadonlySet<StreamErrorCode> = new Set([
   "daemon_unavailable",
+  "sidecar_unavailable",
+  "inference_config",
   "spawn_failed",
   "stream_timeout",
 ]);

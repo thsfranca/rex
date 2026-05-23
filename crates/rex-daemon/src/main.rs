@@ -1,3 +1,4 @@
+mod access_policy;
 mod adapters;
 mod approvals;
 mod broker;

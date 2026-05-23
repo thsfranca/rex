@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import { streamFailureWantsSetupHint } from "../runtime/userActionableFailure";
 
 describe("streamFailureWantsSetupHint", () => {
-  it("is true for daemon, spawn, and timeout codes", () => {
+  it("is true for daemon, spawn, timeout, sidecar, and inference codes", () => {
     expect(streamFailureWantsSetupHint("daemon_unavailable")).toBe(true);
+    expect(streamFailureWantsSetupHint("sidecar_unavailable")).toBe(true);
+    expect(streamFailureWantsSetupHint("inference_config")).toBe(true);
     expect(streamFailureWantsSetupHint("spawn_failed")).toBe(true);
     expect(streamFailureWantsSetupHint("stream_timeout")).toBe(true);
   });

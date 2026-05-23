@@ -5,7 +5,9 @@ use std::time::Duration;
 
 use hyper_util::rt::TokioIo;
 use rex_proto::rex::v1::rex_service_client::RexServiceClient;
-use rex_proto::rex::v1::{BrokerExecShellRequest, BrokerReadFileRequest, BrokerWriteFileRequest};
+use rex_proto::rex::v1::{
+    BrokerExecShellRequest, BrokerInferenceRequest, BrokerReadFileRequest, BrokerWriteFileRequest,
+};
 use tokio::net::UnixStream;
 use tonic::transport::Endpoint;
 use tower::service_fn;
@@ -61,7 +63,24 @@ impl SidecarService for StubSidecar {
         } else {
             inner.mode.trim()
         };
-        let mut text = format!("sidecar-stub[{mode}]: {}", inner.prompt.trim());
+        let mut text = match broker_inference(&inner.prompt, mode, "").await {
+            Ok(content) => content,
+            Err(err) => {
+                let stream = async_stream::stream! {
+                    yield Ok(RunTurnChunk {
+                        text: format!("[broker.inference error: {err}]"),
+                        index: 0,
+                        done: false,
+                    });
+                    yield Ok(RunTurnChunk {
+                        text: String::new(),
+                        index: 1,
+                        done: true,
+                    });
+                };
+                return Ok(Response::new(Box::pin(stream)));
+            }
+        };
         if let Some(path) = parse_read_directive(&inner.prompt) {
             match broker_read_file(&path).await {
                 Ok(content) => {
@@ -143,6 +162,25 @@ async fn connect_daemon(
         .await
         .map_err(|e| e.to_string())?;
     Ok(RexServiceClient::new(channel))
+}
+
+async fn broker_inference(prompt: &str, mode: &str, model: &str) -> Result<String, String> {
+    let socket = daemon_socket_path();
+    let mut client = connect_daemon(&socket).await?;
+    let response = client
+        .broker_inference(BrokerInferenceRequest {
+            prompt: prompt.to_string(),
+            mode: mode.to_string(),
+            model: model.to_string(),
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .into_inner();
+    if response.ok {
+        Ok(response.text)
+    } else {
+        Err(response.error)
+    }
 }
 
 fn parse_read_directive(prompt: &str) -> Option<String> {

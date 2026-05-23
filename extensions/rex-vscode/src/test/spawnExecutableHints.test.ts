@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   appendCliExecutableNotFoundHint,
   appendDaemonExecutableNotFoundHint,
+  appendStreamSetupHint,
   EXTENSION_LOCAL_E2E_DOC_PATH,
   isExecutableNotFoundError,
 } from "../runtime/spawnExecutableHints";
@@ -34,5 +35,15 @@ describe("spawnExecutableHints", () => {
       "rex.daemonBinaryPath",
     );
     expect(appendDaemonExecutableNotFoundHint(new Error("other"), "other")).toBe("other");
+  });
+
+  it("appends stream setup hints for sidecar and HTTP failures", () => {
+    expect(
+      appendStreamSetupHint("sidecar required but unavailable: startup timeout"),
+    ).toContain("REX_SIDECAR_ENABLED");
+    expect(
+      appendStreamSetupHint("inference runtime configuration: missing base url"),
+    ).toContain("REX_OPENAI_COMPAT");
+    expect(appendStreamSetupHint("unrelated failure")).toBe("unrelated failure");
   });
 });

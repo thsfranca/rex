@@ -53,7 +53,7 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 | `REX_SIDECAR_BINARY` | `rex-sidecar-stub` on `PATH` | Sidecar executable for supervision |
 | `REX_SIDECAR_SOCKET` | `/tmp/rex-sidecar.sock` | UDS for `rex.sidecar.v1` — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) |
 | `REX_SIDECAR_HARNESS` | (none) | `direct` forces in-process inference (CI/tests); not MVP product acceptance |
-| `REX_DAEMON_SOCKET` | `/tmp/rex.sock` | Daemon UDS for stub `BrokerReadFile` during tool turns |
+| `REX_DAEMON_SOCKET` | `/tmp/rex.sock` | Daemon UDS for sidecar `BrokerInference` and `BrokerReadFile` during `RunTurn` |
 
 ### `rex-cli` (client metadata)
 

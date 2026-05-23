@@ -114,17 +114,17 @@ Covered by `cargo test -p rex-daemon mvp_product_path` (also run from `verify_mv
 
 - [x] Build workspace (via preflight script).
 - [x] Sidecar health under daemon supervision (stub spawn + health).
-- [x] `StreamInference` **agent** mode returns `sidecar-stub[agent]` text (product path, mock inference).
+- [x] `StreamInference` **agent** mode uses sidecar **`BrokerInference`** → daemon HTTP (loopback fixture in CI; live `REX_OPENAI_COMPAT_*` for operator dogfood).
 - [x] Brokered **`fs.read`** via prompt `__rex_read:<file>` under `REX_WORKSPACE_ROOT`.
 - [x] Required sidecar missing → clear **sidecar** error at daemon startup (no silent success).
 
 ### Operator-only (live HTTP backend)
 
-Requires a running OpenAI-compatible server (Ollama, LM Studio, etc.) — see [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md):
+Required for IDE dogfood after preflight passes. Use a running OpenAI-compatible server (Ollama, LM Studio, etc.) — see [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md):
 
 - [ ] Configure `REX_OPENAI_COMPAT_*` and `REX_SIDECAR_*` on the daemon process.
 - [ ] Start `rex-daemon`; confirm sidecar health in logs.
-- [ ] Extension: **agent** mode send, cancel, apply with approval.
+- [ ] Extension: **agent** mode send (real model text), cancel, apply with approval.
 - [ ] Stop daemon; confirm sockets cleaned up.
 
 ### Additional hooks

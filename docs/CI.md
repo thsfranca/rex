@@ -161,7 +161,9 @@ chmod +x ./scripts/verify_mvp_local.sh
 ./scripts/verify_mvp_local.sh
 ```
 
-That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), then [`scripts/ci/run_extension_checks.sh`](../scripts/ci/run_extension_checks.sh). It does **not** start `rex-daemon` and does **not** replace the human steps for socket checks, sidecar health, chat UX, or **live HTTP + sidecar** validation ([MVP_SPEC.md](MVP_SPEC.md)). Rust tests set `REX_INFERENCE_RUNTIME=mock` and clear `REX_OPENAI_COMPAT_BASE_URL`. Future CI will use a **stub sidecar** for product-path tests without a live LLM.
+That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), then [`scripts/ci/run_extension_checks.sh`](../scripts/ci/run_extension_checks.sh), then `cargo test -p rex-daemon mvp_product_path`. It does **not** start `rex-daemon` for manual editor steps or **live LLM** dogfood ([MVP_SPEC.md](MVP_SPEC.md)).
+
+**Two tiers:** PR CI uses **`mock`** / harness paths in `uds_e2e` and a **loopback OpenAI-compat HTTP fixture** in `mvp_product_path` (real `http_openai_compat`, no cloud API). Operator dogfood requires **live** `REX_OPENAI_COMPAT_*` (Ollama, LM Studio, etc.).
 
 ## Local verification flow for reliability changes
 

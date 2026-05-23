@@ -10,9 +10,10 @@ use std::{
 use async_stream::stream;
 use rex_proto::rex::v1::rex_service_server::RexService;
 use rex_proto::rex::v1::{
-    BrokerExecShellRequest, BrokerExecShellResponse, BrokerReadFileRequest, BrokerReadFileResponse,
-    BrokerWriteFileRequest, BrokerWriteFileResponse, GetSystemStatusRequest,
-    GetSystemStatusResponse, StreamInferenceRequest, StreamInferenceResponse,
+    BrokerExecShellRequest, BrokerExecShellResponse, BrokerInferenceRequest,
+    BrokerInferenceResponse, BrokerReadFileRequest, BrokerReadFileResponse, BrokerWriteFileRequest,
+    BrokerWriteFileResponse, GetSystemStatusRequest, GetSystemStatusResponse,
+    StreamInferenceRequest, StreamInferenceResponse,
 };
 use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
@@ -25,6 +26,7 @@ use crate::adapters::{active_model_id_from_env, AdapterCapabilities};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
 use crate::broker::{broker_exec_shell, broker_read_file, broker_write_file};
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
+use crate::http_openai_compat::broker_inference_completion;
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::plugins::{
     BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
@@ -150,17 +152,54 @@ impl RexService for RexDaemonService {
         request: Request<BrokerReadFileRequest>,
     ) -> Result<Response<BrokerReadFileResponse>, Status> {
         let path = request.into_inner().path;
+        println!("broker.access_policy=evaluate capability=fs.read path={path}");
         match broker_read_file(&path) {
-            Ok(content) => Ok(Response::new(BrokerReadFileResponse {
-                ok: true,
-                content,
-                error: String::new(),
-            })),
-            Err(err) => Ok(Response::new(BrokerReadFileResponse {
-                ok: false,
-                content: String::new(),
-                error: err.to_string(),
-            })),
+            Ok(content) => {
+                println!("broker.access_policy=allow capability=fs.read path={path}");
+                Ok(Response::new(BrokerReadFileResponse {
+                    ok: true,
+                    content,
+                    error: String::new(),
+                }))
+            }
+            Err(err) => {
+                println!("broker.access_policy=deny capability=fs.read path={path} error={err}");
+                Ok(Response::new(BrokerReadFileResponse {
+                    ok: false,
+                    content: String::new(),
+                    error: err.to_string(),
+                }))
+            }
+        }
+    }
+
+    async fn broker_inference(
+        &self,
+        request: Request<BrokerInferenceRequest>,
+    ) -> Result<Response<BrokerInferenceResponse>, Status> {
+        let inner = request.into_inner();
+        let mode = normalize_mode(&inner.mode);
+        println!(
+            "broker.inference=requested mode={mode} prompt_len={}",
+            inner.prompt.chars().count()
+        );
+        match broker_inference_completion(&inner.prompt).await {
+            Ok(text) => {
+                println!("broker.inference=ok mode={mode}");
+                Ok(Response::new(BrokerInferenceResponse {
+                    ok: true,
+                    text,
+                    error: String::new(),
+                }))
+            }
+            Err(message) => {
+                println!("broker.inference=error mode={mode} error={message}");
+                Ok(Response::new(BrokerInferenceResponse {
+                    ok: false,
+                    text: String::new(),
+                    error: message,
+                }))
+            }
         }
     }
 
@@ -184,6 +223,7 @@ impl RexService for RexDaemonService {
     ) -> Result<Response<Self::StreamInferenceStream>, Status> {
         let request_started = Instant::now();
         let request_id = self.request_sequence.fetch_add(1, Ordering::Relaxed);
+        let decision_id = format!("dec-{request_id}");
         let trace_id = extract_trace_id(request.metadata(), request_id);
         let inner = request.into_inner();
         let prompt = inner.prompt;
@@ -207,9 +247,9 @@ impl RexService for RexDaemonService {
             .expect("context pipeline mutex should not be poisoned")
             .prepare(&context_request, adapter_capabilities);
         let prompt_len = prompt.chars().count();
+        let route_label = resolve_route_label(inference_runtime);
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} route={} stream.lifecycle={} prompt_len={prompt_len}",
-            route.label,
+            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} route={route_label} decision_id={decision_id} stream.lifecycle={} prompt_len={prompt_len}",
             StreamLifecycle::Starting.as_str(),
         );
         println!(
@@ -409,6 +449,28 @@ fn format_cache_status(status: CacheStatus) -> &'static str {
     }
 }
 
+pub(crate) fn resolve_route_label_for(
+    inference_runtime: &str,
+    harness_only: bool,
+    sidecar_product_path: bool,
+) -> String {
+    if harness_only {
+        return format!("harness_direct+{inference_runtime}");
+    }
+    if sidecar_product_path {
+        return format!("sidecar+{inference_runtime}");
+    }
+    format!("daemon_direct+{inference_runtime}")
+}
+
+pub(crate) fn resolve_route_label(inference_runtime: &str) -> String {
+    resolve_route_label_for(
+        inference_runtime,
+        parse_harness_only().is_some(),
+        sidecar_product_path_active(),
+    )
+}
+
 fn sidecar_error_to_status(err: &SupervisorError, required: bool) -> Status {
     let message = err.to_string();
     if required {
@@ -486,7 +548,7 @@ mod tests {
 
     use super::{
         extract_trace_id, format_approval_decision, format_behavior_decision, format_cache_status,
-        PromptDirectives, RexDaemonService,
+        resolve_route_label_for, PromptDirectives, RexDaemonService,
     };
     use crate::adapters::{MissingDoneMockRuntime, MockInferenceRuntime};
     use crate::sidecar_config::SidecarConfig;
@@ -573,6 +635,26 @@ mod tests {
                 reason: "y".to_string(),
             }),
             "checkpoint"
+        );
+    }
+
+    #[test]
+    fn resolve_route_label_sidecar_and_harness_modes() {
+        assert_eq!(
+            resolve_route_label_for("http-openai-compat", false, true),
+            "sidecar+http-openai-compat"
+        );
+        assert_eq!(
+            resolve_route_label_for("mock", true, false),
+            "harness_direct+mock"
+        );
+        assert_eq!(
+            resolve_route_label_for("mock", true, true),
+            "harness_direct+mock"
+        );
+        assert_eq!(
+            resolve_route_label_for("mock", false, false),
+            "daemon_direct+mock"
         );
     }
 

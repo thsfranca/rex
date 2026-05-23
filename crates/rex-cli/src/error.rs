@@ -21,6 +21,10 @@ pub enum CliError {
     StreamInterrupted,
     #[error("daemon stream ended without completion marker")]
     StreamIncomplete,
+    #[error("sidecar required but unavailable: {detail}")]
+    SidecarUnavailable { detail: String },
+    #[error("inference runtime not configured: {detail}")]
+    InferenceConfig { detail: String },
     #[error("failed to write NDJSON to stdout: {0}")]
     Stdout(#[from] io::Error),
 }

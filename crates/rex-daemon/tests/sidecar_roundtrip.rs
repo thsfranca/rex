@@ -105,6 +105,8 @@ async fn sidecar_health_and_run_turn_roundtrip() {
         .filter(|c| !c.done)
         .map(|c| c.text.as_str())
         .collect();
-    assert!(text.contains("sidecar-stub[agent]"));
-    assert!(text.contains("hello sidecar"));
+    assert!(
+        text.contains("[broker.inference error"),
+        "run_turn without daemon should surface broker error, got: {text}"
+    );
 }

@@ -16,6 +16,8 @@ echo "::notice::No build-only checks in this job."
 echo "::endgroup::"
 
 echo "::group::TestExecution"
+# Integration tests (e.g. mvp_product_path) spawn rex-sidecar-stub; build it before the test run.
+cargo build -p rex-sidecar-stub --locked
 if command -v cargo-nextest >/dev/null 2>&1; then
   echo "::notice::Using cargo-nextest (CI or local install)."
   test_cmd=(cargo nextest run --workspace --all-targets --locked)

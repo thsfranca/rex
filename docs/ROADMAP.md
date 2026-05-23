@@ -2,7 +2,7 @@
 
 **Purpose:** track progress until all **Must** release criteria in **[V1_0.md](V1_0.md)** are **Met**. That file is the **only** “done” definition. [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) states intent; [MVP_SPEC.md](MVP_SPEC.md) is Phase 1 **architecture and scope** (no separate completion status). [PRIORITIZATION.md](PRIORITIZATION.md) describes MoSCoW bucketing and light R-ICE scoring.
 
-**Version:** workspace remains **`0.1.0`** (SemVer unstable API) until v1.0 criteria are Met—then tag **`1.0.0`** per [V1_0.md](V1_0.md).
+**Version:** workspace **`1.0.0`** — all Must **RC-*** in [V1_0.md](V1_0.md) are **Met**.
 
 ## Release criteria status
 
@@ -10,15 +10,15 @@ Canonical definitions and evidence: **[V1_0.md](V1_0.md)**. Update status there 
 
 | ID | Status |
 |----|--------|
-| RC-01 | Partial |
-| RC-02 | Partial |
+| RC-01 | Met |
+| RC-02 | Met |
 | RC-03 | Met |
 | RC-04 | Met |
-| RC-05 | Not met |
+| RC-05 | Met |
 | RC-06 | Met |
-| RC-07 | Partial |
-| RC-08 | Partial |
-| RC-09 | Partial |
+| RC-07 | Met |
+| RC-08 | Met |
+| RC-09 | Met |
 | RC-10 | Met |
 
 ## Theme order (dependency mental model)
@@ -42,16 +42,14 @@ flowchart LR
   router --> v1
 ```
 
-## Now — close v1.0 gaps
+## Now — v1.0 Must criteria closed
 
-| Priority | What / why | RC-* | “Done enough” | Where |
-|----------|------------|------|---------------|-------|
-| **Must** | **Centralized AccessPolicy broker** — all sidecar tool paths through one evaluation pipeline; structured deny | RC-05 | Tests; [POLICY_ENGINE.md](POLICY_ENGINE.md) pipeline steps 1–3 | daemon |
-| **Must** | **Routing observability** — `route=` plus **decision id** in logs (beyond env-only hook) | RC-09 | Documented policy + grep-able logs | daemon, docs |
-| **Must** | **Actionable operator failures** (daemon, sidecar, HTTP backend, PATH) | RC-08 | Extension + CLI hints; tests | extension, rex-cli |
-| **Must** | **Doc/script coherence** for operator path and hubs | RC-02 | [MVP_SPEC.md](MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [CONFIGURATION.md](CONFIGURATION.md) match code; `verify_mvp_local.sh` | docs |
-| **Should** | Stream/log polish; long-session extension stress | RC-07, RC-S2 | No silent hang; cancel-to-idle | daemon, extension |
-| **Should** | Extension **`rex.modelId`** on every complete | RC-S1 | Setting passes `--model` | extension |
+All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Should** / **Could** / **Later** below.
+
+| Priority | What / why | RC-* | Notes |
+|----------|------------|------|-------|
+| **Should** | Long-session extension stress | RC-S2 | Cancel-to-idle under load |
+| **Should** | Stream/log polish beyond baseline | RC-07 (Met) | Optional hardening only |
 
 ## Next — after v1.0 or in parallel if healthy
 
@@ -83,7 +81,7 @@ flowchart LR
 | R009 | Extension contract tests (approval-id, probe recovery) | Done |
 | R010 | Broker `fs.write` | Done |
 | R011 | Broker `exec.shell` allowlist | Done |
-| **R012** | **AccessPolicy broker centralization** (RC-05) | **Open** |
+| **R012** | **AccessPolicy broker centralization** (RC-05) | **Done** |
 
 ## Parked in design docs
 

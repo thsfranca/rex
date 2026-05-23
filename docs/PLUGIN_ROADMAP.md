@@ -20,7 +20,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 | **Reference sidecar** | Minimal agent binary (any stack per ADR 0005) | RC-03 Met — `rex-sidecar-stub` |
 | **`StreamInference` routing** | Assistant completions via sidecar turn, not direct daemon HTTP | RC-03 Met |
 | **Brokered HTTP** | Reuse `http_openai_compat` when sidecar requests inference | RC-04 Met |
-| **Brokered `fs.read`** | One tool path for workspace files | RC-04 Met; RC-05 Not met (centralized AccessPolicy broker) |
+| **Brokered `fs.read`** | One tool path for workspace files | RC-04 Met; RC-05 Met (`access_policy.rs`) |
 
 ## Brokered HTTP (daemon mechanism)
 
@@ -65,7 +65,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 | 4 — Proto / CLI knobs | **`model`** / **`mode`** on wire |
 | 5+ | L2, `auto`, sidecar-only routing | Backlog |
 
-**Status:** See [V1_0.md](V1_0.md) **RC-*** (canonical). Open engineering item: **R012** / **RC-05** AccessPolicy broker centralization.
+**Status:** See [V1_0.md](V1_0.md) **RC-*** (canonical). **R012** AccessPolicy broker centralization is **Done**.
 
 ## Later optional tracks
 
