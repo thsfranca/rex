@@ -137,8 +137,20 @@ fn uds_bind_supported() -> bool {
 }
 
 fn stub_binary_path() -> String {
-    if let Ok(path) = std::env::var("CARGO_BIN_EXE_rex-sidecar-stub") {
-        return path;
+    for key in [
+        "CARGO_BIN_EXE_rex-sidecar-stub",
+        "CARGO_BIN_EXE_rex_sidecar_stub",
+    ] {
+        if let Ok(path) = std::env::var(key) {
+            if !path.contains("placeholder:") && PathBuf::from(&path).exists() {
+                return path;
+            }
+        }
+    }
+    if let Some(path) = option_env!("CARGO_BIN_EXE_rex-sidecar-stub") {
+        if !path.contains("placeholder:") && PathBuf::from(path).exists() {
+            return path.to_string();
+        }
     }
     let target_dir = std::env::var("CARGO_TARGET_DIR")
         .map(PathBuf::from)
