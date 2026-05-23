@@ -19,8 +19,10 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 | **`rex.sidecar.v1`** | Control-plane API on UDS; verbs in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | RC-03 Met |
 | **Reference sidecar** | Minimal agent binary (any stack per ADR 0005) | RC-03 Met — `rex-sidecar-stub` |
 | **`StreamInference` routing** | Assistant completions via sidecar turn, not direct daemon HTTP | RC-03 Met |
-| **Brokered HTTP** | Reuse `http_openai_compat` when sidecar requests inference | RC-04 Met |
-| **Brokered `fs.read`** | One tool path for workspace files | RC-04 Met; RC-05 Met (`access_policy.rs`) |
+| **Brokered HTTP** | `BrokerInference` → `http_openai_compat` when sidecar requests inference | RC-04 Met |
+| **Brokered `fs.read`** | Workspace read via broker + centralized access policy | RC-04 Met; RC-05 Met |
+| **Brokered `fs.write`** | Bounded workspace write via broker | Shipped (R010) |
+| **Brokered `exec.shell`** | Allowlisted programs via broker | Shipped (R011) |
 
 ## Brokered HTTP (daemon mechanism)
 
@@ -65,7 +67,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 | 4 — Proto / CLI knobs | **`model`** / **`mode`** on wire |
 | 5+ | L2, `auto`, sidecar-only routing | Backlog |
 
-**Status:** See [V1_0.md](V1_0.md) **RC-*** (canonical). **R012** AccessPolicy broker centralization is **Done**.
+**Status:** See [V1_0.md](V1_0.md) **RC-*** (canonical). All Must **RC-*** are **Met**. Broker **`fs.write`**, **`exec.shell`**, and **`BrokerInference`** are shipped ([AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md)).
 
 ## Later optional tracks
 
