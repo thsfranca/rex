@@ -3,7 +3,11 @@ name = "rex-daemon"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 publish = false
+
+[package.metadata.dist]
+dist = true
 
 [dependencies]
 tokio = { workspace = true, features = ["fs", "io-util", "net", "process", "signal", "time"] }

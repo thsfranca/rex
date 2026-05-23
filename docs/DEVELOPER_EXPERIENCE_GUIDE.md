@@ -99,6 +99,7 @@ Use this review checklist before accepting AI-generated changes:
 Major product features use **one canonical hub doc** under `docs/` plus **pointers** in roadmaps and overviews—not parallel full design lists across files. Rules and hubs live in [DOCUMENTATION.md](DOCUMENTATION.md).
 
 CI and PR expectations:
+- Commit and PR title format: [CONTRIBUTING.md](../CONTRIBUTING.md) (Conventional Commits for release automation).
 - CI gate behavior follows `docs/CI.md`.
 - PR description follows `.github/pull_request_template.md` and stays about this repository and the change (no required coupling to external trackers for now).
 - When documentation for a behavior change lives **only** in another open pull request, add **`Documentation:`** under **Summary** with a link to that PR (`#NNN` or full URL). Keep the docs checklist item accurate; auto-merge stays off until the checklist is complete. The same expectation is summarized in [DOCUMENTATION.md](DOCUMENTATION.md) under **Pull request descriptions**.
