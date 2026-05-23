@@ -10,7 +10,7 @@ REX uses **two independent release planes**: the Rust workspace (`v*` tags) and 
 | Changelog | [`CHANGELOG.md`](../CHANGELOG.md) |
 | Release PR bot | [release-plz](https://release-plz.dev/) — workflow [`.github/workflows/release-plz.yml`](../.github/workflows/release-plz.yml), config [`release-plz.toml`](../release-plz.toml) |
 | Tag | `vX.Y.Z` (for example `v0.1.1`) |
-| Binaries | [cargo-dist](https://axodotdev.github.io/cargo-dist/) — workflow [`.github/workflows/core-release.yml`](../.github/workflows/core-release.yml) |
+| Binaries | [cargo-dist](https://axodotdev.github.io/cargo-dist/) — workflow [`.github/workflows/release.yml`](../.github/workflows/release.yml) |
 | Artifacts | `rex-cli`, `rex-daemon`, `rex-sidecar-stub` per target triple |
 
 ### Maintainer flow
@@ -38,7 +38,7 @@ After changing [`dist-workspace.toml`](../dist-workspace.toml) or dist metadata 
 dist generate
 ```
 
-If `dist generate` recreates `.github/workflows/release.yml`, merge its changes into [`core-release.yml`](../.github/workflows/core-release.yml) (this repo renames the workflow and restricts tags to `v[0-9]+.*`).
+After `dist generate`, re-apply the **Run Rust verify** step in the `plan` job of [`.github/workflows/release.yml`](../.github/workflows/release.yml) (see [CI.md](CI.md)).
 
 ## Extension (rex-vscode)
 

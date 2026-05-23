@@ -153,7 +153,7 @@ Release automation is documented in [RELEASE.md](RELEASE.md). Workflows:
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `release-plz.yml` | Push to `main`, `workflow_dispatch` | Open/update core Release PR; tag `v*` and GitHub Release notes on merge |
-| `core-release.yml` | Push tag `v[0-9]+.*`, PR (dist plan) | Build binary archives with cargo-dist after `run_rust_verify.sh` |
+| `release.yml` | Push version tag, PR (dist plan) | Build binary archives with cargo-dist after `run_rust_verify.sh` on tag pushes |
 | `release-please-extension.yml` | Push to `main`, `workflow_dispatch` | Open/update extension Release PR; tag `rex-vscode-v*` on merge |
 | `extension-release.yml` | Push tag `rex-vscode-v*`, `workflow_dispatch` | Build VSIX and optional marketplace publish |
 | `pr-title-lint.yml` | Pull request | Conventional Commits on PR titles |
@@ -161,18 +161,18 @@ Release automation is documented in [RELEASE.md](RELEASE.md). Workflows:
 ### Release workflow permissions
 
 - **release-plz** and **release-please-extension:** `contents: write`, `pull-requests: write`.
-- **core-release** and **extension-release:** `contents: write` (GitHub Release assets).
+- **release** (cargo-dist) and **extension-release:** `contents: write` (GitHub Release assets).
 
 ### Release failure codes (baseline)
 
 Use the same `CI_SIGNAL` pattern when adding release-specific scripts:
 
 - `RELEASE_BUILD_FAIL` — cargo-dist build failed after verify
-- `RELEASE_VERIFY_FAIL` — `run_rust_verify.sh` failed in core-release plan job
+- `RELEASE_VERIFY_FAIL` — `run_rust_verify.sh` failed in release plan job
 
 ### Maintainer notes
 
-- Re-running `dist generate` may recreate `.github/workflows/release.yml`; merge into `core-release.yml` per [RELEASE.md](RELEASE.md).
+- Re-running `dist generate` recreates `.github/workflows/release.yml`; re-apply the Rust verify step per [RELEASE.md](RELEASE.md).
 - Do not enable auto-merge on Release PRs until [V1_0.md](V1_0.md) gates are satisfied for `1.0.0`.
 
 ## Why this setup
