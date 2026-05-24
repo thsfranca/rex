@@ -41,7 +41,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `workspace` | `root`, `indexer` | Broker root and lexical indexer (`workspace` or `seeded`). |
 | `context` | `max_prompt_tokens`, `max_context_tokens` | Context pipeline budgets. |
 | `cache` | `bypass` | L1 / prefix cache bypass. |
-| `broker` | `shell_allowlist` | Allowed `exec.shell` programs. |
+| `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
 | `agent` | `approvals_enabled`, `max_tool_steps` | Agent-mode approval gate. |
 | `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `otlp`, `store` | Economics telemetry, local store, OTLP export — **planned**; see [Observability (planned)](#observability-planned). |
 

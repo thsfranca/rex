@@ -143,7 +143,7 @@ Ship before **`rex-agent`** dogfood (**R017–R018**). Design: [DEVELOPMENT_ASSI
 
 ### R020 — Broker access policy completion
 
-**Status: planned.** Completes [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md) after **R012** (RC-05 read/list protected paths).
+**Status: Done.** Completes [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md) after **R012** (RC-05 read/list protected paths).
 
 | Outcome | Notes |
 |---------|--------|
@@ -185,7 +185,7 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | R013 | Platform enablers | Done |
 | R014 | Unified `rex` CLI | Done |
 | R015 | JSON config + proto install | Done |
-| R020 | Broker access policy completion | Should |
+| R020 | Broker access policy completion | Done |
 | R021 | Turn correlation Phase 1b | Done |
 | R022 | Workspace binding (daemon fail-closed) | Should |
 | R017 | `rex-agent` scaffold | Done (broker-only `RunTurn`; LangGraph **R018**) |

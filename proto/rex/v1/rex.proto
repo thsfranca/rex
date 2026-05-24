@@ -34,6 +34,8 @@ message StreamInferenceRequest {
 
 message BrokerReadFileRequest {
   string path = 1;
+  // Optional. Empty normalizes to "ask" on the daemon.
+  string mode = 2;
 }
 
 message BrokerReadFileResponse {
@@ -45,6 +47,8 @@ message BrokerReadFileResponse {
 message BrokerListDirRequest {
   // Relative directory under workspace; empty means workspace root.
   string path = 1;
+  // Optional. Empty normalizes to "ask" on the daemon.
+  string mode = 2;
 }
 
 message DirEntry {
@@ -61,6 +65,8 @@ message BrokerListDirResponse {
 message BrokerWriteFileRequest {
   string path = 1;
   string content = 2;
+  // Optional. Empty normalizes to "ask" on the daemon.
+  string mode = 3;
 }
 
 message BrokerWriteFileResponse {
@@ -70,6 +76,8 @@ message BrokerWriteFileResponse {
 
 message BrokerExecShellRequest {
   string command = 1;
+  // Optional. Empty normalizes to "ask" on the daemon.
+  string mode = 2;
 }
 
 message BrokerExecShellResponse {

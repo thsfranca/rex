@@ -62,7 +62,7 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** scaffold is shipped (**R017** Done).
 
-**Priority rationale:** **R015** and **R017** are **Done**. Next: **R020** and **R021** in parallel (daemon prerequisites), then **R018** (LangGraph), **R022** daemon workspace fail-closed alongside **R019** extension integration. **R016** remains **Could** after **R019**. **RC-S2** may run in parallel (extension-only blast radius).
+**Priority rationale:** **R015**, **R017**, **R020**, **R021**, **R022**, and **R019** are **Done**. Next: **R018** (LangGraph). **R016** remains **Could** after **R019**. **RC-S2** may run in parallel (extension-only blast radius).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
@@ -70,9 +70,9 @@ Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. De
 | 2 | Platform enablers | **R013** | Done — `BrokerListDir`, `RunTurn.model`, stream passthrough |
 | 3 | Unified `rex` CLI | **R014** | Done — single `rex` binary; subcommands |
 | 4 | Config + proto SDK | **R015** | Done — JSON config, `rex proto install`, `proto.gen_root` |
-| 5 | Broker access policy completion | **R020** | Mode × capability matrix; write/exec protected paths; `max_tool_result_bytes` — [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) |
-| 6 | Turn correlation Phase 1b | **R021** | Populate `turn_id`, `context_revision` on `RunTurn` — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
-| 7 | Workspace binding (daemon) | **R022** | Fail-closed `workspace.root`; harness cwd fallback documented — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
+| 5 | Broker access policy completion | **R020** | Done — mode × capability matrix; write/exec protected paths; `max_tool_result_bytes` — [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) |
+| 6 | Turn correlation Phase 1b | **R021** | Done — `turn_id`, `context_revision` on `RunTurn` — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
+| 7 | Workspace binding (daemon) | **R022** | Done — fail-closed `workspace.root`; harness cwd fallback — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
 | 8 | `rex-agent` scaffold | **R017** | Done — gRPC server + broker client ([sidecars/rex-agent/README.md](../sidecars/rex-agent/README.md)) |
 | 9 | LangGraph agent core | **R018** | ReAct loop, broker adapters |
 | 10 | Integration / E2E | **R019** | Extension workspace + defaults; client hints; live-model E2E — [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md#r019-integration--e2e-acceptance) |
@@ -146,9 +146,9 @@ flowchart TD
 | **R017** | `rex-agent` scaffold (gRPC + broker client) | Done |
 | **R018** | LangGraph agent core (ReAct, broker tools) | Should |
 | **R019** | Integration / E2E (operator path, extension defaults) | Should |
-| **R020** | Broker access policy completion (ADR 0013; follows R012) | Should — [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) |
-| **R021** | Turn correlation Phase 1b (`turn_id`, `context_revision`) | Done — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
-| **R022** | Workspace binding product path (fail-closed daemon) | Should — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
+| **R020** | Broker access policy completion (ADR 0013; follows R012) | **Done** — [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) |
+| **R021** | Turn correlation Phase 1b (`turn_id`, `context_revision`) | **Done** — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
+| **R022** | Workspace binding product path (fail-closed daemon) | **Done** — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
 
 ## Parked in design docs
 

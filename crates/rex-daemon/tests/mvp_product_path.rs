@@ -292,6 +292,36 @@ async fn mvp_product_path_sidecar_stream_and_brokered_read() {
         "expected access policy deny for .env, got: {deny_text}"
     );
 
+    let ask_write_prompt = "inspect __rex_write:deny-out.txt\nblocked".to_string();
+    let ask_write_text = timeout(
+        STREAM_TIMEOUT,
+        collect_stream_text(&mut client, &ask_write_prompt, "ask", ""),
+    )
+    .await
+    .expect("ask write deny stream timed out");
+    assert!(
+        ask_write_text.contains("fs.write error")
+            || ask_write_text.to_ascii_lowercase().contains("mode_denied"),
+        "expected ask mode to deny fs.write, got: {ask_write_text}"
+    );
+    assert!(
+        !ask_write_text.contains("[fs.write:deny-out.txt] ok"),
+        "ask mode must not succeed fs.write, got: {ask_write_text}"
+    );
+
+    let plan_exec_prompt = "inspect __rex_exec:echo blocked".to_string();
+    let plan_exec_text = timeout(
+        STREAM_TIMEOUT,
+        collect_stream_text(&mut client, &plan_exec_prompt, "plan", ""),
+    )
+    .await
+    .expect("plan exec deny stream timed out");
+    assert!(
+        plan_exec_text.contains("exec.shell error")
+            || plan_exec_text.to_ascii_lowercase().contains("mode_denied"),
+        "expected plan mode to deny exec.shell, got: {plan_exec_text}"
+    );
+
     let list_prompt = "inspect __rex_list:".to_string();
     let list_text = timeout(
         STREAM_TIMEOUT,
