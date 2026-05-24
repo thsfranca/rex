@@ -61,7 +61,7 @@ export REX_SIDECAR_ENABLED=1
 
 Managed mode (planned implementation): same fields via JSON — see [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
 
-**Observability (planned):** enable daemon OTLP with `REX_OBS_ENABLED=1` and point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md).
+**Observability (planned):** set `observability.enabled: true` and `observability.otlp` in merged JSON under `$REX_ROOT` — [CONFIGURATION.md](CONFIGURATION.md#observability-planned), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md). Only **`REX_ROOT`** is a bootstrap env var for layout.
 
 ### Working modes
 

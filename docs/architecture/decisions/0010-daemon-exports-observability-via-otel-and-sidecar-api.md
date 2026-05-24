@@ -28,7 +28,7 @@ Rejected alternatives considered:
 ## Decision
 
 1. **Daemon OTLP export (planned implementation)**  
-   When `REX_OBS_ENABLED=1`, `rex-daemon` embeds the OpenTelemetry SDK and pushes **metrics** via **OTLP** using standard `OTEL_EXPORTER_OTLP_*` configuration. Stdout grep is retained.
+   When **`observability.enabled`** is true in merged JSON ([CONFIGURATION.md](../../CONFIGURATION.md)), `rex-daemon` embeds the OpenTelemetry SDK and pushes **metrics** via **OTLP** using `observability.otlp.endpoint` and `observability.otlp.protocol`. Stdout grep is retained. Rex does not use `REX_OBS_*` or `OTEL_EXPORTER_OTLP_*` env vars for product configuration.
 
 2. **`SidecarObservabilityService` on daemon UDS (planned implementation)**  
    Sidecars call **`SidecarObservabilityService`** over the **daemon UDS** (`REX_DAEMON_SOCKET`), not the sidecar control-plane socket. RPCs: `RegisterMetric`, `RecordMetric`, `GetEconomicsSnapshot`, `ReportResourceStats`. The daemon aggregates sidecar points and exports them as `rex.sidecar.custom.*` on the same OTLP stream as daemon economics.
@@ -40,7 +40,7 @@ Rejected alternatives considered:
    OTLP is the primary interoperability surface. Optional Prometheus scrape from Rex is **deferred** unless an operator requests it.
 
 5. **CLI helpers (planned, not shipped)**  
-   Future `rex-cli obs env|doctor|catalog` may assist operators; they are documentation targets only until implemented.
+   Future `rex obs config|doctor|catalog` may assist operators (print merged JSON, health checks, instrument list); documentation targets only until implemented.
 
 | Do | Do not |
 |----|--------|
@@ -53,10 +53,11 @@ Rejected alternatives considered:
 
 - **Positive:** One reviewable export contract; operators bring familiar tooling; sidecar metrics stay brokered and label-consistent with daemon economics.
 - **Negative:** Daemon gains OTel SDK complexity; sidecar authors must use daemon UDS for observability RPCs (distinct from sidecar broker socket).
-- **Risks / follow-up:** PII must stay out of exported logs/traces by default; trace correlation between daemon and sidecar needs explicit propagation design in a later phase. Implementation PRs (proto, handlers, OTel wiring) follow this ADR.
+- **Risks / follow-up:** PII must stay out of exported logs/traces by default; trace correlation between daemon and sidecar needs explicit propagation design in a later phase. Implementation PRs (proto, handlers, OTel wiring) follow this ADR. Local economics persistence is accepted in [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) — complementary to OTLP, not a rejected pattern.
 
 ## Related
 
 - [ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md) · [ADR 0008](0008-dedicated-sidecar-control-plane-api.md)
-- [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md) · [OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md) · [SIDECAR_RUNTIME.md](../../SIDECAR_RUNTIME.md)
+- [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md)
+- [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md) · [OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md) · [CONFIGURATION.md](../../CONFIGURATION.md) · [SIDECAR_RUNTIME.md](../../SIDECAR_RUNTIME.md)
 - [README.md](README.md) (index)

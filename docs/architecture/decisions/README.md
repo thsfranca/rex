@@ -25,6 +25,8 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0017](0017-single-active-sidecar-phase-1.md) | Single-active sidecar for Phase 1 | Accepted |
 | [0018](0018-gateway-first-multi-provider-inference.md) | Gateway-first multi-provider inference (LiteLLM primary) | Accepted (design); partial supersede by 0019 |
 | [0019](0019-inference-gateway-opt-in-litellm.md) | Inference Gateway — opt-in LiteLLM, daemon-controlled | Accepted (design) |
+| [0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) | OpenTelemetry GenAI semconv plus Rex pipeline metrics | Accepted |
+| [0021](0021-rex-owned-economics-store-byot-visualization.md) | Rex-owned economics store; BYOT visualization | Accepted |
 
 ## How to use
 
