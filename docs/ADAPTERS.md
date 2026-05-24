@@ -9,7 +9,7 @@ Product stance: **`rex-daemon` owns economics, policy, and brokering** ([ADR 000
 - **MVP broker backend:** OpenAI-compatible **HTTP** chat/completions (`http_openai_compat`).
 - **Harness / legacy:** in-process **mock** and optional **Cursor CLI** subprocess — CI and migration; **not** MVP product acceptance without sidecar.
 - Trace optimization levers: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) · [CACHING.md](CACHING.md).
-- **Multi-provider (Anthropic, OpenAI, local):** recommended **LiteLLM** gateway on the OpenAI-compat adapter — [Multi-provider gateway via LiteLLM](#multi-provider-gateway-via-litellm-recommended); native Anthropic Messages API is **planned** — [Direct Anthropic Messages API](#direct-anthropic-messages-api-planned--secondary). Strategy: [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md).
+- **Multi-provider (Anthropic, OpenAI, local):** **default API** is OpenAI-compat toward **LiteLLM** — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [Multi-provider gateway via LiteLLM](#multi-provider-gateway-via-litellm-default-api); native Anthropic Messages API is **planned** — [Direct Anthropic Messages API](#direct-anthropic-messages-api-planned--secondary). Strategy: [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md).
 
 ## Terminology: protocol vs vendor
 
@@ -69,7 +69,7 @@ Runtime id remains **`http-openai-compat`** (`REX_INFERENCE_RUNTIME`). Config ke
 
 | Backend | Typical `REX_OPENAI_COMPAT_BASE_URL` | Notes |
 |---------|--------------------------------------|-------|
-| **LiteLLM (multi-provider)** | `http://127.0.0.1:4000/v1` (or your proxy host) | **Recommended** for Anthropic + OpenAI — [Multi-provider gateway via LiteLLM](#multi-provider-gateway-via-litellm-recommended) |
+| **LiteLLM (multi-provider)** | `http://127.0.0.1:4000/v1` (managed or external) | **Default API** for Anthropic + OpenAI + Ollama via gateway — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
 | Ollama (local) | `http://127.0.0.1:11434/v1` | Local OSS |
 | LM Studio | `http://127.0.0.1:1234/v1` | Local OSS |
 | OpenAI API (direct) | `https://api.openai.com/v1` (+ `REX_OPENAI_COMPAT_API_KEY`) | Secondary — same adapter, direct vendor URL |
@@ -80,20 +80,21 @@ Runtime id remains **`http-openai-compat`** (`REX_INFERENCE_RUNTIME`). Config ke
 - LiteLLM: see [CONFIGURATION.md](CONFIGURATION.md#operator-profile-litellm-anthropic-and-other-providers).
 - Automated: `http_openai_compat` unit test with in-process TCP SSE stub; UDS e2e uses **`mock`** — [CI.md](CI.md).
 
-## Multi-provider gateway via LiteLLM (recommended)
+## Multi-provider gateway via LiteLLM (default API)
 
-**Status:** `documented` — operator-ready; no new runtime id.
+**Status:** `accepted` (design) — [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md). Hub: [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md). Shipped `http_openai_compat` unchanged; gateway supervisor **planned**.
 
 ### Purpose
 
-Use a single OpenAI-compat broker URL where **LiteLLM** holds provider keys (Anthropic, OpenAI, etc.) and routes by **`model`**. Rex keeps daemon-first policy; the sidecar still calls **`BrokerInference`** only.
+Use a single OpenAI-compat broker URL where **LiteLLM** holds provider keys (Anthropic, OpenAI, etc.), discovers **local Ollama models** on `/v1/models`, and routes by **`model`**. Rex keeps daemon-first policy; the sidecar still calls **`BrokerInference`** only.
 
 ### Scope
 
 | In | Out |
 |----|-----|
-| Env/JSON mapping, model hint → LiteLLM, secrets on gateway host | Embedding LiteLLM inside `rex-daemon` |
-| Verification steps for Claude via LiteLLM | Replacing the sidecar agent loop |
+| Default API documentation; opt-in **managed** gateway (daemon spawn/stop/health) | Embedding LiteLLM inside `rex-daemon` |
+| Env/JSON mapping, model hint → LiteLLM, secrets on gateway host | Gateway as `rex.sidecar.v1` plugin |
+| Ollama auto-discovery via LiteLLM template | Replacing the sidecar agent loop |
 | Broker error intent catalog (below) | Stable Rust error enums (until [ERROR_HANDLING.md](ERROR_HANDLING.md) exists) |
 
 ### Boundaries

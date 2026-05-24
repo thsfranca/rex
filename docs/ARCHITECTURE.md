@@ -155,7 +155,7 @@ Ownership of chat transcript, turn assembly (`TurnContext`), workspace binding, 
 | `rex.v1` gRPC | `implemented` |
 | NDJSON CLI contract | `implemented` — [EXTENSION.md](EXTENSION.md) |
 | MCP (or equivalent) for tools | `planned` — **approved direction:** MCP stacks **primarily** in the **isolated sidecar**; host-affecting work **brokered** sidecar → daemon ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix). Remote doc resources vs Rex knowledge bundles: [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md). Formal ADR when implementation is scheduled. |
-| HTTP OpenAI-compat via external gateway (LiteLLM recommended for multi-provider) | `documented` operator profile — [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md), [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-recommended); optional per [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
+| HTTP OpenAI-compat via LiteLLM (default API; opt-in managed gateway) | `accepted` design — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md); external profile [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) |
 | Native Anthropic Messages API | `planned` — [ADAPTERS.md](ADAPTERS.md#direct-anthropic-messages-api-planned--secondary) |
 
 ## Observability

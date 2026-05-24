@@ -23,7 +23,8 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0015](0015-agent-knowledge-bundles.md) | Agent knowledge bundles | Accepted |
 | [0016](0016-mcp-in-sidecar-envelope.md) | MCP in sidecar envelope | Accepted |
 | [0017](0017-single-active-sidecar-phase-1.md) | Single-active sidecar for Phase 1 | Accepted |
-| [0018](0018-gateway-first-multi-provider-inference.md) | Gateway-first multi-provider inference (LiteLLM primary) | Accepted (design) |
+| [0018](0018-gateway-first-multi-provider-inference.md) | Gateway-first multi-provider inference (LiteLLM primary) | Accepted (design); partial supersede by 0019 |
+| [0019](0019-inference-gateway-opt-in-litellm.md) | Inference Gateway — opt-in LiteLLM, daemon-controlled | Accepted (design) |
 
 ## How to use
 

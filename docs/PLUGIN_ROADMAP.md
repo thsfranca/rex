@@ -27,7 +27,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 ## Brokered HTTP (daemon mechanism)
 
 - Env: **`REX_OPENAI_COMPAT_*`** — [CONFIGURATION.md](CONFIGURATION.md). Keys name the **OpenAI-compat protocol**, not OpenAI-the-vendor — [ADAPTERS.md](ADAPTERS.md#terminology-protocol-vs-vendor).
-- **Multi-provider (recommended):** LiteLLM (or equivalent) gateway URL — [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-recommended), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md).
+- **Multi-provider (default API):** LiteLLM gateway — opt-in managed or external URL — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md).
 - **Not** the product agent: the sidecar requests inference; the daemon executes the HTTP adapter.
 - **Legacy:** `REX_INFERENCE_RUNTIME=cursor-cli` subprocess — non-MVP.
 - CI: **`mock`** or stub sidecar — [CI.md](CI.md).
@@ -66,7 +66,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 | 2 — HTTP OpenAI-compat | Broker backend for sidecar — **implemented** |
 | 3 — L1 cache | **`ask`** only — [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | 4 — Proto / CLI knobs | **`model`** / **`mode`** on wire |
-| 4b — LiteLLM multi-provider profile (docs) | Operator path for Anthropic + OpenAI via gateway — [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-recommended) |
+| 4b — Inference Gateway design (docs) | Default API + opt-in managed LiteLLM — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md) |
 | 5+ | L2 semantic cache | **Could** — [ROADMAP.md](ROADMAP.md) Later, [CACHING.md](CACHING.md) |
 | 5+ | Difficulty-based routing cascade | **Could** — [ROADMAP.md](ROADMAP.md) Next, [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
 | 5+ | `auto` mode, sidecar-only routing | Backlog — see [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) Later optional tracks |

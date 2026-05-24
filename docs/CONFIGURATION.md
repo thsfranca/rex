@@ -127,7 +127,7 @@ rex config validate
 rex daemon
 ```
 
-For **Anthropic and other cloud providers** via one broker URL, use the [LiteLLM operator profile](#operator-profile-litellm-anthropic-and-other-providers) below.
+For **Anthropic, OpenAI, and local Ollama** via one broker URL, use the [Inference Gateway](#inference-gateway-design) (`managed` or `external`) or the [LiteLLM operator profile](#operator-profile-litellm-anthropic-and-other-providers) below.
 
 Example HTTP backend (Ollama) in `$REX_ROOT/config.json`:
 
@@ -143,9 +143,38 @@ Example HTTP backend (Ollama) in `$REX_ROOT/config.json`:
 
 CI and unit tests set `REX_ROOT` to a temp dir and write `config.json` with `inference.runtime: "mock"` and `sidecars.harness: "direct"` — see [CI.md](CI.md).
 
+## Inference Gateway (design)
+
+**Status:** `accepted` (design) — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md). Implementation planned.
+
+### Purpose
+
+Opt-in **`inference.gateway.mode: managed`** so `rex-daemon` spawns and controls a local LiteLLM proxy; **`external`** keeps an operator-run URL; **`disabled`** leaves gateway off (direct `openai_compat.base_url` or `mock`).
+
+### Example (`managed` — design intent)
+
+```json
+{
+  "inference": {
+    "runtime": "http-openai-compat",
+    "gateway": {
+      "mode": "managed",
+      "port": 4000,
+      "ollama": { "enabled": true, "api_base": "http://127.0.0.1:11434" }
+    },
+    "openai_compat": {
+      "model": "claude-sonnet-4-20250514",
+      "timeout_secs": 120
+    }
+  }
+}
+```
+
+Effective `openai_compat.base_url` becomes `http://127.0.0.1:4000/v1` when managed (unless override allowed). Secrets: `$REX_ROOT/gateway/.env` (gitignored). See hub for full field table and Ollama discovery template.
+
 ## Operator profile: LiteLLM (Anthropic and other providers)
 
-**Status:** operator-ready on existing `http-openai-compat` runtime — no Rex code change. Design: [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-recommended), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md).
+**Status:** operator-ready on existing `http-openai-compat` runtime when gateway is **external**. Design: [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-default-api), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md).
 
 Run LiteLLM (or your deployment) with Anthropic and OpenAI keys in **LiteLLM’s** config. Rex only needs the OpenAI-compat surface LiteLLM exposes.
 
