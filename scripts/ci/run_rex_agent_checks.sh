@@ -34,6 +34,7 @@ export PYTHONPATH="$AGENT_DIR/src:$("$REX_BIN" proto path):${PYTHONPATH:-}"
 python3 -m pytest "$AGENT_DIR/tests" -q
 
 export REX_AGENT_BINARY="${REX_AGENT_BINARY:-$AGENT_DIR/rex-agent}"
+export REX_RUN_AGENT_SMOKE=1
 cargo test -p rex-daemon --test agent_scaffold_smoke agent_ --locked -- --nocapture
 
 echo "run_rex_agent_checks: OK"

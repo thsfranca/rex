@@ -67,6 +67,14 @@ mod sidecar_config;
 #[path = "../src/supervisor.rs"]
 mod supervisor;
 
+/// Set by `scripts/ci/run_rex_agent_checks.sh`. Skips Python/proto setup during workspace `cargo nextest`.
+fn agent_smoke_enabled() -> bool {
+    matches!(
+        std::env::var("REX_RUN_AGENT_SMOKE").as_deref(),
+        Ok("1") | Ok("true") | Ok("yes")
+    )
+}
+
 const READINESS_TIMEOUT: Duration = Duration::from_secs(12);
 const RUN_TIMEOUT: Duration = Duration::from_secs(8);
 const STREAM_TIMEOUT: Duration = Duration::from_secs(8);
@@ -262,6 +270,10 @@ fn install_proto_stubs(rex_root: &std::path::Path) {
 #[tokio::test]
 #[serial]
 async fn agent_sidecar_health_and_broker_error_without_daemon() {
+    if !agent_smoke_enabled() {
+        eprintln!("skipping agent smoke: set REX_RUN_AGENT_SMOKE=1 (see scripts/ci/run_rex_agent_checks.sh)");
+        return;
+    }
     if !uds_bind_supported() {
         eprintln!("skipping agent scaffold: UDS bind not permitted");
         return;
@@ -301,6 +313,10 @@ async fn agent_sidecar_health_and_broker_error_without_daemon() {
 #[tokio::test]
 #[serial]
 async fn agent_product_path_stream_inference_via_supervisor() {
+    if !agent_smoke_enabled() {
+        eprintln!("skipping agent smoke: set REX_RUN_AGENT_SMOKE=1 (see scripts/ci/run_rex_agent_checks.sh)");
+        return;
+    }
     if !uds_bind_supported() {
         eprintln!("skipping agent product path: UDS bind not permitted");
         return;
