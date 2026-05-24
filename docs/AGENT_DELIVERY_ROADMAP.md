@@ -47,11 +47,13 @@ flowchart TB
 | Python sidecar | Graph state, mode routing, tool-loop logic, streaming text to daemon |
 | LangGraph | Graph structure, iteration limits (implementation detail) |
 
+**Capability contracts** (what the daemon assembles vs what the sidecar owns): [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) and [sidecars/rex-agent/DESIGN.md](../sidecars/rex-agent/DESIGN.md).
+
 ## Product agent (`rex-agent`)
 
 | Item | Planned shape |
 |------|----------------|
-| Location | `sidecars/rex-agent/` in monorepo |
+| Location | `sidecars/rex-agent/` in monorepo — [DESIGN.md](../sidecars/rex-agent/DESIGN.md) |
 | Binary name | **`rex-agent`** (LangGraph is internal only) |
 | LLM | **Broker-only** — `BrokerInference` via daemon; no direct OpenAI keys in sidecar |
 | Tools | Broker RPCs: `fs.read`, `fs.list`, `fs.write`, `exec.shell` (mode-gated) |

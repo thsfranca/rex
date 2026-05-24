@@ -12,7 +12,7 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention
 
 ## Status
 
-**planned** — design bet. No ADR until a storage location or broker API fork is accepted.
+**design accepted** — [ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md). Implementation deferred. Integrator: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md).
 
 ## Scope
 
@@ -141,15 +141,16 @@ Names for discussion — no proto or RPC definitions here.
 
 Stream and tool contracts stay stable until a deliberate `rex.v1` or sidecar API change elsewhere.
 
-## Open questions
+## Open questions → decided / deferred
 
-| Question | Why it matters |
-|----------|----------------|
-| Single canonical store vs federated bundles? | Ops complexity vs team isolation |
-| Who edits knowledge — CLI, files, UI, sync only? | Authoring ergonomics |
-| Rex-native broker vs MCP-only? | Duplication vs ecosystem |
-| Multi-workspace isolation? | Shared daemon, separate stores |
-| Relationship to layered prompts? | Avoid duplicate system rules |
+| Question | Status | Decision / deferral |
+|----------|--------|---------------------|
+| Rex-native broker vs MCP-only? | **Decided** | Rex-native `KnowledgeBroker` / `KnowledgeRetrieval`; MCP optional transport ([ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md)) |
+| Relationship to layered prompts? | **Decided** | Separate pipeline stages; prompts = rules, knowledge = corpora |
+| Drift (bundle vs git pointer) | **Decided** | `fail-closed` in `agent`; `prefer-git` in `ask` |
+| Single canonical store vs federated bundles? | **Deferred** | Start one bundle per workspace |
+| Who edits knowledge? | **Deferred** | CLI / file drop first |
+| Multi-workspace isolation? | **Deferred** | Separate bundle namespace per workspace root |
 
 ## Cross-links
 

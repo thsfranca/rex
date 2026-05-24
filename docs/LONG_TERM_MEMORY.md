@@ -11,7 +11,20 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention
 
 ## Positioning
 
-[`rex-daemon`](../crates/rex-daemon/) remains the economics and policy envelope for agent workloads ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). **Chat transcript** lives with the extension or client for UX; durable **project memory** (schemas, tooling, persistence) sits on the Rex side once implemented. Until then, references in architecture and roadmap stay **planned**.
+[`rex-daemon`](../crates/rex-daemon/) remains the economics and policy envelope for agent workloads ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). **Chat transcript** lives with the extension or client for UX; durable **project memory** sits on the Rex side per [ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md). Integrator hub: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md).
+
+## Accepted decisions (ADR 0014)
+
+| Topic | Decision |
+|-------|----------|
+| Scope | Workspace-bound; episodic vs semantic split |
+| Ingestion | Exported client/sidecar events — not daemon transcript DB |
+| Pipeline | `ProjectMemoryRetrieval` after knowledge, before lexical retrieval |
+| Budget | 10% of context tokens default |
+| RPC / shipping | No `rex.v1` RPC until benchmark proves net token reduction |
+| Storage | `sqlite` or files — implementation bet |
+
+Remaining rows in **Design bets — uncommitted** below are hypotheses until implementation scheduling.
 
 ## Vision (optimization-first)
 

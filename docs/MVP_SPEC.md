@@ -18,6 +18,7 @@
 | CLI | Unified **`rex`** binary (**R014** — shipped) | JSON config + `rex proto install` (**R015**) |
 | Config | Environment variables ([CONFIGURATION.md](CONFIGURATION.md)) | JSON config + `rex proto install` (**R015**) |
 | v1.0 **RC-*** | **Met** on stub + platform path | Product agent evidence deferred to **R019** |
+| Capability design | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) + ADRs 0011–0017 | **R019** sets `REX_WORKSPACE_ROOT` from editor workspace |
 
 ## Architecture
 

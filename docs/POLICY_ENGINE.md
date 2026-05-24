@@ -68,11 +68,11 @@ Single conceptual path per request (sidecar and in-daemon adapters converge on d
 
 Sidecar **intent** (model tier, tool RPC) is not sufficient for cache keys or spend attribution — **daemon-resolved execution** wins per [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
-## Access policy broker (planned)
+## Access policy broker (design accepted)
 
 | Responsibility | Owner |
 |----------------|--------|
-| Evaluate `fs.*` / `exec.*` / `net.*` requests from sidecar API | Daemon `AccessPolicy` (name TBD) |
+| Evaluate `fs.*` / `exec.*` / `net.*` requests from sidecar API | Daemon `AccessPolicy` — [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md) |
 | Run approved actions on host | Executor layer (subprocess, scoped FS) |
 | Deny with structured errors | Same surface as gRPC policy errors |
 

@@ -73,7 +73,7 @@ Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. To
 | 5 | `rex-agent` scaffold | **R017** | gRPC server + broker client |
 | 6 | LangGraph agent core | **R018** | ReAct loop, broker adapters |
 | 7 | Integration / E2E | **R019** | Operator path, extension defaults, RC evidence when proven |
-| 8 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (**Could** — open decision) |
+| 8 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (**Could** — deferred Phase 1, [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md)) |
 
 ```mermaid
 flowchart TD
@@ -129,7 +129,7 @@ flowchart TD
 | **R013** | Platform enablers (`BrokerListDir`, `RunTurn.model`, stream passthrough) | Done |
 | **R014** | Unified `rex` CLI (replace `rex-cli` / `rex-daemon`) | Done |
 | **R015** | JSON config + `rex proto install` + `proto.gen_root` | Should |
-| **R016** | Multi-active sidecar broadcast | Could |
+| **R016** | Multi-active sidecar broadcast | Could — deferred Phase 1 per [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md) |
 | **R017** | `rex-agent` scaffold (gRPC + broker client) | Should |
 | **R018** | LangGraph agent core (ReAct, broker tools) | Should |
 | **R019** | Integration / E2E (operator path, extension defaults) | Should |
@@ -143,8 +143,10 @@ flowchart TD
 | **JSON config** via **R015** (`$REX_HOME/config.json`, `rex config`, `proto.gen_root`) | R013–R014 landed or in parallel | [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [CONFIGURATION.md](CONFIGURATION.md) |
 | **Node gRPC `StreamInference`** in extension | New ADR supersedes hybrid policy | [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
 | **Large** multi-plugin orchestration | Single-plugin supervision stable | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
-| **Long-term / project memory** | Economics path clear | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
-| **Agent knowledge** (curated docs for AI, remote/MCP) | Operator pain or bundle design accepted | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
+| **Long-term / project memory** | ADR 0014 accepted; implement after benchmark gate | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md) |
+| **Agent knowledge** (curated docs for AI, remote/MCP) | ADR 0015 accepted; implement after R015 | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md), [ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md) |
+| **MCP in sidecar** | ADR 0016 accepted; implementation deferred | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
+| **Development assistance capabilities** (turn contract, budget pipeline) | Design hub + ADRs 0011–0017 | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | **Observability suite + economics validation** | Design documented; implementation after OTLP/API PRs | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
 | **VM/container sidecar envelope** (server/fleet) | Linux deployment needs stronger isolation | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 

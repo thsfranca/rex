@@ -134,13 +134,7 @@ sequenceDiagram
 
 ## Data and state
 
-| Data | Lifetime | Notes |
-|---|---|---|
-| Stream buffers | Ephemeral — per request. | Owned by goroutine/async task in daemon. |
-| L1 cache entries | Ephemeral — in-process LRU. | Keying: [CACHING.md](CACHING.md). **`agent`** excluded — [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md). |
-| Prefix cache segments | Ephemeral — pipeline | `plugins.rs`; TTL/bypass semantics in CONTEXT_EFFICIENCY. |
-| Chat transcript | Extension / client | Not authoritative for REX policy. |
-| **Project memory** (decisions, repo map fingerprints) | **planned** persistent store | Hub: [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md). Out-of-chat; workspace-scoped; economics row in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md). |
+Ownership of chat transcript, turn assembly (`TurnContext`), workspace binding, session scratch, project memory, and agent knowledge is defined in **[DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md)** (with ADRs 0011–0017). Ephemeral runtime artifacts: stream buffers and L1 cache per request ([CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md)); prefix cache segments in the context pipeline ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)).
 
 ## Security viewpoint (STRIDE-oriented)
 
