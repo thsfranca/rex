@@ -188,7 +188,7 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | R020 | Broker access policy completion | Should |
 | R021 | Turn correlation Phase 1b | Should |
 | R022 | Workspace binding (daemon fail-closed) | Should |
-| R017 | `rex-agent` scaffold | Should |
+| R017 | `rex-agent` scaffold | Done (broker-only `RunTurn`; LangGraph **R018**) |
 | R018 | LangGraph agent core | Should |
 | R019 | Integration / E2E | Should |
 | R016 | Multi-active broadcast | Could |

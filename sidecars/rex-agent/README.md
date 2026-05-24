@@ -1,0 +1,45 @@
+# rex-agent
+
+Python sidecar implementing `rex.sidecar.v1` for the REX product agent program.
+
+**R017 scaffold:** gRPC server on a Unix socket, broker-only `BrokerInference`, incremental `RunTurn` streaming. LangGraph and tool loops are **R018**.
+
+## Prerequisites
+
+- Python 3.10+
+- `rex` CLI on `PATH` (from this monorepo)
+- `grpcio-tools` for `rex proto install` (see [docs/DEPENDENCIES.md](../../docs/DEPENDENCIES.md))
+
+## Bootstrap
+
+From the Rex repository root:
+
+```bash
+rex config init
+rex proto install
+pip install -e sidecars/rex-agent
+export PYTHONPATH="$(rex proto path):${PYTHONPATH}"
+```
+
+Run manually (daemon must be up for `RunTurn` to succeed):
+
+```bash
+rex-agent
+```
+
+Or let `rex daemon` supervise the sidecar — set `sidecars.active` to an entry whose `binary` is `rex-agent` (see [DESIGN.md](DESIGN.md)).
+
+## Configuration
+
+| Variable | Purpose |
+|----------|---------|
+| `REX_SIDECAR_SOCKET` | Sidecar listen UDS (default `/tmp/rex-sidecar.sock` or config) |
+| `REX_DAEMON_SOCKET` | Daemon broker UDS (default `/tmp/rex.sock` or config) |
+| `REX_ROOT` | Config and proto gen root (default `~/.rex`) |
+
+Supervisor injects `REX_ROOT`, `REX_SIDECAR_SOCKET`, `REX_DAEMON_SOCKET`, and `PYTHONPATH` (proto gen) when spawning the sidecar.
+
+## Related
+
+- [DESIGN.md](DESIGN.md) — capability contract
+- [docs/AGENT_DELIVERY_ROADMAP.md](../../docs/AGENT_DELIVERY_ROADMAP.md) — program order (R017–R019)

@@ -60,9 +60,9 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 ## Next — product agent program
 
-Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Today the supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** is planned.
+Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** scaffold is shipped (**R017** Done).
 
-**Priority rationale:** **R015** is **Done**. Next: **R020** and **R021** in parallel (daemon prerequisites), then **R017–R018** (`rex-agent`), **R022** daemon workspace fail-closed alongside **R019** extension integration. **R016** remains **Could** after **R019**. **RC-S2** may run in parallel (extension-only blast radius).
+**Priority rationale:** **R015** and **R017** are **Done**. Next: **R020** and **R021** in parallel (daemon prerequisites), then **R018** (LangGraph), **R022** daemon workspace fail-closed alongside **R019** extension integration. **R016** remains **Could** after **R019**. **RC-S2** may run in parallel (extension-only blast radius).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
@@ -73,7 +73,7 @@ Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. To
 | 5 | Broker access policy completion | **R020** | Mode × capability matrix; write/exec protected paths; `max_tool_result_bytes` — [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) |
 | 6 | Turn correlation Phase 1b | **R021** | Populate `turn_id`, `context_revision` on `RunTurn` — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | 7 | Workspace binding (daemon) | **R022** | Fail-closed `workspace.root`; harness cwd fallback documented — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
-| 8 | `rex-agent` scaffold | **R017** | gRPC server + broker client |
+| 8 | `rex-agent` scaffold | **R017** | Done — gRPC server + broker client ([sidecars/rex-agent/README.md](../sidecars/rex-agent/README.md)) |
 | 9 | LangGraph agent core | **R018** | ReAct loop, broker adapters |
 | 10 | Integration / E2E | **R019** | Extension workspace + defaults; client hints; live-model E2E — [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md#r019-integration--e2e-acceptance) |
 | 11 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (**Could** — deferred Phase 1, [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md)) |
@@ -142,7 +142,7 @@ flowchart TD
 | **R014** | Unified `rex` CLI (replace `rex-cli` / `rex-daemon`) | Done |
 | **R015** | JSON config + `rex proto install` + `proto.gen_root` | Done |
 | **R016** | Multi-active sidecar broadcast | Could — deferred Phase 1 per [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md) |
-| **R017** | `rex-agent` scaffold (gRPC + broker client) | Should |
+| **R017** | `rex-agent` scaffold (gRPC + broker client) | Done |
 | **R018** | LangGraph agent core (ReAct, broker tools) | Should |
 | **R019** | Integration / E2E (operator path, extension defaults) | Should |
 | **R020** | Broker access policy completion (ADR 0013; follows R012) | Should — [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) |

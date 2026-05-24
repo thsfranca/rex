@@ -1,6 +1,6 @@
-use std::process::{Command, ExitCode};
+use std::process::ExitCode;
 
-use rex_config::{ensure_global_layout, load};
+use rex_config::{ensure_global_layout, load, sidecar_binary_resolvable};
 
 pub fn run_sidecar(mut args: impl Iterator<Item = String>) -> ExitCode {
     match args.next().as_deref() {
@@ -64,7 +64,7 @@ fn run_doctor() -> ExitCode {
     };
     let mut ok = true;
     if let Some(entry) = loaded.active_sidecar() {
-        if !sidecar_binary_on_path(&entry.binary) {
+        if !sidecar_binary_resolvable(&entry.binary) {
             eprintln!("sidecar binary not found on PATH: {}", entry.binary);
             ok = false;
         }
@@ -89,16 +89,4 @@ fn run_doctor() -> ExitCode {
     } else {
         ExitCode::from(1)
     }
-}
-
-fn sidecar_binary_on_path(binary: &str) -> bool {
-    if binary.contains('/') {
-        return std::path::Path::new(binary).exists();
-    }
-    Command::new("sh")
-        .arg("-lc")
-        .arg(format!("command -v {binary}"))
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
 }

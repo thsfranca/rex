@@ -75,6 +75,24 @@ pub fn product_path_config(
     http_base_url: &str,
     sidecar_binary: &str,
 ) -> RexConfig {
+    product_path_config_named(
+        daemon_socket,
+        sidecar_socket,
+        workspace,
+        http_base_url,
+        "stub",
+        sidecar_binary,
+    )
+}
+
+pub fn product_path_config_named(
+    daemon_socket: &str,
+    sidecar_socket: &str,
+    workspace: &str,
+    http_base_url: &str,
+    active_name: &str,
+    sidecar_binary: &str,
+) -> RexConfig {
     let mut cfg = RexConfig::defaults();
     cfg.daemon.socket = daemon_socket.to_string();
     cfg.inference.runtime = "http-openai-compat".to_string();
@@ -82,9 +100,9 @@ pub fn product_path_config(
     cfg.inference.openai_compat.api_key = None;
     cfg.sidecars.harness = None;
     cfg.sidecars.required = Some(true);
-    cfg.sidecars.active = "stub".to_string();
+    cfg.sidecars.active = active_name.to_string();
     cfg.sidecars.list = vec![rex_config::SidecarEntry {
-        name: "stub".to_string(),
+        name: active_name.to_string(),
         binary: sidecar_binary.to_string(),
         enabled: true,
         socket: sidecar_socket.to_string(),
