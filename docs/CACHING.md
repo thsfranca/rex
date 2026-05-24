@@ -78,7 +78,7 @@ Use when you want hits across **paraphrase**, not just identical strings.
 
 When the active outbound API (OpenAI, Anthropic, etc.) exposes **prompt cache** or **KV cache** hints, the HTTP adapter may pass provider-specific metadata. REX does not depend on vendor cache for correctness; hints are an optional latency/cost lever only.
 
-**Multi-provider path:** On the **LiteLLM-primary** profile ([ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-recommended)), vendor cache behavior depends on whether LiteLLM passthrough exposes upstream hints — not assumed for correctness. On the planned **native `anthropic`** adapter ([ADAPTERS.md](ADAPTERS.md#direct-anthropic-messages-api-planned--secondary)), Anthropic prompt-cache headers are a candidate metadata hook.
+**Multi-provider path:** On the **Inference Gateway** profile ([INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md)), vendor cache behavior depends on whether LiteLLM passthrough exposes upstream hints — not assumed for correctness. On the planned **native `anthropic`** adapter ([ADAPTERS.md](ADAPTERS.md#direct-anthropic-messages-api-planned--secondary)), Anthropic prompt-cache headers are a candidate metadata hook.
 
 | In (design stage) | Out (design stage) |
 |---|---|

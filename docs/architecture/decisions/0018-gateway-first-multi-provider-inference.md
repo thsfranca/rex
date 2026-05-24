@@ -36,6 +36,7 @@ Teams often run **LiteLLM** (or similar) as a multi-provider OpenAI-compat proxy
 - **Negative:** Extra network hop and operational dependency when using LiteLLM.
 - **Negative:** Vendor-specific features (Anthropic prompt cache, tool schemas) may require native adapter or gateway passthrough — not assumed on compat path.
 - **Follow-up:** Implement `anthropic` runtime + broker dispatch; broker `provider_*` error codes in [ERROR_HANDLING.md](../../ERROR_HANDLING.md) when that hub exists; optional neutral rename of `openai_compat` config with aliases.
+- **Superseded in part by [ADR 0019](0019-inference-gateway-opt-in-litellm.md):** default API + opt-in built-in gateway supervision — see [INFERENCE_GATEWAY.md](../../INFERENCE_GATEWAY.md).
 
 ## Related
 

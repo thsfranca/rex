@@ -11,7 +11,7 @@ Concrete goals:
 - **Single runtime boundary.** One long-lived process holds model/runtime policy, queueing, and shutdown semantics so every client sees the same behavior.
 - **Stable tool contract.** Clients integrate through **`rex-cli`** and shared protobuf types in `rex-proto` instead of embedding vendor inference SDKs.
 - **Streaming-first correctness.** Server-streaming RPCs, explicit terminal outcomes (`done` / `error`), and tests around UDS races and interruption.
-- **Local-first default.** **Supervised sidecar agent** with **brokered OpenAI-compatible HTTP** inference (local Ollama/LM Studio or remote API); **mock** and direct daemon HTTP remain for automated tests only—see [ADAPTERS.md](ADAPTERS.md), [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md).
+- **Local-first default.** **Supervised sidecar agent** with **brokered OpenAI-compatible HTTP** inference; **LiteLLM** is the documented **default multi-provider API**, with an **opt-in daemon-controlled gateway** ([INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md)); **mock** and direct HTTP remain for automated tests—see [ADAPTERS.md](ADAPTERS.md), [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md).
 - **Room to grow.** Additional adapters and optional isolated runtimes evolve **without breaking** `rex.v1` consumers—see [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md).
 
 **Configuration:** precedence and `REX_*` catalog live in [CONFIGURATION.md](CONFIGURATION.md).

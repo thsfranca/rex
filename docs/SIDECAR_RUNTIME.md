@@ -10,6 +10,8 @@ Canonical design for Rex **sidecar agents**: a **supervised separate process** o
 | **Sidecar process** | Agent runtime (graph, prompts, MCP/tool wiring) in an isolated envelope. |
 | **Clients** (CLI, extension) | **`rex.v1` over UDS** only — unchanged. |
 
+**Non-goal:** The **Inference Gateway** (LiteLLM HTTP proxy) is **not** a sidecar plugin — it does not use `rex.sidecar.v1` or `sidecars.list`. Daemon supervises the gateway under `inference.gateway.*` when opted in. See [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md).
+
 ```mermaid
 flowchart LR
   Client[CLI_or_extension]

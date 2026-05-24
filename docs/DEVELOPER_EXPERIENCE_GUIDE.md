@@ -45,16 +45,21 @@ cargo run -p rex -- complete "hello from rex" --format ndjson --mode agent
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Enable `REX_SIDECAR_ENABLED=1` and `rex-sidecar-stub` on `PATH`; set `REX_OPENAI_COMPAT_*` for brokered HTTP. CI may use `REX_SIDECAR_HARNESS=direct` (harness only).
 
-### Multi-provider (Anthropic, OpenAI) via LiteLLM
+### Multi-provider (Anthropic, OpenAI, Ollama) via Inference Gateway
 
-Point the same broker env at a LiteLLM OpenAI-compat URL; provider keys live in LiteLLM, not Rex. Full profile: [CONFIGURATION.md](CONFIGURATION.md#operator-profile-litellm-anthropic-and-other-providers), [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-recommended).
+**Default API:** OpenAI-compat toward LiteLLM. **Opt-in managed:** set `inference.gateway.mode: managed` in `$REX_ROOT/config.json` so Rex starts and controls the gateway (not a sidecar). Hub: [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md).
+
+**External gateway (today):** point broker env at your LiteLLM URL; keys in LiteLLM, not Rex.
 
 ```bash
+# External LiteLLM (operator-run proxy)
 export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:4000/v1"
-export REX_OPENAI_COMPAT_MODEL="claude-sonnet-4-20250514"   # LiteLLM model alias
+export REX_OPENAI_COMPAT_MODEL="claude-sonnet-4-20250514"
 export REX_INFERENCE_RUNTIME="http-openai-compat"
 export REX_SIDECAR_ENABLED=1
 ```
+
+Managed mode (planned implementation): same fields via JSON — see [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
 
 **Observability (planned):** enable daemon OTLP with `REX_OBS_ENABLED=1` and point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md).
 
