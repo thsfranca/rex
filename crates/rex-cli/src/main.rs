@@ -2,6 +2,7 @@ mod command;
 mod domain;
 mod error;
 mod runtime;
+mod toolchain;
 mod transport;
 
 use std::process::ExitCode;

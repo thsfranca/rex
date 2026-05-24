@@ -17,6 +17,19 @@ pub enum AccessDecision {
 
 /// Evaluate `fs.read` before host execution.
 pub fn evaluate_fs_read(relative_path: &str) -> AccessDecision {
+    evaluate_fs_path(relative_path, "read")
+}
+
+/// Evaluate `fs.list` before host execution.
+pub fn evaluate_fs_list(relative_path: &str) -> AccessDecision {
+    let trimmed = relative_path.trim();
+    if trimmed.is_empty() || trimmed == "." {
+        return AccessDecision::Allow;
+    }
+    evaluate_fs_path(trimmed, "list")
+}
+
+fn evaluate_fs_path(relative_path: &str, _capability: &str) -> AccessDecision {
     let trimmed = relative_path.trim();
     if trimmed.is_empty() {
         return AccessDecision::Deny(PolicyDeny {
@@ -77,6 +90,20 @@ mod tests {
     #[test]
     fn denies_git_config() {
         match evaluate_fs_read(".git/config") {
+            AccessDecision::Deny(d) => assert_eq!(d.code, "protected_path"),
+            _ => panic!("expected deny"),
+        }
+    }
+
+    #[test]
+    fn list_allows_workspace_root() {
+        assert_eq!(evaluate_fs_list("."), AccessDecision::Allow);
+        assert_eq!(evaluate_fs_list(""), AccessDecision::Allow);
+    }
+
+    #[test]
+    fn list_denies_env_file() {
+        match evaluate_fs_list(".env") {
             AccessDecision::Deny(d) => assert_eq!(d.code, "protected_path"),
             _ => panic!("expected deny"),
         }

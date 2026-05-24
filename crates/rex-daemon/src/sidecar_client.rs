@@ -37,10 +37,12 @@ pub async fn run_turn_collect(
     client: &mut SidecarServiceClient<tonic::transport::Channel>,
     prompt: &str,
     mode: &str,
+    model: &str,
 ) -> Result<Vec<RunTurnChunk>, tonic::Status> {
     let request = RunTurnRequest {
         prompt: prompt.to_string(),
         mode: mode.to_string(),
+        model: model.to_string(),
     };
     let mut stream = client.run_turn(request).await?.into_inner();
     let mut chunks = Vec::new();
@@ -48,6 +50,20 @@ pub async fn run_turn_collect(
         chunks.push(chunk);
     }
     Ok(chunks)
+}
+
+pub async fn run_turn_stream(
+    client: &mut SidecarServiceClient<tonic::transport::Channel>,
+    prompt: String,
+    mode: String,
+    model: String,
+) -> Result<tonic::Streaming<RunTurnChunk>, tonic::Status> {
+    let request = RunTurnRequest {
+        prompt,
+        mode,
+        model,
+    };
+    Ok(client.run_turn(request).await?.into_inner())
 }
 
 #[allow(clippy::result_large_err)]

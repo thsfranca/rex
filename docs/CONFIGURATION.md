@@ -10,19 +10,28 @@ This document is the **canonical** policy for how REX settings work: what applie
 
 ## Precedence (target model)
 
-Rex does **not** implement all layers below yet. **Phase 1 (today):** only **defaults** and **environment** apply.
-
 | Precedence (low to high) | Role |
 |--------------------------|------|
 | Built-in defaults | Used when a setting is unset. |
-| User persistent file (not implemented) | Optional file under the [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) convention. |
-| Project-local file (not implemented) | Optional repo-local file (for example `.rex.toml`); do **not** commit secrets. |
-| Environment variables | **Primary** for parents (extension, tests, CI) and overrides today. |
-| CLI flags (partial) | `rex-cli complete` accepts `--model` and `--mode` per invocation. |
+| User `$REX_HOME/config.json` | Primary operator settings after `rex config init`. |
+| Project `.rex/config.json` | Optional repo-local overrides; do **not** commit secrets. |
+| Environment variables | **CI override** layer; wins over JSON for tests and extension `daemonEnv`. |
+| CLI flags (partial) | `rex complete` accepts `--model` and `--mode` per invocation. |
 
-**Secret values:** Prefer environment or OS keychain for API keys. Do not commit secrets to the repository.
+**Secret values:** Prefer user config overlay or environment for API keys. Do not commit secrets to the repository.
 
-## Phase 1: environment variables (implemented)
+### JSON config (implemented)
+
+| Path | Purpose |
+|------|---------|
+| `$REX_HOME/config.json` | Daemon socket, `sidecars.active` + `sidecars.list`, `proto.gen_root`, inference, workspace |
+| `.rex/config.json` | Project overlay (optional) |
+
+Commands: `rex config init|show|path|validate`, `rex sidecar list`, `rex proto install|path|doctor`.
+
+Proto stubs install to `{proto.gen_root}/python` (default `~/.rex/proto/gen/python`). Sidecars bootstrap `sys.path` from config — see [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md).
+
+## Phase 1: environment variables (override / CI)
 
 ### `rex-daemon` (inference and cache)
 
@@ -55,13 +64,15 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 | `REX_SIDECAR_HARNESS` | (none) | `direct` forces in-process inference (CI/tests); not MVP product acceptance |
 | `REX_DAEMON_SOCKET` | `/tmp/rex.sock` | Daemon UDS for sidecar `BrokerInference` and `BrokerReadFile` during `RunTurn` |
 
-### `rex-cli` (client metadata)
+### `rex` (client metadata)
 
 | Variable | Default (if unset) | Purpose |
 |----------|--------------------|---------|
-| `REX_TRACE_ID` | (none) | Request correlation; extension sets when spawning `rex-cli` — [`EXTENSION.md`](EXTENSION.md). |
+| `REX_TRACE_ID` | (none) | Request correlation; extension sets when spawning `rex complete` — [`EXTENSION.md`](EXTENSION.md). |
+| `REX_HOME` | `~/.rex` | Config and proto install root. |
+| `REX_CONFIG` | (none) | Absolute path to JSON config (tests). |
 
-**CLI flags:** `rex-cli complete` accepts `--format`, `--model <id>`, `--mode <ask|plan|agent>`, and `--approval-id <id>`. Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
+**CLI flags:** `rex complete` accepts `--format`, `--model <id>`, `--mode <ask|plan|agent>`, and `--approval-id <id>`. Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
 
 ### Related project scripts
 
@@ -72,9 +83,19 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 
 **Module map:** Daemon: `adapters`, `http_openai_compat`, `approvals`, `l1_cache`, stream service. CLI: `runtime` (`REX_TRACE_ID`).
 
-## Operator quick start (daemon + brokered HTTP)
+## Operator quick start (JSON + sidecar agent)
 
-The Phase 1 product path requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Enable with `REX_SIDECAR_ENABLED=1` and related vars in the table above ([SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md)). HTTP env configures the **broker** the daemon uses for sidecar inference requests.
+```bash
+./scripts/install-cli.sh          # installs `rex`, runs config init + proto install
+# edit ~/.rex/config.json (inference base_url/model, sidecars.active)
+rex daemon
+```
+
+Product sidecar: **`rex-agent`** (Python + LangGraph). Harness: **`rex-sidecar-stub`** — set `"sidecars": { "active": "stub" }` for CI-style runs.
+
+HTTP env vars still override JSON for CI. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) and [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md).
+
+### Legacy export-based quick start (CI override)
 
 ```bash
 export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:11434/v1"   # Ollama example

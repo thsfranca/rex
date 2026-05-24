@@ -9,11 +9,17 @@ publish = false
 [package.metadata.dist]
 dist = true
 
+[[bin]]
+name = "rex"
+path = "src/main.rs"
+
 [dependencies]
 tokio.workspace = true
 tonic.workspace = true
 tower = "0.5"
 hyper-util = { version = "0.1", features = ["tokio"] }
 rex-proto = { path = "../rex-proto" }
+rex-config = { path = "../rex-config" }
+rex-daemon = { path = "../rex-daemon" }
 thiserror = "2"
 serde_json = "1"

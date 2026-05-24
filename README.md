@@ -16,10 +16,10 @@ Canonical **purpose and operating principles** (single source of truth): **[docs
 |---|---|
 | **gRPC + UDS** | Low-latency local transport on `/tmp/rex.sock` with generated types from one `rex.v1` contract. |
 | **Streaming completion** | `StreamInference`-style chunks with deterministic lifecycle logging on the daemon for triage. |
-| **`rex-cli`** | `status` and `complete`; human output by default, **`--format ndjson`** for one JSON event per line (`chunk`, `done`, `error`) so extensions and CI can parse streams safely. |
+| **`rex`** | Unified CLI: `daemon`, `status`, `complete`, `config`, `proto`, `sidecar`; **`--format ndjson`** for extensions and CI. |
 | **Startup and failure behavior** | Bounded retry when the daemon is still booting; clear CLI errors for unavailable daemon, interrupted streams, and bad stream endings. |
 | **VS Code / Cursor extension** | Activity-bar chat with streaming markdown, selection-based commands, optional **daemon auto-start**, and install/release docs—see [`extensions/rex-vscode/README.md`](extensions/rex-vscode/README.md) and [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md). |
-| **Development agent (extension)** | Chat with **`ask` / `plan` / `agent`**, guarded apply/insert, NDJSON via **`rex-cli`** — assistant runtime in a **daemon-supervised sidecar** ([docs/EXTENSION.md](docs/EXTENSION.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md)). |
+| **Development agent (extension)** | Chat with **`ask` / `plan` / `agent`**, guarded apply/insert, NDJSON via **`rex complete`** — product agent **`rex-agent`** (LangGraph) or harness **`rex-sidecar-stub`** ([docs/MVP_SPEC.md](docs/MVP_SPEC.md)). |
 | **Brokered HTTP inference** | Daemon invokes **OpenAI-compatible** backend on behalf of the sidecar (`REX_OPENAI_COMPAT_*`); **mock** / **cursor-cli** for tests only — [docs/ADAPTERS.md](docs/ADAPTERS.md), [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
 | **Quality gates** | Workspace `cargo` checks plus UDS end-to-end tests covering failure paths, startup races, and post-interruption behavior (see [Operational checks](#operational-checks)). |
 
@@ -38,11 +38,11 @@ Canonical **purpose and operating principles** (single source of truth): **[docs
 Linear recipe from a clone to **REX** chat in the editor (requires **HTTP backend** for brokered inference and a **sidecar agent** per [docs/MVP_SPEC.md](docs/MVP_SPEC.md)):
 
 1. **Build** the Rust workspace: `cargo build --workspace` — or one shot: `chmod +x ./scripts/dev-rex-extension.sh && ./scripts/dev-rex-extension.sh`.
-2. **Put** `rex-cli` (and the daemon if you use auto-start) where the **editor** can find them — [`scripts/install-cli.sh`](scripts/install-cli.sh).
-3. **Configure** brokered HTTP (example Ollama): `export REX_OPENAI_COMPAT_BASE_URL=http://127.0.0.1:11434/v1` and `REX_OPENAI_COMPAT_MODEL=…` — [docs/CONFIGURATION.md](docs/CONFIGURATION.md). Enable the supervised sidecar: `export REX_SIDECAR_ENABLED=1` and ensure `rex-sidecar-stub` is on `PATH` (or set `REX_SIDECAR_BINARY`) — [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md).
-4. **Run** `rex-daemon` with those env vars (supervisor spawns the sidecar when enabled). Socket: `/tmp/rex.sock` (override with `REX_DAEMON_SOCKET` for the stub broker path).
+2. **Install** `rex` — [`scripts/install-cli.sh`](scripts/install-cli.sh) (`rex config init`, `rex proto install`).
+3. **Configure** `~/.rex/config.json` (inference `base_url`/`model`, `sidecars.active`) — [docs/CONFIGURATION.md](docs/CONFIGURATION.md). Default product sidecar: **`rex-agent`**; CI harness: **`stub`**.
+4. **Run** `rex daemon` (supervisor spawns the active sidecar). Socket: `/tmp/rex.sock`.
 5. **Install** the extension — [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md).
-6. **In the editor:** **REX: Open Chat**, try **agent** mode, send a prompt, cancel once, and apply a code block with approval. Verify sidecar health in daemon logs and brokered `fs.read` via a prompt containing `__rex_read:<path>`.
+6. **In the editor:** **REX: Open Chat**, try **agent** mode with a live HTTP backend.
 
 Details: [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
 
@@ -64,12 +64,12 @@ REX keeps clients thin and centralizes model/runtime policy in one daemon bounda
 cargo build --workspace
 ```
 
-This compiles `rex-proto`, `rex-daemon`, and `rex-cli`.
+This compiles `rex-proto`, `rex-daemon` (library), and the `rex` CLI binary.
 
 2) Start the daemon:
 
 ```bash
-cargo run -p rex-daemon
+cargo run -p rex-cli --bin rex -- daemon
 ```
 
 This starts the local gRPC server on `/tmp/rex.sock`.
@@ -77,9 +77,9 @@ This starts the local gRPC server on `/tmp/rex.sock`.
 3) In another terminal, run CLI commands:
 
 ```bash
-cargo run -p rex-cli -- status
-cargo run -p rex-cli -- complete "hello from rex"
-cargo run -p rex-cli -- complete "hello from rex" --format ndjson
+cargo run -p rex-cli --bin rex -- status
+cargo run -p rex-cli --bin rex -- complete "hello from rex"
+cargo run -p rex-cli --bin rex -- complete "hello from rex" --format ndjson
 ```
 
 This verifies status, server-streaming behavior, and extension-consumable NDJSON output.
@@ -91,13 +91,13 @@ chmod +x ./scripts/dev-rex-extension.sh
 ./scripts/dev-rex-extension.sh
 ```
 
-This runs `cargo build --workspace`, installs `rex-cli` / `rex-daemon` via [`scripts/install-cli.sh`](scripts/install-cli.sh), then runs [`scripts/install-extension.sh`](scripts/install-extension.sh): it builds `extensions/rex-vscode`, packages `rex-vscode.vsix`, installs it with the `cursor` or `code` CLI (auto-detects the host when you run it from an integrated terminal), and requests **Developer: Reload Window** on the last active window. Pass flags through to the installer, for example `./scripts/dev-rex-extension.sh --verify`. Use `./scripts/install-extension.sh --help` for installer flags (`--verify`, `--editor vscode`, `--no-reload`, and so on). The dev script does **not** start `rex-daemon`; use step 2 above or auto-start as in the E2E doc.
+This runs `cargo build --workspace`, installs **`rex`** via [`scripts/install-cli.sh`](scripts/install-cli.sh), then runs [`scripts/install-extension.sh`](scripts/install-extension.sh): it builds `extensions/rex-vscode`, packages `rex-vscode.vsix`, installs it with the `cursor` or `code` CLI (auto-detects the host when you run it from an integrated terminal), and requests **Developer: Reload Window** on the last active window. Pass flags through to the installer, for example `./scripts/dev-rex-extension.sh --verify`. Use `./scripts/install-extension.sh --help` for installer flags (`--verify`, `--editor vscode`, `--no-reload`, and so on). The dev script does **not** start `rex-daemon`; use step 2 above or auto-start as in the E2E doc.
 
 - **Full checklist** (daemon, editor `PATH`, verification): [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md).
 - Extension-only: `chmod +x ./scripts/install-extension.sh && ./scripts/install-extension.sh`.
 - Manual path: `cd extensions/rex-vscode && npm install && npm run package`, then **Extensions: Install from VSIX...**
 - Release VSIX: download from a `rex-vscode-vX.Y.Z` GitHub Release.
-- Set `"rex.daemonAutoStart": true` if you want the extension to spawn `rex-daemon` on activation. See [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) for install, auto-start, and troubleshooting details.
+- Set `"rex.daemonAutoStart": true` if you want the extension to spawn `rex daemon` on activation.
 
 ## Operational checks
 
@@ -124,7 +124,7 @@ chmod +x scripts/install-cli.sh
 
 The script reinstalls with `--force` and does not modify shell dotfiles by default.
 
-Prebuilt binaries for `rex-cli`, `rex-daemon`, and `rex-sidecar-stub` are attached to GitHub Releases tagged `vX.Y.Z` after merging the release-plz Release PR. See [`docs/RELEASE.md`](docs/RELEASE.md).
+Prebuilt **`rex`** and **`rex-sidecar-stub`** binaries are attached to GitHub Releases tagged `vX.Y.Z` after merging the release-plz Release PR. See [`docs/RELEASE.md`](docs/RELEASE.md).
 
 If you want automatic `zsh` PATH configuration:
 
@@ -135,14 +135,14 @@ source ~/.zshrc
 
 ## Manual troubleshooting
 
-- Start `rex-daemon` before invoking `rex-cli` commands.
+- Start `rex daemon` before invoking `rex complete`.
 - If the daemon is still booting, rerun `status` or `complete` after `/tmp/rex.sock` exists.
-- `rex-cli complete` surfaces deterministic lifecycle errors for:
+- `rex complete` surfaces deterministic lifecycle errors for:
   - daemon unavailable;
   - interrupted streams;
   - incomplete stream termination.
-- `rex-cli complete --format ndjson` emits one JSON event per line with terminal `done` or `error`.
-- `rex-daemon` emits request-scoped stream lifecycle logs (`starting`, `streaming`, `completed`, `interrupted`, `failed`) plus `request_id` and first-chunk markers for troubleshooting.
+- `rex complete --format ndjson` emits one JSON event per line with terminal `done` or `error`.
+- `rex daemon` emits request-scoped stream lifecycle logs (`starting`, `streaming`, `completed`, `interrupted`, `failed`) plus `request_id` and first-chunk markers for troubleshooting.
 
 ## Phase 1 boundaries
 
@@ -151,7 +151,7 @@ In scope for the first product shape:
 - Local daemon–client communication over UDS.
 - Unary status RPC and server-streaming completion RPC.
 - **HTTP OpenAI-compat** inference and shutdown lifecycle reliability.
-- **Editor path:** extension + **`rex-cli` NDJSON**; modes and guarded apply — [docs/EXTENSION.md](docs/EXTENSION.md).
+- **Editor path:** extension + **`rex` NDJSON**; modes and guarded apply — [docs/EXTENSION.md](docs/EXTENSION.md).
 - **Dogfooding loop:** develop `rex` from the IDE against a live HTTP backend.
 - **Test harness:** `REX_INFERENCE_RUNTIME=mock` for CI only — [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
 
@@ -187,9 +187,10 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 ## Workspace layout
 
 - `rex-proto`: protobuf/gRPC contract generation (`rex.v1`).
-- `rex-daemon`: daemon runtime with status and mock streaming RPCs over UDS.
-- `rex-cli`: thin client with `status` and `complete` commands.
-- `extensions/rex-vscode`: VS Code/Cursor extension (chat UI, `rex-cli` integration, optional daemon auto-start).
+- `rex-daemon` (library): daemon runtime with status and streaming RPCs over UDS.
+- `rex` CLI: unified operator binary (`daemon`, `status`, `complete`, `config`, `proto`, `sidecar`).
+- `sidecars/rex-agent`: Python LangGraph product sidecar.
+- `extensions/rex-vscode`: VS Code/Cursor extension (chat UI, `rex` integration, optional daemon auto-start).
 
 ## Contributing and validation baseline
 

@@ -2,6 +2,15 @@
 
 **Scope and shape** for the first REX product path (daemon-supervised sidecar, brokered HTTP, thin extension). **Done** is defined only in **[V1_0.md](V1_0.md)** (`RC-*` release criteria)—not in this file.
 
+## Product agent vs harness stub
+
+| Role | Binary | Purpose |
+|------|--------|---------|
+| **Product agent** | `rex-agent` | LangGraph ReAct loop; broker-only LLM and tools; default `sidecars.active` |
+| **Harness / CI** | `rex-sidecar-stub` | Directive-based stub; `BrokerInference` smoke; switch via config or `REX_SIDECAR_*` |
+
+Phase 1 **product** acceptance requires a real tool loop in **`rex-agent`**, not `__rex_*` prompt directives.
+
 ## Product goals
 
 - Deliver a **basic development agent** in the VS Code/Cursor extension whose **reasoning and runtime live in a daemon-supervised sidecar** — not in the extension and not as “daemon calls the model directly.”
@@ -40,8 +49,8 @@ Converge **routing, compaction, caches, metering, and richer tool/MCP loops** in
 | Item | Definition |
 |---|---|
 | Daemon | `/tmp/rex.sock`; `rex.v1`; policy, broker, sidecar supervisor. |
-| CLI | `rex-cli`; NDJSON; `--mode` / `--model` on `complete`. |
-| **Sidecar agent** | One supervised process; agent stack pluggable per [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). |
+| CLI | **`rex`** (`daemon`, `status`, `complete`, `config`, `proto`, `sidecar`); NDJSON; `--mode` / `--model` on `complete`. |
+| **Sidecar agent** | **`rex-agent`** (product); **`rex-sidecar-stub`** (harness); pluggable per [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). |
 | **`rex.sidecar.v1`** | Control plane distinct from `rex.v1` — verbs in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). |
 | **Brokered inference** | Daemon runs HTTP OpenAI-compat adapter on sidecar request ([CONFIGURATION.md](CONFIGURATION.md), [ADAPTERS.md](ADAPTERS.md)). |
 | **Brokered tool** | At least **`fs.read`** (or bounded **`exec.shell`** if chosen at implementation) — [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md). |
@@ -86,8 +95,8 @@ Documented in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Illustrative verbs:
 
 | Command shape | Expected behavior |
 |---|---|
-| `rex-cli status` | Status from `GetSystemStatus`. |
-| `rex-cli complete "<prompt>" --format ndjson --mode <ask\|plan\|agent>` | Forwards to daemon; product path uses sidecar per **RC-03**. |
+| `rex status` | Status from `GetSystemStatus`. |
+| `rex complete "<prompt>" --format ndjson --mode <ask\|plan\|agent>` | Forwards to daemon; product path uses sidecar per **RC-03**. |
 
 ## Extension consumer contract
 

@@ -31,7 +31,17 @@ pub enum DaemonRuntimeError {
 }
 
 pub async fn run_daemon() -> Result<(), DaemonRuntimeError> {
-    run_daemon_on_socket(SOCKET_PATH).await
+    if let Ok(config) = rex_config::load_merged() {
+        rex_config::apply_to_env(&config);
+    }
+    run_daemon_on_socket(
+        std::env::var("REX_DAEMON_SOCKET")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .unwrap_or_else(|| SOCKET_PATH.to_string())
+            .as_str(),
+    )
+    .await
 }
 
 pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntimeError> {

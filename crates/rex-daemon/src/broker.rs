@@ -67,6 +67,56 @@ pub fn broker_read_file(relative_path: &str) -> Result<String, BrokerError> {
     })
 }
 
+pub fn broker_list_dir(relative_path: &str) -> Result<Vec<String>, BrokerError> {
+    match crate::access_policy::evaluate_fs_list(relative_path) {
+        AccessDecision::Allow => {}
+        AccessDecision::Deny(deny) => return Err(deny.into()),
+    }
+    let root = workspace_root_from_env()?;
+    let list_path = if relative_path.trim().is_empty() || relative_path.trim() == "." {
+        root.clone()
+    } else {
+        resolve_under_workspace(&root, relative_path)?
+    };
+    let entries = std::fs::read_dir(&list_path).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::NotFound {
+            BrokerError::NotFound(relative_path.to_string())
+        } else {
+            BrokerError::Io(e.to_string())
+        }
+    })?;
+    let mut names = Vec::new();
+    for entry in entries {
+        let entry = entry.map_err(|e| BrokerError::Io(e.to_string()))?;
+        let file_name = entry.file_name().to_string_lossy().to_string();
+        if file_name.is_empty() {
+            continue;
+        }
+        if is_protected_list_entry(&file_name, relative_path) {
+            continue;
+        }
+        let meta = entry
+            .metadata()
+            .map_err(|e| BrokerError::Io(e.to_string()))?;
+        let suffix = if meta.is_dir() { "/" } else { "" };
+        names.push(format!("{file_name}{suffix}"));
+    }
+    names.sort();
+    Ok(names)
+}
+
+fn is_protected_list_entry(name: &str, parent_path: &str) -> bool {
+    let combined = if parent_path.trim().is_empty() || parent_path.trim() == "." {
+        name.to_string()
+    } else {
+        format!("{}/{}", parent_path.trim().trim_end_matches('/'), name)
+    };
+    matches!(
+        crate::access_policy::evaluate_fs_read(&combined),
+        AccessDecision::Deny(_)
+    )
+}
+
 pub fn broker_write_file(relative_path: &str, content: &str) -> Result<(), BrokerError> {
     let capability = "fs.write";
     let _ = capability;
@@ -235,6 +285,8 @@ mod tests {
         let _guard = WorkspaceRootGuard::set(dir.display().to_string());
         let content = broker_read_file("hello.txt").expect("read");
         assert_eq!(content, "broker-ok");
+        let entries = broker_list_dir(".").expect("list");
+        assert!(entries.iter().any(|e| e.starts_with("hello.txt")));
         let _ = fs::remove_dir_all(&dir);
     }
 

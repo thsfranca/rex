@@ -70,8 +70,20 @@ impl HttpOpenAiCompatRuntime {
 
     /// Single completion for sidecar `BrokerInference` (assembled from SSE).
     pub async fn fetch_completion_text(&self, prompt: &str) -> Result<String, Status> {
+        self.fetch_completion_text_with_model(prompt, None).await
+    }
+
+    pub async fn fetch_completion_text_with_model(
+        &self,
+        prompt: &str,
+        model_override: Option<&str>,
+    ) -> Result<String, Status> {
+        let model = model_override
+            .map(str::trim)
+            .filter(|m| !m.is_empty())
+            .unwrap_or(self.model.as_str());
         let body = serde_json::json!({
-            "model": self.model,
+            "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": true
         });
@@ -169,10 +181,15 @@ fn parse_sse_data_line(line: &str) -> Option<String> {
 }
 
 /// Broker RPC entry: HTTP OpenAI-compat when env is configured.
-pub async fn broker_inference_completion(prompt: &str) -> Result<String, String> {
+pub async fn broker_inference_completion(prompt: &str, model: &str) -> Result<String, String> {
     let runtime = HttpOpenAiCompatRuntime::from_env()?;
+    let override_model = if model.trim().is_empty() {
+        None
+    } else {
+        Some(model.trim())
+    };
     runtime
-        .fetch_completion_text(prompt)
+        .fetch_completion_text_with_model(prompt, override_model)
         .await
         .map_err(|status| status.message().to_string())
 }

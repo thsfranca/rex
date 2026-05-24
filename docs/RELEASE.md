@@ -11,7 +11,7 @@ REX uses **two independent release planes**: the Rust workspace (`v*` tags) and 
 | Release PR bot | [release-plz](https://release-plz.dev/) — workflow [`.github/workflows/release-plz.yml`](../.github/workflows/release-plz.yml), config [`release-plz.toml`](../release-plz.toml) |
 | Tag | `vX.Y.Z` (for example `v0.1.1`) |
 | Binaries | [cargo-dist](https://axodotdev.github.io/cargo-dist/) — workflow [`.github/workflows/release.yml`](../.github/workflows/release.yml) |
-| Artifacts | `rex-cli`, `rex-daemon`, `rex-sidecar-stub` per target triple |
+| Artifacts | `rex`, `rex-sidecar-stub`, `rex-agent` (script) per target triple |
 
 ### Maintainer flow
 

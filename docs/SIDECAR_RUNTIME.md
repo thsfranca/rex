@@ -102,6 +102,18 @@ Proto package **`rex.sidecar.v1`** lands in an implementation PR; this hub defin
 | `proto_version` | `rex.sidecar.v1` compatibility |
 | `runtime_requires` | Python/Node version, arch |
 
+## Sidecar author quickstart
+
+```bash
+rex config init && rex proto install
+rex sidecar list
+cd sidecars/rex-agent && python3 -m venv .venv && source .venv/bin/activate && pip install -e .
+rex daemon    # terminal 1
+python -m rex_agent   # terminal 2 (or supervisor spawns rex-agent when active)
+```
+
+Python imports: `from rex.v1 import rex_pb2, rex_pb2_grpc` after `bootstrap_proto_path()` reads `proto.gen_root` from config ([CONFIGURATION.md](CONFIGURATION.md)).
+
 ## Non-goals (this hub)
 
 - Shipping Firecracker/Colima as Rex’s default Mac envelope.

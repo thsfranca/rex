@@ -9,6 +9,10 @@ publish = false
 [package.metadata.dist]
 dist = true
 
+[lib]
+name = "rex_daemon"
+path = "src/lib.rs"
+
 [dependencies]
 tokio = { workspace = true, features = ["fs", "io-util", "net", "process", "signal", "time"] }
 tonic.workspace = true
@@ -16,6 +20,7 @@ tokio-stream = { version = "0.1", features = ["net"] }
 async-stream = "0.3"
 lru = "0.12"
 rex-proto = { path = "../rex-proto" }
+rex-config = { path = "../rex-config" }
 thiserror = "2"
 serde_json = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }

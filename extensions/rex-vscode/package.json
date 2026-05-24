@@ -98,14 +98,14 @@
       "properties": {
         "rex.cliPath": {
           "type": "string",
-          "default": "rex-cli",
-          "description": "Executable path or name for rex-cli. Defaults to lookup on PATH.",
+          "default": "rex",
+          "description": "Executable path or name for rex. Defaults to lookup on PATH.",
           "scope": "machine-overridable"
         },
         "rex.daemonBinaryPath": {
           "type": "string",
-          "default": "rex-daemon",
-          "description": "Executable path or name for rex-daemon. Used only when auto-start is enabled.",
+          "default": "rex",
+          "description": "Executable path or name for rex. Auto-start runs `rex daemon`.",
           "scope": "machine-overridable"
         },
         "rex.daemonAutoStart": {

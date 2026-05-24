@@ -1,0 +1,26 @@
+[project]
+name = "rex-agent"
+version = "0.1.0"
+description = "REX product sidecar agent (LangGraph + brokered tools)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "grpcio>=1.60",
+  "langgraph>=0.2",
+  "langchain-core>=0.3",
+  "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+rex-agent = "rex_agent.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rex_agent*"]

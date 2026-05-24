@@ -134,7 +134,7 @@ export class DaemonLifecycle {
         this.options.daemonEnv !== undefined
           ? { ...process.env, ...this.options.daemonEnv }
           : process.env;
-      this.ownedChild = spawn(this.options.daemonBinaryPath, [], {
+      this.ownedChild = spawn(this.options.daemonBinaryPath, ["daemon"], {
         stdio: ["ignore", "pipe", "pipe"],
         detached: false,
         env: daemonEnv,

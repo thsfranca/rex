@@ -90,7 +90,7 @@ async fn sidecar_health_and_run_turn_roundtrip() {
         let mut client = sidecar_client::connect_sidecar(&socket_path)
             .await
             .expect("connect sidecar");
-        sidecar_client::run_turn_collect(&mut client, "hello sidecar", "agent")
+        sidecar_client::run_turn_collect(&mut client, "hello sidecar", "agent", "")
             .await
             .expect("run turn")
     })

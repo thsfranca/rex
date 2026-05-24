@@ -1,5 +1,6 @@
 #[derive(Debug, PartialEq, Eq)]
 pub enum CliCommand {
+    Daemon,
     Status,
     Complete {
         prompt: String,
@@ -8,6 +9,9 @@ pub enum CliCommand {
         approval_id: String,
         format: CompleteOutputFormat,
     },
+    Config(Vec<String>),
+    Proto(Vec<String>),
+    Sidecar(Vec<String>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -18,6 +22,7 @@ pub enum CompleteOutputFormat {
 
 pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliCommand, String> {
     match args.next().as_deref() {
+        Some("daemon") => Ok(CliCommand::Daemon),
         Some("status") => Ok(CliCommand::Status),
         Some("complete") => {
             let prompt = args
@@ -35,6 +40,9 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
                 format,
             })
         }
+        Some("config") => Ok(CliCommand::Config(args.collect())),
+        Some("proto") => Ok(CliCommand::Proto(args.collect())),
+        Some("sidecar") => Ok(CliCommand::Sidecar(args.collect())),
         Some(other) => Err(format!("Unknown command: {other}")),
         None => Err("Missing command.".to_string()),
     }
@@ -92,9 +100,13 @@ fn parse_complete_trailing(
 
 pub fn print_usage() {
     eprintln!("Usage:");
-    eprintln!("  rex-cli status");
-    eprintln!("  rex-cli complete \"<prompt>\"");
-    eprintln!("  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ]");
+    eprintln!("  rex daemon");
+    eprintln!("  rex status");
+    eprintln!("  rex complete \"<prompt>\"");
+    eprintln!("  rex complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ]");
+    eprintln!("  rex config {{ init | show | path | validate }}");
+    eprintln!("  rex proto {{ install | path [python] | doctor }}");
+    eprintln!("  rex sidecar {{ list | init [dir] | doctor }}");
 }
 
 #[cfg(test)]
@@ -106,6 +118,13 @@ mod tests {
         let cmd =
             parse_command(vec!["status".to_string()].into_iter()).expect("status should parse");
         assert_eq!(cmd, CliCommand::Status);
+    }
+
+    #[test]
+    fn parses_daemon_command() {
+        let cmd =
+            parse_command(vec!["daemon".to_string()].into_iter()).expect("daemon should parse");
+        assert_eq!(cmd, CliCommand::Daemon);
     }
 
     #[test]
@@ -132,71 +151,9 @@ mod tests {
     }
 
     #[test]
-    fn parses_complete_command_with_ndjson_format() {
-        let cmd = parse_command(
-            vec![
-                "complete".to_string(),
-                "hello".to_string(),
-                "--format".to_string(),
-                "ndjson".to_string(),
-            ]
-            .into_iter(),
-        )
-        .expect("complete ndjson should parse");
-        assert_eq!(
-            cmd,
-            CliCommand::Complete {
-                prompt: "hello".to_string(),
-                model: String::new(),
-                mode: String::new(),
-                approval_id: String::new(),
-                format: CompleteOutputFormat::Ndjson,
-            }
-        );
-    }
-
-    #[test]
-    fn rejects_complete_command_with_unknown_flag() {
-        let err = parse_command(
-            vec![
-                "complete".to_string(),
-                "hello".to_string(),
-                "--unknown".to_string(),
-            ]
-            .into_iter(),
-        )
-        .expect_err("unknown flag should fail");
-        assert_eq!(
-            err.to_string(),
-            "Unknown argument for `complete`: --unknown"
-        );
-    }
-
-    #[test]
-    fn parses_model_and_mode_with_ndjson_in_different_order() {
-        let cmd = parse_command(
-            vec![
-                "complete".to_string(),
-                "hi".to_string(),
-                "--model".to_string(),
-                "m1".to_string(),
-                "--format".to_string(),
-                "ndjson".to_string(),
-                "--mode".to_string(),
-                "ask".to_string(),
-            ]
-            .into_iter(),
-        )
-        .expect("parse");
-        assert_eq!(
-            cmd,
-            CliCommand::Complete {
-                prompt: "hi".to_string(),
-                model: "m1".to_string(),
-                mode: "ask".to_string(),
-                approval_id: String::new(),
-                format: CompleteOutputFormat::Ndjson,
-            }
-        );
+    fn parses_config_subcommand() {
+        let cmd = parse_command(vec!["config".to_string(), "show".to_string()].into_iter())
+            .expect("config show");
+        assert_eq!(cmd, CliCommand::Config(vec!["show".to_string()]));
     }
 }

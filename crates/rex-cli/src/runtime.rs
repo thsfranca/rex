@@ -14,6 +14,7 @@ use crate::domain::{
     STREAM_START_RETRY_ATTEMPTS, STREAM_START_RETRY_DELAY_MS,
 };
 use crate::error::CliError;
+use crate::toolchain;
 use crate::transport::connect_client;
 
 pub async fn run_cli(args: impl Iterator<Item = String>) -> ExitCode {
@@ -47,6 +48,7 @@ pub async fn run_cli(args: impl Iterator<Item = String>) -> ExitCode {
 
 async fn execute(command: CliCommand) -> Result<(), CliError> {
     match command {
+        CliCommand::Daemon => run_daemon().await,
         CliCommand::Status => run_status().await,
         CliCommand::Complete {
             prompt,
@@ -55,7 +57,21 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
             approval_id,
             format,
         } => run_complete(prompt, model, mode, approval_id, format).await,
+        CliCommand::Config(args) => toolchain::run_config(&args).map_err(CliError::Message),
+        CliCommand::Proto(args) => {
+            if args.first().map(String::as_str) != Some("install") {
+                let _ = toolchain::ensure_proto_installed();
+            }
+            toolchain::run_proto(&args).map_err(CliError::Message)
+        }
+        CliCommand::Sidecar(args) => toolchain::run_sidecar(&args).map_err(CliError::Message),
     }
+}
+
+async fn run_daemon() -> Result<(), CliError> {
+    rex_daemon::run_daemon()
+        .await
+        .map_err(|err| CliError::Message(err.to_string()))
 }
 
 async fn run_status() -> Result<(), CliError> {
@@ -265,6 +281,7 @@ fn ndjson_error_code(err: &CliError) -> &'static str {
         CliError::SidecarUnavailable { .. } => "sidecar_unavailable",
         CliError::InferenceConfig { .. } => "inference_config",
         CliError::DaemonConnect { .. } => "daemon_unavailable",
+        CliError::Message(_) => "unknown",
         CliError::Endpoint(_) | CliError::Status(_) => "unknown",
         CliError::Stdout(_) => "unknown",
     }
@@ -302,7 +319,11 @@ impl CliCommand {
     fn output_format(&self) -> Option<CompleteOutputFormat> {
         match self {
             CliCommand::Complete { format, .. } => Some(*format),
-            CliCommand::Status => None,
+            CliCommand::Status
+            | CliCommand::Daemon
+            | CliCommand::Config(_)
+            | CliCommand::Proto(_)
+            | CliCommand::Sidecar(_) => None,
         }
     }
 }

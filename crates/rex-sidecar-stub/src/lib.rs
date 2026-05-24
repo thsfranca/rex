@@ -63,7 +63,7 @@ impl SidecarService for StubSidecar {
         } else {
             inner.mode.trim()
         };
-        let mut text = match broker_inference(&inner.prompt, mode, "").await {
+        let mut text = match broker_inference(&inner.prompt, mode, &inner.model).await {
             Ok(content) => content,
             Err(err) => {
                 let stream = async_stream::stream! {

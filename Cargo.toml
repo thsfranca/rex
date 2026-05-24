@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "crates/rex-proto",
+  "crates/rex-config",
   "crates/rex-daemon",
   "crates/rex-cli",
   "crates/rex-sidecar-stub",
