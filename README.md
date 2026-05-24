@@ -105,7 +105,7 @@ This runs `cargo build --workspace`, installs `rex` via [`scripts/install-cli.sh
 Use these checks when touching daemon/CLI lifecycle behavior:
 
 ```bash
-./scripts/ci/test_enforce_rust_gate.sh
+./scripts/ci/test_enforce_ci_gate.sh
 cargo test -p rex-daemon --test uds_e2e -- --nocapture
 ```
 
@@ -210,7 +210,7 @@ cargo test --workspace --all-targets --locked
 
 For reliability-specific work, follow the full sequence in [`docs/CI.md`](docs/CI.md).
 
-Branch protection should require only `ci-checks`, which aggregates `rust-checks` and `extension-checks`.
+Branch protection should require **`ci-checks`** and **`Conventional PR title`**. Do not require `rust-verify` or `extension-verify` (they skip on docs-only PRs).
 
 ## License
 
