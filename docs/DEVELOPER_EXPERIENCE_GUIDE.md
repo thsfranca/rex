@@ -45,6 +45,8 @@ cargo run -p rex-cli -- complete "hello from rex" --format ndjson --mode agent
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Enable `REX_SIDECAR_ENABLED=1` and `rex-sidecar-stub` on `PATH`; set `REX_OPENAI_COMPAT_*` for brokered HTTP. CI may use `REX_SIDECAR_HARNESS=direct` (harness only).
 
+**Observability (planned):** enable daemon OTLP with `REX_OBS_ENABLED=1` and point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md).
+
 ### Working modes
 
 Use lightweight modes instead of rigid process:

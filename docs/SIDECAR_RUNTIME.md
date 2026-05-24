@@ -42,8 +42,9 @@ The daemon validates **compatibility metadata** (OS, arch, min runtime version) 
 
 | Link | Transport |
 |------|-----------|
-| Client ↔ daemon | gRPC over UDS (`/tmp/rex.sock` — product default) |
-| Sidecar ↔ daemon | gRPC over **UDS** on a dedicated socket path (for example `/tmp/rex-sidecar.sock`) |
+| Client ↔ daemon | gRPC over UDS (`REX_DAEMON_SOCKET`, default `/tmp/rex.sock`) |
+| Sidecar ↔ daemon (broker) | gRPC over **sidecar control-plane UDS** (for example `/tmp/rex-sidecar.sock`) |
+| Sidecar ↔ daemon (observability, planned) | **`SidecarObservabilityService`** on **daemon UDS** (`REX_DAEMON_SOCKET`) — not the sidecar socket |
 
 Cross-VM bridging (loopback TCP, vsock) applies only if a **future server** envelope uses a different kernel — not the Mac-first path. See [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) deferred catalog.
 
@@ -87,10 +88,25 @@ Minimum to satisfy [MVP_SPEC.md](MVP_SPEC.md):
 |------|---------|
 | `Health` / `GetCapabilities` | Supervision and advertised features |
 | `RunTurn` | One agent turn; stream assistant text to daemon |
+| `RegisterMetric` / `RecordMetric` | Custom metrics via daemon OTLP export — **planned** ([ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md)) |
+| `GetEconomicsSnapshot` | Bounded recent Rex economics for in-agent adaptation — **planned** |
+| `ReportResourceStats` | Optional sidecar self-reported resource stats — **planned** |
 | Inference broker RPC | Folded into `RunTurn` or separate `RequestInference` — implementation choice |
 | Tool broker RPC | `RequestTool` with capability `fs.read` for MVP |
 
-Proto package **`rex.sidecar.v1`** lands in an implementation PR; this hub defines intent only.
+Proto package **`rex.sidecar.v1`** — broker RPCs on the sidecar socket; **`SidecarObservabilityService`** on daemon UDS lands in a dedicated implementation PR. See [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md).
+
+## Observability (sidecar → daemon)
+
+Sidecars produce custom metrics **through the daemon**, not via a separate observability sidecar (**planned**):
+
+1. Sidecar opens gRPC to **daemon UDS** (`REX_DAEMON_SOCKET`) and calls `SidecarObservabilityService.RegisterMetric`, then `RecordMetric`.
+2. Daemon aggregates and exports on the same OTLP stream as daemon economics (`rex.sidecar.custom.*`).
+3. Optional: sidecar calls `GetEconomicsSnapshot` on **daemon UDS** to read recent cache/route/token summaries for agent logic.
+
+Broker RPCs (`RunTurn`, inference, tools) stay on the **sidecar control-plane socket**; observability RPCs use **daemon UDS** only — [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md).
+
+Operator setup: [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
 
 ## Plugin manifest (intent)
 
@@ -122,5 +138,6 @@ Full design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). Today use *
 ## Related
 
 - [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)
+- [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) · [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md)
 - [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md) · [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md)
 - [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) · [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) · [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md)

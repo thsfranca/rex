@@ -15,6 +15,7 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0007](0007-editor-extension-hybrid-transport-cli-and-grpc.md) | Editor extension hybrid transport (`rex-cli` NDJSON primary, optional unary `rex.v1`) | Accepted |
 | [0008](0008-dedicated-sidecar-control-plane-api.md) | Dedicated sidecar control-plane API (brokered integration) | Accepted |
 | [0009](0009-centralized-agent-approvals-and-checkpoints.md) | Centralized agent execution approvals and checkpoints | Accepted |
+| [0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) | Daemon exports observability via OTLP; sidecar observability API | Accepted |
 
 ## How to use
 
