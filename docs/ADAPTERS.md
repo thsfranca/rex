@@ -9,6 +9,33 @@ Product stance: **`rex-daemon` owns economics, policy, and brokering** ([ADR 000
 - **MVP broker backend:** OpenAI-compatible **HTTP** chat/completions (`http_openai_compat`).
 - **Harness / legacy:** in-process **mock** and optional **Cursor CLI** subprocess — CI and migration; **not** MVP product acceptance without sidecar.
 - Trace optimization levers: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) · [CACHING.md](CACHING.md).
+- **Multi-provider (Anthropic, OpenAI, local):** recommended **LiteLLM** gateway on the OpenAI-compat adapter — [Multi-provider gateway via LiteLLM](#multi-provider-gateway-via-litellm-recommended); native Anthropic Messages API is **planned** — [Direct Anthropic Messages API](#direct-anthropic-messages-api-planned--secondary). Strategy: [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md).
+
+## Terminology: protocol vs vendor
+
+Rex names adapters and config blocks after the **HTTP wire contract**, not the upstream **model vendor**.
+
+| Name layer | What it means | Anthropic reachable? |
+|------------|---------------|----------------------|
+| `http_openai_compat` / `http-openai-compat` | Client speaks **OpenAI Chat Completions** (`POST …/chat/completions`, SSE `choices[].delta.content`) | **Yes**, when `base_url` points at an OpenAI-compat server (LiteLLM, Ollama, LM Studio, OpenAI API) |
+| `inference.openai_compat` / `REX_OPENAI_COMPAT_*` | Configuration for that adapter (URL, key, model id on the wire) | **Yes** on the gateway path — `model` is whatever the compat server expects |
+| Planned `anthropic` runtime | **Anthropic Messages API** (`POST /v1/messages`, different SSE events) | **Yes**, native second hop — not OpenAI-shaped |
+
+**Rule:** *OpenAI-compat* = request shape; vendor is chosen by **`base_url`** and server-side routing (for example LiteLLM config).
+
+## Adapter granularity (protocol vs vendor)
+
+Rex adds **one `InferenceRuntime` per distinct HTTP contract**, not one per brand.
+
+| Approach | When to use | Rex stance |
+|----------|-------------|------------|
+| **Protocol adapter** | Same wire (chat/completions) for Ollama, LiteLLM, OpenAI API | **`http_openai_compat`** today |
+| **Vendor adapter** | Wire or features diverge (Messages API, vendor-only cache headers) | **`anthropic`** planned — secondary |
+| **Per-brand duplicates** | Identical wire, different logos only | **Avoid** — duplicates SSE/HTTP and broker dispatch |
+
+**LiteLLM** is a **gateway** on the OpenAI-compat surface, not a third protocol. A dedicated `litellm` runtime would still POST to `/v1/chat/completions` unless LiteLLM-specific headers are required later.
+
+See [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) for alternatives considered.
 
 ## `InferenceRequest` (design contract)
 
@@ -25,7 +52,9 @@ Product stance: **`rex-daemon` owns economics, policy, and brokering** ([ADR 000
 
 Chunks carry incremental `text`, monotonic `index`, terminating `done` chunk **or** gRPC/internal error surfaced as terminal **`error`** on the NDJSON CLI path.
 
-## HTTP OpenAI-compat profile (broker)
+## HTTP OpenAI-compatible chat/completions profile (broker)
+
+Runtime id remains **`http-openai-compat`** (`REX_INFERENCE_RUNTIME`). Config keys remain **`REX_OPENAI_COMPAT_*`** / `inference.openai_compat` — they name the **protocol**, not OpenAI-the-vendor.
 
 | Aspect | Policy |
 |---|---|
@@ -38,16 +67,120 @@ Chunks carry incremental `text`, monotonic `index`, terminating `done` chunk **o
 
 ### Operator profiles (examples)
 
-| Backend | Typical `REX_OPENAI_COMPAT_BASE_URL` |
-|---------|--------------------------------------|
-| Ollama (local) | `http://127.0.0.1:11434/v1` |
-| LM Studio | `http://127.0.0.1:1234/v1` |
-| OpenAI API | `https://api.openai.com/v1` (+ `REX_OPENAI_COMPAT_API_KEY`) |
+| Backend | Typical `REX_OPENAI_COMPAT_BASE_URL` | Notes |
+|---------|--------------------------------------|-------|
+| **LiteLLM (multi-provider)** | `http://127.0.0.1:4000/v1` (or your proxy host) | **Recommended** for Anthropic + OpenAI — [Multi-provider gateway via LiteLLM](#multi-provider-gateway-via-litellm-recommended) |
+| Ollama (local) | `http://127.0.0.1:11434/v1` | Local OSS |
+| LM Studio | `http://127.0.0.1:1234/v1` | Local OSS |
+| OpenAI API (direct) | `https://api.openai.com/v1` (+ `REX_OPENAI_COMPAT_API_KEY`) | Secondary — same adapter, direct vendor URL |
 
 ### Verification
 
-- Local: configure env, start daemon, `rex-cli complete "hello" --format ndjson`.
+- Local: configure env, start daemon, `rex complete "hello" --format ndjson`.
+- LiteLLM: see [CONFIGURATION.md](CONFIGURATION.md#operator-profile-litellm-anthropic-and-other-providers).
 - Automated: `http_openai_compat` unit test with in-process TCP SSE stub; UDS e2e uses **`mock`** — [CI.md](CI.md).
+
+## Multi-provider gateway via LiteLLM (recommended)
+
+**Status:** `documented` — operator-ready; no new runtime id.
+
+### Purpose
+
+Use a single OpenAI-compat broker URL where **LiteLLM** holds provider keys (Anthropic, OpenAI, etc.) and routes by **`model`**. Rex keeps daemon-first policy; the sidecar still calls **`BrokerInference`** only.
+
+### Scope
+
+| In | Out |
+|----|-----|
+| Env/JSON mapping, model hint → LiteLLM, secrets on gateway host | Embedding LiteLLM inside `rex-daemon` |
+| Verification steps for Claude via LiteLLM | Replacing the sidecar agent loop |
+| Broker error intent catalog (below) | Stable Rust error enums (until [ERROR_HANDLING.md](ERROR_HANDLING.md) exists) |
+
+### Boundaries
+
+- **Mechanism:** existing `http_openai_compat` ([ADR 0002](architecture/decisions/0002-inference-adapter-contract.md)).
+- **Policy:** `ContextPipeline`, L1 cache, and mode gates unchanged ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)).
+- **Secrets:** Anthropic and OpenAI API keys live in **LiteLLM** configuration, not Rex `config.json` (optional LiteLLM master key via `REX_OPENAI_COMPAT_API_KEY`).
+
+### Interfaces (intent)
+
+| Setting | Example |
+|---------|---------|
+| `REX_OPENAI_COMPAT_BASE_URL` | `http://127.0.0.1:4000/v1` |
+| `REX_OPENAI_COMPAT_API_KEY` | LiteLLM proxy key (if enabled) |
+| `REX_OPENAI_COMPAT_MODEL` | LiteLLM model alias (for example Claude id configured in LiteLLM) |
+| `rex complete --model` | Passes through to LiteLLM as the chat/completions `model` field |
+
+JSON (R015 target): `inference.openai_compat` block — see [CONFIGURATION.md](CONFIGURATION.md#operator-profile-litellm-anthropic-and-other-providers).
+
+### Operator flow
+
+```mermaid
+flowchart LR
+  CLI[rex complete]
+  Daemon[rex-daemon]
+  Sidecar[sidecar RunTurn]
+  Broker[BrokerInference]
+  Adapter[http_openai_compat]
+  LiteLLM[LiteLLM OpenAI-compat]
+  Providers[Anthropic or OpenAI API]
+
+  CLI --> Daemon --> Sidecar --> Broker --> Adapter --> LiteLLM --> Providers
+```
+
+### Broker provider errors (intent)
+
+Design catalog for `BrokerInferenceResponse.error` (implementation follow-up). Prefix with `provider_` for machine parsing.
+
+| Condition | Intended `error` prefix | Operator action |
+|-----------|-------------------------|-----------------|
+| HTTP 401 / 403 | `provider_auth` | Fix LiteLLM or upstream API keys |
+| HTTP 429 | `provider_rate_limit` | Back off; check LiteLLM quotas |
+| HTTP 5xx / timeout | `provider_unavailable` | Check LiteLLM and upstream health |
+| Unknown model (gateway body) | `provider_model` | Fix `REX_OPENAI_COMPAT_MODEL` / LiteLLM model map |
+
+Fold into [ERROR_HANDLING.md](ERROR_HANDLING.md) when that hub is created ([ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md)).
+
+### Cross-links
+
+- [CONFIGURATION.md](CONFIGURATION.md#operator-profile-litellm-anthropic-and-other-providers)
+- [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — LiteLLM gateway economics row
+- [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md)
+- [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md)
+
+## Direct Anthropic Messages API (planned — secondary)
+
+**Status:** `planned` — not shipped. Roadmap: [ROADMAP.md](ROADMAP.md) (**Could**, Later).
+
+### Purpose
+
+Optional **native** Anthropic adapter when an OpenAI-compat gateway hop is undesirable (latency, regulated direct tenant, or Anthropic-only wire features).
+
+### Scope
+
+| In (design stage) | Out (design stage) |
+|---|---|
+| Runtime id `anthropic`, Messages API streaming → Rex chunk/`done` semantics | Replacing LiteLLM-primary operator path |
+| `inference.anthropic` config block (intent) | Sidecar-held Anthropic SDK keys |
+| Broker dispatch from `inference.runtime` (intent) | Mandatory native adapter for all installs |
+
+### Boundaries
+
+- **Mechanism:** new `InferenceRuntime` + broker path dispatch ([ADR 0002](architecture/decisions/0002-inference-adapter-contract.md)).
+- **Wire:** `POST /v1/messages` with SSE (`message_delta` / `content_block_delta` events) — not chat/completions.
+- **Today:** `broker_inference` is hardwired to `http_openai_compat`; native path requires provider dispatch (documented intent only).
+
+### Interfaces (intent)
+
+- Runtime id: `anthropic` on `REX_INFERENCE_RUNTIME`.
+- Config: `inference.anthropic` — `base_url`, `api_key`, `model`, `timeout_secs`, optional `api_version` header.
+- `AdapterCapabilities`: same as HTTP OpenAI-compat (`attach_context`, `truncate_prompt`, **`ask`**-only L1) unless Anthropic-specific limits are documented at implementation time.
+
+### Cross-links
+
+- [CACHING.md](CACHING.md#vendor-kv-and-prompt-cache-hints-planned) — Anthropic prompt-cache metadata on native adapter
+- [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — native Anthropic economics row
+- [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md)
 
 ## Mock profile (test harness)
 
@@ -131,3 +264,5 @@ Optional **Apple MLX** (or similar local runtime) as an `InferenceRuntime` broke
 - [MVP_SPEC.md](MVP_SPEC.md)
 - [CACHING.md](CACHING.md)
 - [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)
+- [CONFIGURATION.md](CONFIGURATION.md)
+- [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) — gateway-first multi-provider strategy

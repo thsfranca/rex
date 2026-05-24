@@ -162,6 +162,7 @@ rg 'stream.metrics' /path/to/daemon.log
 | **Code context ask** | Full prompt without compaction | Extractive compaction + prefix cache |
 | **Agent turn** | Sidecar loop without cache | L1 policy + approvals logged |
 | **Paid API** | Remote OpenAI-compat | Same + `cache_decision=` and `stream.metrics` |
+| **Paid API via LiteLLM** | Gateway to Anthropic/OpenAI | Same Rex signals; attribute spend and upstream errors in **LiteLLM** logs — [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-recommended) |
 | **Local OSS** | Ollama / LM Studio | Same; emphasize compute time + token estimates |
 
 ### Success metrics (hypotheses — not thresholds yet)

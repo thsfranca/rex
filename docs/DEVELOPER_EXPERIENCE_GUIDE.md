@@ -45,6 +45,17 @@ cargo run -p rex -- complete "hello from rex" --format ndjson --mode agent
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Enable `REX_SIDECAR_ENABLED=1` and `rex-sidecar-stub` on `PATH`; set `REX_OPENAI_COMPAT_*` for brokered HTTP. CI may use `REX_SIDECAR_HARNESS=direct` (harness only).
 
+### Multi-provider (Anthropic, OpenAI) via LiteLLM
+
+Point the same broker env at a LiteLLM OpenAI-compat URL; provider keys live in LiteLLM, not Rex. Full profile: [CONFIGURATION.md](CONFIGURATION.md#operator-profile-litellm-anthropic-and-other-providers), [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-recommended).
+
+```bash
+export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:4000/v1"
+export REX_OPENAI_COMPAT_MODEL="claude-sonnet-4-20250514"   # LiteLLM model alias
+export REX_INFERENCE_RUNTIME="http-openai-compat"
+export REX_SIDECAR_ENABLED=1
+```
+
 **Observability (planned):** enable daemon OTLP with `REX_OBS_ENABLED=1` and point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md).
 
 ### Working modes
