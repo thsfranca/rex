@@ -1,12 +1,18 @@
 # REX configuration
 
-This document is the **canonical** policy for how REX settings work: what applies today, how precedence will work when you add new layers, and where each `REX_*` variable is read. See [ARCHITECTURE.md](ARCHITECTURE.md) for where the **daemon** applies inference and cache policy.
+This document is the **canonical** policy for how REX settings work: merged **JSON** under `$REX_ROOT`, optional project overrides, and partial CLI flags. See [ARCHITECTURE.md](ARCHITECTURE.md) for where the **daemon** applies inference and cache policy.
+
+## Configuration surface
+
+- **Product settings:** `$REX_ROOT/config.json` and `.rex/config.json` — not `REX_*` tuning environment variables.
+- **Bootstrap env:** **`REX_ROOT`** only (optional). Points at the layout directory (`config.json`, protos, observability store path). Defaults to `~/.rex` when unset.
+- **Secrets:** API keys may use env or OS keychain alongside JSON fields — see below. Observability and inference are **not** configured via `REX_OBS_*` or similar legacy names.
 
 ## Why this policy exists
 
-- **Developer experience:** Repeat the same run without retyping long `export` lines; future CLI flags and optional files will map to the same **names** as environment variables.
-- **Automation:** CI, scripts, and the editor extension set **`REX_ROOT`** (optional) and use JSON config; legacy `REX_*` tuning vars are ignored with a startup warning.
-- **One catalog:** Documents JSON keys, bootstrap commands, and remaining environment variables.
+- **Developer experience:** One merged config file per machine; `rex config show` for inspection.
+- **Automation:** CI, scripts, and the editor extension set **`REX_ROOT`** and write JSON; legacy `REX_*` tuning vars are ignored with a startup warning.
+- **One catalog:** JSON keys, bootstrap commands, and deprecated env tables for migration only.
 
 ## Precedence (implemented)
 
@@ -37,6 +43,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist` | Allowed `exec.shell` programs. |
 | `agent` | `approvals_enabled`, `max_tool_steps` | Agent-mode approval gate. |
+| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `otlp`, `store` | Economics telemetry, local store, OTLP export — **planned**; see [Observability (planned)](#observability-planned). |
 
 Minimal example:
 
@@ -58,9 +65,36 @@ Minimal example:
       "model": "llama3.2"
     }
   },
-  "workspace": { "root": "." }
+  "workspace": { "root": "." },
+  "observability": {
+    "enabled": false,
+    "service_name": "rex-daemon",
+    "custom_sidecar_metrics": true,
+    "otlp": {
+      "endpoint": "http://127.0.0.1:4317",
+      "protocol": "grpc"
+    },
+    "store": { "path": "obs/store.sqlite" }
+  }
 }
 ```
+
+## Observability (planned)
+
+**Status:** design documented — not read by daemon code yet. Hubs: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md). ADRs: [0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md).
+
+When `observability.enabled` is `true` in merged JSON, the daemon will enable **embedded economics store** (`$REX_ROOT/<store.path>`) and **OTLP export** together. When `false` or omitted, phase 0 **stdout grep** only.
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `observability.enabled` | `false` | Master switch: store + OTLP |
+| `observability.service_name` | `rex-daemon` | OTel resource `service.name` |
+| `observability.custom_sidecar_metrics` | `true` | When `false`, drop sidecar-registered custom metrics at export |
+| `observability.otlp.endpoint` | (none) | Operator collector OTLP URL when enabled |
+| `observability.otlp.protocol` | `grpc` | `grpc` or `http/protobuf` |
+| `observability.store.path` | `obs/store.sqlite` | Path relative to `$REX_ROOT` |
+
+Your **OpenTelemetry Collector** may use its own env or yaml; Rex reads only the `observability` JSON section.
 
 ## Legacy environment variables (deprecated)
 
@@ -256,3 +290,5 @@ Versioned **system / project prompt assemblies** assembled in the daemon so clie
 - [ADAPTERS.md](ADAPTERS.md)
 - [CACHING.md](CACHING.md)
 - [EXTENSION.md](EXTENSION.md)
+- [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
+- [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)

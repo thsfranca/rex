@@ -160,7 +160,7 @@ Ownership of chat transcript, turn assembly (`TurnContext`), workspace binding, 
 
 ## Observability
 
-Full signal catalog, validation program, export contract, and BYOT integrations: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md). Agent knowledge retrieval metrics (planned): [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md).
+Full signal catalog, export contract, and BYOT integrations: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [CONFIGURATION.md](CONFIGURATION.md#observability-planned), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md). Economics validation program: [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). Agent knowledge retrieval metrics (planned): [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md).
 
 | Field / signal | Where | Purpose |
 |---|---|---|
