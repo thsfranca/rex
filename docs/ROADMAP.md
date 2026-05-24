@@ -134,6 +134,8 @@ flowchart TD
 | **Node gRPC `StreamInference`** in extension | New ADR supersedes hybrid policy | [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
 | **Large** multi-plugin orchestration | Single-plugin supervision stable | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
 | **Long-term / project memory** | Economics path clear | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
+| **Agent knowledge** (curated docs for AI, remote/MCP) | Operator pain or bundle design accepted | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
+| **Observability suite + economics validation** | Exporter or validation harness spike | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) |
 | **VM/container sidecar envelope** (server/fleet) | Linux deployment needs stronger isolation | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 
 **CI:** [CI.md](CI.md) — mock / self-contained default; live LLM not required on PRs.

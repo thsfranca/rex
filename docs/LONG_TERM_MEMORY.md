@@ -37,6 +37,10 @@ Each row is a **hypothesis**, not roadmap commitment.
 
 A future design keeps **stream and tool contracts** stable: memory **feeds** the context pipeline under daemon policy; it does not replace [ADAPTERS.md](ADAPTERS.md) or client NDJSON. No new public RPC or proto here until a spec change lands elsewhere.
 
+## Related
+
+- **[AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md)** — operator-curated reference for agents (stable bundles). Long-term memory here is **session-derived and extracted** signals; see the boundary table in that hub.
+
 ## Cross-links (hub pattern)
 
 This file is the **canonical** bet list. [ARCHITECTURE.md](ARCHITECTURE.md) and [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) keep **one-line** pointers and status; they do not restate the full table above.
