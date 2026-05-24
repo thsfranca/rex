@@ -24,6 +24,8 @@ message GetCapabilitiesResponse {
 message RunTurnRequest {
   string prompt = 1;
   string mode = 2;
+  // Optional. Empty string means use daemon default model.
+  string model = 3;
 }
 
 message RunTurnChunk {

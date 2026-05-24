@@ -1,13 +1,17 @@
 //! gRPC client for `rex.sidecar.v1` over UDS.
 
+use std::pin::Pin;
 use std::time::Duration;
 
+use async_stream::stream;
 use hyper_util::rt::TokioIo;
 use rex_proto::rex::sidecar::v1::sidecar_service_client::SidecarServiceClient;
 use rex_proto::rex::sidecar::v1::{HealthRequest, RunTurnChunk, RunTurnRequest};
 use rex_proto::rex::v1::StreamInferenceResponse;
 use tokio::net::UnixStream;
+use tokio_stream::Stream;
 use tonic::transport::Endpoint;
+use tonic::Status;
 use tower::service_fn;
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
@@ -33,35 +37,61 @@ pub async fn health_check(
     Ok(response.healthy)
 }
 
+fn run_turn_request(prompt: &str, mode: &str, model: &str) -> RunTurnRequest {
+    RunTurnRequest {
+        prompt: prompt.to_string(),
+        mode: mode.to_string(),
+        model: model.to_string(),
+    }
+}
+
+pub fn map_run_turn_chunk(chunk: RunTurnChunk) -> StreamInferenceResponse {
+    StreamInferenceResponse {
+        text: chunk.text,
+        index: chunk.index,
+        done: chunk.done,
+    }
+}
+
 pub async fn run_turn_collect(
     client: &mut SidecarServiceClient<tonic::transport::Channel>,
     prompt: &str,
     mode: &str,
+    model: &str,
 ) -> Result<Vec<RunTurnChunk>, tonic::Status> {
-    let request = RunTurnRequest {
-        prompt: prompt.to_string(),
-        mode: mode.to_string(),
-    };
-    let mut stream = client.run_turn(request).await?.into_inner();
+    let request = run_turn_request(prompt, mode, model);
+    let mut grpc_stream = client.run_turn(request).await?.into_inner();
     let mut chunks = Vec::new();
-    while let Some(chunk) = stream.message().await? {
+    while let Some(chunk) = grpc_stream.message().await? {
         chunks.push(chunk);
     }
     Ok(chunks)
 }
 
+pub type RunTurnInferenceStream =
+    Pin<Box<dyn Stream<Item = Result<StreamInferenceResponse, Status>> + Send>>;
+
+pub async fn run_turn_stream(
+    client: &mut SidecarServiceClient<tonic::transport::Channel>,
+    prompt: &str,
+    mode: &str,
+    model: &str,
+) -> Result<RunTurnInferenceStream, tonic::Status> {
+    let request = run_turn_request(prompt, mode, model);
+    let mut grpc_stream = client.run_turn(request).await?.into_inner();
+    Ok(Box::pin(stream! {
+        while let Some(chunk) = grpc_stream.message().await? {
+            yield Ok(map_run_turn_chunk(chunk));
+        }
+    }))
+}
+
 #[allow(clippy::result_large_err)]
 pub fn map_sidecar_to_inference_chunks(
     chunks: Vec<RunTurnChunk>,
-) -> Vec<Result<StreamInferenceResponse, tonic::Status>> {
+) -> Vec<Result<StreamInferenceResponse, Status>> {
     chunks
         .into_iter()
-        .map(|c| {
-            Ok(StreamInferenceResponse {
-                text: c.text,
-                index: c.index,
-                done: c.done,
-            })
-        })
+        .map(|c| Ok(map_run_turn_chunk(c)))
         .collect()
 }

@@ -15,7 +15,9 @@ use tonic::transport::Endpoint;
 use tower::service_fn;
 
 mod support;
-use support::openai_compat_sse::spawn_loopback_openai_compat_sse_fixture;
+use support::openai_compat_sse::{
+    spawn_loopback_openai_compat_sse_fixture, spawn_loopback_openai_compat_sse_fixture_echo_model,
+};
 
 #[allow(dead_code)]
 #[path = "../src/access_policy.rs"]
@@ -218,11 +220,13 @@ async fn collect_stream_text(
     client: &mut RexServiceClient<tonic::transport::Channel>,
     prompt: &str,
     mode: &str,
+    model: &str,
 ) -> String {
     let response = client
         .stream_inference(StreamInferenceRequest {
             prompt: prompt.to_string(),
             mode: mode.to_string(),
+            model: model.to_string(),
             ..Default::default()
         })
         .await
@@ -278,7 +282,7 @@ async fn mvp_product_path_sidecar_stream_and_brokered_read() {
         .expect("connect daemon");
     let agent_text = timeout(
         STREAM_TIMEOUT,
-        collect_stream_text(&mut client, "hello mvp", "agent"),
+        collect_stream_text(&mut client, "hello mvp", "agent", ""),
     )
     .await
     .expect("agent stream timed out");
@@ -290,7 +294,7 @@ async fn mvp_product_path_sidecar_stream_and_brokered_read() {
     let read_prompt = "inspect __rex_read:hello.txt".to_string();
     let read_text = timeout(
         STREAM_TIMEOUT,
-        collect_stream_text(&mut client, &read_prompt, "agent"),
+        collect_stream_text(&mut client, &read_prompt, "agent", ""),
     )
     .await
     .expect("broker read stream timed out");
@@ -303,7 +307,7 @@ async fn mvp_product_path_sidecar_stream_and_brokered_read() {
     let deny_prompt = "inspect __rex_read:.env".to_string();
     let deny_text = timeout(
         STREAM_TIMEOUT,
-        collect_stream_text(&mut client, &deny_prompt, "agent"),
+        collect_stream_text(&mut client, &deny_prompt, "agent", ""),
     )
     .await
     .expect("policy deny stream timed out");
@@ -311,6 +315,34 @@ async fn mvp_product_path_sidecar_stream_and_brokered_read() {
         deny_text.to_ascii_lowercase().contains("protected_path")
             || deny_text.contains("fs.read error"),
         "expected access policy deny for .env, got: {deny_text}"
+    );
+
+    let list_prompt = "inspect __rex_list:".to_string();
+    let list_text = timeout(
+        STREAM_TIMEOUT,
+        collect_stream_text(&mut client, &list_prompt, "agent", ""),
+    )
+    .await
+    .expect("broker list stream timed out");
+    assert!(
+        list_text.contains("hello.txt"),
+        "expected brokered fs.list content, got: {list_text}"
+    );
+
+    let http_addr_model = spawn_loopback_openai_compat_sse_fixture_echo_model().await;
+    std::env::set_var(
+        "REX_OPENAI_COMPAT_BASE_URL",
+        format!("http://{http_addr_model}"),
+    );
+    let model_text = timeout(
+        STREAM_TIMEOUT,
+        collect_stream_text(&mut client, "hello model", "agent", "custom-model-id"),
+    )
+    .await
+    .expect("model override stream timed out");
+    assert!(
+        model_text.contains("model=custom-model-id"),
+        "expected request model override in brokered inference, got: {model_text}"
     );
 
     daemon.abort();

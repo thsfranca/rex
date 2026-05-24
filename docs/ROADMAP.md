@@ -62,12 +62,12 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Today the supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** is planned.
 
-**Priority rationale:** Primary focus is **R013 → R019** (daemon proto/CLI/config, then single-active **`rex-agent`**). **RC-S2** may run **in parallel** with **R013** (extension-only blast radius). Per [PRIORITIZATION.md](PRIORITIZATION.md) tie-breakers: prefer **daemon → CLI → extension** ordering; proto rows carry **medium contract risk** — keep slices small. **R016** stays **Could** until single-active agent is proven (open socket/broadcast decision).
+**Priority rationale:** Primary focus is **R014 → R019** (unified CLI, config, then single-active **`rex-agent`**). **R013** is **Done**. **RC-S2** may run in parallel (extension-only blast radius).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
 | 1 | Doc truth (stub vs product) | — | Hubs state planned agent; stub = harness |
-| 2 | Platform enablers | **R013** | `BrokerListDir`, `RunTurn.model`, stream passthrough |
+| 2 | Platform enablers | **R013** | Done — `BrokerListDir`, `RunTurn.model`, stream passthrough |
 | 3 | Unified `rex` CLI | **R014** | Single `rex` binary; subcommands |
 | 4 | Config + proto SDK | **R015** | JSON config, `rex proto install`, `proto.gen_root` |
 | 5 | `rex-agent` scaffold | **R017** | gRPC server + broker client |
@@ -126,7 +126,7 @@ flowchart TD
 | R010 | Broker `fs.write` | Done |
 | R011 | Broker `exec.shell` allowlist | Done |
 | **R012** | **AccessPolicy broker centralization** (RC-05) | **Done** |
-| **R013** | Platform enablers (`BrokerListDir`, `RunTurn.model`, stream passthrough) | Should |
+| **R013** | Platform enablers (`BrokerListDir`, `RunTurn.model`, stream passthrough) | Done |
 | **R014** | Unified `rex` CLI (replace `rex-cli` / `rex-daemon`) | Should |
 | **R015** | JSON config + `rex proto install` + `proto.gen_root` | Should |
 | **R016** | Multi-active sidecar broadcast | Could |

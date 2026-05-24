@@ -24,10 +24,19 @@ pub fn evaluate_fs_read(relative_path: &str) -> AccessDecision {
             message: "path must not be empty".to_string(),
         });
     }
-    if is_protected_path(trimmed) {
+    evaluate_fs_path(trimmed, "read")
+}
+
+/// Evaluate `fs.list` before host execution.
+pub fn evaluate_fs_list(relative_path: &str) -> AccessDecision {
+    evaluate_fs_path(relative_path.trim(), "list")
+}
+
+fn evaluate_fs_path(trimmed: &str, operation: &str) -> AccessDecision {
+    if !trimmed.is_empty() && is_protected_path(trimmed) {
         return AccessDecision::Deny(PolicyDeny {
             code: "protected_path",
-            message: format!("read denied for protected path: {trimmed}"),
+            message: format!("{operation} denied for protected path: {trimmed}"),
         });
     }
     AccessDecision::Allow
@@ -72,6 +81,19 @@ mod tests {
             AccessDecision::Deny(d) => assert_eq!(d.code, "protected_path"),
             _ => panic!("expected deny"),
         }
+    }
+
+    #[test]
+    fn denies_env_list() {
+        match evaluate_fs_list(".env") {
+            AccessDecision::Deny(d) => assert_eq!(d.code, "protected_path"),
+            _ => panic!("expected deny"),
+        }
+    }
+
+    #[test]
+    fn allows_list_workspace_root() {
+        assert_eq!(evaluate_fs_list(""), AccessDecision::Allow);
     }
 
     #[test]

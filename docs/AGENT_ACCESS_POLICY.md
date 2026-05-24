@@ -7,11 +7,12 @@ Canonical **architecture-level** design for how Rex constrains **agent workloads
 | Capability | MVP | Notes |
 |------------|-----|-------|
 | **`fs.read`** | **Required** (recommended default) | Workspace paths; proves agent can inspect repo via broker |
+| **`fs.list`** | **Implemented** (broker RPC) | Non-recursive directory listing under `REX_WORKSPACE_ROOT` (256-entry cap); sidecar stub `__rex_list:` directive |
 | **`fs.write`** | **Implemented** (broker RPC) | Bounded write under `REX_WORKSPACE_ROOT`; sidecar stub `__rex_write:` directive |
 | **`exec.shell`** | **Implemented** (broker RPC) | Allowlisted programs only (`REX_BROKER_SHELL_ALLOWLIST`); sidecar stub `__rex_exec:` directive |
 | **`net.fetch`** | Won't (now) | Default deny |
 
-**Daemon RPC surface today:** [`proto/rex/v1/rex.proto`](../proto/rex/v1/rex.proto) exposes **`BrokerReadFile`**, **`BrokerWriteFile`**, and **`BrokerExecShell`** (allowlisted programs).
+**Daemon RPC surface today:** [`proto/rex/v1/rex.proto`](../proto/rex/v1/rex.proto) exposes **`BrokerReadFile`**, **`BrokerListDir`**, **`BrokerWriteFile`**, and **`BrokerExecShell`** (allowlisted programs).
 
 Acceptance: sidecar successfully reads a file under policy; denial paths logged for protected locations.
 
@@ -61,6 +62,7 @@ Trust model: sidecar **requests**; daemon **does not obey blind commands**. Anti
 | Capability | Default for dev `agent` mode | Notes |
 |------------|------------------------------|-------|
 | **`fs.read`** | Workspace + declared readonly roots | Broader read may prompt or deny. |
+| **`fs.list`** | Workspace only; non-recursive; capped entry count | Protected directories denied at policy layer. |
 | **`fs.write`** | Workspace only | Protected paths always deny write. |
 | **`exec.shell`** | Workspace `cwd`, bounded timeout/output | Host tools via broker so guest stays sandboxed. |
 | **`net.fetch`** | **Deny** until policy grants | Allowlist domains when enabled. |

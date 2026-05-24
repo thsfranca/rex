@@ -67,7 +67,7 @@ flowchart TB
 
 ## Platform enablers (R013)
 
-Additive proto and daemon changes before agent dogfood:
+**Status: implemented.** Additive proto and daemon changes before agent dogfood:
 
 | Change | Why |
 |--------|-----|

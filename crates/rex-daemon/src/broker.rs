@@ -1,4 +1,4 @@
-//! Host capability broker (MVP: workspace `fs.read`, `fs.write`, `exec.shell`).
+//! Host capability broker (MVP: workspace `fs.read`, `fs.list`, `fs.write`, `exec.shell`).
 
 use std::env;
 use std::fs;
@@ -29,7 +29,14 @@ pub enum BrokerError {
 
 const MAX_WRITE_BYTES: usize = 65_536;
 const MAX_SHELL_OUTPUT_BYTES: usize = 8_192;
+const MAX_LIST_DIR_ENTRIES: usize = 256;
 const DEFAULT_SHELL_ALLOWLIST: &str = "echo,printf,true";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BrokerDirEntry {
+    pub name: String,
+    pub is_dir: bool,
+}
 
 impl From<PolicyDeny> for BrokerError {
     fn from(deny: PolicyDeny) -> Self {
@@ -65,6 +72,48 @@ pub fn broker_read_file(relative_path: &str) -> Result<String, BrokerError> {
             BrokerError::Io(e.to_string())
         }
     })
+}
+
+pub fn broker_list_dir(relative_path: &str) -> Result<Vec<BrokerDirEntry>, BrokerError> {
+    match crate::access_policy::evaluate_fs_list(relative_path) {
+        AccessDecision::Allow => {}
+        AccessDecision::Deny(deny) => return Err(deny.into()),
+    }
+    let root = workspace_root_from_env()?;
+    let resolved = resolve_list_dir(&root, relative_path)?;
+    if !resolved.is_dir() {
+        return Err(BrokerError::Io(format!(
+            "not a directory: {}",
+            relative_path.trim()
+        )));
+    }
+    let mut entries = Vec::new();
+    for entry in fs::read_dir(&resolved).map_err(|e| {
+        if e.kind() == std::io::ErrorKind::NotFound {
+            BrokerError::NotFound(relative_path.trim().to_string())
+        } else {
+            BrokerError::Io(e.to_string())
+        }
+    })? {
+        let entry = entry.map_err(|e| BrokerError::Io(e.to_string()))?;
+        let file_type = entry
+            .file_type()
+            .map_err(|e| BrokerError::Io(e.to_string()))?;
+        let name = entry.file_name().to_string_lossy().to_string();
+        entries.push(BrokerDirEntry {
+            name,
+            is_dir: file_type.is_dir(),
+        });
+        if entries.len() >= MAX_LIST_DIR_ENTRIES {
+            break;
+        }
+    }
+    entries.sort_by(|a, b| {
+        a.name
+            .to_ascii_lowercase()
+            .cmp(&b.name.to_ascii_lowercase())
+    });
+    Ok(entries)
 }
 
 pub fn broker_write_file(relative_path: &str, content: &str) -> Result<(), BrokerError> {
@@ -198,6 +247,14 @@ fn resolve_under_workspace(root: &Path, relative_path: &str) -> Result<PathBuf, 
     Ok(canonical)
 }
 
+fn resolve_list_dir(root: &Path, relative_path: &str) -> Result<PathBuf, BrokerError> {
+    let trimmed = relative_path.trim();
+    if trimmed.is_empty() {
+        return Ok(root.canonicalize().unwrap_or_else(|_| root.to_path_buf()));
+    }
+    resolve_under_workspace(root, trimmed)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -300,6 +357,46 @@ mod tests {
             err,
             BrokerError::EscapesWorkspace("../etc/passwd".to_string())
         );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    #[serial]
+    fn lists_workspace_root_and_subdirectory() {
+        let dir = std::env::temp_dir().join(format!("rex-broker-list-{}", std::process::id()));
+        fs::create_dir_all(dir.join("src")).expect("srcdir");
+        fs::write(dir.join("hello.txt"), "x").expect("file");
+        let _guard = WorkspaceRootGuard::set(dir.display().to_string());
+        let root_entries = broker_list_dir("").expect("list root");
+        assert!(root_entries
+            .iter()
+            .any(|e| e.name == "hello.txt" && !e.is_dir));
+        assert!(root_entries.iter().any(|e| e.name == "src" && e.is_dir));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    #[serial]
+    fn list_dir_denies_protected_path() {
+        let dir = std::env::temp_dir().join(format!("rex-broker-list-deny-{}", std::process::id()));
+        fs::create_dir_all(&dir).expect("tmpdir");
+        let _guard = WorkspaceRootGuard::set(dir.display().to_string());
+        let err = broker_list_dir(".env").unwrap_err();
+        assert!(matches!(err, BrokerError::PolicyDenied { .. }));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    #[serial]
+    fn list_dir_caps_entries() {
+        let dir = std::env::temp_dir().join(format!("rex-broker-list-cap-{}", std::process::id()));
+        fs::create_dir_all(&dir).expect("tmpdir");
+        for i in 0..300 {
+            fs::write(dir.join(format!("file-{i:03}.txt")), "x").expect("file");
+        }
+        let _guard = WorkspaceRootGuard::set(dir.display().to_string());
+        let entries = broker_list_dir("").expect("list");
+        assert_eq!(entries.len(), MAX_LIST_DIR_ENTRIES);
         let _ = fs::remove_dir_all(&dir);
     }
 }
