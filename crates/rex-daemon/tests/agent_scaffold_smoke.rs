@@ -66,6 +66,8 @@ mod sidecar_config;
 #[allow(dead_code)]
 #[path = "../src/supervisor.rs"]
 mod supervisor;
+#[path = "../src/turn_correlation.rs"]
+mod turn_correlation;
 
 /// Set by `scripts/ci/run_rex_agent_checks.sh`. Skips Python/proto setup during workspace `cargo nextest`.
 fn agent_smoke_enabled() -> bool {
@@ -289,9 +291,18 @@ async fn agent_sidecar_health_and_broker_error_without_daemon() {
         let mut client = sidecar_client::connect_sidecar(&socket_path)
             .await
             .expect("connect sidecar");
-        sidecar_client::run_turn_collect(&mut client, "hello agent", "agent", "")
-            .await
-            .expect("run turn")
+        sidecar_client::run_turn_collect(
+            &mut client,
+            "hello agent",
+            "agent",
+            "",
+            &sidecar_client::TurnCorrelation {
+                turn_id: "turn-agent-smoke".to_string(),
+                context_revision: String::new(),
+            },
+        )
+        .await
+        .expect("run turn")
     })
     .await
     .expect("run_turn timed out");

@@ -30,7 +30,18 @@ def _daemon_channel(socket_path: str) -> grpc.Channel:
     return grpc.insecure_channel(target, options=options)
 
 
-def broker_inference(prompt: str, mode: str, model: str) -> tuple[bool, str]:
+def _metadata(turn_id: str | None) -> tuple[tuple[str, str], ...]:
+    if turn_id and turn_id.strip():
+        return (("x-rex-turn-id", turn_id.strip()),)
+    return ()
+
+
+def broker_inference(
+    prompt: str,
+    mode: str,
+    model: str,
+    turn_id: str | None = None,
+) -> tuple[bool, str]:
     """
     Call BrokerInference on the daemon.
 
@@ -46,7 +57,11 @@ def broker_inference(prompt: str, mode: str, model: str) -> tuple[bool, str]:
             model=model or "",
         )
         try:
-            response = stub.BrokerInference(request, timeout=30.0)
+            response = stub.BrokerInference(
+                request,
+                timeout=30.0,
+                metadata=_metadata(turn_id),
+            )
         except grpc.RpcError as err:
             return False, str(err)
         if response.ok:

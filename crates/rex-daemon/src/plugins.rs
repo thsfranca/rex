@@ -5,6 +5,7 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use crate::adapters::AdapterCapabilities;
+use crate::turn_correlation::strip_extension_context_blocks;
 
 pub fn estimate_tokens(text: &str) -> usize {
     text.chars().count().div_ceil(4)
@@ -85,6 +86,8 @@ pub struct PipelineMetrics {
 #[derive(Debug, Clone)]
 pub struct PipelineResult {
     pub effective_prompt: String,
+    pub injected_context: String,
+    pub c1_stripped: bool,
     pub metrics: PipelineMetrics,
 }
 
@@ -330,15 +333,25 @@ impl ContextPipeline {
         request: &ContextRequest,
         capabilities: AdapterCapabilities,
     ) -> PipelineResult {
-        let bounded_prompt = if capabilities.truncate_prompt {
+        let mut bounded_prompt = if capabilities.truncate_prompt {
             apply_prompt_budget(&request.prompt, self.budget.max_prompt_tokens)
         } else {
             request.prompt.clone()
         };
+        let mut c1_stripped = false;
+        if capabilities.attach_context && !should_skip_retrieval(request) {
+            let (stripped, applied) = strip_extension_context_blocks(&bounded_prompt);
+            if applied {
+                bounded_prompt = stripped;
+                c1_stripped = true;
+            }
+        }
         let decision = BehavioralPrefilter::evaluate(request.behavior_snapshot);
         if let BehaviorDecision::Suppress { .. } = decision {
             return PipelineResult {
                 effective_prompt: bounded_prompt.clone(),
+                injected_context: String::new(),
+                c1_stripped,
                 metrics: PipelineMetrics {
                     prompt_tokens: estimate_tokens(&bounded_prompt),
                     selected_context_tokens: 0,
@@ -356,6 +369,8 @@ impl ContextPipeline {
         if !capabilities.attach_context {
             return PipelineResult {
                 effective_prompt: bounded_prompt.clone(),
+                injected_context: String::new(),
+                c1_stripped,
                 metrics: PipelineMetrics {
                     prompt_tokens: estimate_tokens(&bounded_prompt),
                     selected_context_tokens: 0,
@@ -379,6 +394,8 @@ impl ContextPipeline {
             if let Some(context) = self.cache.get(&cache_key) {
                 return PipelineResult {
                     effective_prompt: join_prompt_and_context(&bounded_prompt, &context),
+                    injected_context: context.clone(),
+                    c1_stripped,
                     metrics: PipelineMetrics {
                         prompt_tokens: estimate_tokens(&bounded_prompt),
                         selected_context_tokens: estimate_tokens(&context),
@@ -423,6 +440,8 @@ impl ContextPipeline {
         }
         PipelineResult {
             effective_prompt: join_prompt_and_context(&bounded_prompt, &context),
+            injected_context: context.clone(),
+            c1_stripped,
             metrics: PipelineMetrics {
                 prompt_tokens: estimate_tokens(&bounded_prompt),
                 selected_context_tokens: selected_tokens,
@@ -777,6 +796,26 @@ mod tests {
             AdapterCapabilities::for_runtime(RuntimeKind::Mock),
         );
         assert_eq!(result.metrics.retrieval, super::RetrievalDecision::Skipped);
+    }
+
+    #[test]
+    fn c1_strip_removes_extension_trailer_before_retrieval() {
+        let mut pipeline = test_pipeline();
+        let prompt = "status stream retry integration tests daemon lifecycle\n\n---\nFile: src/main.rs\nLanguage: rust".to_string();
+        let request = ContextRequest {
+            prompt,
+            diagnostics_hint: None,
+            cache_bypass: true,
+            behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
+        };
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::Mock),
+        );
+        assert!(result.c1_stripped);
+        assert!(!result.effective_prompt.contains("File: src/main.rs"));
+        assert_eq!(result.metrics.retrieval, super::RetrievalDecision::Ran);
     }
 
     #[test]

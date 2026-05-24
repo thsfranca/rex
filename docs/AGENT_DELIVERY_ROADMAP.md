@@ -154,15 +154,15 @@ Ship before **`rex-agent`** dogfood (**R017–R018**). Design: [DEVELOPMENT_ASSI
 
 ### R021 — Turn correlation Phase 1b
 
-**Status: planned.** Populate optional `turn_id` and `context_revision` on `RunTurn` ([sidecar.proto](../proto/rex/sidecar/v1/sidecar.proto)); correlate logs on stream and broker paths. Enables conflict **C1** stripping when `context_revision` is set.
+**Status: Done.** Populate optional `turn_id` and `context_revision` on `RunTurn` ([sidecar.proto](../proto/rex/sidecar/v1/sidecar.proto)); correlate logs on stream and broker paths (`turn_id=`, `context_revision=`). C1 hook strips extension `File:`/`Selection:` trailers when retrieval runs. Sidecars forward `x-rex-turn-id` on broker metadata.
 
 ### R022 — Workspace binding (daemon)
 
-**Status: planned.** Product path: fail-closed when `workspace.root` unset ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)); harness cwd fallback documented in [CONFIGURATION.md](CONFIGURATION.md). Extension supplies root under **R019**.
+**Status: Done.** Product path: fail-closed when `workspace.root` unset ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)); harness cwd fallback via `workspace.allow_cwd_fallback` or `REX_ALLOW_CWD_WORKSPACE` in [CONFIGURATION.md](CONFIGURATION.md). Extension supplies root under **R019**.
 
 ## R019 — Integration and E2E acceptance
 
-**Status: planned.** Operator and extension path after **R017–R018**.
+**Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, and operator checklist in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md#8-r019-acceptance--live-model-operator-not-ci).
 
 | Criterion | Evidence |
 |-----------|----------|
@@ -186,7 +186,7 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | R014 | Unified `rex` CLI | Done |
 | R015 | JSON config + proto install | Done |
 | R020 | Broker access policy completion | Should |
-| R021 | Turn correlation Phase 1b | Should |
+| R021 | Turn correlation Phase 1b | Done |
 | R022 | Workspace binding (daemon fail-closed) | Should |
 | R017 | `rex-agent` scaffold | Done (broker-only `RunTurn`; LangGraph **R018**) |
 | R018 | LangGraph agent core | Should |
