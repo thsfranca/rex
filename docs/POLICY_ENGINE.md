@@ -78,6 +78,8 @@ Sidecar **intent** (model tier, tool RPC) is not sufficient for cache keys or sp
 
 Does **not** replace `ApprovalGate` — approvals are human/UX gates; access policy is **technical allow/deny**.
 
+**Implementation:** **R012** shipped protected-path checks for `fs.read` / `fs.list` (**RC-05**). **R020** completes ADR 0013: mode × capability matrix, protected paths on `fs.write` / `exec.shell`, and `max_tool_result_bytes` from JSON config. See [ROADMAP.md](ROADMAP.md) engineering backlog **R020**.
+
 ## Extension and CLI
 
 - **Approval UX** stays in the extension — [EXTENSION.md](EXTENSION.md).
@@ -89,4 +91,4 @@ Does **not** replace `ApprovalGate` — approvals are human/UX gates; access pol
 - [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md)
 - [ARCHITECTURE.md](ARCHITECTURE.md) · [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)
 - [V1_0.md](V1_0.md) — **RC-05** AccessPolicy broker criterion
-- [ROADMAP.md](ROADMAP.md) — **R012** and Later rows
+- [ROADMAP.md](ROADMAP.md) — **R012** (Done), **R020** (broker policy completion)

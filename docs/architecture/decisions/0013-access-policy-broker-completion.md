@@ -31,7 +31,7 @@
 
 - **Positive:** One story for Codex-like sandbox + REX broker; lean error surface for LLM.
 - **Negative:** More policy code in daemon; mode matrix must stay in sync with extension UX.
-- **Risks / follow-up:** Implement unified evaluator; extend tests for deny paths per mode.
+- **Risks / follow-up:** Implement unified evaluator — [ROADMAP.md](../../ROADMAP.md) **R020**; extend tests for deny paths per mode.
 
 ## Related
 

@@ -1,6 +1,6 @@
 # Development assistance capabilities (design hub)
 
-**Status:** **design accepted** — interfaces and ADRs 0011–0017 record decisions; implementation follows [ROADMAP.md](ROADMAP.md) **R015–R019**.
+**Status:** **design accepted** — interfaces and ADRs 0011–0017 record decisions; implementation follows [ROADMAP.md](ROADMAP.md) **R015–R022** (product agent program).
 
 Canonical **integrator** for what REX owns when assisting software development with a supervised agent (`rex-agent`). Economics levers and the full matrix live in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md); this hub owns **ownership**, **turn contract**, **budget pipeline**, and **conflict resolutions**.
 
@@ -30,13 +30,14 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for hub conventions. Align with [PURPOS
 | Capability | Owner | Phase |
 |------------|-------|-------|
 | Stream contract, modes, L1 response policy | `rex-daemon` | 1 — shipped / extend |
-| Workspace root + broker sandbox | Daemon resolves; client **supplies** root | 1 — design accepted; **R015** impl |
+| Workspace root + broker sandbox | Daemon resolves; client **supplies** root | 1 — **R022** (fail-closed daemon); extension **R019** |
+| Broker mode × capability + output bounds | Daemon `AccessPolicy` before host execution | 1 — **R020** ([ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md)) |
 | Lexical retrieval + compression | Daemon `ContextPipeline` | 1 — shipped |
 | Layered system/project prompts | Daemon assembly | 1 — design accepted; 2 — impl |
 | Editor selection / chat transcript | Extension / client UX | 1 |
 | Graph state, tool loop | `rex-agent` sidecar | 1 — **R018** |
 | Session scratch (tool outputs, partial plans) | Sidecar ephemeral | 1 — design accepted |
-| Turn/session correlation ids | Daemon issues; clients echo | 1 — design accepted |
+| Turn/session correlation ids | Daemon issues; clients echo | 1b — **R021** |
 | Durable project memory | Daemon store + pipeline stage | 2 — [ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md) |
 | Agent knowledge bundles | Daemon `KnowledgeRetrieval` stage | 2 — [ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md) |
 | MCP tools/resources | Sidecar guest; host via broker | 2 — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
@@ -47,8 +48,8 @@ Trust model: sidecar **requests**; daemon **authorizes, assembles context, execu
 
 | Phase | Deliverable |
 |-------|-------------|
-| **1 (now)** | `TurnContext` logical model; workspace binding rules ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)); policy/prompt ADRs; `rex-agent` DESIGN; extension sets `REX_WORKSPACE_ROOT` (**R019**) |
-| **1b** | Additive `turn_id`, `context_revision` on `rex.sidecar.v1.RunTurnRequest` (optional fields) |
+| **1 (now)** | `TurnContext` logical model; workspace binding rules ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)); policy/prompt ADRs; `rex-agent` DESIGN; daemon prerequisites **R020–R022**; extension integration **R019** |
+| **1b** | Populate `turn_id`, `context_revision` on `rex.sidecar.v1.RunTurnRequest` — **R021** (proto fields exist) |
 | **2** | Layered prompt impl; `ProjectMemoryRetrieval`; `KnowledgeRetrieval`; MCP profile; multi-root workspace (optional ADR amendment) |
 
 ## Context budget pipeline
@@ -126,7 +127,8 @@ Daemon-assembled snapshot at turn start. Not yet a separate proto message in Pha
 ### Workspace binding (summary)
 
 - Config: `workspace.root` in `.rex/config.json` / env (**R015**).
-- Extension: set `REX_WORKSPACE_ROOT` to primary `workspaceFolders[0]` when spawning daemon (**R019**).
+- Extension: set `workspace.root` when auto-starting daemon (**R019**).
+- Daemon: fail-closed when `workspace.root` unset unless harness flag — **R022** ([CONFIGURATION.md](CONFIGURATION.md)).
 - Product path: **fail-closed** if root unset; cwd fallback only with `REX_ALLOW_CWD_WORKSPACE=1` (harness/CI) — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md).
 - Multi-root: Phase 1 uses primary folder only; log `workspace.warning=multi_root` when `folders.length > 1`.
 
@@ -181,6 +183,17 @@ Hard conflicts (**C***) and resolutions recorded in ADRs.
 | Reactive compaction (Claude Code) | Lossy late summarization | Proactive pipeline + future LTM facts |
 | MCP tool schema dump | 10K–55K tokens/turn overhead | Broker verbs + lazy MCP ([ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md)) |
 | Mem0-style memory | Separate policy layer | Daemon `ProjectMemoryRetrieval` under same budget |
+
+## Roadmap linkage
+
+| ID | Theme | Hub section |
+|----|-------|-------------|
+| **R020** | Broker access policy completion | [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) |
+| **R021** | Turn correlation Phase 1b | [Turn contract](#turn-contract) |
+| **R022** | Workspace binding product path | [Workspace binding (summary)](#workspace-binding-summary) |
+| **R017–R019** | `rex-agent` scaffold, graph, integration | [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) |
+
+Canonical order: [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-agent-program).
 
 ## Cross-links
 

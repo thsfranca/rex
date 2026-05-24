@@ -1,6 +1,6 @@
 # rex-agent — design contract
 
-**Status:** planned — not shipped. Scaffold: [ROADMAP.md](../../docs/ROADMAP.md) **R017–R018**.
+**Status:** planned — not shipped. Prerequisites: [ROADMAP.md](../../docs/ROADMAP.md) **R020–R022**. Scaffold and graph: **R017–R018**.
 
 Canonical capability ownership: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](../../docs/DEVELOPMENT_ASSISTANCE_CAPABILITIES.md). ADRs: [0011](../../docs/architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)–[0017](../../docs/architecture/decisions/0017-single-active-sidecar-phase-1.md).
 
