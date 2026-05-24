@@ -29,6 +29,9 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 | Layered cache — L2 semantic | Embedding similarity **ask-only** guarded | Planned | [CACHING.md](CACHING.md) | **planned** |
 | Prefix / shared context reuse | TTL prefix cache segments in pipeline | `PrefixCache` in context pipeline | Responsibility map below | **partial** |
 | Vendor KV / prompt cache hints | Depends on outbound API owning runtime | Adapter metadata future | [CACHING.md](CACHING.md#vendor-kv-and-prompt-cache-hints-planned) | **planned** |
+| LiteLLM multi-provider gateway | One compat hop; keys and routing on gateway | `http_openai_compat` + `REX_OPENAI_COMPAT_*` | [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-recommended), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) | **documented** (operator) |
+| Direct OpenAI API (secondary) | Same adapter, direct vendor URL | `http_openai_compat` | [ADAPTERS.md](ADAPTERS.md#http-openai-compatible-chatcompletions-profile-broker) | **documented** |
+| Native Anthropic Messages API (secondary) | No compat hop; Messages wire | Planned `anthropic` runtime + broker dispatch | [ADAPTERS.md](ADAPTERS.md#direct-anthropic-messages-api-planned--secondary) | **planned** |
 | Layered prompts (system/project stack) | Versioned assemblies to avoid duplicate client rules | Config + daemon assembly | [ADR 0012](architecture/decisions/0012-layered-prompt-assemblies.md), [CONFIGURATION.md](CONFIGURATION.md#layered-prompts-design-accepted) | **design accepted** |
 | Local MLX inference adapter | Optional on-device broker backend | `InferenceRuntime` adapter seam | [ADAPTERS.md](ADAPTERS.md#local-mlx-path-planned) | **planned** |
 | Batching / async doc jobs | Lower priority vs interactive latency | Future RPC/job | [ROADMAP.md](ROADMAP.md) | **planned** |

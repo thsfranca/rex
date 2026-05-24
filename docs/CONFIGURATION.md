@@ -29,7 +29,7 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 | Variable | Default (if unset) | Purpose |
 |----------|--------------------|---------|
 | `REX_INFERENCE_RUNTIME` | `http-openai-compat` | Broker backend when sidecar requests inference: **`http-openai-compat`**, **`mock`** (tests/harness), **`cursor-cli`** (legacy). Direct daemon HTTP without sidecar is **harness only** for MVP acceptance. |
-| `REX_OPENAI_COMPAT_BASE_URL` | (none — **required** for HTTP runtime) | Base URL for OpenAI-compatible API (for example `http://127.0.0.1:11434/v1` for Ollama). |
+| `REX_OPENAI_COMPAT_BASE_URL` | (none — **required** for HTTP runtime) | Base URL for **OpenAI-compatible** chat/completions (protocol name — not OpenAI-only). Examples: Ollama, LiteLLM gateway, OpenAI API — [ADAPTERS.md](ADAPTERS.md#terminology-protocol-vs-vendor). |
 | `REX_OPENAI_COMPAT_API_KEY` | (none) | Optional `Bearer` token for remote APIs. |
 | `REX_OPENAI_COMPAT_MODEL` | `gpt-4o-mini` | Model id sent in chat/completions requests; reported on `GetSystemStatus` when HTTP runtime is active. |
 | `REX_OPENAI_COMPAT_TIMEOUT_SECS` | `120` | Upper bound for a single HTTP completion request. |
@@ -83,7 +83,51 @@ export REX_INFERENCE_RUNTIME="http-openai-compat"
 cargo run -p rex -- daemon
 ```
 
+For **Anthropic and other cloud providers** via one broker URL, use the [LiteLLM operator profile](#operator-profile-litellm-anthropic-and-other-providers) below.
+
 CI and unit tests set `REX_INFERENCE_RUNTIME=mock` and clear `REX_OPENAI_COMPAT_BASE_URL` — see [CI.md](CI.md).
+
+## Operator profile: LiteLLM (Anthropic and other providers)
+
+**Status:** operator-ready on existing `http-openai-compat` runtime — no Rex code change. Design: [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-recommended), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md).
+
+Run LiteLLM (or your deployment) with Anthropic and OpenAI keys in **LiteLLM’s** config. Rex only needs the OpenAI-compat surface LiteLLM exposes.
+
+### Environment (Phase 1)
+
+```bash
+export REX_INFERENCE_RUNTIME="http-openai-compat"
+export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:4000/v1"   # LiteLLM default listen example
+export REX_OPENAI_COMPAT_MODEL="claude-sonnet-4-20250514"      # must match LiteLLM model_name / alias
+# Optional: LiteLLM master key if your proxy requires it
+# export REX_OPENAI_COMPAT_API_KEY="sk-..."
+export REX_SIDECAR_ENABLED=1
+```
+
+`rex complete --model <id>` overrides the model sent on each request (LiteLLM uses it for routing).
+
+### JSON fragment (R015 target)
+
+Do not commit secrets. Anthropic API keys belong in LiteLLM configuration, not Rex `config.json`.
+
+```json
+{
+  "inference": {
+    "runtime": "http-openai-compat",
+    "openai_compat": {
+      "base_url": "http://127.0.0.1:4000/v1",
+      "model": "claude-sonnet-4-20250514",
+      "timeout_secs": 120
+    }
+  }
+}
+```
+
+### Verification
+
+1. Confirm LiteLLM responds: `curl` against `{base_url}/chat/completions` per LiteLLM docs.
+2. Start daemon with sidecar enabled; `rex complete "hello" --format ndjson --model <litellm-model>`.
+3. On failure, see broker error intent in [ADAPTERS.md](ADAPTERS.md#broker-provider-errors-intent).
 
 ## Planned: JSON configuration (R015)
 
