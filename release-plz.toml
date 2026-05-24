@@ -10,6 +10,10 @@ repo_url = "https://github.com/thsfranca/rex"
 semver_check = false
 
 [[package]]
+name = "rex"
+version_group = "rex"
+
+[[package]]
 name = "rex-cli"
 version_group = "rex"
 changelog_path = "CHANGELOG.md"

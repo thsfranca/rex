@@ -18,7 +18,7 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 | User persistent file (not implemented) | Optional file under the [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) convention. |
 | Project-local file (not implemented) | Optional repo-local file (for example `.rex.toml`); do **not** commit secrets. |
 | Environment variables | **Primary** for parents (extension, tests, CI) and overrides today. |
-| CLI flags (partial) | `rex-cli complete` accepts `--model` and `--mode` per invocation. |
+| CLI flags (partial) | `rex complete` accepts `--model` and `--mode` per invocation. |
 
 **Secret values:** Prefer environment or OS keychain for API keys. Do not commit secrets to the repository.
 
@@ -42,7 +42,7 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 | `REX_MAX_PROMPT_TOKENS` | `512` | Context pipeline max prompt tokens (char heuristic ÷4). |
 | `REX_MAX_CONTEXT_TOKENS` | `192` | Context pipeline max injected context tokens. |
 | `REX_BROKER_SHELL_ALLOWLIST` | `echo,printf,true` | Comma-separated programs `exec.shell` broker may run (workspace cwd). |
-| `REX_AGENT_APPROVALS` | off | `1` or `true` enforces daemon `ApprovalGate` for `agent` mode ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). Pass `approval_id` on `StreamInference` (via `rex-cli --approval-id`) after extension approval. |
+| `REX_AGENT_APPROVALS` | off | `1` or `true` enforces daemon `ApprovalGate` for `agent` mode ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). Pass `approval_id` on `StreamInference` (via `rex complete --approval-id`) after extension approval. |
 
 ### Sidecar supervision and harness
 
@@ -55,13 +55,13 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 | `REX_SIDECAR_HARNESS` | (none) | `direct` forces in-process inference (CI/tests); not MVP product acceptance |
 | `REX_DAEMON_SOCKET` | `/tmp/rex.sock` | Daemon UDS for sidecar `BrokerInference` and `BrokerReadFile` during `RunTurn` |
 
-### `rex-cli` (client metadata)
+### `rex` CLI (client metadata)
 
 | Variable | Default (if unset) | Purpose |
 |----------|--------------------|---------|
-| `REX_TRACE_ID` | (none) | Request correlation; extension sets when spawning `rex-cli` — [`EXTENSION.md`](EXTENSION.md). |
+| `REX_TRACE_ID` | (none) | Request correlation; extension sets when spawning `rex` — [`EXTENSION.md`](EXTENSION.md). |
 
-**CLI flags:** `rex-cli complete` accepts `--format`, `--model <id>`, `--mode <ask|plan|agent>`, and `--approval-id <id>`. Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
+**CLI flags:** `rex complete` accepts `--format`, `--model <id>`, `--mode <ask|plan|agent>`, and `--approval-id <id>`. Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
 
 ### Related project scripts
 
@@ -80,7 +80,7 @@ The Phase 1 product path requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SP
 export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:11434/v1"   # Ollama example
 export REX_OPENAI_COMPAT_MODEL="llama3.2"
 export REX_INFERENCE_RUNTIME="http-openai-compat"
-cargo run -p rex-daemon
+cargo run -p rex -- daemon
 ```
 
 CI and unit tests set `REX_INFERENCE_RUNTIME=mock` and clear `REX_OPENAI_COMPAT_BASE_URL` — see [CI.md](CI.md).
@@ -133,7 +133,7 @@ Versioned **system / project prompt assemblies** assembled in the daemon so clie
 ## Not implemented yet (roadmap)
 
 - Persistent user config on disk — see **Planned: JSON configuration** and **R015**.
-- Global `rex-daemon` / `rex-cli` flags mirroring env keys — unified **`rex`** CLI (**R014**).
+- Global CLI flags mirroring env keys — deferred beyond **R014** (unified binary shipped).
 - `rex config` subcommands — **R015**.
 - Project-local `.rex/config.json` — **R015** (not `.rex.toml`).
 

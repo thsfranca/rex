@@ -15,7 +15,7 @@ pub enum CliError {
     },
     #[error("timed out while waiting for daemon stream chunk after {seconds}s")]
     StreamTimeout { seconds: u64 },
-    #[error("daemon is unavailable at {socket_path}; start rex-daemon and retry")]
+    #[error("daemon is unavailable at {socket_path}; run `rex daemon` and retry")]
     DaemonUnavailable { socket_path: String },
     #[error("daemon interrupted the stream before completion")]
     StreamInterrupted,

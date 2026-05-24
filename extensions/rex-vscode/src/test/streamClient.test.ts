@@ -106,16 +106,16 @@ describe("streamComplete", () => {
     expect(events.slice(terminalIndex + 1)).toEqual([]);
   });
 
-  it("includes onboarding hint when rex-cli executable is missing", async () => {
+  it("includes onboarding hint when rex executable is missing", async () => {
     const events = await collect(
-      streamComplete({ cliPath: "/__rex_vitest_nonexistent__/rex-cli" }, {
+      streamComplete({ cliPath: "/__rex_vitest_nonexistent__/rex" }, {
         prompt: "hi",
       }),
     );
     const last = events.at(-1);
     expect(last?.kind).toBe("error");
     if (last?.kind === "error") {
-      expect(last.message).toMatch(/failed to spawn rex-cli/);
+      expect(last.message).toMatch(/failed to spawn rex/);
       expect(last.message).toContain(EXTENSION_LOCAL_E2E_DOC_PATH);
       expect(last.message).toContain("rex.cliPath");
     }
@@ -157,7 +157,7 @@ describe("streamComplete", () => {
     const last = events.at(-1);
     expect(last?.kind).toBe("error");
     if (last?.kind === "error") {
-      expect(last.message).toContain("rex-cli exited with code 2");
+      expect(last.message).toContain("rex exited with code 2");
       expect(last.message).toContain("[rex: stderr truncated]");
       expect(last.message.length).toBeLessThan(40_000);
     }

@@ -77,17 +77,17 @@ flowchart TB
 
 ## Unified CLI (R014)
 
-Replace separate **`rex-cli`** and **`rex-daemon`** binaries with one **`rex`** binary:
+**Status: implemented.** One **`rex`** binary replaces separate **`rex-cli`** and **`rex-daemon`** entrypoints for operators and the extension:
 
 | Subcommand | Purpose |
 |------------|---------|
-| `rex daemon` | Run daemon (today: `rex-daemon`) |
-| `rex status` / `rex complete` | Client RPCs (today: `rex-cli`) |
-| `rex config` | `init`, `show`, `path`, `validate` |
-| `rex proto` | `install`, `path`, `doctor` |
-| `rex sidecar` | `list`, `init`, `doctor` |
+| `rex daemon` | Run daemon (was `rex-daemon`) |
+| `rex status` / `rex complete` | Client RPCs (was `rex-cli`) |
+| `rex config` | **Stub** — full behavior in **R015** |
+| `rex proto` | `doctor` checks `protoc`; `install` / `path` — **R015** |
+| `rex sidecar` | **Stub** — **R015** |
 
-Extension defaults move to **`rex`** + `["daemon"]` for auto-start when implemented.
+Extension defaults: **`rex`** + `["daemon"]` for auto-start. Compatibility shims **`rex-cli`** / **`rex-daemon`** delegate to the same libraries with deprecation hints.
 
 ## JSON configuration (R015)
 
@@ -144,7 +144,7 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | ID | Theme | Priority |
 |----|-------|----------|
 | R013 | Platform enablers | Should |
-| R014 | Unified `rex` CLI | Should |
+| R014 | Unified `rex` CLI | Done |
 | R015 | JSON config + proto install | Should |
 | R017 | `rex-agent` scaffold | Should |
 | R018 | LangGraph agent core | Should |

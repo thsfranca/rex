@@ -12,9 +12,9 @@ const SECTION = "rex";
 export function readSettings(): RexSettings {
   const config = vscode.workspace.getConfiguration(SECTION);
   return {
-    cliPath: (config.get<string>("cliPath") ?? "rex-cli").trim() || "rex-cli",
+    cliPath: (config.get<string>("cliPath") ?? "rex").trim() || "rex",
     daemonBinaryPath:
-      (config.get<string>("daemonBinaryPath") ?? "rex-daemon").trim() || "rex-daemon",
+      (config.get<string>("daemonBinaryPath") ?? "rex").trim() || "rex",
     daemonAutoStart: config.get<boolean>("daemonAutoStart") ?? false,
     modelId: (config.get<string>("modelId") ?? "").trim(),
   };

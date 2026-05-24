@@ -5,10 +5,10 @@ cat <<'EOF'
 Manual test steps (use two terminals):
 
 Terminal 1:
-  rex-daemon
+  rex daemon
 
 Terminal 2:
-  rex-cli complete "hello from rex"
+  rex complete "hello from rex"
 
 Expected behavior:
 - Terminal 2 prints text in incremental chunks.

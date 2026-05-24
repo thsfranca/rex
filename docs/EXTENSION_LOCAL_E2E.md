@@ -1,6 +1,6 @@
 # Local end-to-end: REX daemon, CLI, and VS Code / Cursor extension
 
-This guide walks from a clean clone to **REX ready** in the editor: built binaries, `rex-cli` visible to the extension host, `rex-daemon` on `/tmp/rex.sock`, and the extension installed.
+This guide walks from a clean clone to **REX ready** in the editor: built binaries, `rex` visible to the extension host, daemon on `/tmp/rex.sock`, and the extension installed.
 
 ## Prerequisites
 
@@ -18,13 +18,13 @@ From the repository root:
 cargo build --workspace
 ```
 
-This builds `rex-proto`, `rex-daemon`, and `rex-cli`. For a quicker smoke test you can use `cargo run -p rex-daemon` / `cargo run -p rex-cli` without installing binaries (see step 5 for editor settings if you stay on `cargo run` for the CLI only).
+This builds `rex-proto`, `rex`, `rex-daemon`, and `rex-cli`. For a quicker smoke test you can use `cargo run -p rex -- daemon` / `cargo run -p rex -- status` without installing binaries (see step 5 for editor settings if you stay on `cargo run`).
 
-## 2) Put `rex-cli` and `rex-daemon` where the editor can run them
+## 2) Put `rex` where the editor can run it
 
-The extension spawns **`rex-cli` as a child process** using the extension host environment. That environment often has a **smaller `PATH` than your terminal** (common when you launch Cursor or VS Code from the macOS Dock).
+The extension spawns **`rex status`** and **`rex complete`** as child processes using the extension host environment. That environment often has a **smaller `PATH` than your terminal** (common when you launch Cursor or VS Code from the macOS Dock).
 
-Recommended: install both binaries into Cargo’s bin directory:
+Recommended: install the unified binary into Cargo’s bin directory:
 
 ```bash
 chmod +x ./scripts/install-cli.sh
@@ -65,38 +65,38 @@ cargo build -p rex-sidecar-stub
 
 See [CONFIGURATION.md](./CONFIGURATION.md) for `REX_SIDECAR_REQUIRED`, socket path, and harness `REX_SIDECAR_HARNESS=direct` (CI/tests only).
 
-## 4) Run `rex-daemon`
+## 4) Run `rex daemon`
 
 **User-managed (default extension behavior)**
 
 In a separate terminal from the repo root (with HTTP env from step 3):
 
 ```bash
-cargo run -p rex-daemon
+cargo run -p rex -- daemon
 ```
 
 Or, after `install-cli.sh`:
 
 ```bash
-rex-daemon
+rex daemon
 ```
 
 The daemon listens on **`/tmp/rex.sock`**.
 
 **Extension-managed (opt-in)**
 
-In editor settings, set `"rex.daemonAutoStart": true`. The extension spawns `rex.daemonBinaryPath` (default `rex-daemon`). If `rex-daemon` is not on the editor `PATH`, set `rex.daemonBinaryPath` to an **absolute path** (same idea as `rex.cliPath` below).
+In editor settings, set `"rex.daemonAutoStart": true`. The extension spawns `rex daemon` via `rex.daemonBinaryPath` (default `rex`). If `rex` is not on the editor `PATH`, set `rex.daemonBinaryPath` and `rex.cliPath` to the **absolute path** to the same binary.
 
 ## 5) Verify from a terminal
 
 ```bash
-rex-cli status
+rex status
 ```
 
 Or without install:
 
 ```bash
-cargo run -p rex-cli -- status
+cargo run -p rex -- status
 ```
 
 You should see daemon fields (version, uptime, model id). If this fails, fix the daemon or socket before opening the extension.

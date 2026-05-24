@@ -132,7 +132,7 @@ export async function* streamComplete(
   });
 
   child.once("error", (err) => {
-    const base = `failed to spawn rex-cli: ${err instanceof Error ? err.message : String(err)}`;
+    const base = `failed to spawn rex: ${err instanceof Error ? err.message : String(err)}`;
     pushEvent({
       kind: "error",
       message: appendCliExecutableNotFoundHint(err, base),
@@ -154,7 +154,7 @@ export async function* streamComplete(
       const message =
         code === 0
           ? "stream ended without terminal event"
-          : `rex-cli exited with code ${code}${stderrTrim.length > 0 ? `: ${stderrTrim}` : ""}`;
+          : `rex exited with code ${code}${stderrTrim.length > 0 ? `: ${stderrTrim}` : ""}`;
       const classified = classifyStreamErrorMessage(message);
       let finalMessage = classified.message;
       if (streamFailureWantsSetupHint(classified.code, finalMessage)) {

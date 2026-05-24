@@ -12,7 +12,7 @@ fi
 
 TAG="${1:-}"
 if [[ -z "${TAG}" ]]; then
-  VERSION="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="rex-cli") | .version')"
+  VERSION="$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="rex") | .version')"
   TAG="v${VERSION}"
   echo "No tag argument; using workspace version tag: ${TAG}"
 fi
