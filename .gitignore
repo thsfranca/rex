@@ -9,7 +9,9 @@ TEMP_*
 node_modules
 
 # Local Python venvs
+.venv/
 .venv-proto/
+**/.venv/
 
 # Rust (workspace build output)
 /target
