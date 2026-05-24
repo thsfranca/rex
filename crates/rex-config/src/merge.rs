@@ -69,6 +69,15 @@ impl LoadedConfig {
     pub fn broker_shell_allowlist(&self) -> &[String] {
         &self.effective.broker.shell_allowlist
     }
+
+    pub fn broker_max_tool_result_bytes(&self) -> usize {
+        let bytes = self.effective.broker.max_tool_result_bytes;
+        if bytes == 0 {
+            crate::model::DEFAULT_MAX_TOOL_RESULT_BYTES as usize
+        } else {
+            bytes as usize
+        }
+    }
 }
 
 fn env_current_dir() -> PathBuf {
@@ -170,6 +179,9 @@ fn merge_cache(base: &mut crate::model::CacheConfig, overlay: crate::model::Cach
 fn merge_broker(base: &mut crate::model::BrokerConfig, overlay: crate::model::BrokerConfig) {
     if !overlay.shell_allowlist.is_empty() {
         base.shell_allowlist = overlay.shell_allowlist;
+    }
+    if overlay.max_tool_result_bytes != 0 {
+        base.max_tool_result_bytes = overlay.max_tool_result_bytes;
     }
 }
 

@@ -70,6 +70,7 @@ impl RexConfig {
             },
             broker: BrokerConfig {
                 shell_allowlist: vec!["echo".to_string(), "printf".to_string(), "true".to_string()],
+                max_tool_result_bytes: default_max_tool_result_bytes(),
             },
             agent: AgentConfig {
                 approvals_enabled: Some(false),
@@ -195,10 +196,27 @@ pub struct CacheConfig {
     pub bypass: Option<bool>,
 }
 
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
+pub const DEFAULT_MAX_TOOL_RESULT_BYTES: u32 = 8192;
+
+fn default_max_tool_result_bytes() -> u32 {
+    DEFAULT_MAX_TOOL_RESULT_BYTES
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct BrokerConfig {
     #[serde(default)]
     pub shell_allowlist: Vec<String>,
+    #[serde(default = "default_max_tool_result_bytes")]
+    pub max_tool_result_bytes: u32,
+}
+
+impl Default for BrokerConfig {
+    fn default() -> Self {
+        Self {
+            shell_allowlist: Vec::new(),
+            max_tool_result_bytes: default_max_tool_result_bytes(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]

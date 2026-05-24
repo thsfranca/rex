@@ -27,8 +27,8 @@ pub enum BrokerError {
 }
 
 const MAX_WRITE_BYTES: usize = 65_536;
-const MAX_SHELL_OUTPUT_BYTES: usize = 8_192;
 const MAX_LIST_DIR_ENTRIES: usize = 256;
+const TRUNCATION_MARKER: &str = " [rex: tool output truncated]";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BrokerDirEntry {
@@ -53,24 +53,42 @@ pub fn workspace_root_from_config() -> Result<PathBuf, BrokerError> {
     Ok(root)
 }
 
-pub fn broker_read_file(relative_path: &str) -> Result<String, BrokerError> {
-    match crate::access_policy::evaluate_fs_read(relative_path) {
+fn max_tool_result_bytes() -> usize {
+    crate::settings::get().broker_max_tool_result_bytes()
+}
+
+pub fn truncate_tool_result(text: &str) -> String {
+    let max = max_tool_result_bytes();
+    if text.len() <= max {
+        return text.to_string();
+    }
+    let mut out = text.chars().take(max).collect::<String>();
+    out.push_str(TRUNCATION_MARKER);
+    out
+}
+
+pub fn broker_read_file(relative_path: &str, mode: &str) -> Result<String, BrokerError> {
+    match crate::access_policy::evaluate_fs_read(relative_path, mode) {
         AccessDecision::Allow => {}
         AccessDecision::Deny(deny) => return Err(deny.into()),
     }
     let root = workspace_root_from_config()?;
     let resolved = resolve_under_workspace(&root, relative_path)?;
-    std::fs::read_to_string(&resolved).map_err(|e| {
+    let content = std::fs::read_to_string(&resolved).map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
             BrokerError::NotFound(relative_path.to_string())
         } else {
             BrokerError::Io(e.to_string())
         }
-    })
+    })?;
+    Ok(truncate_tool_result(&content))
 }
 
-pub fn broker_list_dir(relative_path: &str) -> Result<Vec<BrokerDirEntry>, BrokerError> {
-    match crate::access_policy::evaluate_fs_list(relative_path) {
+pub fn broker_list_dir(
+    relative_path: &str,
+    mode: &str,
+) -> Result<Vec<BrokerDirEntry>, BrokerError> {
+    match crate::access_policy::evaluate_fs_list(relative_path, mode) {
         AccessDecision::Allow => {}
         AccessDecision::Deny(deny) => return Err(deny.into()),
     }
@@ -111,9 +129,15 @@ pub fn broker_list_dir(relative_path: &str) -> Result<Vec<BrokerDirEntry>, Broke
     Ok(entries)
 }
 
-pub fn broker_write_file(relative_path: &str, content: &str) -> Result<(), BrokerError> {
-    let capability = "fs.write";
-    let _ = capability;
+pub fn broker_write_file(
+    relative_path: &str,
+    content: &str,
+    mode: &str,
+) -> Result<(), BrokerError> {
+    match crate::access_policy::evaluate_fs_write(relative_path, mode) {
+        AccessDecision::Allow => {}
+        AccessDecision::Deny(deny) => return Err(deny.into()),
+    }
     if content.len() > MAX_WRITE_BYTES {
         return Err(BrokerError::WriteTooLarge(content.len(), MAX_WRITE_BYTES));
     }
@@ -131,9 +155,11 @@ pub struct ShellResult {
     pub stderr: String,
 }
 
-pub fn broker_exec_shell(command: &str) -> Result<ShellResult, BrokerError> {
-    let capability = "exec.shell";
-    let _ = capability;
+pub fn broker_exec_shell(command: &str, mode: &str) -> Result<ShellResult, BrokerError> {
+    match crate::access_policy::evaluate_exec_shell(mode) {
+        AccessDecision::Allow => {}
+        AccessDecision::Deny(deny) => return Err(deny.into()),
+    }
     let trimmed = command.trim();
     if trimmed.is_empty() {
         return Err(BrokerError::CommandNotAllowed("(empty)".to_string()));
@@ -160,8 +186,8 @@ pub fn broker_exec_shell(command: &str) -> Result<ShellResult, BrokerError> {
         )));
     }
     Ok(ShellResult {
-        stdout: truncate_output(&String::from_utf8_lossy(&output.stdout)),
-        stderr: truncate_output(&String::from_utf8_lossy(&output.stderr)),
+        stdout: truncate_tool_result(&String::from_utf8_lossy(&output.stdout)),
+        stderr: truncate_tool_result(&String::from_utf8_lossy(&output.stderr)),
     })
 }
 
@@ -172,18 +198,6 @@ fn shell_allowlist() -> Vec<String> {
         .map(|s| s.trim().to_ascii_lowercase())
         .filter(|s| !s.is_empty())
         .collect()
-}
-
-fn truncate_output(text: &str) -> String {
-    if text.len() <= MAX_SHELL_OUTPUT_BYTES {
-        return text.to_string();
-    }
-    let mut out = text
-        .chars()
-        .take(MAX_SHELL_OUTPUT_BYTES)
-        .collect::<String>();
-    out.push_str(" [rex: shell output truncated]");
-    out
 }
 
 fn resolve_under_workspace_for_write(
@@ -286,7 +300,7 @@ mod tests {
         let file = dir.join("hello.txt");
         fs::write(&file, "broker-ok").expect("write");
         let _guard = init_workspace_root(&dir.display().to_string());
-        let content = broker_read_file("hello.txt").expect("read");
+        let content = broker_read_file("hello.txt", "agent").expect("read");
         assert_eq!(content, "broker-ok");
         let _ = fs::remove_dir_all(&dir);
     }
@@ -302,9 +316,26 @@ mod tests {
             std::env::temp_dir().join(format!("rex-broker-write-{}-{}", std::process::id(), nonce));
         fs::create_dir_all(&dir).expect("tmpdir");
         let _guard = init_workspace_root(&dir.display().to_string());
-        broker_write_file("out.txt", "written-by-broker").expect("write");
-        let content = broker_read_file("out.txt").expect("read back");
+        broker_write_file("out.txt", "written-by-broker", "agent").expect("write");
+        let content = broker_read_file("out.txt", "agent").expect("read back");
         assert_eq!(content, "written-by-broker");
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    #[serial]
+    fn ask_mode_denies_write() {
+        let dir = std::env::temp_dir().join(format!("rex-broker-ask-write-{}", std::process::id()));
+        fs::create_dir_all(&dir).expect("tmpdir");
+        let _guard = init_workspace_root(&dir.display().to_string());
+        let err = broker_write_file("out.txt", "x", "ask").unwrap_err();
+        assert!(matches!(
+            err,
+            BrokerError::PolicyDenied {
+                code,
+                ..
+            } if code == "mode_denied"
+        ));
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -314,7 +345,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("rex-broker-policy-{}", std::process::id()));
         fs::create_dir_all(&dir).expect("tmpdir");
         let _guard = init_workspace_root(&dir.display().to_string());
-        let err = broker_read_file(".env").unwrap_err();
+        let err = broker_read_file(".env", "agent").unwrap_err();
         assert!(matches!(err, BrokerError::PolicyDenied { .. }));
         let _ = fs::remove_dir_all(&dir);
     }
@@ -325,8 +356,25 @@ mod tests {
         let root = std::env::temp_dir().join(format!("rex-broker-shell-{}", std::process::id()));
         fs::create_dir_all(&root).expect("tmpdir");
         let _guard = init_workspace_root(&root.display().to_string());
-        let out = broker_exec_shell("echo broker-shell-ok").expect("echo");
+        let out = broker_exec_shell("echo broker-shell-ok", "agent").expect("echo");
         assert!(out.stdout.contains("broker-shell-ok"));
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    #[serial]
+    fn ask_mode_denies_exec() {
+        let root = std::env::temp_dir().join(format!("rex-broker-ask-exec-{}", std::process::id()));
+        fs::create_dir_all(&root).expect("tmpdir");
+        let _guard = init_workspace_root(&root.display().to_string());
+        let err = broker_exec_shell("echo hi", "ask").unwrap_err();
+        assert!(matches!(
+            err,
+            BrokerError::PolicyDenied {
+                code,
+                ..
+            } if code == "mode_denied"
+        ));
         let _ = fs::remove_dir_all(&root);
     }
 
@@ -337,7 +385,7 @@ mod tests {
             std::env::temp_dir().join(format!("rex-broker-shell-deny-{}", std::process::id()));
         fs::create_dir_all(&root).expect("tmpdir");
         let _guard = init_workspace_root(&root.display().to_string());
-        let err = broker_exec_shell("rm -rf /").unwrap_err();
+        let err = broker_exec_shell("rm -rf /", "agent").unwrap_err();
         assert!(matches!(err, BrokerError::CommandNotAllowed(_)));
         let _ = fs::remove_dir_all(&root);
     }
@@ -348,7 +396,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("rex-broker-deny-{}", std::process::id()));
         fs::create_dir_all(&dir).expect("tmpdir");
         let _guard = init_workspace_root(&dir.display().to_string());
-        let err = broker_read_file("../etc/passwd").unwrap_err();
+        let err = broker_read_file("../etc/passwd", "agent").unwrap_err();
         assert_eq!(
             err,
             BrokerError::EscapesWorkspace("../etc/passwd".to_string())
@@ -363,7 +411,7 @@ mod tests {
         fs::create_dir_all(dir.join("src")).expect("srcdir");
         fs::write(dir.join("hello.txt"), "x").expect("file");
         let _guard = init_workspace_root(&dir.display().to_string());
-        let root_entries = broker_list_dir("").expect("list root");
+        let root_entries = broker_list_dir("", "ask").expect("list root");
         assert!(root_entries
             .iter()
             .any(|e| e.name == "hello.txt" && !e.is_dir));
@@ -377,7 +425,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("rex-broker-list-deny-{}", std::process::id()));
         fs::create_dir_all(&dir).expect("tmpdir");
         let _guard = init_workspace_root(&dir.display().to_string());
-        let err = broker_list_dir(".env").unwrap_err();
+        let err = broker_list_dir(".env", "ask").unwrap_err();
         assert!(matches!(err, BrokerError::PolicyDenied { .. }));
         let _ = fs::remove_dir_all(&dir);
     }
@@ -391,8 +439,26 @@ mod tests {
             fs::write(dir.join(format!("file-{i:03}.txt")), "x").expect("file");
         }
         let _guard = init_workspace_root(&dir.display().to_string());
-        let entries = broker_list_dir("").expect("list");
+        let entries = broker_list_dir("", "agent").expect("list");
         assert_eq!(entries.len(), MAX_LIST_DIR_ENTRIES);
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn truncates_large_read_content() {
+        let mut cfg = rex_config::RexConfig::defaults();
+        cfg.broker.max_tool_result_bytes = 8;
+        crate::settings::reset_for_test();
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-broker-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
+        let long = "abcdefghijklmnop";
+        let out = truncate_tool_result(long);
+        assert!(out.ends_with(TRUNCATION_MARKER));
+        assert!(out.len() <= 8 + TRUNCATION_MARKER.len());
+        crate::settings::reset_for_test();
     }
 }

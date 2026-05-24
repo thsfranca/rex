@@ -23,7 +23,9 @@ use crate::adapters::InferenceRuntime;
 use crate::adapters::MockInferenceRuntime;
 use crate::adapters::{active_model_id_from_config, AdapterCapabilities};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
-use crate::broker::{broker_exec_shell, broker_list_dir, broker_read_file, broker_write_file};
+use crate::broker::{
+    broker_exec_shell, broker_list_dir, broker_read_file, broker_write_file, BrokerError,
+};
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::http_openai_compat::broker_inference_completion;
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
@@ -123,12 +125,15 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerExecShellRequest>,
     ) -> Result<Response<BrokerExecShellResponse>, Status> {
-        let turn_id = extract_turn_id(request.metadata());
-        let command = request.into_inner().command;
-        println!("broker.access_policy=evaluate capability=exec.shell turn_id={turn_id} command={command}");
-        match broker_exec_shell(&command) {
+        let inner = request.into_inner();
+        let mode = normalize_mode(&inner.mode);
+        let command = inner.command;
+        println!(
+            "broker.access_policy=evaluate capability=exec.shell mode={mode} command={command}"
+        );
+        match broker_exec_shell(&command, &mode) {
             Ok(result) => {
-                println!("broker.access_policy=allow capability=exec.shell turn_id={turn_id}");
+                println!("broker.access_policy=allow capability=exec.shell mode={mode}");
                 Ok(Response::new(BrokerExecShellResponse {
                     ok: true,
                     stdout: result.stdout,
@@ -137,7 +142,7 @@ impl RexService for RexDaemonService {
                 }))
             }
             Err(err) => {
-                println!("broker.access_policy=deny capability=exec.shell turn_id={turn_id} command={command} error={err}");
+                log_broker_access_policy_deny("exec.shell", &mode, &command, &err);
                 Ok(Response::new(BrokerExecShellResponse {
                     ok: false,
                     stdout: String::new(),
@@ -152,25 +157,20 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerWriteFileRequest>,
     ) -> Result<Response<BrokerWriteFileResponse>, Status> {
-        let turn_id = extract_turn_id(request.metadata());
         let inner = request.into_inner();
-        println!(
-            "broker.access_policy=evaluate capability=fs.write turn_id={turn_id} path={}",
-            inner.path
-        );
-        match broker_write_file(&inner.path, &inner.content) {
+        let mode = normalize_mode(&inner.mode);
+        let path = inner.path;
+        println!("broker.access_policy=evaluate capability=fs.write mode={mode} path={path}");
+        match broker_write_file(&path, &inner.content, &mode) {
             Ok(()) => {
-                println!(
-                    "broker.access_policy=allow capability=fs.write turn_id={turn_id} path={}",
-                    inner.path
-                );
+                println!("broker.access_policy=allow capability=fs.write mode={mode} path={path}");
                 Ok(Response::new(BrokerWriteFileResponse {
                     ok: true,
                     error: String::new(),
                 }))
             }
             Err(err) => {
-                println!("broker.access_policy=deny capability=fs.write turn_id={turn_id} path={} error={err}", inner.path);
+                log_broker_access_policy_deny("fs.write", &mode, &path, &err);
                 Ok(Response::new(BrokerWriteFileResponse {
                     ok: false,
                     error: err.to_string(),
@@ -183,14 +183,13 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerListDirRequest>,
     ) -> Result<Response<BrokerListDirResponse>, Status> {
-        let turn_id = extract_turn_id(request.metadata());
-        let path = request.into_inner().path;
-        println!("broker.access_policy=evaluate capability=fs.list turn_id={turn_id} path={path}");
-        match broker_list_dir(&path) {
+        let inner = request.into_inner();
+        let mode = normalize_mode(&inner.mode);
+        let path = inner.path;
+        println!("broker.access_policy=evaluate capability=fs.list mode={mode} path={path}");
+        match broker_list_dir(&path, &mode) {
             Ok(entries) => {
-                println!(
-                    "broker.access_policy=allow capability=fs.list turn_id={turn_id} path={path}"
-                );
+                println!("broker.access_policy=allow capability=fs.list mode={mode} path={path}");
                 Ok(Response::new(BrokerListDirResponse {
                     ok: true,
                     entries: entries
@@ -204,7 +203,7 @@ impl RexService for RexDaemonService {
                 }))
             }
             Err(err) => {
-                println!("broker.access_policy=deny capability=fs.list turn_id={turn_id} path={path} error={err}");
+                log_broker_access_policy_deny("fs.list", &mode, &path, &err);
                 Ok(Response::new(BrokerListDirResponse {
                     ok: false,
                     entries: Vec::new(),
@@ -218,14 +217,13 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerReadFileRequest>,
     ) -> Result<Response<BrokerReadFileResponse>, Status> {
-        let turn_id = extract_turn_id(request.metadata());
-        let path = request.into_inner().path;
-        println!("broker.access_policy=evaluate capability=fs.read turn_id={turn_id} path={path}");
-        match broker_read_file(&path) {
+        let inner = request.into_inner();
+        let mode = normalize_mode(&inner.mode);
+        let path = inner.path;
+        println!("broker.access_policy=evaluate capability=fs.read mode={mode} path={path}");
+        match broker_read_file(&path, &mode) {
             Ok(content) => {
-                println!(
-                    "broker.access_policy=allow capability=fs.read turn_id={turn_id} path={path}"
-                );
+                println!("broker.access_policy=allow capability=fs.read mode={mode} path={path}");
                 Ok(Response::new(BrokerReadFileResponse {
                     ok: true,
                     content,
@@ -233,7 +231,7 @@ impl RexService for RexDaemonService {
                 }))
             }
             Err(err) => {
-                println!("broker.access_policy=deny capability=fs.read turn_id={turn_id} path={path} error={err}");
+                log_broker_access_policy_deny("fs.read", &mode, &path, &err);
                 Ok(Response::new(BrokerReadFileResponse {
                     ok: false,
                     content: String::new(),
@@ -606,6 +604,18 @@ fn extract_trace_id(metadata: &tonic::metadata::MetadataMap, request_id: u64) ->
     match trace_id {
         Some(value) => value.to_string(),
         None => format!("request-{request_id}"),
+    }
+}
+
+fn log_broker_access_policy_deny(capability: &str, mode: &str, subject: &str, err: &BrokerError) {
+    if let BrokerError::PolicyDenied { code, message } = err {
+        println!(
+            "broker.access_policy=deny capability={capability} mode={mode} code={code} subject={subject} error={message}"
+        );
+    } else {
+        println!(
+            "broker.access_policy=deny capability={capability} mode={mode} subject={subject} error={err}"
+        );
     }
 }
 
