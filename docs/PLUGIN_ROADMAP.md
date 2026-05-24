@@ -65,7 +65,9 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 | 2 — HTTP OpenAI-compat | Broker backend for sidecar — **implemented** |
 | 3 — L1 cache | **`ask`** only — [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | 4 — Proto / CLI knobs | **`model`** / **`mode`** on wire |
-| 5+ | L2, `auto`, sidecar-only routing | Backlog |
+| 5+ | L2 semantic cache | **Could** — [ROADMAP.md](ROADMAP.md) Later, [CACHING.md](CACHING.md) |
+| 5+ | Difficulty-based routing cascade | **Could** — [ROADMAP.md](ROADMAP.md) Next, [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
+| 5+ | `auto` mode, sidecar-only routing | Backlog — see [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) Later optional tracks |
 
 **Status:** See [V1_0.md](V1_0.md) **RC-*** (canonical). All Must **RC-*** are **Met**. Broker **`fs.write`**, **`exec.shell`**, and **`BrokerInference`** are shipped ([AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md)).
 

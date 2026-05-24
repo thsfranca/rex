@@ -1,6 +1,6 @@
 # Roadmap
 
-**Purpose:** track progress until all **Must** release criteria in **[V1_0.md](V1_0.md)** are **Met**. That file is the **only** “done” definition. [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) states intent; [MVP_SPEC.md](MVP_SPEC.md) is Phase 1 **architecture and scope** (no separate completion status). [PRIORITIZATION.md](PRIORITIZATION.md) describes MoSCoW bucketing and light R-ICE scoring.
+**Purpose:** track **post-v1.0** **Should** / **Could** work and closure of **Should** release criteria (**RC-S***) in **[V1_0.md](V1_0.md)**. Must **RC-*** remain canonical in that hub. [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) states intent; [MVP_SPEC.md](MVP_SPEC.md) is Phase 1 **architecture and scope** (no separate completion status). [PRIORITIZATION.md](PRIORITIZATION.md) describes MoSCoW bucketing and light R-ICE scoring.
 
 **Version:** workspace **`1.0.0`** — all Must **RC-*** in [V1_0.md](V1_0.md) are **Met**.
 
@@ -20,6 +20,13 @@ Canonical definitions and evidence: **[V1_0.md](V1_0.md)**. Update status there 
 | RC-08 | Met |
 | RC-09 | Met |
 | RC-10 | Met |
+
+### Should criteria (not blocking `1.0.0`)
+
+| ID | Status | Notes |
+|----|--------|-------|
+| RC-S1 | Met | Extension `rex.modelId` → `--model` — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
+| RC-S2 | Open | Long-session extension stress — cancel returns UI to idle |
 
 ## Theme order (dependency mental model)
 
@@ -48,12 +55,14 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 | Priority | What / why | RC-* | Notes |
 |----------|------------|------|-------|
-| **Should** | Long-session extension stress | RC-S2 | Cancel-to-idle under load |
+| **Should** | Long-session extension stress | RC-S2 | Cancel-to-idle under load — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | **Should** | Stream/log polish beyond baseline | RC-07 (Met) | Optional hardening only |
 
 ## Next — product agent program
 
 Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Today the supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** is planned.
+
+**Priority rationale:** Primary focus is **R013 → R019** (daemon proto/CLI/config, then single-active **`rex-agent`**). **RC-S2** may run **in parallel** with **R013** (extension-only blast radius). Per [PRIORITIZATION.md](PRIORITIZATION.md) tie-breakers: prefer **daemon → CLI → extension** ordering; proto rows carry **medium contract risk** — keep slices small. **R016** stays **Could** until single-active agent is proven (open socket/broadcast decision).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
@@ -61,10 +70,10 @@ Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. To
 | 2 | Platform enablers | **R013** | `BrokerListDir`, `RunTurn.model`, stream passthrough |
 | 3 | Unified `rex` CLI | **R014** | Single `rex` binary; subcommands |
 | 4 | Config + proto SDK | **R015** | JSON config, `rex proto install`, `proto.gen_root` |
-| 5 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (open decision) |
-| 6 | `rex-agent` scaffold | **R017** | gRPC server + broker client |
-| 7 | LangGraph agent core | **R018** | ReAct loop, broker adapters |
-| 8 | Integration / E2E | **R019** | Operator path, extension defaults, RC evidence when proven |
+| 5 | `rex-agent` scaffold | **R017** | gRPC server + broker client |
+| 6 | LangGraph agent core | **R018** | ReAct loop, broker adapters |
+| 7 | Integration / E2E | **R019** | Operator path, extension defaults, RC evidence when proven |
+| 8 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (**Could** — open decision) |
 
 ```mermaid
 flowchart TD
@@ -72,17 +81,17 @@ flowchart TD
   plat[R013_Platform]
   cli[R014_rex_CLI]
   cfg[R015_Config_proto]
-  multi[R016_Multi_active]
   scaffold[R017_agent_scaffold]
   graph[R018_LangGraph]
   e2e[R019_Integration]
+  multi[R016_Multi_active]
   doc --> plat
-  plat --> multi
+  plat --> cli
   cli --> cfg
-  cfg --> multi
-  multi --> scaffold
+  cfg --> scaffold
   scaffold --> graph
   graph --> e2e
+  e2e -.-> multi
 ```
 
 ## Next — after v1.0 or in parallel if healthy
@@ -91,17 +100,18 @@ flowchart TD
 |----------|------------|-----------|--------|
 | **Could** | **MCP** interoperability (design accepted; implementation deferred) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | Formal MCP ADR when scheduled |
 | **Could** | Learned / small-model compression; batching/async doc jobs | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Matrix **planned** rows |
-| **Could** | Layered prompts (system/project stack) | [CONFIGURATION.md](CONFIGURATION.md) | **planned** |
+| **Could** | Layered prompts (system/project stack) | [CONFIGURATION.md](CONFIGURATION.md#layered-prompts-planned) | **planned** |
 | **Could** | Difficulty-based routing cascade (ML escalation) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | Beyond **RC-09** env hook |
-| **Harness only** | Direct daemon HTTP/mock without sidecar | [MVP_SPEC.md](MVP_SPEC.md) | CI only |
+| **Won't (now)** | Direct daemon HTTP/mock without sidecar | [MVP_SPEC.md](MVP_SPEC.md) | CI/harness path only; not product default |
 
 ## Later — only if the core path stays healthy
 
 | Priority | What | Source(s) | Notes |
 |----------|------|-----------|--------|
 | **Could** | L2 **semantic** cache | [CACHING.md](CACHING.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Out of v1.0 |
-| **Could** | **Apple MLX** local model path | [ARCHITECTURE.md](ARCHITECTURE.md), [MVP_SPEC.md](MVP_SPEC.md) | Post-v1.0 |
-| **Later** | Gateway adapters beyond broker HTTP | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | After router story matures; multi-sidecar broadcast → **R016** |
+| **Could** | **Apple MLX** local model path | [ADAPTERS.md](ADAPTERS.md#local-mlx-path-planned) | Post-v1.0 |
+| **Could** | Gateway adapters beyond broker HTTP | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | After router story matures; multi-sidecar broadcast → **R016** |
+| **Could** | Vendor KV / prompt cache hints | [CACHING.md](CACHING.md#vendor-kv-and-prompt-cache-hints-planned) | Depends on outbound API owning runtime |
 | **Won't (now)** | VM/container as **default Mac** sidecar envelope | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Process + broker instead |
 
 ## Engineering backlog (refactor / contract IDs)
@@ -119,7 +129,7 @@ flowchart TD
 | **R013** | Platform enablers (`BrokerListDir`, `RunTurn.model`, stream passthrough) | Should |
 | **R014** | Unified `rex` CLI (replace `rex-cli` / `rex-daemon`) | Should |
 | **R015** | JSON config + `rex proto install` + `proto.gen_root` | Should |
-| **R016** | Multi-active sidecar broadcast | Should |
+| **R016** | Multi-active sidecar broadcast | Could |
 | **R017** | `rex-agent` scaffold (gRPC + broker client) | Should |
 | **R018** | LangGraph agent core (ReAct, broker tools) | Should |
 | **R019** | Integration / E2E (operator path, extension defaults) | Should |
@@ -146,6 +156,10 @@ flowchart TD
 2. Skim [MVP_SPEC.md](MVP_SPEC.md) when **scope** changes; [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) for feature phasing.
 3. **New product or feature ideas:** follow [DOCUMENTATION.md — Roadmap and new features](DOCUMENTATION.md#roadmap-and-new-features) (hub first, then row with **Source(s)** link).
 4. Re-check [PRIORITIZATION.md](PRIORITIZATION.md) when moving rows.
+
+### Prioritization audit (2026-05-23)
+
+Roadmap rows checked against [PRIORITIZATION.md](PRIORITIZATION.md): MoSCoW labels, hub links for **Could** / **Won't (now)**, economics-matrix coherence, and **RC-S*** mirrors. Re-run when priorities shift materially.
 
 ## Related
 

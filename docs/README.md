@@ -30,7 +30,7 @@ Before adding or materially editing a doc under `docs/`:
 | [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) | How to contribute and gate quality |
 | [PRIORITIZATION.md](PRIORITIZATION.md) | MoSCoW + quick R-ICE |
 | [V1_0.md](V1_0.md) | v1.0 release criteria (SMART), SemVer meaning, tagging gate |
-| [ROADMAP.md](ROADMAP.md) | Progress toward v1.0 (**RC-***) + engineering backlog IDs |
+| [ROADMAP.md](ROADMAP.md) | Post-v1.0 **Should** / **Could** queue, **RC-S*** closure, engineering backlog IDs |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | SAD + C4-style views + links to ADRs |
 | [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) | Architecture policies, ownership, documentation layering |
 | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Deferred VM/container transport catalog |
@@ -63,6 +63,9 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Feature area | Canonical hub |
 |---|---|
 | Inference adapters | [ADAPTERS.md](ADAPTERS.md), [ADR 0002](architecture/decisions/0002-inference-adapter-contract.md) |
+| Layered prompts (planned) | [CONFIGURATION.md](CONFIGURATION.md#layered-prompts-planned) |
+| Local MLX adapter (planned) | [ADAPTERS.md](ADAPTERS.md#local-mlx-path-planned) |
+| Vendor KV / prompt cache hints (planned) | [CACHING.md](CACHING.md#vendor-kv-and-prompt-cache-hints-planned) |
 | Daemon extensibility / sidecars | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Layered cache policy | [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | Routing / optional gateway stance | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), economics rows in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |

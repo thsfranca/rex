@@ -98,6 +98,38 @@ CI and unit tests set `REX_INFERENCE_RUNTIME=mock` and clear `REX_OPENAI_COMPAT_
 
 Precedence target (low → high): built-in defaults → user JSON → project JSON → environment → CLI flags. Until **R015** lands, **environment remains primary** (table above).
 
+## Layered prompts (planned)
+
+**Status:** `planned` — not shipped. Economics lever: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md). Roadmap: [ROADMAP.md](ROADMAP.md) (**Could**).
+
+### Purpose
+
+Versioned **system / project prompt assemblies** assembled in the daemon so clients and sidecars do not duplicate long rule blocks on every request.
+
+### Scope
+
+| In (design stage) | Out (design stage) |
+|---|---|
+| Assembly versioning and merge order (system → project → mode) | Full prompt authoring UI in the extension |
+| Config keys or JSON section for assembly paths | Client-side prompt templating replacing daemon policy |
+| Daemon responsibility for final prompt sent to broker | Replacing [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) retrieval/compression pipeline |
+
+### Boundaries
+
+- **Policy / assembly:** daemon owns merge order and version bumps.
+- **Mechanism:** existing context pipeline and broker adapters unchanged until scheduled.
+- See [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) for doc precedence.
+
+### Interfaces (intent)
+
+- Future config keys under `prompts.*` or `$REX_HOME/config.json` section (exact names TBD with **R015**).
+- Assembly **schema version** in cache keys when layered prompts affect L1 ([CACHING.md](CACHING.md)).
+
+### Cross-links
+
+- [ROADMAP.md](ROADMAP.md) — **Could** row
+- [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — economics matrix row
+
 ## Not implemented yet (roadmap)
 
 - Persistent user config on disk — see **Planned: JSON configuration** and **R015**.
