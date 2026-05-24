@@ -36,11 +36,13 @@ rex-cli complete "<prompt>" --format ndjson --mode <ask|plan|agent> [--model <id
 - Exactly **one** terminal event per request path (`done` **or** `error`).
 - `error` objects may expose stable `code` for UX routing.
 
-Current `error.code` taxonomy:
+**Error codes and message quality:** canonical catalog, templates, and review checklist — [ERROR_HANDLING.md](ERROR_HANDLING.md). Wire-shape table (retry guidance):
 
 | Code | Meaning | Retry guidance |
 |---|---|---|
 | `daemon_unavailable` | Daemon not reachable | Retry after daemon start |
+| `sidecar_unavailable` | Sidecar required but unavailable | Fix sidecar setup; see [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) |
+| `inference_config` | Inference backend not configured | Set `REX_OPENAI_COMPAT_*`; see [CONFIGURATION.md](CONFIGURATION.md) |
 | `stream_timeout` | No stream activity in window | Retry usually safe |
 | `stream_interrupted` | Mid-flight failure | Retry usually safe |
 | `stream_incomplete` | No terminal marker | Inspect daemon; avoid blind retry |

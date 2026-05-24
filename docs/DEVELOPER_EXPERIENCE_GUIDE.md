@@ -92,9 +92,15 @@ cargo test --workspace --all-targets --locked
 Use this review checklist before accepting AI-generated changes:
 - Scope: one primary concern per PR.
 - Contract safety: no accidental `rex.v1` breaking changes.
-- Reliability: failure paths are explicit and testable.
+- Reliability: failure paths are explicit and testable; error messages follow [ERROR_HANDLING.md](ERROR_HANDLING.md).
 - Documentation: setup/behavior changes are documented.
 - Verification: command-level or test-level proof is present.
+
+Optional before PR (error codes, fixtures, or guidelines scripts):
+
+```bash
+./scripts/ci/run_guidelines_verify.sh
+```
 
 ### Documentation conventions
 
@@ -168,7 +174,7 @@ Security baseline:
 
 Operational baseline:
 - Keep daemon lifecycle deterministic (startup, shutdown, cleanup).
-- Keep failure messages actionable for CLI and logs.
+- Keep failure messages actionable for CLI and logs — see [ERROR_HANDLING.md](ERROR_HANDLING.md).
 - Preserve CI observability conventions from `docs/CI.md`.
 
 ## 8) Roadmap to extensibility-ready DX

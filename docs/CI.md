@@ -79,6 +79,7 @@ Keep failure codes low-cardinality. Current baseline set:
 - `LINT_FAIL` (extension ESLint)
 - `BUILD_FAIL` (extension esbuild bundle)
 - `PACKAGE_FAIL` (extension VSIX packaging)
+- `GUIDELINES_FAIL` (documented guideline conformance — error code catalog sync and sibling checks under `scripts/ci/guidelines/`)
 
 ### Reliability guardrails
 
@@ -102,7 +103,7 @@ Set branch protection or ruleset on `main` to require:
 
 - `ci-checks`
 
-`ci-checks` is the final gate and fails when `rust-checks` or `extension-checks` fails. `rust-checks` gates Rust work (`rust-verify`). `extension-checks` gates extension install, typecheck, lint, test, and VSIX packaging (`extension-verify`). All gate jobs use canonical summary fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`) plus upstream outcomes.
+`ci-checks` is the final gate and fails when `guidelines-verify`, `rust-checks`, or `extension-checks` fails. **`guidelines-verify`** always runs documented guideline conformance checks. `rust-checks` gates Rust work (`rust-verify`). `extension-checks` gates extension install, typecheck, lint, test, and VSIX packaging (`extension-verify`). All gate jobs use canonical summary fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`) plus upstream outcomes.
 
 ## Path-aware execution model
 
@@ -135,12 +136,26 @@ CI first evaluates changed paths, then runs only relevant domain checks.
   - `scripts/ci/**`
   - `Cargo.toml`
   - `Cargo.lock`
+  - `docs/ERROR_HANDLING.md`
+  - `fixtures/guidelines/**`
+  - `fixtures/ndjson_contract/**`
+
+### Guidelines verify (always runs)
+
+Every pull request runs [`scripts/ci/run_guidelines_verify.sh`](scripts/ci/run_guidelines_verify.sh) in the **guidelines-verify** job. It validates documented rules that are not covered by fmt, clippy, or ESLint — starting with NDJSON stream **error code catalog** sync (`fixtures/guidelines/error_codes.yaml` ↔ TypeScript ↔ docs ↔ fixtures). Failure code: `GUIDELINES_FAIL`. See [ERROR_HANDLING.md](ERROR_HANDLING.md).
+
+Local run:
+
+```bash
+./scripts/ci/run_guidelines_verify.sh
+```
 
 ### Dependency model
 
+- Guidelines chain: `guidelines-verify` (always)
 - Rust chain: `rust-verify` -> `rust-checks`
 - Extension chain: `extension-verify` -> `extension-checks`
-- Top-level chain: `rust-checks` + `extension-checks` -> `ci-checks`
+- Top-level chain: `guidelines-verify` + `rust-checks` + `extension-checks` -> `ci-checks`
 
 When a domain is non-relevant, leaf jobs skip and that domain gate exits with `result=skip` while returning success. This keeps the required `ci-checks` result deterministic on pull requests that touch only out-of-scope paths.
 

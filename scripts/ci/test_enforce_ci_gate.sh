@@ -21,6 +21,7 @@ run_gate_case() {
   local ext_res="$4"
   local expected_exit="$5"
   local expected_signal_line="$6"
+  local guidelines_res="${7:-success}"
 
   local tmp_dir
   tmp_dir="$(mktemp -d)"
@@ -34,6 +35,7 @@ run_gate_case() {
     EXTENSION_RELEVANT="${ext_rel}" \
     RUST_RESULT="${rust_res}" \
     EXTENSION_RESULT="${ext_res}" \
+    GUIDELINES_RESULT="${guidelines_res}" \
     GITHUB_RUN_ID="local-test-run-id" \
     GITHUB_STEP_SUMMARY="${summary_file}" \
     bash "${GATE_SCRIPT}" 2>&1
@@ -56,6 +58,8 @@ run_gate_case() {
   summary_contents="$(cat "${summary_file}")"
   assert_contains "${summary_contents}" "- rust-checks: ${rust_res}"
   assert_contains "${summary_contents}" "- extension-checks: ${ext_res}"
+  assert_contains "${summary_contents}" "- guidelines-verify: ${guidelines_res}"
+
   assert_contains "${summary_contents}" "- run_id: local-test-run-id"
 
   rm -rf "${tmp_dir}"
@@ -68,5 +72,6 @@ run_gate_case "false" "false" "skipped" "skipped" 0 "::notice::Top-level CI gate
 run_gate_case "false" "false" "success" "success" 0 "::notice::Top-level CI gate passed."
 run_gate_case "false" "true" "skipped" "success" 0 "::notice::Top-level CI gate passed."
 run_gate_case "true" "false" "success" "skipped" 0 "::notice::Top-level CI gate passed."
+run_gate_case "true" "true" "success" "success" 1 "CI_SIGNAL code=GUIDELINES_FAIL" "failure"
 
 echo "enforce_ci_gate contract tests passed."
