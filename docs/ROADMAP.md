@@ -147,7 +147,7 @@ flowchart TD
 | **R018** | LangGraph agent core (ReAct, broker tools) | Should |
 | **R019** | Integration / E2E (operator path, extension defaults) | Should |
 | **R020** | Broker access policy completion (ADR 0013; follows R012) | Should — [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) |
-| **R021** | Turn correlation Phase 1b (`turn_id`, `context_revision`) | Should — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
+| **R021** | Turn correlation Phase 1b (`turn_id`, `context_revision`) | Done — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | **R022** | Workspace binding product path (fail-closed daemon) | Should — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
 
 ## Parked in design docs

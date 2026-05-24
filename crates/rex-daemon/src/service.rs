@@ -37,6 +37,7 @@ use crate::sidecar_client::{
 };
 use crate::sidecar_config::parse_harness_only;
 use crate::supervisor::{SharedSupervisor, SupervisorError};
+use crate::turn_correlation::{build_turn_correlation, TurnCorrelation};
 
 pub struct RexDaemonService {
     started_at: Instant,
@@ -78,6 +79,7 @@ impl RexDaemonService {
         mode: &str,
         model: &str,
         inference_runtime: &str,
+        correlation: &TurnCorrelation,
     ) -> Result<Vec<Result<StreamInferenceResponse, Status>>, Status> {
         if parse_harness_only().is_some() || !self.sidecar.config().enabled {
             return Ok(self.runtime.build_chunks(effective_prompt).await);
@@ -90,12 +92,14 @@ impl RexDaemonService {
         let mut client = connect_sidecar(&socket)
             .await
             .map_err(|e| Status::unavailable(format!("sidecar connect failed: {e}")))?;
-        let sidecar_chunks = run_turn_collect(&mut client, effective_prompt, mode, model)
-            .await
-            .map_err(|e| Status::internal(format!("sidecar RunTurn failed: {e}")))?;
+        let sidecar_chunks =
+            run_turn_collect(&mut client, effective_prompt, mode, model, correlation)
+                .await
+                .map_err(|e| Status::internal(format!("sidecar RunTurn failed: {e}")))?;
         println!(
-            "stream.sidecar=ok inference_runtime=sidecar sidecar_socket={socket} mode={}",
-            normalize_mode(mode)
+            "stream.sidecar=ok inference_runtime=sidecar sidecar_socket={socket} mode={} turn_id={}",
+            normalize_mode(mode),
+            correlation.turn_id
         );
         let _ = inference_runtime;
         Ok(map_sidecar_to_inference_chunks(sidecar_chunks))
@@ -119,20 +123,28 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerExecShellRequest>,
     ) -> Result<Response<BrokerExecShellResponse>, Status> {
+        let turn_id = extract_turn_id(request.metadata());
         let command = request.into_inner().command;
+        println!("broker.access_policy=evaluate capability=exec.shell turn_id={turn_id} command={command}");
         match broker_exec_shell(&command) {
-            Ok(result) => Ok(Response::new(BrokerExecShellResponse {
-                ok: true,
-                stdout: result.stdout,
-                stderr: result.stderr,
-                error: String::new(),
-            })),
-            Err(err) => Ok(Response::new(BrokerExecShellResponse {
-                ok: false,
-                stdout: String::new(),
-                stderr: String::new(),
-                error: err.to_string(),
-            })),
+            Ok(result) => {
+                println!("broker.access_policy=allow capability=exec.shell turn_id={turn_id}");
+                Ok(Response::new(BrokerExecShellResponse {
+                    ok: true,
+                    stdout: result.stdout,
+                    stderr: result.stderr,
+                    error: String::new(),
+                }))
+            }
+            Err(err) => {
+                println!("broker.access_policy=deny capability=exec.shell turn_id={turn_id} command={command} error={err}");
+                Ok(Response::new(BrokerExecShellResponse {
+                    ok: false,
+                    stdout: String::new(),
+                    stderr: String::new(),
+                    error: err.to_string(),
+                }))
+            }
         }
     }
 
@@ -140,16 +152,30 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerWriteFileRequest>,
     ) -> Result<Response<BrokerWriteFileResponse>, Status> {
+        let turn_id = extract_turn_id(request.metadata());
         let inner = request.into_inner();
+        println!(
+            "broker.access_policy=evaluate capability=fs.write turn_id={turn_id} path={}",
+            inner.path
+        );
         match broker_write_file(&inner.path, &inner.content) {
-            Ok(()) => Ok(Response::new(BrokerWriteFileResponse {
-                ok: true,
-                error: String::new(),
-            })),
-            Err(err) => Ok(Response::new(BrokerWriteFileResponse {
-                ok: false,
-                error: err.to_string(),
-            })),
+            Ok(()) => {
+                println!(
+                    "broker.access_policy=allow capability=fs.write turn_id={turn_id} path={}",
+                    inner.path
+                );
+                Ok(Response::new(BrokerWriteFileResponse {
+                    ok: true,
+                    error: String::new(),
+                }))
+            }
+            Err(err) => {
+                println!("broker.access_policy=deny capability=fs.write turn_id={turn_id} path={} error={err}", inner.path);
+                Ok(Response::new(BrokerWriteFileResponse {
+                    ok: false,
+                    error: err.to_string(),
+                }))
+            }
         }
     }
 
@@ -157,11 +183,14 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerListDirRequest>,
     ) -> Result<Response<BrokerListDirResponse>, Status> {
+        let turn_id = extract_turn_id(request.metadata());
         let path = request.into_inner().path;
-        println!("broker.access_policy=evaluate capability=fs.list path={path}");
+        println!("broker.access_policy=evaluate capability=fs.list turn_id={turn_id} path={path}");
         match broker_list_dir(&path) {
             Ok(entries) => {
-                println!("broker.access_policy=allow capability=fs.list path={path}");
+                println!(
+                    "broker.access_policy=allow capability=fs.list turn_id={turn_id} path={path}"
+                );
                 Ok(Response::new(BrokerListDirResponse {
                     ok: true,
                     entries: entries
@@ -175,7 +204,7 @@ impl RexService for RexDaemonService {
                 }))
             }
             Err(err) => {
-                println!("broker.access_policy=deny capability=fs.list path={path} error={err}");
+                println!("broker.access_policy=deny capability=fs.list turn_id={turn_id} path={path} error={err}");
                 Ok(Response::new(BrokerListDirResponse {
                     ok: false,
                     entries: Vec::new(),
@@ -189,11 +218,14 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerReadFileRequest>,
     ) -> Result<Response<BrokerReadFileResponse>, Status> {
+        let turn_id = extract_turn_id(request.metadata());
         let path = request.into_inner().path;
-        println!("broker.access_policy=evaluate capability=fs.read path={path}");
+        println!("broker.access_policy=evaluate capability=fs.read turn_id={turn_id} path={path}");
         match broker_read_file(&path) {
             Ok(content) => {
-                println!("broker.access_policy=allow capability=fs.read path={path}");
+                println!(
+                    "broker.access_policy=allow capability=fs.read turn_id={turn_id} path={path}"
+                );
                 Ok(Response::new(BrokerReadFileResponse {
                     ok: true,
                     content,
@@ -201,7 +233,7 @@ impl RexService for RexDaemonService {
                 }))
             }
             Err(err) => {
-                println!("broker.access_policy=deny capability=fs.read path={path} error={err}");
+                println!("broker.access_policy=deny capability=fs.read turn_id={turn_id} path={path} error={err}");
                 Ok(Response::new(BrokerReadFileResponse {
                     ok: false,
                     content: String::new(),
@@ -215,15 +247,16 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerInferenceRequest>,
     ) -> Result<Response<BrokerInferenceResponse>, Status> {
+        let turn_id = extract_turn_id(request.metadata());
         let inner = request.into_inner();
         let mode = normalize_mode(&inner.mode);
         println!(
-            "broker.inference=requested mode={mode} prompt_len={}",
+            "broker.inference=requested turn_id={turn_id} mode={mode} prompt_len={}",
             inner.prompt.chars().count()
         );
         match broker_inference_completion(&inner.prompt, &inner.model).await {
             Ok(text) => {
-                println!("broker.inference=ok mode={mode}");
+                println!("broker.inference=ok turn_id={turn_id} mode={mode}");
                 Ok(Response::new(BrokerInferenceResponse {
                     ok: true,
                     text,
@@ -231,7 +264,7 @@ impl RexService for RexDaemonService {
                 }))
             }
             Err(message) => {
-                println!("broker.inference=error mode={mode} error={message}");
+                println!("broker.inference=error turn_id={turn_id} mode={mode} error={message}");
                 Ok(Response::new(BrokerInferenceResponse {
                     ok: false,
                     text: String::new(),
@@ -284,6 +317,20 @@ impl RexService for RexDaemonService {
             .lock()
             .expect("context pipeline mutex should not be poisoned")
             .prepare(&context_request, adapter_capabilities);
+        let correlation = build_turn_correlation(
+            request_id,
+            &pipeline_result.injected_context,
+            pipeline_result.metrics.retrieval.as_str(),
+            pipeline_result.metrics.compression_strategy,
+            pipeline_result.metrics.context_selected,
+            pipeline_result.metrics.context_truncated,
+        );
+        if pipeline_result.c1_stripped {
+            println!(
+                "stream.request_id={request_id} trace_id={trace_id} turn_id={} context.strip=c1",
+                correlation.turn_id
+            );
+        }
         let prompt_len = prompt.chars().count();
         let route_label = resolve_route_label_for(
             inference_runtime,
@@ -291,11 +338,15 @@ impl RexService for RexDaemonService {
             self.sidecar_live_stream_active(),
         );
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} route={route_label} decision_id={decision_id} stream.lifecycle={} prompt_len={prompt_len}",
+            "stream.request_id={request_id} trace_id={trace_id} turn_id={} context_revision={} inference_runtime={inference_runtime} route={route_label} decision_id={decision_id} stream.lifecycle={} prompt_len={prompt_len}",
+            correlation.turn_id,
+            correlation.context_revision,
             StreamLifecycle::Starting.as_str(),
         );
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={} retrieval={} compression_strategy={}",
+            "stream.request_id={request_id} trace_id={trace_id} turn_id={} context_revision={} inference_runtime={inference_runtime} stream.metrics prompt_tokens={} context_tokens={} candidates={} selected={} truncated={} cache={} behavior={} retrieval={} compression_strategy={}",
+            correlation.turn_id,
+            correlation.context_revision,
             pipeline_result.metrics.prompt_tokens,
             pipeline_result.metrics.selected_context_tokens,
             pipeline_result.metrics.context_candidates,
@@ -359,6 +410,7 @@ impl RexService for RexDaemonService {
         let mut l1_state: Option<&'static str> = None;
         let effective_prompt = pipeline_result.effective_prompt.clone();
         let effective_model = model.clone();
+        let correlation_for_sidecar = correlation.clone();
         let sidecar_live = self.sidecar_live_stream_active();
         let lookup_key = match &decision {
             CacheDecision::Lookup(key) => Some(key.clone()),
@@ -383,6 +435,7 @@ impl RexService for RexDaemonService {
                         &mode,
                         &effective_model,
                         inference_runtime,
+                        &correlation_for_sidecar,
                     )
                     .await?;
                 if let Some(to_store) = l1_cachable_responses(&built) {
@@ -395,6 +448,7 @@ impl RexService for RexDaemonService {
                     &mode,
                     &effective_model,
                     inference_runtime,
+                    &correlation_for_sidecar,
                 )
                 .await?
             };
@@ -408,27 +462,32 @@ impl RexService for RexDaemonService {
         let log_mode = normalize_mode(&mode);
         if let Some(state) = l1_state {
             println!(
-                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} l1_cache={state} model={log_model} mode={log_mode}",
+                "stream.request_id={request_id} trace_id={trace_id} turn_id={} inference_runtime={inference_runtime} l1_cache={state} model={log_model} mode={log_mode}",
+                correlation.turn_id,
             );
         }
         println!(
-            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} cache_decision={} model={log_model} mode={log_mode}",
+            "stream.request_id={request_id} trace_id={trace_id} turn_id={} inference_runtime={inference_runtime} cache_decision={} model={log_model} mode={log_mode}",
+            correlation.turn_id,
             cache_decision_state.label(),
         );
         if !use_sidecar_live {
             println!(
-                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} chunk_count={}",
+                "stream.request_id={request_id} trace_id={trace_id} turn_id={} inference_runtime={inference_runtime} stream.lifecycle={} chunk_count={}",
+                correlation.turn_id,
                 StreamLifecycle::Streaming.as_str(),
                 chunks.len()
             );
         } else {
             println!(
-                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} chunk_count=live_sidecar",
+                "stream.request_id={request_id} trace_id={trace_id} turn_id={} inference_runtime={inference_runtime} stream.lifecycle={} chunk_count=live_sidecar",
+                correlation.turn_id,
                 StreamLifecycle::Streaming.as_str(),
             );
         }
         let sidecar = self.sidecar.clone();
         let sidecar_socket = self.sidecar.config().socket_path.clone();
+        let turn_id_for_stream = correlation.turn_id.clone();
         let output = stream! {
             let mut chunk_count: u64 = 0;
             let mut done_seen = false;
@@ -445,11 +504,12 @@ impl RexService for RexDaemonService {
                     &effective_prompt,
                     &mode,
                     &effective_model,
+                    &correlation_for_sidecar,
                 )
                 .await
                 .map_err(|e| Status::internal(format!("sidecar RunTurn failed: {e}")))?;
                 println!(
-                    "stream.sidecar=ok inference_runtime=sidecar sidecar_socket={sidecar_socket} mode={log_mode}",
+                    "stream.sidecar=ok inference_runtime=sidecar sidecar_socket={sidecar_socket} mode={log_mode} turn_id={turn_id_for_stream}",
                 );
                 while let Some(chunk) = sidecar_stream.next().await {
                     match chunk {
@@ -457,7 +517,7 @@ impl RexService for RexDaemonService {
                             chunk_count += 1;
                             if chunk_count == 1 {
                                 println!(
-                                    "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.event=first_chunk index={} done={}",
+                                    "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.event=first_chunk index={} done={}",
                                     chunk.index,
                                     chunk.done
                                 );
@@ -469,7 +529,7 @@ impl RexService for RexDaemonService {
                         }
                         Err(err) => {
                             println!(
-                                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
+                                "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
                                 StreamLifecycle::Failed.as_str(),
                                 err.code() as i32,
                                 err.message(),
@@ -487,7 +547,7 @@ impl RexService for RexDaemonService {
                             chunk_count += 1;
                             if chunk_count == 1 {
                                 println!(
-                                    "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.event=first_chunk index={} done={}",
+                                    "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.event=first_chunk index={} done={}",
                                     chunk.index,
                                     chunk.done
                                 );
@@ -503,7 +563,7 @@ impl RexService for RexDaemonService {
                         }
                         Err(err) => {
                             println!(
-                                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
+                                "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
                                 StreamLifecycle::Failed.as_str(),
                                 err.code() as i32,
                                 err.message(),
@@ -517,13 +577,13 @@ impl RexService for RexDaemonService {
             }
             if done_seen {
                 println!(
-                    "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.terminal=done chunks_sent={chunk_count} elapsed_ms={}",
+                    "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.terminal=done chunks_sent={chunk_count} elapsed_ms={}",
                     StreamLifecycle::Completed.as_str(),
                     request_started.elapsed().as_millis()
                 );
             } else {
                 println!(
-                    "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=incomplete stream.terminal=missing_done chunks_sent={chunk_count} elapsed_ms={}",
+                    "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=incomplete stream.terminal=missing_done chunks_sent={chunk_count} elapsed_ms={}",
                     StreamLifecycle::Interrupted.as_str(),
                     request_started.elapsed().as_millis()
                 );
@@ -547,6 +607,16 @@ fn extract_trace_id(metadata: &tonic::metadata::MetadataMap, request_id: u64) ->
         Some(value) => value.to_string(),
         None => format!("request-{request_id}"),
     }
+}
+
+fn extract_turn_id(metadata: &tonic::metadata::MetadataMap) -> String {
+    metadata
+        .get("x-rex-turn-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("")
+        .to_string()
 }
 
 fn cache_bypass_from_config() -> bool {
@@ -651,8 +721,8 @@ mod tests {
     use std::path::PathBuf;
 
     use super::{
-        extract_trace_id, format_approval_decision, format_behavior_decision, format_cache_status,
-        resolve_route_label_for, PromptDirectives, RexDaemonService,
+        extract_trace_id, extract_turn_id, format_approval_decision, format_behavior_decision,
+        format_cache_status, resolve_route_label_for, PromptDirectives, RexDaemonService,
     };
     use crate::adapters::{MissingDoneMockRuntime, MockInferenceRuntime};
     use crate::sidecar_config::SidecarConfig;
@@ -766,6 +836,14 @@ mod tests {
     fn trace_id_extraction_falls_back_to_request_id() {
         let metadata = tonic::metadata::MetadataMap::new();
         assert_eq!(extract_trace_id(&metadata, 42), "request-42");
+    }
+
+    #[test]
+    fn extract_turn_id_reads_metadata() {
+        let mut metadata = tonic::metadata::MetadataMap::new();
+        metadata.insert("x-rex-turn-id", "turn-9".parse().unwrap());
+        assert_eq!(extract_turn_id(&metadata), "turn-9");
+        assert_eq!(extract_turn_id(&tonic::metadata::MetadataMap::new()), "");
     }
 
     #[tokio::test]

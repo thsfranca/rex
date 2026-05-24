@@ -37,7 +37,10 @@ class AgentServicer(sidecar_pb2_grpc.SidecarServiceServicer):
     def RunTurn(self, request, context) -> Iterator[sidecar_pb2.RunTurnChunk]:  # noqa: N802
         mode = (request.mode or "").strip() or "ask"
         model = request.model or ""
-        ok, text = broker_inference(request.prompt, mode, model)
+        turn_id = getattr(request, "turn_id", "") or ""
+        if turn_id:
+            print(f"rex-agent event=run_turn turn_id={turn_id}")
+        ok, text = broker_inference(request.prompt, mode, model, turn_id or None)
         if not ok:
             text = f"[broker.inference error: {text}]"
         for chunk in run_turn_chunks(text):

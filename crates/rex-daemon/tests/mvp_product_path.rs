@@ -61,7 +61,6 @@ mod runtime;
 #[allow(dead_code)]
 #[path = "../src/service.rs"]
 mod service;
-#[allow(dead_code)]
 #[path = "../src/sidecar_client.rs"]
 mod sidecar_client;
 #[allow(dead_code)]
@@ -70,6 +69,9 @@ mod sidecar_config;
 #[allow(dead_code)]
 #[path = "../src/supervisor.rs"]
 mod supervisor;
+#[allow(dead_code)]
+#[path = "../src/turn_correlation.rs"]
+mod turn_correlation;
 
 const READINESS_TIMEOUT: Duration = Duration::from_secs(8);
 const CONNECT_TIMEOUT: Duration = Duration::from_millis(250);

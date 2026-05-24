@@ -7,6 +7,13 @@ use tokio::task::JoinHandle;
 use tokio::time::{sleep, timeout, Instant};
 
 #[allow(dead_code)]
+#[path = "../src/settings.rs"]
+mod settings;
+#[allow(dead_code)]
+#[path = "../src/turn_correlation.rs"]
+mod turn_correlation;
+
+#[allow(dead_code)]
 #[path = "../src/sidecar_client.rs"]
 mod sidecar_client;
 
@@ -91,9 +98,18 @@ async fn sidecar_health_and_run_turn_roundtrip() {
         let mut client = sidecar_client::connect_sidecar(&socket_path)
             .await
             .expect("connect sidecar");
-        sidecar_client::run_turn_collect(&mut client, "hello sidecar", "agent", "")
-            .await
-            .expect("run turn")
+        sidecar_client::run_turn_collect(
+            &mut client,
+            "hello sidecar",
+            "agent",
+            "",
+            &sidecar_client::TurnCorrelation {
+                turn_id: "turn-test".to_string(),
+                context_revision: String::new(),
+            },
+        )
+        .await
+        .expect("run turn")
     })
     .await
     .expect("run_turn timed out");
@@ -127,9 +143,18 @@ async fn sidecar_run_turn_stream_yields_incremental_chunks() {
         let mut client = sidecar_client::connect_sidecar(&socket_path)
             .await
             .expect("connect sidecar");
-        let mut stream = sidecar_client::run_turn_stream(&mut client, "hello sidecar", "agent", "")
-            .await
-            .expect("run turn stream");
+        let mut stream = sidecar_client::run_turn_stream(
+            &mut client,
+            "hello sidecar",
+            "agent",
+            "",
+            &sidecar_client::TurnCorrelation {
+                turn_id: "turn-test".to_string(),
+                context_revision: String::new(),
+            },
+        )
+        .await
+        .expect("run turn stream");
         let first = stream
             .next()
             .await
