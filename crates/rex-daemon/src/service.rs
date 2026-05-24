@@ -8,12 +8,14 @@ use std::{
 };
 
 use async_stream::stream;
+use futures::StreamExt;
 use rex_proto::rex::v1::rex_service_server::RexService;
 use rex_proto::rex::v1::{
     BrokerExecShellRequest, BrokerExecShellResponse, BrokerInferenceRequest,
-    BrokerInferenceResponse, BrokerReadFileRequest, BrokerReadFileResponse, BrokerWriteFileRequest,
-    BrokerWriteFileResponse, GetSystemStatusRequest, GetSystemStatusResponse,
-    StreamInferenceRequest, StreamInferenceResponse,
+    BrokerInferenceResponse, BrokerListDirRequest, BrokerListDirResponse, BrokerReadFileRequest,
+    BrokerReadFileResponse, BrokerWriteFileRequest, BrokerWriteFileResponse,
+    GetSystemStatusRequest, GetSystemStatusResponse, StreamInferenceRequest,
+    StreamInferenceResponse,
 };
 use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
@@ -24,7 +26,7 @@ use crate::adapters::InferenceRuntime;
 use crate::adapters::MockInferenceRuntime;
 use crate::adapters::{active_model_id_from_env, AdapterCapabilities};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
-use crate::broker::{broker_exec_shell, broker_read_file, broker_write_file};
+use crate::broker::{broker_exec_shell, broker_list_dir, broker_read_file, broker_write_file};
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::http_openai_compat::broker_inference_completion;
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
@@ -33,7 +35,9 @@ use crate::plugins::{
 };
 use crate::policy::{CacheDecision, CacheDecisionState, PolicyEngine, PolicyRequest};
 use crate::routing::decide_route;
-use crate::sidecar_client::{connect_sidecar, map_sidecar_to_inference_chunks, run_turn_collect};
+use crate::sidecar_client::{
+    connect_sidecar, map_sidecar_to_inference_chunks, run_turn_collect, run_turn_stream,
+};
 use crate::sidecar_config::{parse_harness_only, sidecar_product_path_active};
 use crate::supervisor::{SharedSupervisor, SupervisorError};
 
@@ -75,6 +79,7 @@ impl RexDaemonService {
         &self,
         effective_prompt: &str,
         mode: &str,
+        model: &str,
         inference_runtime: &str,
     ) -> Result<Vec<Result<StreamInferenceResponse, Status>>, Status> {
         if parse_harness_only().is_some() || !sidecar_product_path_active() {
@@ -88,7 +93,7 @@ impl RexDaemonService {
         let mut client = connect_sidecar(&socket)
             .await
             .map_err(|e| Status::unavailable(format!("sidecar connect failed: {e}")))?;
-        let sidecar_chunks = run_turn_collect(&mut client, effective_prompt, mode)
+        let sidecar_chunks = run_turn_collect(&mut client, effective_prompt, mode, model)
             .await
             .map_err(|e| Status::internal(format!("sidecar RunTurn failed: {e}")))?;
         println!(
@@ -97,6 +102,10 @@ impl RexDaemonService {
         );
         let _ = inference_runtime;
         Ok(map_sidecar_to_inference_chunks(sidecar_chunks))
+    }
+
+    fn sidecar_live_stream_active(&self) -> bool {
+        parse_harness_only().is_none() && sidecar_product_path_active()
     }
 
     #[cfg(test)]
@@ -147,6 +156,38 @@ impl RexService for RexDaemonService {
         }
     }
 
+    async fn broker_list_dir(
+        &self,
+        request: Request<BrokerListDirRequest>,
+    ) -> Result<Response<BrokerListDirResponse>, Status> {
+        let path = request.into_inner().path;
+        println!("broker.access_policy=evaluate capability=fs.list path={path}");
+        match broker_list_dir(&path) {
+            Ok(entries) => {
+                println!("broker.access_policy=allow capability=fs.list path={path}");
+                Ok(Response::new(BrokerListDirResponse {
+                    ok: true,
+                    entries: entries
+                        .into_iter()
+                        .map(|entry| rex_proto::rex::v1::DirEntry {
+                            name: entry.name,
+                            is_dir: entry.is_dir,
+                        })
+                        .collect(),
+                    error: String::new(),
+                }))
+            }
+            Err(err) => {
+                println!("broker.access_policy=deny capability=fs.list path={path} error={err}");
+                Ok(Response::new(BrokerListDirResponse {
+                    ok: false,
+                    entries: Vec::new(),
+                    error: err.to_string(),
+                }))
+            }
+        }
+    }
+
     async fn broker_read_file(
         &self,
         request: Request<BrokerReadFileRequest>,
@@ -183,7 +224,7 @@ impl RexService for RexDaemonService {
             "broker.inference=requested mode={mode} prompt_len={}",
             inner.prompt.chars().count()
         );
-        match broker_inference_completion(&inner.prompt).await {
+        match broker_inference_completion(&inner.prompt, &inner.model).await {
             Ok(text) => {
                 println!("broker.inference=ok mode={mode}");
                 Ok(Response::new(BrokerInferenceResponse {
@@ -315,35 +356,47 @@ impl RexService for RexDaemonService {
             }
         }
         let mut l1_state: Option<&'static str> = None;
-        let chunks: Vec<Result<StreamInferenceResponse, Status>> = match &decision {
-            CacheDecision::Lookup(key) => {
-                if let Some(cached) = self.policy.get(key) {
-                    l1_state = Some("hit");
-                    cached.into_iter().map(Ok).collect()
-                } else {
+        let effective_prompt = pipeline_result.effective_prompt.clone();
+        let effective_model = model.clone();
+        let sidecar_live = self.sidecar_live_stream_active();
+        let lookup_key = match &decision {
+            CacheDecision::Lookup(key) => Some(key.clone()),
+            _ => None,
+        };
+        let cached_chunks = lookup_key.as_ref().and_then(|key| self.policy.get(key));
+        let use_sidecar_live = sidecar_live && cached_chunks.is_none();
+        let chunks: Vec<Result<StreamInferenceResponse, Status>> =
+            if let Some(cached) = cached_chunks {
+                l1_state = Some("hit");
+                cached.into_iter().map(Ok).collect()
+            } else if use_sidecar_live {
+                if lookup_key.is_some() {
                     l1_state = Some("miss");
-                    let built = self
-                        .resolve_inference_chunks(
-                            &pipeline_result.effective_prompt,
-                            &mode,
-                            inference_runtime,
-                        )
-                        .await?;
-                    if let Some(to_store) = l1_cachable_responses(&built) {
-                        self.policy.put(key.clone(), to_store);
-                    }
-                    built
                 }
-            }
-            CacheDecision::Bypass | CacheDecision::Uncacheable { .. } => {
+                Vec::new()
+            } else if let Some(key) = lookup_key {
+                l1_state = Some("miss");
+                let built = self
+                    .resolve_inference_chunks(
+                        &effective_prompt,
+                        &mode,
+                        &effective_model,
+                        inference_runtime,
+                    )
+                    .await?;
+                if let Some(to_store) = l1_cachable_responses(&built) {
+                    self.policy.put(key, to_store);
+                }
+                built
+            } else {
                 self.resolve_inference_chunks(
-                    &pipeline_result.effective_prompt,
+                    &effective_prompt,
                     &mode,
+                    &effective_model,
                     inference_runtime,
                 )
                 .await?
-            }
-        };
+            };
         let cache_decision_state =
             CacheDecisionState::from_outcome(&decision, matches!(l1_state, Some("hit")));
         let log_model = if model.trim().is_empty() {
@@ -361,44 +414,103 @@ impl RexService for RexDaemonService {
             "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} cache_decision={} model={log_model} mode={log_mode}",
             cache_decision_state.label(),
         );
-        println!(
-            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} chunk_count={}",
-            StreamLifecycle::Streaming.as_str(),
-            chunks.len()
-        );
+        if !use_sidecar_live {
+            println!(
+                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} chunk_count={}",
+                StreamLifecycle::Streaming.as_str(),
+                chunks.len()
+            );
+        } else {
+            println!(
+                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} chunk_count=live_sidecar",
+                StreamLifecycle::Streaming.as_str(),
+            );
+        }
+        let sidecar = self.sidecar.clone();
+        let sidecar_socket = self.sidecar.config().socket_path.clone();
         let output = stream! {
             let mut chunk_count: u64 = 0;
             let mut done_seen = false;
-            for chunk in chunks {
-                match chunk {
-                    Ok(chunk) => {
-                        chunk_count += 1;
-                        if chunk_count == 1 {
+            if use_sidecar_live {
+                sidecar
+                    .ensure_running()
+                    .await
+                    .map_err(|err| sidecar_error_to_status(&err, sidecar.config().required))?;
+                let mut client = connect_sidecar(&sidecar_socket)
+                    .await
+                    .map_err(|e| Status::unavailable(format!("sidecar connect failed: {e}")))?;
+                let mut sidecar_stream = run_turn_stream(
+                    &mut client,
+                    &effective_prompt,
+                    &mode,
+                    &effective_model,
+                )
+                .await
+                .map_err(|e| Status::internal(format!("sidecar RunTurn failed: {e}")))?;
+                println!(
+                    "stream.sidecar=ok inference_runtime=sidecar sidecar_socket={sidecar_socket} mode={log_mode}",
+                );
+                while let Some(chunk) = sidecar_stream.next().await {
+                    match chunk {
+                        Ok(chunk) => {
+                            chunk_count += 1;
+                            if chunk_count == 1 {
+                                println!(
+                                    "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.event=first_chunk index={} done={}",
+                                    chunk.index,
+                                    chunk.done
+                                );
+                            }
+                            if chunk.done {
+                                done_seen = true;
+                            }
+                            yield Ok(chunk);
+                        }
+                        Err(err) => {
                             println!(
-                                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.event=first_chunk index={} done={}",
-                                chunk.index,
-                                chunk.done
+                                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
+                                StreamLifecycle::Failed.as_str(),
+                                err.code() as i32,
+                                err.message(),
+                                request_started.elapsed().as_millis()
                             );
-                        }
-                        if chunk.done {
-                            done_seen = true;
-                        }
-                        let terminal = chunk.done;
-                        yield Ok(chunk);
-                        if !terminal {
-                            sleep(Duration::from_millis(STREAM_CHUNK_DELAY_MS)).await;
+                            yield Err(err);
+                            return;
                         }
                     }
-                    Err(err) => {
-                        println!(
-                            "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
-                            StreamLifecycle::Failed.as_str(),
-                            err.code() as i32,
-                            err.message(),
-                            request_started.elapsed().as_millis()
-                        );
-                        yield Err(err);
-                        return;
+                }
+            } else {
+                for chunk in chunks {
+                    match chunk {
+                        Ok(chunk) => {
+                            chunk_count += 1;
+                            if chunk_count == 1 {
+                                println!(
+                                    "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.event=first_chunk index={} done={}",
+                                    chunk.index,
+                                    chunk.done
+                                );
+                            }
+                            if chunk.done {
+                                done_seen = true;
+                            }
+                            let terminal = chunk.done;
+                            yield Ok(chunk);
+                            if !terminal {
+                                sleep(Duration::from_millis(STREAM_CHUNK_DELAY_MS)).await;
+                            }
+                        }
+                        Err(err) => {
+                            println!(
+                                "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
+                                StreamLifecycle::Failed.as_str(),
+                                err.code() as i32,
+                                err.message(),
+                                request_started.elapsed().as_millis()
+                            );
+                            yield Err(err);
+                            return;
+                        }
                     }
                 }
             }

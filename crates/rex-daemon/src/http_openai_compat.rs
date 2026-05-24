@@ -69,9 +69,10 @@ impl HttpOpenAiCompatRuntime {
     }
 
     /// Single completion for sidecar `BrokerInference` (assembled from SSE).
-    pub async fn fetch_completion_text(&self, prompt: &str) -> Result<String, Status> {
+    pub async fn fetch_completion_text(&self, prompt: &str, model: &str) -> Result<String, Status> {
+        let effective_model = resolve_inference_model(model, &self.model);
         let body = serde_json::json!({
-            "model": self.model,
+            "model": effective_model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": true
         });
@@ -125,7 +126,7 @@ impl HttpOpenAiCompatRuntime {
 #[tonic::async_trait]
 impl crate::adapters::InferenceRuntime for HttpOpenAiCompatRuntime {
     async fn build_chunks(&self, prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>> {
-        match self.fetch_completion_text(prompt).await {
+        match self.fetch_completion_text(prompt, &self.model).await {
             Ok(text) => {
                 let content_chunks = chunk_output(&text, STREAM_CHUNK_MAX_CHARS);
                 stream_chunks_with_done(content_chunks)
@@ -168,11 +169,21 @@ fn parse_sse_data_line(line: &str) -> Option<String> {
         })
 }
 
+/// Resolve request model override against the configured default.
+pub fn resolve_inference_model(request_model: &str, default_model: &str) -> String {
+    let trimmed = request_model.trim();
+    if trimmed.is_empty() {
+        default_model.to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
 /// Broker RPC entry: HTTP OpenAI-compat when env is configured.
-pub async fn broker_inference_completion(prompt: &str) -> Result<String, String> {
+pub async fn broker_inference_completion(prompt: &str, model: &str) -> Result<String, String> {
     let runtime = HttpOpenAiCompatRuntime::from_env()?;
     runtime
-        .fetch_completion_text(prompt)
+        .fetch_completion_text(prompt, model)
         .await
         .map_err(|status| status.message().to_string())
 }
@@ -187,6 +198,18 @@ fn truncate_body(body: &str, max: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn resolves_model_override() {
+        assert_eq!(
+            resolve_inference_model("", "default-model"),
+            "default-model"
+        );
+        assert_eq!(
+            resolve_inference_model("  custom-model  ", "default-model"),
+            "custom-model"
+        );
+    }
 
     #[test]
     fn normalizes_base_urls() {

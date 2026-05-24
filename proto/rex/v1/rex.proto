@@ -7,6 +7,7 @@ service RexService {
   rpc StreamInference(StreamInferenceRequest) returns (stream StreamInferenceResponse);
   // Sidecar broker: workspace file read (MVP `fs.read`).
   rpc BrokerReadFile(BrokerReadFileRequest) returns (BrokerReadFileResponse);
+  rpc BrokerListDir(BrokerListDirRequest) returns (BrokerListDirResponse);
   rpc BrokerWriteFile(BrokerWriteFileRequest) returns (BrokerWriteFileResponse);
   rpc BrokerExecShell(BrokerExecShellRequest) returns (BrokerExecShellResponse);
   // Sidecar broker: OpenAI-compatible HTTP inference (daemon executes backend).
@@ -38,6 +39,22 @@ message BrokerReadFileRequest {
 message BrokerReadFileResponse {
   bool ok = 1;
   string content = 2;
+  string error = 3;
+}
+
+message BrokerListDirRequest {
+  // Relative directory under workspace; empty means workspace root.
+  string path = 1;
+}
+
+message DirEntry {
+  string name = 1;
+  bool is_dir = 2;
+}
+
+message BrokerListDirResponse {
+  bool ok = 1;
+  repeated DirEntry entries = 2;
   string error = 3;
 }
 

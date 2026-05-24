@@ -6,7 +6,8 @@ use std::time::Duration;
 use hyper_util::rt::TokioIo;
 use rex_proto::rex::v1::rex_service_client::RexServiceClient;
 use rex_proto::rex::v1::{
-    BrokerExecShellRequest, BrokerInferenceRequest, BrokerReadFileRequest, BrokerWriteFileRequest,
+    BrokerExecShellRequest, BrokerInferenceRequest, BrokerListDirRequest, BrokerReadFileRequest,
+    BrokerWriteFileRequest,
 };
 use tokio::net::UnixStream;
 use tonic::transport::Endpoint;
@@ -63,7 +64,7 @@ impl SidecarService for StubSidecar {
         } else {
             inner.mode.trim()
         };
-        let mut text = match broker_inference(&inner.prompt, mode, "").await {
+        let mut text = match broker_inference(&inner.prompt, mode, &inner.model).await {
             Ok(content) => content,
             Err(err) => {
                 let stream = async_stream::stream! {
@@ -88,6 +89,27 @@ impl SidecarService for StubSidecar {
                 }
                 Err(err) => {
                     text.push_str(&format!("\n\n[fs.read error:{err}]"));
+                }
+            }
+        }
+        if let Some(path) = parse_list_directive(&inner.prompt) {
+            match broker_list_dir(&path).await {
+                Ok(entries) => {
+                    let listing = entries
+                        .iter()
+                        .map(|entry| {
+                            if entry.is_dir {
+                                format!("{}/", entry.name)
+                            } else {
+                                entry.name.clone()
+                            }
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    text.push_str(&format!("\n\n[fs.list:{path}]\n{listing}"));
+                }
+                Err(err) => {
+                    text.push_str(&format!("\n\n[fs.list error:{err}]"));
                 }
             }
         }
@@ -184,7 +206,14 @@ async fn broker_inference(prompt: &str, mode: &str, model: &str) -> Result<Strin
 }
 
 fn parse_read_directive(prompt: &str) -> Option<String> {
-    let marker = "__rex_read:";
+    parse_path_directive(prompt, "__rex_read:")
+}
+
+fn parse_list_directive(prompt: &str) -> Option<String> {
+    parse_path_directive(prompt, "__rex_list:")
+}
+
+fn parse_path_directive(prompt: &str, marker: &str) -> Option<String> {
     let start = prompt.find(marker)? + marker.len();
     let rest = &prompt[start..];
     let path = rest
@@ -192,11 +221,7 @@ fn parse_read_directive(prompt: &str) -> Option<String> {
         .next()
         .or_else(|| rest.split('\n').next())?
         .trim();
-    if path.is_empty() {
-        None
-    } else {
-        Some(path.to_string())
-    }
+    Some(path.to_string())
 }
 
 fn parse_exec_directive(prompt: &str) -> Option<String> {
@@ -277,6 +302,35 @@ async fn broker_read_file(path: &str) -> Result<String, String> {
         .into_inner();
     if response.ok {
         Ok(response.content)
+    } else {
+        Err(response.error)
+    }
+}
+
+struct BrokerListEntry {
+    name: String,
+    is_dir: bool,
+}
+
+async fn broker_list_dir(path: &str) -> Result<Vec<BrokerListEntry>, String> {
+    let socket = daemon_socket_path();
+    let mut client = connect_daemon(&socket).await?;
+    let response = client
+        .broker_list_dir(BrokerListDirRequest {
+            path: path.to_string(),
+        })
+        .await
+        .map_err(|e| e.to_string())?
+        .into_inner();
+    if response.ok {
+        Ok(response
+            .entries
+            .into_iter()
+            .map(|entry| BrokerListEntry {
+                name: entry.name,
+                is_dir: entry.is_dir,
+            })
+            .collect())
     } else {
         Err(response.error)
     }

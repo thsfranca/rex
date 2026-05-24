@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use futures::StreamExt;
 use rex_sidecar_stub::serve_on_socket;
 use serial_test::serial;
 use tokio::task::JoinHandle;
@@ -90,7 +91,7 @@ async fn sidecar_health_and_run_turn_roundtrip() {
         let mut client = sidecar_client::connect_sidecar(&socket_path)
             .await
             .expect("connect sidecar");
-        sidecar_client::run_turn_collect(&mut client, "hello sidecar", "agent")
+        sidecar_client::run_turn_collect(&mut client, "hello sidecar", "agent", "")
             .await
             .expect("run turn")
     })
@@ -109,4 +110,47 @@ async fn sidecar_health_and_run_turn_roundtrip() {
         text.contains("[broker.inference error"),
         "run_turn without daemon should surface broker error, got: {text}"
     );
+}
+
+#[tokio::test]
+#[serial]
+async fn sidecar_run_turn_stream_yields_incremental_chunks() {
+    if !uds_bind_supported() {
+        eprintln!("skipping sidecar stream test: UDS bind not permitted in this environment");
+        return;
+    }
+    let socket_path = test_socket_path();
+    let _stub = StubServer::spawn(socket_path.clone());
+    wait_ready(&socket_path).await;
+
+    timeout(RUN_TIMEOUT, async {
+        let mut client = sidecar_client::connect_sidecar(&socket_path)
+            .await
+            .expect("connect sidecar");
+        let mut stream = sidecar_client::run_turn_stream(&mut client, "hello sidecar", "agent", "")
+            .await
+            .expect("run turn stream");
+        let first = stream
+            .next()
+            .await
+            .expect("first chunk")
+            .expect("first chunk ok");
+        let first_at = Instant::now();
+        let second = timeout(Duration::from_millis(250), stream.next())
+            .await
+            .expect("second chunk should arrive incrementally")
+            .expect("second chunk present")
+            .expect("second chunk ok");
+        assert!(
+            first_at.elapsed() < Duration::from_millis(200),
+            "expected incremental stream delivery"
+        );
+        assert!(
+            !first.text.is_empty() || first.done,
+            "expected first chunk content or terminal"
+        );
+        let _ = second;
+    })
+    .await
+    .expect("run_turn stream timed out");
 }
