@@ -3,6 +3,7 @@ mod layout;
 mod merge;
 mod model;
 mod paths;
+mod sidecar_binary;
 
 pub use error::ConfigError;
 pub use layout::{ensure_global_layout, EnsureResult};
@@ -13,6 +14,7 @@ pub use model::{
     DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
 };
 pub use paths::{global_config_path, proto_gen_path, proto_src_path, rex_root, REX_ROOT_ENV};
+pub use sidecar_binary::sidecar_binary_resolvable;
 
 use std::env;
 use std::path::PathBuf;

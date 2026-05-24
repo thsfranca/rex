@@ -128,10 +128,13 @@ CI first evaluates changed paths, then runs only relevant domain checks.
 
 - Rust-relevant:
   - `crates/**`
+  - `sidecars/rex-agent/**`
+  - `proto/**`
   - `Cargo.toml`
   - `Cargo.lock`
   - `scripts/install-cli.sh`
   - `scripts/ci/run_rust_*.sh`
+  - `scripts/ci/run_rex_agent_checks.sh`
 - Extension-relevant:
   - `extensions/rex-vscode/**`
   - `scripts/ci/run_extension*.sh`
@@ -197,6 +200,8 @@ chmod +x ./scripts/verify_mvp_local.sh
 That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), then [`scripts/ci/run_extension_checks.sh`](../scripts/ci/run_extension_checks.sh), then `cargo test -p rex-daemon mvp_product_path`. It does **not** start `rex-daemon` for manual editor steps or **live LLM** dogfood ([MVP_SPEC.md](MVP_SPEC.md)).
 
 **Two tiers:** PR CI uses **`mock`** / harness paths in `uds_e2e` and a **loopback OpenAI-compat HTTP fixture** in `mvp_product_path` (real `http_openai_compat`, no cloud API). Operator dogfood requires **live** `REX_OPENAI_COMPAT_*` (Ollama, LM Studio, etc.).
+
+**Python sidecar (R017):** [`run_rust_tests.sh`](../scripts/ci/run_rust_tests.sh) calls [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) after the workspace test run — `pytest` for `sidecars/rex-agent` and `cargo test --test agent_scaffold_smoke` (no live LLM). Requires `python3` and `pip install grpcio-tools` on the runner.
 
 ## Local verification flow for reliability changes
 

@@ -124,16 +124,18 @@ Operator setup: [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
 - Widening `rex.v1` for sidecar tunnels.
 - Multi-plugin sprawl without operator demand.
 
-## Planned: sidecar author quickstart (R015–R017)
+## Sidecar author quickstart (`rex-agent` scaffold — R017)
 
-**Not shipped.** Target operator flow for a Python sidecar such as **`rex-agent`**:
+**`rex-agent`** scaffold is shipped under [sidecars/rex-agent/](../sidecars/rex-agent/). Default supervised sidecar remains **`rex-sidecar-stub`** until **R019**.
 
-1. **`rex config init`** — create `$REX_HOME/config.json` with sidecar list and `proto.gen_root`.
-2. **`rex proto install`** — materialize `{gen_root}/python/` stubs from repo protos.
-3. Set **`sidecars.active`** to the sidecar name; daemon supervises that binary on startup.
-4. Sidecar imports generated stubs from **`proto.gen_root`** only — no per-sidecar proto path in config.
+1. **`rex config init`** — create `$REX_ROOT/config.json` (layout root **`REX_ROOT`**, default `~/.rex`).
+2. **`rex proto install`** — materialize Python stubs under `$REX_ROOT/proto/gen` (flat layout; not `gen/python/`).
+3. **`pip install -e sidecars/rex-agent`** (or use the repo [launcher](../sidecars/rex-agent/rex-agent) with `PYTHONPATH` including proto gen + `sidecars/rex-agent/src`).
+4. Add a `sidecars.list` entry with `"binary": "rex-agent"` and set **`sidecars.active`** to that name when dogfooding.
 
-Full design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). Today use **`REX_SIDECAR_*`** env vars and **`rex-sidecar-stub`**.
+Broker calls from Python use `grpc.default_authority=localhost` on daemon UDS (interop with tonic). See [sidecars/rex-agent/README.md](../sidecars/rex-agent/README.md).
+
+Full program: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md).
 
 ## Related
 
