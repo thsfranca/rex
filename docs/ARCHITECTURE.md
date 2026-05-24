@@ -165,7 +165,7 @@ sequenceDiagram
 
 ## Observability
 
-Full signal catalog, validation program, and OSS UI options: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md). Agent knowledge retrieval metrics (planned): [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md).
+Full signal catalog, validation program, export contract, and BYOT integrations: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md). Agent knowledge retrieval metrics (planned): [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md).
 
 | Field / signal | Where | Purpose |
 |---|---|---|

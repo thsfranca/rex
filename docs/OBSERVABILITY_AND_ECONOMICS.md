@@ -4,63 +4,92 @@ This document is the **single source** for Rex **observability beyond stdout gre
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention.
 
+**Decision record:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · **Operator how-to:** [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md)
+
 ## Purpose
 
-- Make daemon economics **measurable and operable**: operators can see cache, routing, and pipeline decisions in a **UI** built from third-party open-source tools—not a bespoke Rex-only dashboard monolith.
-- Define how to **validate** Rex value: baseline (adapter-only) vs Rex-enabled runs across local and remote inference backends.
+- Make daemon economics **measurable and operable**: operators visualize cache, routing, and pipeline decisions in **their chosen UI** (Grafana, Datadog, observr, etc.) — not a Rex-owned dashboard monolith.
+- Export via **vendor-neutral OTLP** from `rex-daemon`; sidecars produce custom metrics **through the daemon observability API**.
+- Define how to **validate** Rex value: baseline vs Rex-enabled runs across local and remote inference backends.
 - Extend the signal vocabulary in [ARCHITECTURE.md](ARCHITECTURE.md#observability) without duplicating the full [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) lever matrix.
 
 ## Status
 
-**planned** — design bet. Exporter, reference dashboards, and benchmark harness are not shipped.
+**design documented** — [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) accepted; this hub, integrations guide, and cross-links capture intent. OTLP export, `SidecarObservabilityService`, CLI helpers, and reference integration configs are **planned / not shipped** in code.
 
 ## Scope
 
-**In (this design stage):**
+**In:**
 
-- **Signal catalog** (implemented + planned) shared by logs, future exporters, and dashboards.
+- **Signal catalog** (implemented + planned) shared by stdout, OTLP, and operator dashboards.
+- **Daemon OTLP export** when `REX_OBS_ENABLED=1` — **planned**.
+- **`SidecarObservabilityService`** on **daemon UDS** (`REX_DAEMON_SOCKET`) — `RegisterMetric`, `RecordMetric`, `GetEconomicsSnapshot`, `ReportResourceStats` — **planned**.
 - **Economics validation program**: scenarios, metrics, success criteria.
-- **OSS reference architectures** (options, not a single mandated stack).
-- **Phasing** from grep → exporter → dashboards → CI smoke.
+- **BYOT integrations** — patterns documented in [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md); no Rex-managed stack.
 
 **Out:**
 
+- Rex-managed metric databases, collectors, or dashboard servers.
+- Dedicated observability-only sidecar or export sidecar.
 - Hosted SaaS billing or mandatory cloud telemetry.
-- Replacing stdout grep before an exporter exists.
 - Live LLM calls on every PR ([CI.md](CI.md) stays mock/self-contained by default).
 
 ## Boundaries
 
 | Concern | Owner | Notes |
 |---------|--------|--------|
-| **Emitting stable labels** | `rex-daemon` (and sidecar logs later) | Vocabulary aligned with [CACHING.md](CACHING.md) and `CacheDecisionState` in `policy.rs`. |
-| **Storage, query, UI** | Third-party OSS (Prometheus, Grafana, Loki, Jaeger, etc.) | Rex does not own long-term metric DBs in the default story. |
-| **Lever definitions** | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix | This hub references rows; does not duplicate the matrix body. |
+| **Emitting stable labels + OTLP export** | `rex-daemon` | OpenTelemetry SDK; background export must not block streams — **planned**. |
+| **Sidecar custom metrics** | Sidecar via **`SidecarObservabilityService`** on daemon UDS → daemon OTLP | Primary path; optional direct sidecar OTLP for SDK-equipped runtimes — **planned**. |
+| **Storage, query, UI** | Operator tooling | Collector, TSDB, Grafana, vendor SaaS — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md). |
+| **Lever definitions** | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | This hub references rows; does not duplicate the matrix. |
 | **Agent knowledge retrieval metrics** | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) | Future `knowledge=` stage — cross-link only. |
 
-## Architecture (intent)
+## Architecture
 
 ```mermaid
-flowchart TB
-  daemon[rexDaemon_stdout]
-  sidecar[rexSidecar_logs]
-  exporter[RexExporter_optional]
-  prom[Prometheus_or_OTel]
-  ui[Grafana_or_equivalent]
-  validate[EconomicsValidationHarness]
-  daemon --> exporter
-  sidecar --> exporter
-  exporter --> prom
-  prom --> ui
-  validate --> daemon
+flowchart LR
+  subgraph rex [Rex]
+    daemon[rex_daemon]
+    sidecar[agent_sidecar]
+    api[SidecarObservabilityService_on_daemon_UDS]
+    stdout[stdout_grep]
+    sidecar -->|RegisterMetric_RecordMetric_GetEconomicsSnapshot| api
+    daemon --> api
+    daemon -->|OTLP| otlpOut[operator_collector]
+    daemon --> stdout
+  end
+  subgraph byot [Operator BYOT]
+    otlpOut --> backend[Any_backend]
+    backend --> ui[Any_UI]
+  end
 ```
 
-- **Phase 0:** operators grep daemon stdout (today).
-- **Phase 1+:** optional Rex exporter scrapes or receives push; OSS stack provides UI.
+- **Phase 0 (today):** grep daemon stdout.
+- **Phase 1+ (planned):** daemon OTLP export + `SidecarObservabilityService`; operator connects collector and UI.
+
+### Rejected patterns
+
+| Pattern | Why rejected |
+|---------|--------------|
+| Rex-managed observability stack (bundled Grafana/VM + `rex-cli obs up`) | Operators choose tooling; Rex emits OTLP only. |
+| Dedicated observability sidecar | Extra supervised process; duplicates collector role. |
+| Builtin **export** sidecar | Extra hop; conflicts with 0-or-1 agent sidecar model — [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md). |
+| Extension-embedded metrics dashboard | Reuse OSS UI via BYOT. |
+
+## Sidecar observability API (planned)
+
+**`SidecarObservabilityService`** on the **daemon UDS** (`REX_DAEMON_SOCKET`) — distinct from the sidecar control-plane socket. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md).
+
+| RPC | Purpose |
+|-----|---------|
+| `RegisterMetric` | Declare custom metric (name, type, allowed labels) |
+| `RecordMetric` | Emit data point; exported as `rex.sidecar.custom.*` via daemon OTLP |
+| `GetEconomicsSnapshot` | Bounded recent economics for in-agent decisions (not time-series query) |
+| `ReportResourceStats` | Optional self-reported CPU/memory/runtime stats |
 
 ## Signal catalog
 
-Canonical vocabulary for grep, exporters, and dashboards. **Implemented** fields exist in daemon stdout today unless marked **planned**.
+Canonical vocabulary for grep, OTLP, and dashboards. **Implemented** fields exist in daemon stdout today unless marked **planned**.
 
 ### Stream and lifecycle
 
@@ -79,7 +108,7 @@ Canonical vocabulary for grep, exporters, and dashboards. **Implemented** fields
 
 | Signal | Status | Meaning |
 |--------|--------|---------|
-| `cache_decision=` | implemented | `hit`, `miss_stored`, `bypass`, `uncacheable_mode` — prefer over legacy `l1_cache=` |
+| `cache_decision=` | implemented | `hit`, `miss_stored`, `bypass`, `uncacheable_mode` |
 | `l1_cache=` | implemented | Legacy; cacheable lookups only — [CACHING.md](CACHING.md) |
 
 ### Context pipeline (`stream.metrics`)
@@ -103,21 +132,21 @@ Canonical vocabulary for grep, exporters, and dashboards. **Implemented** fields
 | `broker.inference=*` | implemented | Sidecar broker inference RPC |
 | `broker.access_policy=*` | implemented | Broker policy outcomes |
 
-### Planned
+### Planned (OTLP + API)
 
-| Signal | Meaning |
+| Signal / capability | Meaning |
 |--------|---------|
-| **Estimated tokens / cost** | Adapter metadata + optional pricing table — [ARCHITECTURE.md](ARCHITECTURE.md#observability) |
-| `knowledge=` | Agent knowledge retrieval stage — [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
-| Sidecar trace spans | OpenTelemetry correlation daemon ↔ sidecar |
+| `rex.*` OTel instruments | Stable names — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) |
+| Sidecar `rex.sidecar.custom.*` | Via `SidecarObservabilityService` |
+| **Estimated tokens / cost** | Adapter metadata + optional pricing table |
+| `knowledge=` | Agent knowledge retrieval — [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
+| OTLP logs and traces | Phase after metrics |
+| `obs.export=degraded` | Stdout signal when OTLP export fails |
 
 ### Example grep (phase 0)
 
 ```bash
-# Cache outcomes for a session
 rg 'cache_decision=' /path/to/daemon.log
-
-# Per-request economics line
 rg 'stream.metrics' /path/to/daemon.log
 ```
 
@@ -135,17 +164,6 @@ rg 'stream.metrics' /path/to/daemon.log
 | **Paid API** | Remote OpenAI-compat | Same + `cache_decision=` and `stream.metrics` |
 | **Local OSS** | Ollama / LM Studio | Same; emphasize compute time + token estimates |
 
-### Dimensions to compare
-
-| Dimension | Source lever (matrix) |
-|-----------|------------------------|
-| Prompt / context tokens | Token budget, compressor, retrieval gate |
-| Cache hit rate | L1 (and future L2) — [CACHING.md](CACHING.md) |
-| Retrieval skipped | `[[retrieve:off]]`, heuristics |
-| Route label | `route=` — routing / sidecar path |
-| End-to-end latency | `elapsed_ms` |
-| Estimated cost | **planned** pricing table |
-
 ### Success metrics (hypotheses — not thresholds yet)
 
 | Metric | Notes |
@@ -155,77 +173,50 @@ rg 'stream.metrics' /path/to/daemon.log
 | p50 / p95 `elapsed_ms` | Regression guard when adding stages |
 | Cost per successful turn | When pricing metadata exists |
 
-### Harness ownership (open)
-
-| Option | Fit |
-|--------|-----|
-| Manual operator scripts | Fast learning; not CI-gated |
-| `rex-daemon` integration tests with mock adapter | CI-safe; no live LLM — [CI.md](CI.md) |
-| Dedicated benchmark crate or `scripts/` tool | Repeatable fixtures; optional nightly live LLM job |
-
-**Ownership is not decided in this hub** — pick after a spike.
-
-## OSS UI stack (options, uncommitted)
-
-Rex should integrate with common local-first stacks; **no default stack is selected**.
-
-| Layer | OSS options | Rex role |
-|-------|-------------|----------|
-| **Metrics** | Prometheus scrape; OpenTelemetry metrics | Optional `/metrics` or OTel exporter |
-| **Dashboards** | Grafana | Reference dashboard JSON (future) |
-| **Logs** | Loki, Vector | Ship stdout; structured parse of `key=value` tokens |
-| **Traces** | Jaeger, Grafana Tempo | OTel from daemon + sidecar when instrumented |
-
-**Local-first install story (intent):** document a compose example in a follow-up spike—not committed in this documentation slice.
-
 ## Rex vs third-party responsibilities
 
-| Responsibility | Rex | Third party |
-|----------------|-----|-------------|
-| Define stable metric/log field names | yes | — |
-| Emit per-request economics on stdout | yes (today) | — |
-| Long-term retention | optional local helper | yes (default) |
-| Dashboards and alerting | reference only | yes |
-| Validation fixtures and reports | harness (future) | — |
+| Responsibility | Rex | Third party / operator |
+|----------------|-----|------------------------|
+| Stable metric names + OTLP export | yes (planned) | — |
+| `SidecarObservabilityService` | yes (planned) | — |
+| Stdout economics grep | yes (today) | — |
+| Collector, storage, UI | — | yes |
+| Reference dashboard JSON | examples in docs only | import into your Grafana |
 
 ## Phasing
 
-| Phase | Deliverable | Depends on |
-|-------|-------------|------------|
-| **0** | This hub + grep recipes | Current daemon logs |
-| **1** | Metrics/log exporter (design + impl PR) | Stable signal catalog |
-| **2** | Reference Grafana (or equivalent) dashboard | Phase 1 |
-| **3** | CI smoke on mock metrics | [CI.md](CI.md) policy — no live LLM on PRs |
+| Phase | Deliverable | Status |
+|-------|-------------|--------|
+| **0** | Stdout + grep recipes | **implemented** |
+| **1** | Design docs + ADR 0010 + integrations guide | **design documented** (this PR) |
+| **2** | Sidecar observability proto + daemon OTLP predefined metrics | planned — see [ROADMAP.md](ROADMAP.md) |
+| **3** | `SidecarObservabilityService` implementation + BYOT examples | planned |
+| **4** | CI OTLP smoke (mock adapter) | planned |
+| **5** | OTLP logs/traces | planned |
+
+## Resolved questions
+
+| Question | Resolution |
+|----------|------------|
+| Push vs pull? | **Push (OTLP)** primary; optional Prometheus scrape deferred unless requested. |
+| Daemon vs export sidecar? | **Daemon exports directly** — [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md). |
+| Sidecar custom metrics? | **`SidecarObservabilityService`** on **daemon UDS** — not sidecar UDS. |
+| Default observability stack? | **None** — BYOT via [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md). |
 
 ## Open questions
 
 | Question | Why it matters |
 |----------|----------------|
-| Push vs pull metrics? | Daemon lifecycle vs operator setup |
 | PII in logs and traces? | Prompt snippets must stay out by default |
-| Dashboard in extension vs standalone? | UX vs reuse of OSS UI |
-| Correlate daemon + sidecar in one trace? | Multi-process debugging |
+| Correlate daemon + sidecar in one trace? | OTLP trace propagation design |
 
 ## Cross-links
 
 | Doc | Relationship |
 |-----|----------------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | SAD observability table — pointer here |
-| [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Lever matrix + `stream.metrics` |
-| [CACHING.md](CACHING.md) | `cache_decision=` vocabulary |
-| [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) | Future `knowledge=` metrics |
-| [ROADMAP.md](ROADMAP.md) | Parked theme — observability suite |
+| [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | BYOT operator recipes |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | SAD observability table |
+| [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | Sidecar → daemon observability flow |
+| [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Lever matrix |
+| [ROADMAP.md](ROADMAP.md) | Parked theme |
 | [CI.md](CI.md) | No live LLM on PRs |
-
-```mermaid
-flowchart LR
-  hub[OBSERVABILITY_AND_ECONOMICS.md]
-  arch[ARCHITECTURE.md]
-  ctx[CONTEXT_EFFICIENCY.md]
-  cache[CACHING.md]
-  roadmap[ROADMAP.md]
-  hub --> arch
-  hub --> ctx
-  hub --> cache
-  hub --> roadmap
-```
