@@ -119,6 +119,12 @@
           "default": "",
           "description": "Optional model id passed to rex complete as --model on every request. Leave empty to use the daemon default.",
           "scope": "machine-overridable"
+        },
+        "rex.rexRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Optional REX_ROOT path passed to the daemon child when auto-start is enabled. Leave empty to use the default layout (~/.rex or $REX_ROOT from the environment).",
+          "scope": "machine-overridable"
         }
       }
     },

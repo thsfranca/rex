@@ -44,11 +44,10 @@ fn hash_effective_prompt(s: &str) -> u64 {
 }
 
 fn workspace_fingerprint() -> String {
-    std::env::var("REX_WORKSPACE_ROOT")
-        .ok()
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "default".to_string())
+    crate::settings::get()
+        .workspace_root()
+        .display()
+        .to_string()
 }
 
 /// Key for the L1 **exact** response cache (in-memory, process-local).

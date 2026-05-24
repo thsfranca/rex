@@ -1,4 +1,5 @@
 //! Shared loopback OpenAI-compat SSE fixture for integration tests (plan Step 3.3).
+#![allow(dead_code)]
 
 use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};

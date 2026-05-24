@@ -1,11 +1,8 @@
-use std::time::Instant;
-use std::{
-    env,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc, Mutex,
-    },
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc, Mutex,
 };
+use std::time::Instant;
 
 use async_stream::stream;
 use futures::StreamExt;
@@ -24,7 +21,7 @@ use tonic::{Request, Response, Status};
 use crate::adapters::InferenceRuntime;
 #[cfg(test)]
 use crate::adapters::MockInferenceRuntime;
-use crate::adapters::{active_model_id_from_env, AdapterCapabilities};
+use crate::adapters::{active_model_id_from_config, AdapterCapabilities};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
 use crate::broker::{broker_exec_shell, broker_list_dir, broker_read_file, broker_write_file};
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
@@ -38,7 +35,7 @@ use crate::routing::decide_route;
 use crate::sidecar_client::{
     connect_sidecar, map_sidecar_to_inference_chunks, run_turn_collect, run_turn_stream,
 };
-use crate::sidecar_config::{parse_harness_only, sidecar_product_path_active};
+use crate::sidecar_config::parse_harness_only;
 use crate::supervisor::{SharedSupervisor, SupervisorError};
 
 pub struct RexDaemonService {
@@ -82,7 +79,7 @@ impl RexDaemonService {
         model: &str,
         inference_runtime: &str,
     ) -> Result<Vec<Result<StreamInferenceResponse, Status>>, Status> {
-        if parse_harness_only().is_some() || !sidecar_product_path_active() {
+        if parse_harness_only().is_some() || !self.sidecar.config().enabled {
             return Ok(self.runtime.build_chunks(effective_prompt).await);
         }
         self.sidecar
@@ -105,7 +102,7 @@ impl RexDaemonService {
     }
 
     fn sidecar_live_stream_active(&self) -> bool {
-        parse_harness_only().is_none() && sidecar_product_path_active()
+        parse_harness_only().is_none() && self.sidecar.config().enabled
     }
 
     #[cfg(test)]
@@ -251,7 +248,7 @@ impl RexService for RexDaemonService {
         Ok(Response::new(GetSystemStatusResponse {
             daemon_version: DAEMON_VERSION.to_string(),
             uptime_seconds: self.started_at.elapsed().as_secs(),
-            active_model_id: active_model_id_from_env(),
+            active_model_id: active_model_id_from_config(),
         }))
     }
 
@@ -278,7 +275,7 @@ impl RexService for RexDaemonService {
         let context_request = ContextRequest {
             prompt: prompt.clone(),
             diagnostics_hint: directives.diagnostics_hint.clone(),
-            cache_bypass: directives.cache_bypass || cache_bypass_from_env(),
+            cache_bypass: directives.cache_bypass || cache_bypass_from_config(),
             behavior_snapshot: directives.behavior_snapshot,
             retrieve_off: directives.retrieve_off,
         };
@@ -288,7 +285,11 @@ impl RexService for RexDaemonService {
             .expect("context pipeline mutex should not be poisoned")
             .prepare(&context_request, adapter_capabilities);
         let prompt_len = prompt.chars().count();
-        let route_label = resolve_route_label(inference_runtime);
+        let route_label = resolve_route_label_for(
+            inference_runtime,
+            parse_harness_only().is_some(),
+            self.sidecar_live_stream_active(),
+        );
         println!(
             "stream.request_id={request_id} trace_id={trace_id} inference_runtime={inference_runtime} route={route_label} decision_id={decision_id} stream.lifecycle={} prompt_len={prompt_len}",
             StreamLifecycle::Starting.as_str(),
@@ -305,7 +306,7 @@ impl RexService for RexDaemonService {
             pipeline_result.metrics.retrieval.as_str(),
             pipeline_result.metrics.compression_strategy,
         );
-        let cache_bypass = directives.cache_bypass || cache_bypass_from_env();
+        let cache_bypass = directives.cache_bypass || cache_bypass_from_config();
         let policy_request = PolicyRequest {
             runtime: runtime_kind,
             model: &model,
@@ -548,9 +549,8 @@ fn extract_trace_id(metadata: &tonic::metadata::MetadataMap, request_id: u64) ->
     }
 }
 
-fn cache_bypass_from_env() -> bool {
-    let value = env::var("REX_CACHE_BYPASS").unwrap_or_default();
-    value == "1" || value.eq_ignore_ascii_case("true")
+fn cache_bypass_from_config() -> bool {
+    crate::settings::get().cache_bypass()
 }
 
 fn format_cache_status(status: CacheStatus) -> &'static str {
@@ -573,14 +573,6 @@ pub(crate) fn resolve_route_label_for(
         return format!("sidecar+{inference_runtime}");
     }
     format!("daemon_direct+{inference_runtime}")
-}
-
-pub(crate) fn resolve_route_label(inference_runtime: &str) -> String {
-    resolve_route_label_for(
-        inference_runtime,
-        parse_harness_only().is_some(),
-        sidecar_product_path_active(),
-    )
 }
 
 fn sidecar_error_to_status(err: &SupervisorError, required: bool) -> Status {

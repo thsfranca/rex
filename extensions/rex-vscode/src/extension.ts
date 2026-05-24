@@ -222,9 +222,12 @@ function buildLifecycle(
   output: vscode.OutputChannel,
   onStateChange: (state: DaemonLifecycleState) => void,
 ): DaemonLifecycle {
+  const daemonEnv =
+    settings.rexRoot.length > 0 ? { REX_ROOT: settings.rexRoot } : undefined;
   return new DaemonLifecycle({
     cli: { cliPath: settings.cliPath },
     daemonBinaryPath: settings.daemonBinaryPath,
+    daemonEnv,
     onState: (state) => {
       statusBar.update(state);
       output.appendLine(`[lifecycle] ${describeState(state)}`);

@@ -10,6 +10,7 @@ mod policy;
 mod routing;
 mod runtime;
 mod service;
+mod settings;
 mod sidecar_client;
 mod sidecar_config;
 mod supervisor;

@@ -42,6 +42,8 @@ fn run_turn_request(prompt: &str, mode: &str, model: &str) -> RunTurnRequest {
         prompt: prompt.to_string(),
         mode: mode.to_string(),
         model: model.to_string(),
+        turn_id: String::new(),
+        context_revision: String::new(),
     }
 }
 

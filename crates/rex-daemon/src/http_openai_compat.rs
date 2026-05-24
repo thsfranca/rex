@@ -1,6 +1,5 @@
 //! OpenAI-compatible HTTP chat/completions adapter (SSE streaming).
 
-use std::env;
 use std::time::Duration;
 
 use futures::StreamExt;
@@ -17,12 +16,6 @@ const TIMEOUT_SECS_DEFAULT: u64 = 120;
 const STREAM_CHUNK_MAX_CHARS: usize = 8;
 pub const MODEL_DEFAULT: &str = "gpt-4o-mini";
 
-/// Environment keys — catalog in `docs/CONFIGURATION.md`.
-pub const BASE_URL_ENV: &str = "REX_OPENAI_COMPAT_BASE_URL";
-pub const API_KEY_ENV: &str = "REX_OPENAI_COMPAT_API_KEY";
-pub const MODEL_ENV: &str = "REX_OPENAI_COMPAT_MODEL";
-pub const TIMEOUT_ENV: &str = "REX_OPENAI_COMPAT_TIMEOUT_SECS";
-
 pub struct HttpOpenAiCompatRuntime {
     client: Client,
     chat_completions_url: String,
@@ -32,28 +25,34 @@ pub struct HttpOpenAiCompatRuntime {
 }
 
 impl HttpOpenAiCompatRuntime {
-    pub fn from_env() -> Result<Self, String> {
-        let base = env::var(BASE_URL_ENV)
-            .ok()
-            .map(|v| v.trim().to_string())
-            .filter(|v| !v.is_empty())
-            .ok_or_else(|| {
-                format!("HTTP inference requires {BASE_URL_ENV} (see docs/CONFIGURATION.md)")
-            })?;
-        let chat_completions_url = normalize_chat_completions_url(&base);
-        let api_key = env::var(API_KEY_ENV)
-            .ok()
+    pub fn from_config() -> Result<Self, String> {
+        let cfg = &crate::settings::get().effective.inference.openai_compat;
+        let base = cfg.base_url.trim();
+        if base.is_empty() {
+            return Err(
+                "HTTP inference requires inference.openai_compat.base_url (see docs/CONFIGURATION.md)"
+                    .to_string(),
+            );
+        }
+        let chat_completions_url = normalize_chat_completions_url(base);
+        let api_key = cfg
+            .api_key
+            .as_ref()
             .map(|v| v.trim().to_string())
             .filter(|v| !v.is_empty());
-        let model = env::var(MODEL_ENV)
-            .ok()
-            .map(|v| v.trim().to_string())
-            .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| MODEL_DEFAULT.to_string());
-        let timeout_secs = env::var(TIMEOUT_ENV)
-            .ok()
-            .and_then(|v| v.parse::<u64>().ok())
-            .unwrap_or(TIMEOUT_SECS_DEFAULT);
+        let model = {
+            let m = cfg.model.trim();
+            if m.is_empty() {
+                MODEL_DEFAULT.to_string()
+            } else {
+                m.to_string()
+            }
+        };
+        let timeout_secs = if cfg.timeout_secs == 0 {
+            TIMEOUT_SECS_DEFAULT
+        } else {
+            cfg.timeout_secs
+        };
         let timeout = Duration::from_secs(timeout_secs);
         let client = Client::builder()
             .timeout(timeout)
@@ -88,7 +87,7 @@ impl HttpOpenAiCompatRuntime {
             .await
             .map_err(|_| {
                 Status::deadline_exceeded(format!(
-                    "http inference timed out after {}s (adjust {TIMEOUT_ENV})",
+                    "http inference timed out after {}s (adjust inference.openai_compat.timeout_secs)",
                     self.timeout.as_secs()
                 ))
             })?
@@ -181,7 +180,7 @@ pub fn resolve_inference_model(request_model: &str, default_model: &str) -> Stri
 
 /// Broker RPC entry: HTTP OpenAI-compat when env is configured.
 pub async fn broker_inference_completion(prompt: &str, model: &str) -> Result<String, String> {
-    let runtime = HttpOpenAiCompatRuntime::from_env()?;
+    let runtime = HttpOpenAiCompatRuntime::from_config()?;
     runtime
         .fetch_completion_text(prompt, model)
         .await
@@ -232,7 +231,10 @@ mod tests {
     #[tokio::test]
     #[serial_test::serial]
     async fn streams_from_local_sse_stub() {
+        use std::sync::Arc;
+
         use crate::adapters::InferenceRuntime;
+        use rex_config::RexConfig;
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         use tokio::net::TcpListener;
 
@@ -252,12 +254,18 @@ mod tests {
             }
         });
 
-        let prev_base = env::var(BASE_URL_ENV).ok();
-        let prev_runtime = env::var("REX_INFERENCE_RUNTIME").ok();
-        env::set_var(BASE_URL_ENV, format!("http://{addr}"));
-        env::set_var("REX_INFERENCE_RUNTIME", "http-openai-compat");
+        crate::settings::reset_for_test();
+        let mut cfg = RexConfig::defaults();
+        cfg.inference.runtime = "http-openai-compat".to_string();
+        cfg.inference.openai_compat.base_url = format!("http://{addr}");
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-http-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
 
-        let runtime = HttpOpenAiCompatRuntime::from_env().expect("runtime");
+        let runtime = HttpOpenAiCompatRuntime::from_config().expect("runtime");
         let chunks = runtime.build_chunks("ping").await;
         assert!(chunks.len() >= 2);
         assert!(chunks[..chunks.len() - 1]
@@ -265,15 +273,6 @@ mod tests {
             .all(|c| c.as_ref().is_ok_and(|v| !v.done)));
         assert!(chunks.last().unwrap().as_ref().unwrap().done);
 
-        if let Some(v) = prev_base {
-            env::set_var(BASE_URL_ENV, v);
-        } else {
-            env::remove_var(BASE_URL_ENV);
-        }
-        if let Some(v) = prev_runtime {
-            env::set_var("REX_INFERENCE_RUNTIME", v);
-        } else {
-            env::remove_var("REX_INFERENCE_RUNTIME");
-        }
+        crate::settings::reset_for_test();
     }
 }

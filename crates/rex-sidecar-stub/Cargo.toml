@@ -23,5 +23,6 @@ tonic.workspace = true
 tokio-stream = { version = "0.1", features = ["net"] }
 async-stream = "0.3"
 hyper-util = { version = "0.1", features = ["tokio"] }
+rex-config = { path = "../rex-config" }
 rex-proto = { path = "../rex-proto" }
 tower = "0.5"

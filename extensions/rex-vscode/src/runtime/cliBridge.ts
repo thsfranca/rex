@@ -61,6 +61,7 @@ export interface CompleteStreamOptions {
 export function buildCompleteNdjsonArgs(
   prompt: string,
   stream?: CompleteStreamOptions,
+  traceId?: string,
 ): string[] {
   const args = ["complete", prompt, "--format", "ndjson"];
   if (stream?.mode !== undefined && stream.mode.length > 0) {
@@ -72,6 +73,9 @@ export function buildCompleteNdjsonArgs(
   if (stream?.approvalId !== undefined && stream.approvalId.length > 0) {
     args.push("--approval-id", stream.approvalId);
   }
+  if (traceId !== undefined && traceId.length > 0) {
+    args.push("--trace-id", traceId);
+  }
   return args;
 }
 
@@ -81,8 +85,8 @@ export function spawnCompleteStream(
   traceId?: string,
   stream?: CompleteStreamOptions,
 ): SpawnedProcess {
-  const env = buildEnv(options.env, traceId);
-  const args = buildCompleteNdjsonArgs(prompt, stream);
+  const env = buildEnv(options.env);
+  const args = buildCompleteNdjsonArgs(prompt, stream, traceId);
   const child = spawn(options.cliPath, args, {
     cwd: options.cwd,
     env,
@@ -198,11 +202,6 @@ export function parseStatusOutput(raw: string): StatusSnapshot {
 
 function buildEnv(
   extra: Readonly<Record<string, string>> | undefined,
-  traceId?: string,
 ): NodeJS.ProcessEnv {
-  const env = extra === undefined ? { ...process.env } : { ...process.env, ...extra };
-  if (traceId !== undefined && traceId.length > 0) {
-    env.REX_TRACE_ID = traceId;
-  }
-  return env;
+  return extra === undefined ? { ...process.env } : { ...process.env, ...extra };
 }

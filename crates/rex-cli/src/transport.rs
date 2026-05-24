@@ -11,28 +11,37 @@ use crate::error::CliError;
 pub async fn connect_client(
     _trace_id: Option<&str>,
 ) -> Result<RexServiceClient<tonic::transport::Channel>, CliError> {
+    let socket_path = daemon_socket_path();
+    let connect_path = socket_path.clone();
     let endpoint = Endpoint::try_from("http://[::]:50051")?
         .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECONDS))
         .timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS));
     let channel = endpoint
-        .connect_with_connector(service_fn(|_: tonic::transport::Uri| async {
-            UnixStream::connect(SOCKET_PATH).await.map(TokioIo::new)
+        .connect_with_connector(service_fn(move |_: tonic::transport::Uri| {
+            let socket_path = connect_path.clone();
+            async move { UnixStream::connect(socket_path).await.map(TokioIo::new) }
         }))
         .await
         .map_err(|source| {
             if is_daemon_unavailable_error(&source.to_string()) {
                 CliError::DaemonUnavailable {
-                    socket_path: SOCKET_PATH.to_string(),
+                    socket_path: socket_path.clone(),
                 }
             } else {
                 CliError::DaemonConnect {
-                    socket_path: SOCKET_PATH.to_string(),
+                    socket_path: socket_path.clone(),
                     source,
                 }
             }
         })?;
 
     Ok(RexServiceClient::new(channel))
+}
+
+fn daemon_socket_path() -> String {
+    rex_config::load_merged()
+        .map(|loaded| loaded.daemon_socket().to_string())
+        .unwrap_or_else(|_| SOCKET_PATH.to_string())
 }
 
 fn is_daemon_unavailable_error(message: &str) -> bool {

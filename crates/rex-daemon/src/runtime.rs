@@ -1,7 +1,9 @@
 use std::io;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Instant;
 
+use rex_config::ConfigError;
 use rex_proto::rex::v1::rex_service_server::RexServiceServer;
 use thiserror::Error;
 use tokio::net::UnixListener;
@@ -9,15 +11,19 @@ use tokio::signal;
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::transport::Server;
 
-use crate::adapters::{runtime_from_env, RuntimeKind};
-use crate::approvals::approval_gate_from_env;
-use crate::domain::{DAEMON_VERSION, SOCKET_PATH};
+use crate::adapters::{runtime_from_config, RuntimeKind};
+use crate::approvals::approval_gate_from_config;
+use crate::domain::DAEMON_VERSION;
 use crate::policy::PolicyEngine;
 use crate::service::RexDaemonService;
-use crate::supervisor::{supervisor_from_env, SupervisorError};
+use crate::settings;
+use crate::sidecar_config::sidecar_harness_direct;
+use crate::supervisor::{supervisor_from_config, SupervisorError};
 
 #[derive(Debug, Error)]
 pub enum DaemonRuntimeError {
+    #[error("configuration: {0}")]
+    Config(#[from] ConfigError),
     #[error("inference runtime configuration: {0}")]
     InferenceConfig(String),
     #[error("failed to remove stale socket at {path}: {source}")]
@@ -31,10 +37,13 @@ pub enum DaemonRuntimeError {
 }
 
 pub async fn run_daemon() -> Result<(), DaemonRuntimeError> {
-    run_daemon_on_socket(SOCKET_PATH).await
+    ensure_settings_loaded()?;
+    let socket = settings::get().daemon_socket().to_string();
+    run_daemon_on_socket(&socket).await
 }
 
 pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntimeError> {
+    ensure_settings_loaded()?;
     remove_stale_socket(socket_path)?;
     let listener =
         UnixListener::bind(socket_path).map_err(|source| DaemonRuntimeError::SocketBind {
@@ -42,13 +51,13 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
             source,
         })?;
     let incoming = UnixListenerStream::new(listener);
-    let runtime = runtime_from_env().map_err(|message| {
+    let runtime = runtime_from_config().map_err(|message| {
         eprintln!("rex-daemon inference runtime failed: {message}");
         DaemonRuntimeError::InferenceConfig(message)
     })?;
-    let approval_gate = approval_gate_from_env();
-    let sidecar = supervisor_from_env();
-    if sidecar.config().enabled {
+    let approval_gate = approval_gate_from_config();
+    let sidecar = supervisor_from_config();
+    if !sidecar_harness_direct() && sidecar.config().enabled {
         if let Err(err) = sidecar.ensure_running().await {
             let config = sidecar.config();
             if config.required {
@@ -68,7 +77,7 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
     println!(
         "rex-daemon event=listen socket={} inference_runtime={} daemon_version={}",
         socket_path,
-        RuntimeKind::from_env().log_label(),
+        RuntimeKind::from_config().log_label(),
         DAEMON_VERSION
     );
     Server::builder()
@@ -81,6 +90,15 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
         socket_path
     );
 
+    Ok(())
+}
+
+fn ensure_settings_loaded() -> Result<(), ConfigError> {
+    if settings::is_initialized() {
+        return Ok(());
+    }
+    let loaded = Arc::new(rex_config::load()?);
+    settings::init(loaded);
     Ok(())
 }
 

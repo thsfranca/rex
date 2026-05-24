@@ -85,15 +85,17 @@ flowchart TB
 |------------|---------|
 | `rex daemon` | Run daemon (was `rex-daemon`) |
 | `rex status` / `rex complete` | Client RPCs (was `rex-cli`) |
-| `rex config` | **Stub** — full behavior in **R015** |
-| `rex proto` | `doctor` checks `protoc`; `install` / `path` — **R015** |
-| `rex sidecar` | **Stub** — **R015** |
+| `rex config` | `init`, `show`, `path`, `validate` |
+| `rex proto` | `doctor`, `install`, `path` |
+| `rex sidecar` | `list`, `init`, `doctor` |
 
 Extension defaults: **`rex`** + `["daemon"]` for auto-start. Compatibility shims **`rex-cli`** / **`rex-daemon`** delegate to the same libraries with deprecation hints.
 
 ## JSON configuration (R015)
 
-**Target precedence** (low → high): defaults → `$REX_HOME/config.json` → `.rex/config.json` → **environment (CI override)** → CLI flags.
+**Status: implemented.** Precedence (low → high): defaults → `$REX_ROOT/config.json` → `.rex/config.json` → CLI flags on `rex complete`.
+
+Layout root: **`REX_ROOT`** (default `~/.rex`). Bootstrap with `rex config init`.
 
 ### Minimal example (illustrative)
 
@@ -147,7 +149,7 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 |----|-------|----------|
 | R013 | Platform enablers | Should |
 | R014 | Unified `rex` CLI | Done |
-| R015 | JSON config + proto install | Should |
+| R015 | JSON config + proto install | Done |
 | R017 | `rex-agent` scaffold | Should |
 | R018 | LangGraph agent core | Should |
 | R019 | Integration / E2E | Should |

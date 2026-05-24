@@ -1,4 +1,7 @@
 mod command;
+mod config_cmd;
+mod proto_cmd;
+mod sidecar_cmd;
 
 use std::process::ExitCode;
 
@@ -23,9 +26,9 @@ pub async fn run(args: impl Iterator<Item = String>) -> ExitCode {
             }
         },
         Ok(TopLevelCommand::Cli(rest)) => rex_cli::run_cli(rest.into_iter()).await,
-        Ok(TopLevelCommand::ConfigStub) => command::print_r015_stub("config"),
-        Ok(TopLevelCommand::ProtoStub(rest)) => command::run_proto_stub(rest.into_iter()),
-        Ok(TopLevelCommand::SidecarStub) => command::print_r015_stub("sidecar"),
+        Ok(TopLevelCommand::Config(rest)) => config_cmd::run_config(rest.into_iter()),
+        Ok(TopLevelCommand::Proto(rest)) => proto_cmd::run_proto(rest.into_iter()),
+        Ok(TopLevelCommand::Sidecar(rest)) => sidecar_cmd::run_sidecar(rest.into_iter()),
         Err(message) => {
             eprintln!("{message}");
             print_usage();
@@ -51,15 +54,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn config_stub_exits_two() {
+    async fn config_init_exits_zero_when_layout_created() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let prev = std::env::var("REX_ROOT").ok();
+        std::env::set_var("REX_ROOT", tmp.path());
         let code = run(["config", "init"].into_iter().map(str::to_string)).await;
-        assert_eq!(code, ExitCode::from(2));
-    }
-
-    #[tokio::test]
-    async fn sidecar_stub_exits_two() {
-        let code = run(["sidecar", "list"].into_iter().map(str::to_string)).await;
-        assert_eq!(code, ExitCode::from(2));
+        match prev {
+            Some(v) => std::env::set_var("REX_ROOT", v),
+            None => std::env::remove_var("REX_ROOT"),
+        }
+        assert_eq!(code, ExitCode::SUCCESS);
     }
 
     #[tokio::test]

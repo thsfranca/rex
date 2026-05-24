@@ -6,6 +6,7 @@ pub enum CliCommand {
         model: String,
         mode: String,
         approval_id: String,
+        trace_id: String,
         format: CompleteOutputFormat,
     },
 }
@@ -26,12 +27,13 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
             if prompt.trim().is_empty() {
                 return Err("Prompt cannot be empty.".to_string());
             }
-            let (format, model, mode, approval_id) = parse_complete_trailing(&mut args)?;
+            let (format, model, mode, approval_id, trace_id) = parse_complete_trailing(&mut args)?;
             Ok(CliCommand::Complete {
                 prompt,
                 model,
                 mode,
                 approval_id,
+                trace_id,
                 format,
             })
         }
@@ -43,11 +45,12 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
 /// Parses optional `complete` flags: `--format`, `--model`, `--model <id>`, `--mode <ask|plan|agent>` (any order).
 fn parse_complete_trailing(
     args: &mut impl Iterator<Item = String>,
-) -> Result<(CompleteOutputFormat, String, String, String), String> {
+) -> Result<(CompleteOutputFormat, String, String, String, String), String> {
     let mut format = CompleteOutputFormat::Text;
     let mut model = String::new();
     let mut mode = String::new();
     let mut approval_id = String::new();
+    let mut trace_id = String::new();
     while let Some(flag) = args.next() {
         match flag.as_str() {
             "--format" => {
@@ -82,19 +85,25 @@ fn parse_complete_trailing(
                     .ok_or_else(|| "Missing value for `--approval-id`.".to_string())?;
                 approval_id = value;
             }
+            "--trace-id" => {
+                let value = args
+                    .next()
+                    .ok_or_else(|| "Missing value for `--trace-id`.".to_string())?;
+                trace_id = value;
+            }
             other => {
                 return Err(format!("Unknown argument for `complete`: {other}"));
             }
         }
     }
-    Ok((format, model, mode, approval_id))
+    Ok((format, model, mode, approval_id, trace_id))
 }
 
 pub fn print_usage() {
     eprintln!("Usage:");
     eprintln!("  rex-cli status");
     eprintln!("  rex-cli complete \"<prompt>\"");
-    eprintln!("  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ]");
+    eprintln!("  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ] [ --trace-id <id> ]");
 }
 
 #[cfg(test)]
@@ -119,6 +128,7 @@ mod tests {
                 model: String::new(),
                 mode: String::new(),
                 approval_id: String::new(),
+                trace_id: String::new(),
                 format: CompleteOutputFormat::Text,
             }
         );
@@ -150,6 +160,7 @@ mod tests {
                 model: String::new(),
                 mode: String::new(),
                 approval_id: String::new(),
+                trace_id: String::new(),
                 format: CompleteOutputFormat::Ndjson,
             }
         );
@@ -195,6 +206,7 @@ mod tests {
                 model: "m1".to_string(),
                 mode: "ask".to_string(),
                 approval_id: String::new(),
+                trace_id: String::new(),
                 format: CompleteOutputFormat::Ndjson,
             }
         );

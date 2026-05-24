@@ -1,4 +1,3 @@
-use std::env;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
@@ -49,10 +48,8 @@ impl AdapterCapabilities {
 }
 
 impl RuntimeKind {
-    pub fn from_env() -> Self {
-        let raw =
-            env::var("REX_INFERENCE_RUNTIME").unwrap_or_else(|_| "http-openai-compat".to_string());
-        Self::from_setting(&raw)
+    pub fn from_config() -> Self {
+        Self::from_setting(&crate::settings::get().effective.inference.runtime)
     }
 
     fn from_setting(raw: &str) -> Self {
@@ -79,24 +76,27 @@ pub trait InferenceRuntime: Send + Sync {
     async fn build_chunks(&self, prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>>;
 }
 
-pub fn runtime_from_env() -> Result<Arc<dyn InferenceRuntime>, String> {
-    match RuntimeKind::from_env() {
-        RuntimeKind::HttpOpenAiCompat => {
-            HttpOpenAiCompatRuntime::from_env().map(|rt| Arc::new(rt) as Arc<dyn InferenceRuntime>)
-        }
+pub fn runtime_from_config() -> Result<Arc<dyn InferenceRuntime>, String> {
+    match RuntimeKind::from_config() {
+        RuntimeKind::HttpOpenAiCompat => HttpOpenAiCompatRuntime::from_config()
+            .map(|rt| Arc::new(rt) as Arc<dyn InferenceRuntime>),
         RuntimeKind::Mock => Ok(Arc::new(MockInferenceRuntime)),
-        RuntimeKind::CursorCli => Ok(Arc::new(CursorCliRuntime::from_env())),
+        RuntimeKind::CursorCli => Ok(Arc::new(CursorCliRuntime::from_config())),
     }
 }
 
 /// Active model id for status RPC when the HTTP runtime is selected.
-pub fn active_model_id_from_env() -> String {
-    match RuntimeKind::from_env() {
-        RuntimeKind::HttpOpenAiCompat => env::var(crate::http_openai_compat::MODEL_ENV)
-            .ok()
-            .map(|v| v.trim().to_string())
-            .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| crate::http_openai_compat::MODEL_DEFAULT.to_string()),
+pub fn active_model_id_from_config() -> String {
+    let cfg = &crate::settings::get().effective.inference;
+    match RuntimeKind::from_config() {
+        RuntimeKind::HttpOpenAiCompat => {
+            let model = cfg.openai_compat.model.trim();
+            if model.is_empty() {
+                crate::http_openai_compat::MODEL_DEFAULT.to_string()
+            } else {
+                model.to_string()
+            }
+        }
         _ => crate::domain::ACTIVE_MODEL_ID.to_string(),
     }
 }
@@ -119,25 +119,30 @@ pub struct CursorCliRuntime {
 }
 
 impl CursorCliRuntime {
-    pub fn from_env() -> Self {
-        let command_template = env::var("REX_CURSOR_CLI_COMMAND")
-            .ok()
+    pub fn from_config() -> Self {
+        let cfg = &crate::settings::get().effective.inference.cursor_cli;
+        let command_template = cfg
+            .command
+            .as_ref()
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty());
-        let command_path = env::var("REX_CURSOR_CLI_PATH")
-            .ok()
-            .map(|value| value.trim().to_string())
-            .filter(|value| !value.is_empty())
-            .unwrap_or_else(|| "cursor-agent".to_string());
-        let timeout = env::var("REX_CURSOR_CLI_TIMEOUT_SECS")
-            .ok()
-            .and_then(|value| value.parse::<u64>().ok())
-            .map(Duration::from_secs)
-            .unwrap_or(Duration::from_secs(CURSOR_TIMEOUT_SECS_DEFAULT));
+        let command_path = {
+            let path = cfg.path.trim();
+            if path.is_empty() {
+                "cursor-agent".to_string()
+            } else {
+                path.to_string()
+            }
+        };
+        let timeout_secs = if cfg.timeout_secs == 0 {
+            CURSOR_TIMEOUT_SECS_DEFAULT
+        } else {
+            cfg.timeout_secs
+        };
         Self {
             command_template,
             command_path,
-            timeout,
+            timeout: Duration::from_secs(timeout_secs),
         }
     }
 
