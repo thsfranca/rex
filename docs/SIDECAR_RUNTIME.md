@@ -108,8 +108,19 @@ Proto package **`rex.sidecar.v1`** lands in an implementation PR; this hub defin
 - Widening `rex.v1` for sidecar tunnels.
 - Multi-plugin sprawl without operator demand.
 
+## Planned: sidecar author quickstart (R015–R017)
+
+**Not shipped.** Target operator flow for a Python sidecar such as **`rex-agent`**:
+
+1. **`rex config init`** — create `$REX_HOME/config.json` with sidecar list and `proto.gen_root`.
+2. **`rex proto install`** — materialize `{gen_root}/python/` stubs from repo protos.
+3. Set **`sidecars.active`** to the sidecar name; daemon supervises that binary on startup.
+4. Sidecar imports generated stubs from **`proto.gen_root`** only — no per-sidecar proto path in config.
+
+Full design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). Today use **`REX_SIDECAR_*`** env vars and **`rex-sidecar-stub`**.
+
 ## Related
 
 - [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)
 - [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md) · [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md)
-- [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) · [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md)
+- [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) · [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) · [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md)

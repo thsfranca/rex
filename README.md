@@ -28,6 +28,7 @@ Canonical **purpose and operating principles** (single source of truth): **[docs
 - **Experimental scope:** APIs, docs, and behavior can change as the study evolves; use this workspace for learning and prototypes, not production SLAs.
 - **Local operator path:** **clone → configure HTTP backend → daemon (sidecar) → REX chat** — [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). Product shape: [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md).
 - **Done / v1.0:** [`docs/V1_0.md`](docs/V1_0.md) (**RC-*** release criteria, **`1.0.0`** tag gate); [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks open gaps; [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) buckets work.
+- **Product agent (planned):** [`docs/AGENT_DELIVERY_ROADMAP.md`](docs/AGENT_DELIVERY_ROADMAP.md) — `rex-agent`, unified CLI, JSON config (**R013–R019**); today uses **`rex-sidecar-stub`**.
 - Engineering focus: **stream reliability** plus **stable NDJSON** across CLI/extension.
 - Product-learning focus: daemon **economics** (routing, compaction, caches, metrics per [docs/CONTEXT_EFFICIENCY.md](docs/CONTEXT_EFFICIENCY.md)); implementation incremental.
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.

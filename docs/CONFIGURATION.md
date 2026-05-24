@@ -85,17 +85,31 @@ cargo run -p rex-daemon
 
 CI and unit tests set `REX_INFERENCE_RUNTIME=mock` and clear `REX_OPENAI_COMPAT_BASE_URL` — see [CI.md](CI.md).
 
+## Planned: JSON configuration (R015)
+
+**Not shipped.** Target model is documented in [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md):
+
+| Layer | Role |
+|-------|------|
+| `$REX_HOME/config.json` | User defaults: sidecars, inference, `proto.gen_root` |
+| `.rex/config.json` | Optional project overrides |
+| Environment | **CI override** — same variable names as today |
+| **`rex config`** / **`rex proto install`** | Operator bootstrap (**R014**–**R015**) |
+
+Precedence target (low → high): built-in defaults → user JSON → project JSON → environment → CLI flags. Until **R015** lands, **environment remains primary** (table above).
+
 ## Not implemented yet (roadmap)
 
-- Persistent user config on disk.
-- Global `rex-daemon` / `rex-cli` flags mirroring env keys.
-- `rex config` subcommands.
-- Project-local `.rex.toml`.
+- Persistent user config on disk — see **Planned: JSON configuration** and **R015**.
+- Global `rex-daemon` / `rex-cli` flags mirroring env keys — unified **`rex`** CLI (**R014**).
+- `rex config` subcommands — **R015**.
+- Project-local `.rex/config.json` — **R015** (not `.rex.toml`).
 
 ## See also
 
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [MVP_SPEC.md](MVP_SPEC.md)
+- [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)
 - [ADAPTERS.md](ADAPTERS.md)
 - [CACHING.md](CACHING.md)
 - [EXTENSION.md](EXTENSION.md)

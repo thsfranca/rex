@@ -17,7 +17,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 |-------|---------|-------------------------|
 | **Sidecar lifecycle** | Daemon supervises **0 or 1** process; health, timeout, restart | RC-03 Met |
 | **`rex.sidecar.v1`** | Control-plane API on UDS; verbs in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | RC-03 Met |
-| **Reference sidecar** | Minimal agent binary (any stack per ADR 0005) | RC-03 Met — `rex-sidecar-stub` |
+| **Reference sidecar** | Minimal agent binary (any stack per ADR 0005) | RC-03 Met — **`rex-sidecar-stub`** (harness); **`rex-agent`** planned — [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) |
 | **`StreamInference` routing** | Assistant completions via sidecar turn, not direct daemon HTTP | RC-03 Met |
 | **Brokered HTTP** | `BrokerInference` → `http_openai_compat` when sidecar requests inference | RC-04 Met |
 | **Brokered `fs.read`** | Workspace read via broker + centralized access policy | RC-04 Met; RC-05 Met |
@@ -89,4 +89,4 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 
 ## Related
 
-- [MVP_SPEC.md](MVP_SPEC.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [ADAPTERS.md](ADAPTERS.md) · [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)
+- [MVP_SPEC.md](MVP_SPEC.md) · [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) · [ARCHITECTURE.md](ARCHITECTURE.md) · [ADAPTERS.md](ADAPTERS.md) · [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)
