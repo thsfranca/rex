@@ -72,6 +72,17 @@ Use when you want hits across **paraphrase**, not just identical strings.
 
 **Scope default:** L2 is **ask-only** until you have evidence that your semantic gate is safe for `plan`.
 
+## Vendor KV and prompt cache hints (planned)
+
+**Status:** `planned` — not shipped. Roadmap: [ROADMAP.md](ROADMAP.md) (**Could**). Economics row: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md).
+
+When the active outbound API (OpenAI, Anthropic, etc.) exposes **prompt cache** or **KV cache** hints, the HTTP adapter may pass provider-specific metadata. REX does not depend on vendor cache for correctness; hints are an optional latency/cost lever only.
+
+| In (design stage) | Out (design stage) |
+|---|---|
+| Adapter metadata hooks on `http_openai_compat` | Replacing L1/L2 application cache |
+| Documented env or config for hint enablement | Cross-vendor cache key portability guarantees |
+
 ## Metrics and observability
 
 The daemon emits one `cache_decision=` field per request on stdout:

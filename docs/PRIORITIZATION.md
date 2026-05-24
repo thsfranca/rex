@@ -44,6 +44,8 @@ Optional. Three scores **1–5** (5 is best). Use this to break ties between two
 
 **Example:** medium learning value, high contract risk, migration still undefined → **Should** or **Could**.
 
+**Example (Should tie):** **R013** (daemon proto, medium contract risk, high learning value) vs **RC-S2** (extension-only, lower blast radius) — run **RC-S2** in parallel with **R013** when extension capacity is available; otherwise sequence **R013** first per blast-radius tie-breaker.
+
 ## How often to touch this
 
 - Update the [ROADMAP](ROADMAP.md) when you **change focus**, finish a piece of work that shifts priorities, or reach a **learning milestone** (for example: streaming behavior feels solid, next interest is adapters).

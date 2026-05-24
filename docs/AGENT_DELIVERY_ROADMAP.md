@@ -133,23 +133,23 @@ $REX_HOME/
 - **`proto.gen_root`** only in config — not `proto.python_gen_path` per sidecar.
 - **`rex proto install`** materializes stubs + updates config (maintainers run `rex proto generate` when `.proto` changes).
 
-## Multi-active sidecars (R016 — open decision)
+## Multi-active sidecars (R016 — open decision, **Could**)
 
-Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. Only one process can bind a UDS path today—implementation options (derived socket per name vs future multiplexer) stay **undecided** until R016.
+Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. Only one process can bind a UDS path today—implementation options (derived socket per name vs future multiplexer) stay **undecided** until R016. **Defer until single-active `rex-agent` is proven** ([ROADMAP.md](ROADMAP.md) — **Could**, ordered after **R019**).
 
 ## Implementation order
 
 See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-agent-program).
 
-| ID | Theme |
-|----|-------|
-| R013 | Platform enablers |
-| R014 | Unified `rex` CLI |
-| R015 | JSON config + proto install |
-| R016 | Multi-active broadcast |
-| R017 | `rex-agent` scaffold |
-| R018 | LangGraph agent core |
-| R019 | Integration / E2E |
+| ID | Theme | Priority |
+|----|-------|----------|
+| R013 | Platform enablers | Should |
+| R014 | Unified `rex` CLI | Should |
+| R015 | JSON config + proto install | Should |
+| R017 | `rex-agent` scaffold | Should |
+| R018 | LangGraph agent core | Should |
+| R019 | Integration / E2E | Should |
+| R016 | Multi-active broadcast | Could |
 
 ## Out of scope (this program)
 

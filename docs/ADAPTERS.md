@@ -91,6 +91,40 @@ Same contract may run out-of-process per [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) 
 4. Add profile subsection here.
 5. Update [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) if placement shifts.
 
+## Local MLX path (planned)
+
+**Status:** `planned` — not shipped. Roadmap: [ROADMAP.md](ROADMAP.md) (**Could**, Later horizon).
+
+### Purpose
+
+Optional **Apple MLX** (or similar local runtime) as an `InferenceRuntime` broker backend for on-device inference, increasing local-first leverage without embedding ML stacks in the daemon core.
+
+### Scope
+
+| In (design stage) | Out (design stage) |
+|---|---|
+| Adapter profile: capabilities, env catalog, streaming terminal semantics | Replacing sidecar agent loop ([MVP_SPEC.md](MVP_SPEC.md)) |
+| Broker-only invocation from daemon (same as HTTP OpenAI-compat) | Default Mac product path (HTTP broker remains primary) |
+| CI harness with mock/stub, not live MLX on every PR | |
+
+### Boundaries
+
+- **Mechanism:** new adapter implementing `InferenceRuntime` ([ADR 0002](architecture/decisions/0002-inference-adapter-contract.md)).
+- **Policy:** routing, cache, and mode gates stay in daemon ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)).
+- Sidecar may host exotic ML codecs per [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md); MLX adapter is **in-daemon broker** unless a future ADR moves it.
+
+### Interfaces (intent)
+
+- Runtime id (for example `mlx`) on `REX_INFERENCE_RUNTIME`.
+- Env catalog TBD (model path, device) — documented in [CONFIGURATION.md](CONFIGURATION.md) when scheduled.
+- `AdapterCapabilities`: full context pipeline (budget, indexer, compressor) per [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md).
+
+### Cross-links
+
+- [ROADMAP.md](ROADMAP.md) — **Could** row
+- [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — economics matrix row
+- [MVP_SPEC.md](MVP_SPEC.md) — explicit v1.0 non-promise
+
 ## Related
 
 - [ARCHITECTURE.md](ARCHITECTURE.md)
