@@ -33,9 +33,18 @@ brew install protobuf
 
 ### MVP: sidecar agent + brokered HTTP
 
-- **Sidecar binary** (reference or operator-built) supervised by `rex-daemon` — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [MVP_SPEC.md](MVP_SPEC.md).
+- **Sidecar binary** supervised by `rex-daemon` — harness **`rex-sidecar-stub`** (default) or product scaffold **`rex-agent`** ([sidecars/rex-agent/README.md](../sidecars/rex-agent/README.md)) — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [MVP_SPEC.md](MVP_SPEC.md).
 - Reachable **chat/completions** endpoint for brokered inference (Ollama, LM Studio, vLLM, OpenAI API, or compatible proxy).
-- Configure `REX_OPENAI_COMPAT_*` — [CONFIGURATION.md](CONFIGURATION.md). Sidecar env (`REX_SIDECAR_*`) when supervision lands.
+- Configure inference via `$REX_ROOT/config.json` — [CONFIGURATION.md](CONFIGURATION.md).
+
+### Python sidecar (`rex-agent` scaffold)
+
+| Dependency | Why | Notes |
+|---|---|---|
+| Python 3.10+ | Runs `rex-agent` | 3.9 may work with editable-install limitations |
+| `grpcio`, `protobuf` | gRPC runtime for sidecar + broker client | `pip install` with the sidecar package |
+| `grpcio-tools` | Maintainer: `rex proto install` | Same as `rex proto doctor` toolchain |
+| `pytest` | Sidecar unit tests | CI: [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) |
 
 ### Test harness (non-MVP product path)
 

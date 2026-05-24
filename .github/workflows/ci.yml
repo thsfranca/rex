@@ -35,11 +35,9 @@ jobs:
               - 'Cargo.lock'
               - 'scripts/install-cli.sh'
               - 'scripts/ci/run_rust_*.sh'
-              - 'scripts/ci/enforce_rust_gate.sh'
             extension_changed:
               - 'extensions/rex-vscode/**'
               - 'scripts/ci/run_extension*.sh'
-              - 'scripts/ci/enforce_extension_gate.sh'
             ci_changed:
               - '.github/workflows/**'
               - 'scripts/ci/**'
@@ -126,40 +124,6 @@ jobs:
         if: ${{ steps.run_rust_verify.outcome != 'success' }}
         run: exit 1
 
-  rust-checks:
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [changes, rust-verify]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          sparse-checkout: |
-            scripts/ci
-          sparse-checkout-cone-mode: false
-
-      - name: Run Gate
-        id: run_gate
-        continue-on-error: true
-        env:
-          RUST_RELEVANT: ${{ needs.changes.outputs.rust_relevant }}
-          RUST_VERIFY_RESULT: ${{ needs.rust-verify.result }}
-        run: ./scripts/ci/enforce_rust_gate.sh
-
-      - name: Upload diagnostics artifact
-        if: ${{ steps.run_gate.outcome != 'success' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-logs-rust-checks-${{ github.run_id }}
-          path: ci-observability
-          retention-days: 7
-
-      - name: Enforce gate job status
-        if: ${{ steps.run_gate.outcome != 'success' }}
-        run: exit 1
-
   extension-verify:
     needs: [changes]
     if: ${{ needs.changes.outputs.extension_relevant == 'true' }}
@@ -211,44 +175,6 @@ jobs:
         if: ${{ steps.run_extension_verify.outcome != 'success' }}
         run: exit 1
 
-  extension-checks:
-    if: ${{ always() }}
-    needs: [changes, extension-verify]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          sparse-checkout: |
-            scripts/ci
-          sparse-checkout-cone-mode: false
-
-      - name: Run Gate
-        id: run_gate
-        continue-on-error: true
-        env:
-          EXTENSION_RELEVANT: ${{ needs.changes.outputs.extension_relevant }}
-          EXTENSION_VERIFY_RESULT: ${{ needs.extension-verify.result }}
-        run: ./scripts/ci/enforce_extension_gate.sh
-
-      - name: Write Job Summary
-        if: ${{ always() }}
-        run: ./scripts/ci/write_job_summary.sh extension-checks
-
-      - name: Upload diagnostics artifact
-        if: ${{ steps.run_gate.outcome != 'success' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-logs-extension-checks-${{ github.run_id }}
-          path: ci-observability
-          retention-days: 7
-
-      - name: Enforce extension checks status
-        if: ${{ steps.run_gate.outcome != 'success' }}
-        run: exit 1
-
   guidelines-verify:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -281,7 +207,7 @@ jobs:
 
   ci-checks:
     if: ${{ always() }}
-    needs: [changes, rust-checks, extension-checks, guidelines-verify]
+    needs: [changes, rust-verify, extension-verify, guidelines-verify]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -299,14 +225,10 @@ jobs:
         env:
           RUST_RELEVANT: ${{ needs.changes.outputs.rust_relevant }}
           EXTENSION_RELEVANT: ${{ needs.changes.outputs.extension_relevant }}
-          RUST_RESULT: ${{ needs.rust-checks.result }}
-          EXTENSION_RESULT: ${{ needs.extension-checks.result }}
+          RUST_RESULT: ${{ needs.rust-verify.result }}
+          EXTENSION_RESULT: ${{ needs.extension-verify.result }}
           GUIDELINES_RESULT: ${{ needs.guidelines-verify.result }}
         run: ./scripts/ci/enforce_ci_gate.sh
-
-      - name: Write Job Summary
-        if: ${{ always() }}
-        run: ./scripts/ci/write_job_summary.sh ci-checks
 
       - name: Upload diagnostics artifact
         if: ${{ steps.run_gate.outcome != 'success' }}

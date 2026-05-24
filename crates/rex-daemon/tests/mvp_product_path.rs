@@ -14,7 +14,14 @@ use tokio::time::{sleep, timeout, Instant};
 use tonic::transport::Endpoint;
 use tower::service_fn;
 
+#[path = "../src/settings.rs"]
+mod settings;
 mod support;
+
+use support::config::{
+    install_rex_config, loaded_from_config, product_path_config, rex_root_path,
+    sidecar_required_missing_binary_config,
+};
 use support::openai_compat_sse::{
     spawn_loopback_openai_compat_sse_fixture, spawn_loopback_openai_compat_sse_fixture_echo_model,
 };
@@ -54,7 +61,6 @@ mod runtime;
 #[allow(dead_code)]
 #[path = "../src/service.rs"]
 mod service;
-#[allow(dead_code)]
 #[path = "../src/sidecar_client.rs"]
 mod sidecar_client;
 #[allow(dead_code)]
@@ -63,55 +69,28 @@ mod sidecar_config;
 #[allow(dead_code)]
 #[path = "../src/supervisor.rs"]
 mod supervisor;
+#[allow(dead_code)]
+#[path = "../src/turn_correlation.rs"]
+mod turn_correlation;
 
 const READINESS_TIMEOUT: Duration = Duration::from_secs(8);
 const CONNECT_TIMEOUT: Duration = Duration::from_millis(250);
 const STREAM_TIMEOUT: Duration = Duration::from_secs(5);
 
 struct ProductPathEnv {
-    inference_runtime: Option<String>,
-    openai_base_url: Option<String>,
-    sidecar_harness: Option<String>,
-    sidecar_enabled: Option<String>,
-    sidecar_required: Option<String>,
-    sidecar_binary: Option<String>,
-    sidecar_socket: Option<String>,
-    daemon_socket: Option<String>,
-    workspace_root: Option<String>,
+    _rex_root: support::config::RexRootGuard,
 }
 
-fn save_product_path_env() -> ProductPathEnv {
-    ProductPathEnv {
-        inference_runtime: std::env::var("REX_INFERENCE_RUNTIME").ok(),
-        openai_base_url: std::env::var("REX_OPENAI_COMPAT_BASE_URL").ok(),
-        sidecar_harness: std::env::var("REX_SIDECAR_HARNESS").ok(),
-        sidecar_enabled: std::env::var("REX_SIDECAR_ENABLED").ok(),
-        sidecar_required: std::env::var("REX_SIDECAR_REQUIRED").ok(),
-        sidecar_binary: std::env::var("REX_SIDECAR_BINARY").ok(),
-        sidecar_socket: std::env::var("REX_SIDECAR_SOCKET").ok(),
-        daemon_socket: std::env::var("REX_DAEMON_SOCKET").ok(),
-        workspace_root: std::env::var("REX_WORKSPACE_ROOT").ok(),
-    }
+fn init_product_path_settings(cfg: rex_config::RexConfig) -> ProductPathEnv {
+    settings::reset_for_test();
+    let guard = install_rex_config(cfg.clone());
+    let root = rex_root_path(&guard);
+    settings::init_for_test(loaded_from_config(cfg, &root));
+    ProductPathEnv { _rex_root: guard }
 }
 
-fn restore_product_path_env(saved: ProductPathEnv) {
-    restore_var("REX_INFERENCE_RUNTIME", saved.inference_runtime);
-    restore_var("REX_OPENAI_COMPAT_BASE_URL", saved.openai_base_url);
-    restore_var("REX_SIDECAR_HARNESS", saved.sidecar_harness);
-    restore_var("REX_SIDECAR_ENABLED", saved.sidecar_enabled);
-    restore_var("REX_SIDECAR_REQUIRED", saved.sidecar_required);
-    restore_var("REX_SIDECAR_BINARY", saved.sidecar_binary);
-    restore_var("REX_SIDECAR_SOCKET", saved.sidecar_socket);
-    restore_var("REX_DAEMON_SOCKET", saved.daemon_socket);
-    restore_var("REX_WORKSPACE_ROOT", saved.workspace_root);
-}
-
-fn restore_var(key: &str, value: Option<String>) {
-    if let Some(v) = value {
-        std::env::set_var(key, v);
-    } else {
-        std::env::remove_var(key);
-    }
+fn restore_product_path_env(_saved: ProductPathEnv) {
+    settings::reset_for_test();
 }
 
 fn temp_socket_path(label: &str) -> String {
@@ -169,22 +148,19 @@ fn stub_binary_path() -> String {
     );
 }
 
-fn configure_product_path_env(
+fn configure_product_path(
     daemon_socket: &str,
     sidecar_socket: &str,
     workspace: &str,
     http_base_url: &str,
-) {
-    std::env::set_var("REX_INFERENCE_RUNTIME", "http-openai-compat");
-    std::env::set_var("REX_OPENAI_COMPAT_BASE_URL", http_base_url);
-    std::env::remove_var("REX_OPENAI_COMPAT_API_KEY");
-    std::env::remove_var("REX_SIDECAR_HARNESS");
-    std::env::set_var("REX_SIDECAR_ENABLED", "1");
-    std::env::set_var("REX_SIDECAR_REQUIRED", "1");
-    std::env::set_var("REX_SIDECAR_BINARY", stub_binary_path());
-    std::env::set_var("REX_SIDECAR_SOCKET", sidecar_socket);
-    std::env::set_var("REX_DAEMON_SOCKET", daemon_socket);
-    std::env::set_var("REX_WORKSPACE_ROOT", workspace);
+) -> ProductPathEnv {
+    init_product_path_settings(product_path_config(
+        daemon_socket,
+        sidecar_socket,
+        workspace,
+        http_base_url,
+        &stub_binary_path(),
+    ))
 }
 
 async fn connect_client(
@@ -250,7 +226,6 @@ async fn mvp_product_path_sidecar_stream_and_brokered_read() {
         return;
     }
 
-    let saved = save_product_path_env();
     let daemon_socket = temp_socket_path("daemon");
     let sidecar_socket = temp_socket_path("sidecar");
     cleanup_socket(&daemon_socket);
@@ -262,7 +237,7 @@ async fn mvp_product_path_sidecar_stream_and_brokered_read() {
 
     let http_addr = spawn_loopback_openai_compat_sse_fixture().await;
     let http_base = format!("http://{http_addr}");
-    configure_product_path_env(
+    let saved = configure_product_path(
         &daemon_socket,
         &sidecar_socket,
         &workspace.display().to_string(),
@@ -330,10 +305,18 @@ async fn mvp_product_path_sidecar_stream_and_brokered_read() {
     );
 
     let http_addr_model = spawn_loopback_openai_compat_sse_fixture_echo_model().await;
-    std::env::set_var(
-        "REX_OPENAI_COMPAT_BASE_URL",
-        format!("http://{http_addr_model}"),
+    let cfg = product_path_config(
+        &daemon_socket,
+        &sidecar_socket,
+        &workspace.display().to_string(),
+        &format!("http://{http_addr_model}"),
+        &stub_binary_path(),
     );
+    settings::reset_for_test();
+    settings::init_for_test(loaded_from_config(
+        cfg.clone(),
+        &rex_root_path(&saved._rex_root),
+    ));
     let model_text = timeout(
         STREAM_TIMEOUT,
         collect_stream_text(&mut client, "hello model", "agent", "custom-model-id"),
@@ -361,20 +344,14 @@ async fn mvp_product_path_sidecar_required_clear_error_when_binary_missing() {
         return;
     }
 
-    let saved = save_product_path_env();
     let daemon_socket = temp_socket_path("daemon-err");
+    let sidecar_socket = temp_socket_path("sidecar-err");
     cleanup_socket(&daemon_socket);
-
-    std::env::set_var("REX_INFERENCE_RUNTIME", "mock");
-    std::env::remove_var("REX_SIDECAR_HARNESS");
-    std::env::set_var("REX_SIDECAR_ENABLED", "1");
-    std::env::set_var("REX_SIDECAR_REQUIRED", "1");
-    std::env::set_var(
-        "REX_SIDECAR_BINARY",
+    let saved = init_product_path_settings(sidecar_required_missing_binary_config(
+        &daemon_socket,
+        &sidecar_socket,
         "/nonexistent/rex-sidecar-stub-for-mvp-test",
-    );
-    std::env::set_var("REX_SIDECAR_SOCKET", temp_socket_path("sidecar-err"));
-    std::env::set_var("REX_DAEMON_SOCKET", &daemon_socket);
+    ));
 
     let daemon_socket_task = daemon_socket.clone();
     let result = timeout(

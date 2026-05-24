@@ -56,10 +56,9 @@ run_gate_case() {
 
   local summary_contents
   summary_contents="$(cat "${summary_file}")"
-  assert_contains "${summary_contents}" "- rust-checks: ${rust_res}"
-  assert_contains "${summary_contents}" "- extension-checks: ${ext_res}"
+  assert_contains "${summary_contents}" "- rust-verify: ${rust_res}"
+  assert_contains "${summary_contents}" "- extension-verify: ${ext_res}"
   assert_contains "${summary_contents}" "- guidelines-verify: ${guidelines_res}"
-
   assert_contains "${summary_contents}" "- run_id: local-test-run-id"
 
   rm -rf "${tmp_dir}"

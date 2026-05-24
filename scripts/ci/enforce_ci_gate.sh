@@ -49,7 +49,7 @@ if ! domain_ok "${rust_relevant}" "${rust_result}" \
     fail_code="GUIDELINES_FAIL"
     hint="Guidelines verify failed; run ./scripts/ci/run_guidelines_verify.sh locally."
   else
-    hint="Inspect rust-checks and extension-checks summaries; when a domain is not relevant, upstream may be skipped."
+    hint="Inspect rust-verify and extension-verify summaries and artifacts; when a domain is not relevant, upstream verify may be skipped."
   fi
 fi
 
@@ -62,8 +62,8 @@ fi
   echo "- hint: ${hint}"
   echo "- run_id: ${GITHUB_RUN_ID:-unknown}"
   echo ""
-  echo "- rust-checks: ${rust_result}"
-  echo "- extension-checks: ${extension_result}"
+  echo "- rust-verify: ${rust_result}"
+  echo "- extension-verify: ${extension_result}"
   echo "- guidelines-verify: ${guidelines_result}"
 } >> "$GITHUB_STEP_SUMMARY"
 
@@ -72,8 +72,8 @@ fi
   echo "fail_stage=${fail_stage}"
   echo "fail_code=${fail_code}"
   echo "hint=${hint}"
-  echo "rust_checks=${rust_result}"
-  echo "extension_checks=${extension_result}"
+  echo "rust_verify=${rust_result}"
+  echo "extension_verify=${extension_result}"
   echo "guidelines_verify=${guidelines_result}"
 } > "ci-observability/ci-gate-summary.txt"
 

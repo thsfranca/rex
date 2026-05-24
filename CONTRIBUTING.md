@@ -41,7 +41,7 @@ Examples: `feat(cli):`, `fix(daemon):`, `feat(extension):`. Scopes are optional 
 
 ### Pull request titles
 
-PR titles should follow the same convention when using squash merge (the title becomes the commit on `main`). CI may warn on non-conventional PR titles.
+PR titles must follow the same convention when using squash merge (the title becomes the commit on `main`). CI requires conventional PR titles before merge.
 
 ## Releases
 

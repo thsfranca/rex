@@ -60,27 +60,33 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 ## Next — product agent program
 
-Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Today the supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** is planned.
+Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** scaffold is shipped (**R017** Done).
 
-**Priority rationale:** Primary focus is **R015 → R019** (JSON config, then single-active **`rex-agent`**). **R013** and **R014** are **Done**. **RC-S2** may run in parallel (extension-only blast radius).
+**Priority rationale:** **R015** and **R017** are **Done**. Next: **R020** and **R021** in parallel (daemon prerequisites), then **R018** (LangGraph), **R022** daemon workspace fail-closed alongside **R019** extension integration. **R016** remains **Could** after **R019**. **RC-S2** may run in parallel (extension-only blast radius).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
-| 1 | Doc truth (stub vs product) | — | Hubs state planned agent; stub = harness |
+| 1 | Doc truth (stub vs product) | — | Hubs state planned agent; stub = harness; JSON config primary ([CONFIGURATION.md](CONFIGURATION.md)) |
 | 2 | Platform enablers | **R013** | Done — `BrokerListDir`, `RunTurn.model`, stream passthrough |
 | 3 | Unified `rex` CLI | **R014** | Done — single `rex` binary; subcommands |
-| 4 | Config + proto SDK | **R015** | JSON config, `rex proto install`, `proto.gen_root` |
-| 5 | `rex-agent` scaffold | **R017** | gRPC server + broker client |
-| 6 | LangGraph agent core | **R018** | ReAct loop, broker adapters |
-| 7 | Integration / E2E | **R019** | Operator path, extension defaults, RC evidence when proven |
-| 8 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (**Could** — open decision) |
+| 4 | Config + proto SDK | **R015** | Done — JSON config, `rex proto install`, `proto.gen_root` |
+| 5 | Broker access policy completion | **R020** | Mode × capability matrix; write/exec protected paths; `max_tool_result_bytes` — [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) |
+| 6 | Turn correlation Phase 1b | **R021** | Populate `turn_id`, `context_revision` on `RunTurn` — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
+| 7 | Workspace binding (daemon) | **R022** | Fail-closed `workspace.root`; harness cwd fallback documented — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
+| 8 | `rex-agent` scaffold | **R017** | Done — gRPC server + broker client ([sidecars/rex-agent/README.md](../sidecars/rex-agent/README.md)) |
+| 9 | LangGraph agent core | **R018** | ReAct loop, broker adapters |
+| 10 | Integration / E2E | **R019** | Extension workspace + defaults; client hints; live-model E2E — [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md#r019-integration--e2e-acceptance) |
+| 11 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (**Could** — deferred Phase 1, [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md)) |
 
 ```mermaid
 flowchart TD
   doc[DocTruth]
   plat[R013_Platform]
   cli[R014_rex_CLI]
-  cfg[R015_Config_proto]
+  cfg[R015_Config_Done]
+  policy[R020_BrokerPolicy]
+  turn[R021_TurnCorrelation]
+  workspace[R022_WorkspaceBinding]
   scaffold[R017_agent_scaffold]
   graph[R018_LangGraph]
   e2e[R019_Integration]
@@ -88,9 +94,13 @@ flowchart TD
   doc --> plat
   plat --> cli
   cli --> cfg
-  cfg --> scaffold
+  cfg --> policy
+  cfg --> turn
+  policy --> scaffold
+  turn --> scaffold
   scaffold --> graph
   graph --> e2e
+  workspace --> e2e
   e2e -.-> multi
 ```
 
@@ -102,6 +112,8 @@ flowchart TD
 | **Could** | Learned / small-model compression; batching/async doc jobs | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Matrix **planned** rows |
 | **Could** | Layered prompts (system/project stack) | [CONFIGURATION.md](CONFIGURATION.md#layered-prompts-planned) | **planned** |
 | **Could** | Difficulty-based routing cascade (ML escalation) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | Beyond **RC-09** env hook |
+| **Should** | Inference Gateway — opt-in managed LiteLLM (daemon control, Ollama model discovery) | [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md) | Design **accepted**; implementation: supervisor + `$REX_ROOT/gateway/` |
+| **Should** | LiteLLM default API docs (external + managed profiles) | [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-default-api), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) | Hub + ADR 0019 landed |
 | **Won't (now)** | Direct daemon HTTP/mock without sidecar | [MVP_SPEC.md](MVP_SPEC.md) | CI/harness path only; not product default |
 
 ## Later — only if the core path stays healthy
@@ -110,6 +122,7 @@ flowchart TD
 |----------|------|-----------|--------|
 | **Could** | L2 **semantic** cache | [CACHING.md](CACHING.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Out of v1.0 |
 | **Could** | **Apple MLX** local model path | [ADAPTERS.md](ADAPTERS.md#local-mlx-path-planned) | Post-v1.0 |
+| **Could** | Native Anthropic Messages adapter (secondary) | [ADAPTERS.md](ADAPTERS.md#direct-anthropic-messages-api-planned--secondary), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) | After LiteLLM profile; broker dispatch + `anthropic` runtime |
 | **Could** | Gateway adapters beyond broker HTTP | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | After router story matures; multi-sidecar broadcast → **R016** |
 | **Could** | Vendor KV / prompt cache hints | [CACHING.md](CACHING.md#vendor-kv-and-prompt-cache-hints-planned) | Depends on outbound API owning runtime |
 | **Won't (now)** | VM/container as **default Mac** sidecar envelope | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Process + broker instead |
@@ -128,11 +141,14 @@ flowchart TD
 | **R012** | **AccessPolicy broker centralization** (RC-05) | **Done** |
 | **R013** | Platform enablers (`BrokerListDir`, `RunTurn.model`, stream passthrough) | Done |
 | **R014** | Unified `rex` CLI (replace `rex-cli` / `rex-daemon`) | Done |
-| **R015** | JSON config + `rex proto install` + `proto.gen_root` | Should |
-| **R016** | Multi-active sidecar broadcast | Could |
-| **R017** | `rex-agent` scaffold (gRPC + broker client) | Should |
+| **R015** | JSON config + `rex proto install` + `proto.gen_root` | Done |
+| **R016** | Multi-active sidecar broadcast | Could — deferred Phase 1 per [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md) |
+| **R017** | `rex-agent` scaffold (gRPC + broker client) | Done |
 | **R018** | LangGraph agent core (ReAct, broker tools) | Should |
 | **R019** | Integration / E2E (operator path, extension defaults) | Should |
+| **R020** | Broker access policy completion (ADR 0013; follows R012) | Should — [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) |
+| **R021** | Turn correlation Phase 1b (`turn_id`, `context_revision`) | Done — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
+| **R022** | Workspace binding product path (fail-closed daemon) | Should — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
 
 ## Parked in design docs
 
@@ -140,12 +156,14 @@ flowchart TD
 |--------|-----------------|--------|
 | **Remote** networking, **TLS**, **production auth** | Operator story + threat model ready | [MVP_SPEC.md](MVP_SPEC.md), [ARCHITECTURE.md](ARCHITECTURE.md) |
 | **Wasm** in-process plugins | Sidecar path mature enough to compare | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
-| **JSON config** via **R015** (`$REX_HOME/config.json`, `rex config`, `proto.gen_root`) | R013–R014 landed or in parallel | [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [CONFIGURATION.md](CONFIGURATION.md) |
+| ~~JSON config via **R015**~~ | **Landed** — see engineering backlog **R015** Done | [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [CONFIGURATION.md](CONFIGURATION.md) |
 | **Node gRPC `StreamInference`** in extension | New ADR supersedes hybrid policy | [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
 | **Large** multi-plugin orchestration | Single-plugin supervision stable | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
-| **Long-term / project memory** | Economics path clear | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
-| **Agent knowledge** (curated docs for AI, remote/MCP) | Operator pain or bundle design accepted | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
-| **Observability suite + economics validation** | Design documented; implementation after OTLP/API PRs | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
+| **Long-term / project memory** | ADR 0014 accepted; implement after benchmark gate | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md) |
+| **Agent knowledge** (curated docs for AI, remote/MCP) | ADR 0015 accepted; implement after R015 | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md), [ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md) |
+| **MCP in sidecar** | ADR 0016 accepted; implementation deferred | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
+| **Development assistance capabilities** (turn contract, budget pipeline) | Design hub + ADRs 0011–0017 | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
+| **Observability suite + economics validation** | Design documented ([ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)); implementation: OTLP + `observability` JSON ([ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md)), `rex-obs-store` ([ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md)), harness | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
 | **VM/container sidecar envelope** (server/fleet) | Linux deployment needs stronger isolation | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 
 **CI:** [CI.md](CI.md) — mock / self-contained default; live LLM not required on PRs.

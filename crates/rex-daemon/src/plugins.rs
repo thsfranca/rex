@@ -1,11 +1,11 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
-use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 use crate::adapters::AdapterCapabilities;
+use crate::turn_correlation::strip_extension_context_blocks;
 
 pub fn estimate_tokens(text: &str) -> usize {
     text.chars().count().div_ceil(4)
@@ -27,24 +27,13 @@ impl Default for TokenBudget {
 }
 
 impl TokenBudget {
-    pub fn from_env() -> Self {
-        let default = Self::default();
+    pub fn from_config() -> Self {
+        let (max_prompt_tokens, max_context_tokens) = crate::settings::get().token_budget();
         Self {
-            max_prompt_tokens: parse_usize_env("REX_MAX_PROMPT_TOKENS", default.max_prompt_tokens),
-            max_context_tokens: parse_usize_env(
-                "REX_MAX_CONTEXT_TOKENS",
-                default.max_context_tokens,
-            ),
+            max_prompt_tokens: max_prompt_tokens.max(1),
+            max_context_tokens: max_context_tokens.max(1),
         }
     }
-}
-
-fn parse_usize_env(name: &str, default: usize) -> usize {
-    env::var(name)
-        .ok()
-        .and_then(|v| v.trim().parse().ok())
-        .filter(|&n| n > 0)
-        .unwrap_or(default)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -97,6 +86,8 @@ pub struct PipelineMetrics {
 #[derive(Debug, Clone)]
 pub struct PipelineResult {
     pub effective_prompt: String,
+    pub injected_context: String,
+    pub c1_stripped: bool,
     pub metrics: PipelineMetrics,
 }
 
@@ -143,17 +134,13 @@ impl LexicalWorkspaceIndexer {
         Self::with_seed_docs(docs)
     }
 
-    pub fn from_env() -> Self {
-        let mode = env::var("REX_INDEXER").unwrap_or_else(|_| "workspace".to_string());
+    pub fn from_config() -> Self {
+        let loaded = crate::settings::get();
+        let mode = loaded.workspace_indexer_mode();
         if mode.trim().eq_ignore_ascii_case("seeded") {
             return Self::default_seeded();
         }
-        let root = env::var("REX_WORKSPACE_ROOT")
-            .ok()
-            .map(|v| PathBuf::from(v.trim().to_string()))
-            .filter(|p| !p.as_os_str().is_empty())
-            .or_else(|| env::current_dir().ok())
-            .unwrap_or_else(|| PathBuf::from("."));
+        let root = loaded.workspace_root();
         Self::from_workspace_root(&root)
     }
 
@@ -327,14 +314,14 @@ pub struct ContextPipeline {
 }
 
 impl ContextPipeline {
-    /// Production pipeline: workspace indexer unless `REX_INDEXER=seeded`.
+    /// Production pipeline: workspace indexer unless config indexer is `seeded`.
     pub fn production_default() -> Self {
-        Self::with_indexer(LexicalWorkspaceIndexer::from_env())
+        Self::with_indexer(LexicalWorkspaceIndexer::from_config())
     }
 
     pub(crate) fn with_indexer(indexer: LexicalWorkspaceIndexer) -> Self {
         Self {
-            budget: TokenBudget::from_env(),
+            budget: TokenBudget::from_config(),
             indexer,
             compressor: ExtractiveContextCompressor,
             cache: ExactPrefixCache::new(Duration::from_secs(600)),
@@ -346,15 +333,25 @@ impl ContextPipeline {
         request: &ContextRequest,
         capabilities: AdapterCapabilities,
     ) -> PipelineResult {
-        let bounded_prompt = if capabilities.truncate_prompt {
+        let mut bounded_prompt = if capabilities.truncate_prompt {
             apply_prompt_budget(&request.prompt, self.budget.max_prompt_tokens)
         } else {
             request.prompt.clone()
         };
+        let mut c1_stripped = false;
+        if capabilities.attach_context && !should_skip_retrieval(request) {
+            let (stripped, applied) = strip_extension_context_blocks(&bounded_prompt);
+            if applied {
+                bounded_prompt = stripped;
+                c1_stripped = true;
+            }
+        }
         let decision = BehavioralPrefilter::evaluate(request.behavior_snapshot);
         if let BehaviorDecision::Suppress { .. } = decision {
             return PipelineResult {
                 effective_prompt: bounded_prompt.clone(),
+                injected_context: String::new(),
+                c1_stripped,
                 metrics: PipelineMetrics {
                     prompt_tokens: estimate_tokens(&bounded_prompt),
                     selected_context_tokens: 0,
@@ -372,6 +369,8 @@ impl ContextPipeline {
         if !capabilities.attach_context {
             return PipelineResult {
                 effective_prompt: bounded_prompt.clone(),
+                injected_context: String::new(),
+                c1_stripped,
                 metrics: PipelineMetrics {
                     prompt_tokens: estimate_tokens(&bounded_prompt),
                     selected_context_tokens: 0,
@@ -395,6 +394,8 @@ impl ContextPipeline {
             if let Some(context) = self.cache.get(&cache_key) {
                 return PipelineResult {
                     effective_prompt: join_prompt_and_context(&bounded_prompt, &context),
+                    injected_context: context.clone(),
+                    c1_stripped,
                     metrics: PipelineMetrics {
                         prompt_tokens: estimate_tokens(&bounded_prompt),
                         selected_context_tokens: estimate_tokens(&context),
@@ -439,6 +440,8 @@ impl ContextPipeline {
         }
         PipelineResult {
             effective_prompt: join_prompt_and_context(&bounded_prompt, &context),
+            injected_context: context.clone(),
+            c1_stripped,
             metrics: PipelineMetrics {
                 prompt_tokens: estimate_tokens(&bounded_prompt),
                 selected_context_tokens: selected_tokens,
@@ -580,23 +583,38 @@ mod tests {
         ContextRequest, ExtractiveContextCompressor, LexicalWorkspaceIndexer, TokenBudget,
     };
     use crate::adapters::{AdapterCapabilities, RuntimeKind};
-    use std::env;
     use std::fs;
+    use std::sync::Arc;
 
     fn test_pipeline() -> ContextPipeline {
         ContextPipeline::with_indexer(LexicalWorkspaceIndexer::default_seeded())
     }
 
-    #[test]
-    fn token_budget_from_env_overrides_defaults() {
-        let _guard = EnvGuard::set("REX_MAX_PROMPT_TOKENS", "64");
-        let budget = TokenBudget::from_env();
-        assert_eq!(budget.max_prompt_tokens, 64);
+    fn init_token_budget(max_prompt_tokens: usize) {
+        crate::settings::reset_for_test();
+        let mut cfg = rex_config::RexConfig::defaults();
+        cfg.context.max_prompt_tokens = max_prompt_tokens;
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-plugins-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
     }
 
     #[test]
-    fn prompt_budget_truncates_when_env_limits_tokens() {
-        let _guard = EnvGuard::set("REX_MAX_PROMPT_TOKENS", "4");
+    #[serial_test::serial]
+    fn token_budget_from_config_overrides_defaults() {
+        init_token_budget(64);
+        let budget = TokenBudget::from_config();
+        assert_eq!(budget.max_prompt_tokens, 64);
+        crate::settings::reset_for_test();
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn prompt_budget_truncates_when_config_limits_tokens() {
+        init_token_budget(4);
         let mut pipeline = ContextPipeline::with_indexer(LexicalWorkspaceIndexer::default_seeded());
         let long = "a".repeat(200);
         let request = ContextRequest {
@@ -611,28 +629,7 @@ mod tests {
             AdapterCapabilities::for_runtime(RuntimeKind::Mock),
         );
         assert!(result.effective_prompt.chars().count() <= 16);
-    }
-
-    struct EnvGuard {
-        key: &'static str,
-        previous: Option<String>,
-    }
-
-    impl EnvGuard {
-        fn set(key: &'static str, value: &str) -> Self {
-            let previous = env::var(key).ok();
-            env::set_var(key, value);
-            Self { key, previous }
-        }
-    }
-
-    impl Drop for EnvGuard {
-        fn drop(&mut self) {
-            match &self.previous {
-                Some(v) => env::set_var(self.key, v),
-                None => env::remove_var(self.key),
-            }
-        }
+        crate::settings::reset_for_test();
     }
 
     #[test]
@@ -799,6 +796,26 @@ mod tests {
             AdapterCapabilities::for_runtime(RuntimeKind::Mock),
         );
         assert_eq!(result.metrics.retrieval, super::RetrievalDecision::Skipped);
+    }
+
+    #[test]
+    fn c1_strip_removes_extension_trailer_before_retrieval() {
+        let mut pipeline = test_pipeline();
+        let prompt = "status stream retry integration tests daemon lifecycle\n\n---\nFile: src/main.rs\nLanguage: rust".to_string();
+        let request = ContextRequest {
+            prompt,
+            diagnostics_hint: None,
+            cache_bypass: true,
+            behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
+        };
+        let result = pipeline.prepare(
+            &request,
+            AdapterCapabilities::for_runtime(RuntimeKind::Mock),
+        );
+        assert!(result.c1_stripped);
+        assert!(!result.effective_prompt.contains("File: src/main.rs"));
+        assert_eq!(result.metrics.retrieval, super::RetrievalDecision::Ran);
     }
 
     #[test]

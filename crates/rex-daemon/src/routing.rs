@@ -1,4 +1,4 @@
-//! Minimal inference routing hook (env-selected runtime today).
+//! Minimal inference routing hook (config-selected runtime today).
 
 use crate::adapters::RuntimeKind;
 
@@ -8,9 +8,9 @@ pub struct RouteDecision {
     pub label: &'static str,
 }
 
-/// Phase-1 router: env default only; logs as `route=<label>`.
+/// Phase-1 router: config default only; logs as `route=<label>`.
 pub fn decide_route(_mode: &str, _model: &str) -> RouteDecision {
-    let runtime = RuntimeKind::from_env();
+    let runtime = RuntimeKind::from_config();
     RouteDecision {
         runtime,
         label: runtime.log_label(),
@@ -20,35 +20,23 @@ pub fn decide_route(_mode: &str, _model: &str) -> RouteDecision {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
-
-    struct EnvGuard {
-        key: &'static str,
-        previous: Option<String>,
-    }
-
-    impl EnvGuard {
-        fn set(key: &'static str, value: &str) -> Self {
-            let previous = env::var(key).ok();
-            env::set_var(key, value);
-            Self { key, previous }
-        }
-    }
-
-    impl Drop for EnvGuard {
-        fn drop(&mut self) {
-            match &self.previous {
-                Some(v) => env::set_var(self.key, v),
-                None => env::remove_var(self.key),
-            }
-        }
-    }
+    use std::sync::Arc;
 
     #[test]
-    fn route_follows_rex_inference_runtime() {
-        let _guard = EnvGuard::set("REX_INFERENCE_RUNTIME", "mock");
+    #[serial_test::serial]
+    fn route_follows_config_inference_runtime() {
+        crate::settings::reset_for_test();
+        let mut cfg = rex_config::RexConfig::defaults();
+        cfg.inference.runtime = "mock".to_string();
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-route-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
         let decision = decide_route("ask", "");
         assert_eq!(decision.runtime, RuntimeKind::Mock);
         assert_eq!(decision.label, "mock");
+        crate::settings::reset_for_test();
     }
 }

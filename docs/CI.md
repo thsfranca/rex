@@ -38,7 +38,7 @@ Use this standard for every CI job in `.github/workflows/ci.yml`.
   - `ci-logs-<job>-<run_id>`
   - `ci-test-report-<job>-<run_id>`
 - Set `retention-days: 7` unless project needs change.
-- Ensure gate jobs upload diagnostics on failure too (for this workflow: `ci-logs-rust-checks-<run_id>`).
+- Ensure gate jobs upload diagnostics on failure too (for this workflow: `ci-logs-ci-checks-<run_id>`).
 
 ### Workflow script separation contract
 
@@ -86,10 +86,10 @@ Keep failure codes low-cardinality. Current baseline set:
 - Set `timeout-minutes` per job.
 - **`rust-verify`** uses **mold** (`RUSTFLAGS=-C link-arg=-fuse-ld=mold`), lean **`apt-get install --no-install-recommends`**, **`cargo-nextest`** when available (falls back to `cargo test` in [`run_rust_tests.sh`](scripts/ci/run_rust_tests.sh)), and **`CARGO_TERM_PROGRESS_WHEN=never`** to trim log noise.
 - **`extension-verify`** sets **`NODE_OPTIONS=--max-old-space-size=6144`** and **`CI=true`** so Vitest can use full CPU (`maxWorkers` in [`vitest.config.ts`](extensions/rex-vscode/vitest.config.ts)).
-- Gate jobs (`rust-checks`, `extension-checks`, `ci-checks`) use **sparse checkout** of `scripts/ci/` only (faster clone; gates only run shell scripts there).
+- **`ci-checks`** uses **sparse checkout** of `scripts/ci/` only (faster clone; gate only runs shell scripts there).
 - Keep `concurrency.cancel-in-progress: true`.
-- Keep `ci-checks` as the single required protection check.
-- Keep `rust-checks` and `extension-checks` as domain gate jobs feeding the final gate.
+- Keep **`ci-checks`** and **`Conventional PR title`** as required protection checks (see below).
+- Do **not** require `rust-verify` or `extension-verify` — they skip on docs-only PRs and GitHub treats required skipped checks as blocking.
 
 ## Workflow triggers
 
@@ -97,13 +97,20 @@ Keep failure codes low-cardinality. Current baseline set:
 
 Configured in `.github/workflows/ci.yml`. Checkouts use `fetch-depth: 1` unless a job needs full history. Gate jobs use sparse checkout as noted above.
 
-## Required status check for `main`
+## Required status checks for `main`
 
 Set branch protection or ruleset on `main` to require:
 
 - `ci-checks`
+- `Conventional PR title` (job in [`.github/workflows/pr-title-lint.yml`](../.github/workflows/pr-title-lint.yml))
 
-`ci-checks` is the final gate and fails when `guidelines-verify`, `rust-checks`, or `extension-checks` fails. **`guidelines-verify`** always runs documented guideline conformance checks. `rust-checks` gates Rust work (`rust-verify`). `extension-checks` gates extension install, typecheck, lint, test, and VSIX packaging (`extension-verify`). All gate jobs use canonical summary fields (`result`, `fail_stage`, `fail_code`, `hint`, `run_id`) plus upstream outcomes.
+`ci-checks` is the merge gate for code quality. It reads `rust-verify`, `extension-verify`, and `guidelines-verify` results. **`guidelines-verify`** always runs documented guideline conformance checks. `rust-verify` and `extension-verify` use path-aware skip semantics: when a domain is not relevant, the verify job is skipped and `ci-checks` still passes. When a relevant verify job fails, `ci-checks` fails with `GATE_FAIL`. When `guidelines-verify` fails, `ci-checks` fails with `GUIDELINES_FAIL`.
+
+**Conventional PR title** is required because squash-merge titles become commits on `main`, which feed release-plz and release-please (semver + changelog). See [CONTRIBUTING.md](../CONTRIBUTING.md).
+
+Do **not** require `rust-verify`, `extension-verify`, `guidelines-verify`, or `changes` — domain verify jobs skip on docs-only PRs; `changes` is path detection only.
+
+Informational jobs (not required): `rust-verify`, `extension-verify`, `guidelines-verify`, `changes`.
 
 ## Path-aware execution model
 
@@ -122,15 +129,16 @@ CI first evaluates changed paths, then runs only relevant domain checks.
 
 - Rust-relevant:
   - `crates/**`
+  - `sidecars/rex-agent/**`
+  - `proto/**`
   - `Cargo.toml`
   - `Cargo.lock`
   - `scripts/install-cli.sh`
   - `scripts/ci/run_rust_*.sh`
-  - `scripts/ci/enforce_rust_gate.sh`
+  - `scripts/ci/run_rex_agent_checks.sh`
 - Extension-relevant:
   - `extensions/rex-vscode/**`
   - `scripts/ci/run_extension*.sh`
-  - `scripts/ci/enforce_extension_gate.sh`
 - Cross-domain triggers:
   - `.github/workflows/**`
   - `scripts/ci/**`
@@ -152,14 +160,13 @@ Local run:
 
 ### Dependency model
 
-- Guidelines chain: `guidelines-verify` (always)
-- Rust chain: `rust-verify` -> `rust-checks`
-- Extension chain: `extension-verify` -> `extension-checks`
-- Top-level chain: `guidelines-verify` + `rust-checks` + `extension-checks` -> `ci-checks`
+- Always: `guidelines-verify`
+- Verify jobs (parallel, path-aware): `rust-verify`, `extension-verify`
+- Merge gate: `guidelines-verify` + `rust-verify` + `extension-verify` → `ci-checks`
 
-When a domain is non-relevant, leaf jobs skip and that domain gate exits with `result=skip` while returning success. This keeps the required `ci-checks` result deterministic on pull requests that touch only out-of-scope paths.
+When a domain is non-relevant, its verify job skips. `ci-checks` runs with `if: always()` and passes when skipped verify results are acceptable for non-relevant paths.
 
-Docs-only and README-only pull requests are treated as out-of-scope for both domain verify jobs. In those cases, `rust-checks`, `extension-checks`, and `ci-checks` still run and pass through the gate scripts.
+Docs-only and README-only pull requests skip both verify jobs. `ci-checks` still runs and passes via [`enforce_ci_gate.sh`](../scripts/ci/enforce_ci_gate.sh).
 
 ## Release workflows
 
@@ -194,7 +201,7 @@ Use the same `CI_SIGNAL` pattern when adding release-specific scripts:
 
 - Avoids duplicate CI runs from branch `push` + `pull_request` (workflow is PR-scoped).
 - Uses shallow clones where safe to reduce checkout time.
-- Keeps one stable required check name as the protection contract.
+- Keeps stable required check names as the protection contract.
 
 ## Local MVP preflight (operator path)
 
@@ -209,6 +216,8 @@ That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh
 
 **Two tiers:** PR CI uses **`mock`** / harness paths in `uds_e2e` and a **loopback OpenAI-compat HTTP fixture** in `mvp_product_path` (real `http_openai_compat`, no cloud API). Operator dogfood requires **live** `REX_OPENAI_COMPAT_*` (Ollama, LM Studio, etc.).
 
+**Python sidecar (R017):** [`run_rust_tests.sh`](../scripts/ci/run_rust_tests.sh) calls [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) after the workspace test run — `pytest` for `sidecars/rex-agent` and `cargo test --test agent_scaffold_smoke` (no live LLM). Requires `python3` and `pip install grpcio-tools` on the runner.
+
 ## Local verification flow for reliability changes
 
 Run this sequence before opening PRs that change stream lifecycle behavior:
@@ -216,7 +225,7 @@ Run this sequence before opening PRs that change stream lifecycle behavior:
 1. `cargo fmt --all -- --check`
 2. `cargo clippy --workspace --all-targets --locked -- -D warnings`
 3. `cargo test --workspace --all-targets --locked` (optional: `cargo install cargo-nextest` then `cargo nextest run --workspace --all-targets --locked` to mirror CI)
-4. `./scripts/ci/test_enforce_rust_gate.sh`
+4. `./scripts/ci/test_enforce_ci_gate.sh`
 5. `cargo test -p rex-daemon --test uds_e2e -- --nocapture`
 
 For lifecycle/race fixes, ensure E2E coverage includes:

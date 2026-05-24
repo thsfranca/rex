@@ -14,6 +14,8 @@ use tonic::transport::Endpoint;
 use tonic::Status;
 use tower::service_fn;
 
+pub use crate::turn_correlation::TurnCorrelation;
+
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
 
 pub async fn connect_sidecar(
@@ -37,11 +39,18 @@ pub async fn health_check(
     Ok(response.healthy)
 }
 
-fn run_turn_request(prompt: &str, mode: &str, model: &str) -> RunTurnRequest {
+fn run_turn_request(
+    prompt: &str,
+    mode: &str,
+    model: &str,
+    correlation: &TurnCorrelation,
+) -> RunTurnRequest {
     RunTurnRequest {
         prompt: prompt.to_string(),
         mode: mode.to_string(),
         model: model.to_string(),
+        turn_id: correlation.turn_id.clone(),
+        context_revision: correlation.context_revision.clone(),
     }
 }
 
@@ -58,8 +67,9 @@ pub async fn run_turn_collect(
     prompt: &str,
     mode: &str,
     model: &str,
+    correlation: &TurnCorrelation,
 ) -> Result<Vec<RunTurnChunk>, tonic::Status> {
-    let request = run_turn_request(prompt, mode, model);
+    let request = run_turn_request(prompt, mode, model, correlation);
     let mut grpc_stream = client.run_turn(request).await?.into_inner();
     let mut chunks = Vec::new();
     while let Some(chunk) = grpc_stream.message().await? {
@@ -76,8 +86,9 @@ pub async fn run_turn_stream(
     prompt: &str,
     mode: &str,
     model: &str,
+    correlation: &TurnCorrelation,
 ) -> Result<RunTurnInferenceStream, tonic::Status> {
-    let request = run_turn_request(prompt, mode, model);
+    let request = run_turn_request(prompt, mode, model, correlation);
     let mut grpc_stream = client.run_turn(request).await?.into_inner();
     Ok(Box::pin(stream! {
         while let Some(chunk) = grpc_stream.message().await? {
@@ -94,4 +105,19 @@ pub fn map_sidecar_to_inference_chunks(
         .into_iter()
         .map(|c| Ok(map_run_turn_chunk(c)))
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::turn_correlation::build_turn_correlation;
+
+    #[test]
+    fn run_turn_request_populates_correlation_fields() {
+        let correlation =
+            build_turn_correlation(3, "ctx-body", "ran", "extractive_query", 1, false);
+        let request = run_turn_request("hello", "ask", "model-a", &correlation);
+        assert_eq!(request.turn_id, "turn-3");
+        assert!(request.context_revision.starts_with("ctx-"));
+    }
 }

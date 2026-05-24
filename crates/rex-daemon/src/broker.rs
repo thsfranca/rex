@@ -1,6 +1,5 @@
 //! Host capability broker (MVP: workspace `fs.read`, `fs.list`, `fs.write`, `exec.shell`).
 
-use std::env;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
@@ -30,7 +29,6 @@ pub enum BrokerError {
 const MAX_WRITE_BYTES: usize = 65_536;
 const MAX_SHELL_OUTPUT_BYTES: usize = 8_192;
 const MAX_LIST_DIR_ENTRIES: usize = 256;
-const DEFAULT_SHELL_ALLOWLIST: &str = "echo,printf,true";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BrokerDirEntry {
@@ -47,15 +45,12 @@ impl From<PolicyDeny> for BrokerError {
     }
 }
 
-pub fn workspace_root_from_env() -> Result<PathBuf, BrokerError> {
-    let raw = env::var("REX_WORKSPACE_ROOT")
-        .or_else(|_| env::current_dir().map(|p| p.display().to_string()))
-        .map_err(|_| BrokerError::NoWorkspaceRoot)?;
-    let trimmed = raw.trim();
-    if trimmed.is_empty() {
+pub fn workspace_root_from_config() -> Result<PathBuf, BrokerError> {
+    let root = crate::settings::get().workspace_root();
+    if root.as_os_str().is_empty() {
         return Err(BrokerError::NoWorkspaceRoot);
     }
-    Ok(PathBuf::from(trimmed))
+    Ok(root)
 }
 
 pub fn broker_read_file(relative_path: &str) -> Result<String, BrokerError> {
@@ -63,7 +58,7 @@ pub fn broker_read_file(relative_path: &str) -> Result<String, BrokerError> {
         AccessDecision::Allow => {}
         AccessDecision::Deny(deny) => return Err(deny.into()),
     }
-    let root = workspace_root_from_env()?;
+    let root = workspace_root_from_config()?;
     let resolved = resolve_under_workspace(&root, relative_path)?;
     std::fs::read_to_string(&resolved).map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
@@ -79,7 +74,7 @@ pub fn broker_list_dir(relative_path: &str) -> Result<Vec<BrokerDirEntry>, Broke
         AccessDecision::Allow => {}
         AccessDecision::Deny(deny) => return Err(deny.into()),
     }
-    let root = workspace_root_from_env()?;
+    let root = workspace_root_from_config()?;
     let resolved = resolve_list_dir(&root, relative_path)?;
     if !resolved.is_dir() {
         return Err(BrokerError::Io(format!(
@@ -122,7 +117,7 @@ pub fn broker_write_file(relative_path: &str, content: &str) -> Result<(), Broke
     if content.len() > MAX_WRITE_BYTES {
         return Err(BrokerError::WriteTooLarge(content.len(), MAX_WRITE_BYTES));
     }
-    let root = workspace_root_from_env()?;
+    let root = workspace_root_from_config()?;
     let resolved = resolve_under_workspace_for_write(&root, relative_path)?;
     if let Some(parent) = resolved.parent() {
         fs::create_dir_all(parent).map_err(|e| BrokerError::Io(e.to_string()))?;
@@ -150,7 +145,7 @@ pub fn broker_exec_shell(command: &str) -> Result<ShellResult, BrokerError> {
     if !shell_allowlist().contains(&program.to_ascii_lowercase()) {
         return Err(BrokerError::CommandNotAllowed(program.to_string()));
     }
-    let root = workspace_root_from_env()?;
+    let root = workspace_root_from_config()?;
     let output = std::process::Command::new(program)
         .args(parts)
         .current_dir(&root)
@@ -171,9 +166,9 @@ pub fn broker_exec_shell(command: &str) -> Result<ShellResult, BrokerError> {
 }
 
 fn shell_allowlist() -> Vec<String> {
-    env::var("REX_BROKER_SHELL_ALLOWLIST")
-        .unwrap_or_else(|_| DEFAULT_SHELL_ALLOWLIST.to_string())
-        .split(',')
+    crate::settings::get()
+        .broker_shell_allowlist()
+        .iter()
         .map(|s| s.trim().to_ascii_lowercase())
         .filter(|s| !s.is_empty())
         .collect()
@@ -260,26 +255,27 @@ mod tests {
     use super::*;
     use serial_test::serial;
     use std::fs;
+    use std::sync::Arc;
 
-    struct WorkspaceRootGuard {
-        previous: Option<String>,
-    }
+    struct SettingsGuard;
 
-    impl WorkspaceRootGuard {
-        fn set(value: String) -> Self {
-            let previous = env::var("REX_WORKSPACE_ROOT").ok();
-            env::set_var("REX_WORKSPACE_ROOT", value);
-            Self { previous }
-        }
-    }
-
-    impl Drop for WorkspaceRootGuard {
+    impl Drop for SettingsGuard {
         fn drop(&mut self) {
-            match &self.previous {
-                Some(v) => env::set_var("REX_WORKSPACE_ROOT", v),
-                None => env::remove_var("REX_WORKSPACE_ROOT"),
-            }
+            crate::settings::reset_for_test();
         }
+    }
+
+    fn init_workspace_root(root: &str) -> SettingsGuard {
+        crate::settings::reset_for_test();
+        let mut cfg = rex_config::RexConfig::defaults();
+        cfg.workspace.root = root.to_string();
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-broker-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
+        SettingsGuard
     }
 
     #[test]
@@ -289,7 +285,7 @@ mod tests {
         fs::create_dir_all(&dir).expect("tmpdir");
         let file = dir.join("hello.txt");
         fs::write(&file, "broker-ok").expect("write");
-        let _guard = WorkspaceRootGuard::set(dir.display().to_string());
+        let _guard = init_workspace_root(&dir.display().to_string());
         let content = broker_read_file("hello.txt").expect("read");
         assert_eq!(content, "broker-ok");
         let _ = fs::remove_dir_all(&dir);
@@ -305,7 +301,7 @@ mod tests {
         let dir =
             std::env::temp_dir().join(format!("rex-broker-write-{}-{}", std::process::id(), nonce));
         fs::create_dir_all(&dir).expect("tmpdir");
-        let _guard = WorkspaceRootGuard::set(dir.display().to_string());
+        let _guard = init_workspace_root(&dir.display().to_string());
         broker_write_file("out.txt", "written-by-broker").expect("write");
         let content = broker_read_file("out.txt").expect("read back");
         assert_eq!(content, "written-by-broker");
@@ -317,7 +313,7 @@ mod tests {
     fn denies_protected_env_file() {
         let dir = std::env::temp_dir().join(format!("rex-broker-policy-{}", std::process::id()));
         fs::create_dir_all(&dir).expect("tmpdir");
-        let _guard = WorkspaceRootGuard::set(dir.display().to_string());
+        let _guard = init_workspace_root(&dir.display().to_string());
         let err = broker_read_file(".env").unwrap_err();
         assert!(matches!(err, BrokerError::PolicyDenied { .. }));
         let _ = fs::remove_dir_all(&dir);
@@ -328,7 +324,7 @@ mod tests {
     fn exec_shell_runs_allowlisted_echo() {
         let root = std::env::temp_dir().join(format!("rex-broker-shell-{}", std::process::id()));
         fs::create_dir_all(&root).expect("tmpdir");
-        let _guard = WorkspaceRootGuard::set(root.display().to_string());
+        let _guard = init_workspace_root(&root.display().to_string());
         let out = broker_exec_shell("echo broker-shell-ok").expect("echo");
         assert!(out.stdout.contains("broker-shell-ok"));
         let _ = fs::remove_dir_all(&root);
@@ -340,7 +336,7 @@ mod tests {
         let root =
             std::env::temp_dir().join(format!("rex-broker-shell-deny-{}", std::process::id()));
         fs::create_dir_all(&root).expect("tmpdir");
-        let _guard = WorkspaceRootGuard::set(root.display().to_string());
+        let _guard = init_workspace_root(&root.display().to_string());
         let err = broker_exec_shell("rm -rf /").unwrap_err();
         assert!(matches!(err, BrokerError::CommandNotAllowed(_)));
         let _ = fs::remove_dir_all(&root);
@@ -351,7 +347,7 @@ mod tests {
     fn rejects_parent_traversal() {
         let dir = std::env::temp_dir().join(format!("rex-broker-deny-{}", std::process::id()));
         fs::create_dir_all(&dir).expect("tmpdir");
-        let _guard = WorkspaceRootGuard::set(dir.display().to_string());
+        let _guard = init_workspace_root(&dir.display().to_string());
         let err = broker_read_file("../etc/passwd").unwrap_err();
         assert_eq!(
             err,
@@ -366,7 +362,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("rex-broker-list-{}", std::process::id()));
         fs::create_dir_all(dir.join("src")).expect("srcdir");
         fs::write(dir.join("hello.txt"), "x").expect("file");
-        let _guard = WorkspaceRootGuard::set(dir.display().to_string());
+        let _guard = init_workspace_root(&dir.display().to_string());
         let root_entries = broker_list_dir("").expect("list root");
         assert!(root_entries
             .iter()
@@ -380,7 +376,7 @@ mod tests {
     fn list_dir_denies_protected_path() {
         let dir = std::env::temp_dir().join(format!("rex-broker-list-deny-{}", std::process::id()));
         fs::create_dir_all(&dir).expect("tmpdir");
-        let _guard = WorkspaceRootGuard::set(dir.display().to_string());
+        let _guard = init_workspace_root(&dir.display().to_string());
         let err = broker_list_dir(".env").unwrap_err();
         assert!(matches!(err, BrokerError::PolicyDenied { .. }));
         let _ = fs::remove_dir_all(&dir);
@@ -394,7 +390,7 @@ mod tests {
         for i in 0..300 {
             fs::write(dir.join(format!("file-{i:03}.txt")), "x").expect("file");
         }
-        let _guard = WorkspaceRootGuard::set(dir.display().to_string());
+        let _guard = init_workspace_root(&dir.display().to_string());
         let entries = broker_list_dir("").expect("list");
         assert_eq!(entries.len(), MAX_LIST_DIR_ENTRIES);
         let _ = fs::remove_dir_all(&dir);

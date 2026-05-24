@@ -1,6 +1,6 @@
 # Product agent delivery (planned)
 
-**Status: planned — not shipped.** Today the supervised sidecar is **`rex-sidecar-stub`** (harness). Operator settings are **environment variables** only ([CONFIGURATION.md](CONFIGURATION.md)). Implementation order: [ROADMAP.md](ROADMAP.md) **R013–R019**.
+**Status: planned — not shipped.** Today the supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** is the planned product sidecar. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)) with legacy env warnings. Implementation order: [ROADMAP.md](ROADMAP.md) **R013–R022**.
 
 ## Problem
 
@@ -47,11 +47,13 @@ flowchart TB
 | Python sidecar | Graph state, mode routing, tool-loop logic, streaming text to daemon |
 | LangGraph | Graph structure, iteration limits (implementation detail) |
 
+**Capability contracts** (what the daemon assembles vs what the sidecar owns): [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) and [sidecars/rex-agent/DESIGN.md](../sidecars/rex-agent/DESIGN.md).
+
 ## Product agent (`rex-agent`)
 
 | Item | Planned shape |
 |------|----------------|
-| Location | `sidecars/rex-agent/` in monorepo |
+| Location | `sidecars/rex-agent/` in monorepo — [DESIGN.md](../sidecars/rex-agent/DESIGN.md) |
 | Binary name | **`rex-agent`** (LangGraph is internal only) |
 | LLM | **Broker-only** — `BrokerInference` via daemon; no direct OpenAI keys in sidecar |
 | Tools | Broker RPCs: `fs.read`, `fs.list`, `fs.write`, `exec.shell` (mode-gated) |
@@ -83,15 +85,17 @@ flowchart TB
 |------------|---------|
 | `rex daemon` | Run daemon (was `rex-daemon`) |
 | `rex status` / `rex complete` | Client RPCs (was `rex-cli`) |
-| `rex config` | **Stub** — full behavior in **R015** |
-| `rex proto` | `doctor` checks `protoc`; `install` / `path` — **R015** |
-| `rex sidecar` | **Stub** — **R015** |
+| `rex config` | `init`, `show`, `path`, `validate` |
+| `rex proto` | `doctor`, `install`, `path` |
+| `rex sidecar` | `list`, `init`, `doctor` |
 
 Extension defaults: **`rex`** + `["daemon"]` for auto-start. Compatibility shims **`rex-cli`** / **`rex-daemon`** delegate to the same libraries with deprecation hints.
 
 ## JSON configuration (R015)
 
-**Target precedence** (low → high): defaults → `$REX_HOME/config.json` → `.rex/config.json` → **environment (CI override)** → CLI flags.
+**Status: implemented.** Precedence (low → high): defaults → `$REX_ROOT/config.json` → `.rex/config.json` → CLI flags on `rex complete`.
+
+Layout root: **`REX_ROOT`** (default `~/.rex`). Bootstrap with `rex config init`.
 
 ### Minimal example (illustrative)
 
@@ -133,6 +137,41 @@ $REX_HOME/
 - **`proto.gen_root`** only in config — not `proto.python_gen_path` per sidecar.
 - **`rex proto install`** materializes stubs + updates config (maintainers run `rex proto generate` when `.proto` changes).
 
+## Daemon prerequisites (R020–R022)
+
+Ship before **`rex-agent`** dogfood (**R017–R018**). Design: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md).
+
+### R020 — Broker access policy completion
+
+**Status: planned.** Completes [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md) after **R012** (RC-05 read/list protected paths).
+
+| Outcome | Notes |
+|---------|--------|
+| Mode × capability matrix on all broker RPCs | `ask`/`plan` deny `fs.write` and `exec.shell` |
+| Protected-path checks on `fs.write` / `exec.shell` | Same class as read/list |
+| `max_tool_result_bytes` from JSON config | Align broker truncation with sidecar scratch (**T5**) |
+| Structured deny + `broker.access_policy=` logs | Per capability |
+
+### R021 — Turn correlation Phase 1b
+
+**Status: Done.** Populate optional `turn_id` and `context_revision` on `RunTurn` ([sidecar.proto](../proto/rex/sidecar/v1/sidecar.proto)); correlate logs on stream and broker paths (`turn_id=`, `context_revision=`). C1 hook strips extension `File:`/`Selection:` trailers when retrieval runs. Sidecars forward `x-rex-turn-id` on broker metadata.
+
+### R022 — Workspace binding (daemon)
+
+**Status: Done.** Product path: fail-closed when `workspace.root` unset ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)); harness cwd fallback via `workspace.allow_cwd_fallback` or `REX_ALLOW_CWD_WORKSPACE` in [CONFIGURATION.md](CONFIGURATION.md). Extension supplies root under **R019**.
+
+## R019 — Integration and E2E acceptance
+
+**Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, and operator checklist in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md#8-r019-acceptance--live-model-operator-not-ci).
+
+| Criterion | Evidence |
+|-----------|----------|
+| Extension sets `workspace.root` when auto-starting daemon | Primary `workspaceFolders[0]` |
+| Config template defaults active sidecar to **`rex-agent`** | `rex config init` / docs example |
+| **C1:** thin `client_hints`; reduce duplicate selection-in-prompt | Document interim double-count until migrated |
+| [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) with **live model** (not stub echo) | `ask`, `plan`, `agent` modes |
+| Optional: refresh [MVP_SPEC.md](MVP_SPEC.md) stub vs product table | When product agent is proven |
+
 ## Multi-active sidecars (R016 — open decision, **Could**)
 
 Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. Only one process can bind a UDS path today—implementation options (derived socket per name vs future multiplexer) stay **undecided** until R016. **Defer until single-active `rex-agent` is proven** ([ROADMAP.md](ROADMAP.md) — **Could**, ordered after **R019**).
@@ -143,10 +182,13 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 
 | ID | Theme | Priority |
 |----|-------|----------|
-| R013 | Platform enablers | Should |
+| R013 | Platform enablers | Done |
 | R014 | Unified `rex` CLI | Done |
-| R015 | JSON config + proto install | Should |
-| R017 | `rex-agent` scaffold | Should |
+| R015 | JSON config + proto install | Done |
+| R020 | Broker access policy completion | Should |
+| R021 | Turn correlation Phase 1b | Done |
+| R022 | Workspace binding (daemon fail-closed) | Should |
+| R017 | `rex-agent` scaffold | Done (broker-only `RunTurn`; LangGraph **R018**) |
 | R018 | LangGraph agent core | Should |
 | R019 | Integration / E2E | Should |
 | R016 | Multi-active broadcast | Could |

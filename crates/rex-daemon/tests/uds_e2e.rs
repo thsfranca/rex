@@ -1,14 +1,23 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use hyper_util::rt::TokioIo;
 use rex_proto::rex::v1::rex_service_client::RexServiceClient;
 use rex_proto::rex::v1::{GetSystemStatusRequest, StreamInferenceRequest};
 use serial_test::serial;
-use std::env;
 use tokio::net::UnixStream;
 use tokio::time::{sleep, timeout, Instant};
 use tonic::transport::Endpoint;
 use tower::service_fn;
+
+#[path = "../src/settings.rs"]
+mod settings;
+mod support;
+
+use support::config::{
+    cursor_cli_e2e_config, install_rex_config, mock_e2e_config, mock_e2e_with_approvals,
+    rex_root_path,
+};
 
 #[allow(dead_code)]
 #[path = "../src/access_policy.rs"]
@@ -45,7 +54,6 @@ mod runtime;
 #[allow(dead_code)]
 #[path = "../src/service.rs"]
 mod service;
-#[allow(dead_code)]
 #[path = "../src/sidecar_client.rs"]
 mod sidecar_client;
 #[allow(dead_code)]
@@ -54,6 +62,9 @@ mod sidecar_config;
 #[allow(dead_code)]
 #[path = "../src/supervisor.rs"]
 mod supervisor;
+#[allow(dead_code)]
+#[path = "../src/turn_correlation.rs"]
+mod turn_correlation;
 
 const READINESS_TIMEOUT: Duration = Duration::from_secs(4);
 const CONNECT_TIMEOUT: Duration = Duration::from_millis(250);
@@ -70,36 +81,30 @@ fn cleanup_socket(socket_path: &str) {
 }
 
 struct E2eInferenceEnv {
-    runtime: Option<String>,
-    base_url: Option<String>,
+    _rex_root: support::config::RexRootGuard,
+}
+
+fn init_daemon_settings(cfg: rex_config::RexConfig) -> E2eInferenceEnv {
+    settings::reset_for_test();
+    let guard = install_rex_config(cfg.clone());
+    let root = rex_root_path(&guard);
+    let loaded = Arc::new(rex_config::LoadedConfig {
+        rex_root: root.clone(),
+        global_path: Some(root.join("config.json")),
+        project_path: None,
+        effective: cfg,
+    });
+    settings::init_for_test(loaded);
+    E2eInferenceEnv { _rex_root: guard }
 }
 
 /// UDS e2e tests use the **mock** runtime so they do not require a live HTTP backend.
 fn set_e2e_mock_runtime() -> E2eInferenceEnv {
-    let saved = E2eInferenceEnv {
-        runtime: env::var("REX_INFERENCE_RUNTIME").ok(),
-        base_url: env::var("REX_OPENAI_COMPAT_BASE_URL").ok(),
-    };
-    env::set_var("REX_INFERENCE_RUNTIME", "mock");
-    env::set_var("REX_SIDECAR_HARNESS", "direct");
-    env::set_var("REX_SIDECAR_ENABLED", "0");
-    env::remove_var("REX_OPENAI_COMPAT_BASE_URL");
-    saved
+    init_daemon_settings(mock_e2e_config())
 }
 
-fn restore_inference_runtime(saved: E2eInferenceEnv) {
-    if let Some(value) = saved.runtime {
-        env::set_var("REX_INFERENCE_RUNTIME", value);
-    } else {
-        env::remove_var("REX_INFERENCE_RUNTIME");
-    }
-    env::remove_var("REX_SIDECAR_HARNESS");
-    env::remove_var("REX_SIDECAR_ENABLED");
-    if let Some(value) = saved.base_url {
-        env::set_var("REX_OPENAI_COMPAT_BASE_URL", value);
-    } else {
-        env::remove_var("REX_OPENAI_COMPAT_BASE_URL");
-    }
+fn restore_inference_runtime(_saved: E2eInferenceEnv) {
+    settings::reset_for_test();
 }
 
 fn uds_bind_supported() -> bool {
@@ -224,13 +229,9 @@ async fn cursor_runtime_streams_chunks_over_uds() {
         return;
     }
 
-    let prev_runtime = env::var("REX_INFERENCE_RUNTIME").ok();
-    let prev_cmd = env::var("REX_CURSOR_CLI_COMMAND").ok();
-    env::set_var("REX_INFERENCE_RUNTIME", "cursor-cli");
-    env::set_var(
-        "REX_CURSOR_CLI_COMMAND",
+    let _runtime = init_daemon_settings(cursor_cli_e2e_config(
         "printf '{\"text\":\"hello from cursor\"}\\n'",
-    );
+    ));
 
     let socket_path = test_socket_path();
     cleanup_socket(&socket_path);
@@ -277,17 +278,7 @@ async fn cursor_runtime_streams_chunks_over_uds() {
     daemon.abort();
     let _ = daemon.await;
     cleanup_socket(&socket_path);
-
-    if let Some(value) = prev_runtime {
-        env::set_var("REX_INFERENCE_RUNTIME", value);
-    } else {
-        env::remove_var("REX_INFERENCE_RUNTIME");
-    }
-    if let Some(value) = prev_cmd {
-        env::set_var("REX_CURSOR_CLI_COMMAND", value);
-    } else {
-        env::remove_var("REX_CURSOR_CLI_COMMAND");
-    }
+    settings::reset_for_test();
 }
 
 #[tokio::test]
@@ -422,8 +413,6 @@ async fn stream_reports_terminal_error_when_daemon_interrupts() {
     restore_inference_runtime(prev_runtime);
 }
 
-const APPROVALS_ENV: &str = "REX_AGENT_APPROVALS";
-
 /// With `REX_AGENT_APPROVALS=1`, an `agent`-mode request must surface a
 /// `FailedPrecondition` gRPC error matching `ENFORCEMENT_DENY_REASON` from
 /// `approvals.rs`. `ask`-mode requests on the same daemon stay successful.
@@ -435,9 +424,7 @@ async fn agent_mode_is_denied_when_approvals_env_is_set() {
         return;
     }
 
-    let prev = env::var(APPROVALS_ENV).ok();
-    env::set_var(APPROVALS_ENV, "1");
-    let prev_runtime = set_e2e_mock_runtime();
+    let _runtime = init_daemon_settings(mock_e2e_with_approvals(true));
 
     let socket_path = test_socket_path();
     cleanup_socket(&socket_path);
@@ -460,7 +447,7 @@ async fn agent_mode_is_denied_when_approvals_env_is_set() {
             ..Default::default()
         })
         .await
-        .expect_err("agent mode must be denied when REX_AGENT_APPROVALS=1");
+        .expect_err("agent mode must be denied when agent.approvals_enabled is true");
     assert_eq!(agent_err.code(), tonic::Code::FailedPrecondition);
     assert!(
         agent_err
@@ -488,13 +475,7 @@ async fn agent_mode_is_denied_when_approvals_env_is_set() {
     daemon.abort();
     let _ = daemon.await;
     cleanup_socket(&socket_path);
-
-    if let Some(value) = prev {
-        env::set_var(APPROVALS_ENV, value);
-    } else {
-        env::remove_var(APPROVALS_ENV);
-    }
-    restore_inference_runtime(prev_runtime);
+    settings::reset_for_test();
 }
 
 #[tokio::test]
@@ -505,9 +486,7 @@ async fn agent_mode_succeeds_with_approval_id_when_enforced() {
         return;
     }
 
-    let prev = env::var(APPROVALS_ENV).ok();
-    env::set_var(APPROVALS_ENV, "1");
-    let prev_runtime = set_e2e_mock_runtime();
+    let _runtime = init_daemon_settings(mock_e2e_with_approvals(true));
 
     let socket_path = test_socket_path();
     cleanup_socket(&socket_path);
@@ -542,13 +521,7 @@ async fn agent_mode_succeeds_with_approval_id_when_enforced() {
     daemon.abort();
     let _ = daemon.await;
     cleanup_socket(&socket_path);
-
-    if let Some(value) = prev {
-        env::set_var(APPROVALS_ENV, value);
-    } else {
-        env::remove_var(APPROVALS_ENV);
-    }
-    restore_inference_runtime(prev_runtime);
+    settings::reset_for_test();
 }
 
 /// With `REX_AGENT_APPROVALS` unset, an `agent`-mode request must succeed
@@ -561,9 +534,7 @@ async fn agent_mode_is_allowed_when_approvals_env_is_unset() {
         return;
     }
 
-    let prev = env::var(APPROVALS_ENV).ok();
-    env::remove_var(APPROVALS_ENV);
-    let prev_runtime = set_e2e_mock_runtime();
+    let _runtime = init_daemon_settings(mock_e2e_with_approvals(false));
 
     let socket_path = test_socket_path();
     cleanup_socket(&socket_path);
@@ -586,7 +557,7 @@ async fn agent_mode_is_allowed_when_approvals_env_is_unset() {
             ..Default::default()
         })
         .await
-        .expect("agent mode should succeed when approvals env is unset");
+        .expect("agent mode should succeed when approvals are disabled in config");
     let mut stream = response.into_inner();
     let mut saw_done = false;
     while let Some(chunk) = stream.message().await.expect("stream read should succeed") {
@@ -597,9 +568,5 @@ async fn agent_mode_is_allowed_when_approvals_env_is_unset() {
     daemon.abort();
     let _ = daemon.await;
     cleanup_socket(&socket_path);
-
-    if let Some(value) = prev {
-        env::set_var(APPROVALS_ENV, value);
-    }
-    restore_inference_runtime(prev_runtime);
+    settings::reset_for_test();
 }

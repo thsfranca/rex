@@ -134,13 +134,7 @@ sequenceDiagram
 
 ## Data and state
 
-| Data | Lifetime | Notes |
-|---|---|---|
-| Stream buffers | Ephemeral — per request. | Owned by goroutine/async task in daemon. |
-| L1 cache entries | Ephemeral — in-process LRU. | Keying: [CACHING.md](CACHING.md). **`agent`** excluded — [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md). |
-| Prefix cache segments | Ephemeral — pipeline | `plugins.rs`; TTL/bypass semantics in CONTEXT_EFFICIENCY. |
-| Chat transcript | Extension / client | Not authoritative for REX policy. |
-| **Project memory** (decisions, repo map fingerprints) | **planned** persistent store | Hub: [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md). Out-of-chat; workspace-scoped; economics row in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md). |
+Ownership of chat transcript, turn assembly (`TurnContext`), workspace binding, session scratch, project memory, and agent knowledge is defined in **[DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md)** (with ADRs 0011–0017). Ephemeral runtime artifacts: stream buffers and L1 cache per request ([CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md)); prefix cache segments in the context pipeline ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)).
 
 ## Security viewpoint (STRIDE-oriented)
 
@@ -161,11 +155,12 @@ sequenceDiagram
 | `rex.v1` gRPC | `implemented` |
 | NDJSON CLI contract | `implemented` — [EXTENSION.md](EXTENSION.md) |
 | MCP (or equivalent) for tools | `planned` — **approved direction:** MCP stacks **primarily** in the **isolated sidecar**; host-affecting work **brokered** sidecar → daemon ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix). Remote doc resources vs Rex knowledge bundles: [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md). Formal ADR when implementation is scheduled. |
-| HTTP OpenAI-compat via external gateway | `optional / deferred` — [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
+| HTTP OpenAI-compat via LiteLLM (default API; opt-in managed gateway) | `accepted` design — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md); external profile [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) |
+| Native Anthropic Messages API | `planned` — [ADAPTERS.md](ADAPTERS.md#direct-anthropic-messages-api-planned--secondary) |
 
 ## Observability
 
-Full signal catalog, validation program, export contract, and BYOT integrations: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md). Agent knowledge retrieval metrics (planned): [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md).
+Full signal catalog, export contract, and BYOT integrations: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [CONFIGURATION.md](CONFIGURATION.md#observability-planned), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md). Economics validation program: [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). Agent knowledge retrieval metrics (planned): [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md).
 
 | Field / signal | Where | Purpose |
 |---|---|---|

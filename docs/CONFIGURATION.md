@@ -1,35 +1,111 @@
 # REX configuration
 
-This document is the **canonical** policy for how REX settings work: what applies today, how precedence will work when you add new layers, and where each `REX_*` variable is read. See [ARCHITECTURE.md](ARCHITECTURE.md) for where the **daemon** applies inference and cache policy.
+This document is the **canonical** policy for how REX settings work: merged **JSON** under `$REX_ROOT`, optional project overrides, and partial CLI flags. See [ARCHITECTURE.md](ARCHITECTURE.md) for where the **daemon** applies inference and cache policy.
+
+## Configuration surface
+
+- **Product settings:** `$REX_ROOT/config.json` and `.rex/config.json` — not `REX_*` tuning environment variables.
+- **Bootstrap env:** **`REX_ROOT`** only (optional). Points at the layout directory (`config.json`, protos, observability store path). Defaults to `~/.rex` when unset.
+- **Secrets:** API keys may use env or OS keychain alongside JSON fields — see below. Observability and inference are **not** configured via `REX_OBS_*` or similar legacy names.
 
 ## Why this policy exists
 
-- **Developer experience:** Repeat the same run without retyping long `export` lines; future CLI flags and optional files will map to the same **names** as environment variables.
-- **Automation:** CI, scripts, and the editor extension inject settings through the environment.
-- **One catalog:** Lists variables the **Rust** binaries and core tool flow use.
+- **Developer experience:** One merged config file per machine; `rex config show` for inspection.
+- **Automation:** CI, scripts, and the editor extension set **`REX_ROOT`** and write JSON; legacy `REX_*` tuning vars are ignored with a startup warning.
+- **One catalog:** JSON keys, bootstrap commands, and deprecated env tables for migration only.
 
-## Precedence (target model)
-
-Rex does **not** implement all layers below yet. **Phase 1 (today):** only **defaults** and **environment** apply.
+## Precedence (implemented)
 
 | Precedence (low to high) | Role |
 |--------------------------|------|
-| Built-in defaults | Used when a setting is unset. |
-| User persistent file (not implemented) | Optional file under the [XDG Base Directory](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html) convention. |
-| Project-local file (not implemented) | Optional repo-local file (for example `.rex.toml`); do **not** commit secrets. |
-| Environment variables | **Primary** for parents (extension, tests, CI) and overrides today. |
-| CLI flags (partial) | `rex complete` accepts `--model` and `--mode` per invocation. |
+| Built-in defaults | Used when a JSON field is unset. |
+| `$REX_ROOT/config.json` | User defaults: daemon socket, sidecars, inference, workspace, broker, agent. |
+| `.rex/config.json` | Optional project overrides (walked from cwd upward). |
+| CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--trace-id` per invocation. |
 
-**Secret values:** Prefer environment or OS keychain for API keys. Do not commit secrets to the repository.
+**Layout root:** `$REX_ROOT` defaults to `~/.rex` when unset. Run `rex config init` to create the layout and template `config.json`.
 
-## Phase 1: environment variables (implemented)
+**Legacy environment variables:** Daemon startup ignores former `REX_INFERENCE_RUNTIME`, `REX_OPENAI_COMPAT_*`, `REX_SIDECAR_*`, `REX_DAEMON_SOCKET`, and `REX_WORKSPACE_ROOT` when present and prints a warning — use JSON instead. **`REX_ROOT`** remains the bootstrap override for layout location (tests, extension auto-start).
 
-### `rex-daemon` (inference and cache)
+**Secret values:** Prefer environment or OS keychain for API keys in JSON (`inference.openai_compat.api_key`). Do not commit secrets to the repository.
+
+## JSON configuration keys (implemented)
+
+Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`, `rex proto install|path|doctor`.
+
+| Section | Keys | Purpose |
+|---------|------|---------|
+| `daemon` | `socket` | Daemon UDS path (default `/tmp/rex.sock`). |
+| `sidecars` | `active`, `required`, `harness`, `list[]` | Supervised sidecar; `harness: "direct"` skips spawn (CI/tests). |
+| `inference` | `runtime`, `openai_compat`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. |
+| `workspace` | `root`, `indexer` | Broker root and lexical indexer (`workspace` or `seeded`). |
+| `context` | `max_prompt_tokens`, `max_context_tokens` | Context pipeline budgets. |
+| `cache` | `bypass` | L1 / prefix cache bypass. |
+| `broker` | `shell_allowlist` | Allowed `exec.shell` programs. |
+| `agent` | `approvals_enabled`, `max_tool_steps` | Agent-mode approval gate. |
+| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `otlp`, `store` | Economics telemetry, local store, OTLP export — **planned**; see [Observability (planned)](#observability-planned). |
+
+Minimal example:
+
+```json
+{
+  "version": 1,
+  "daemon": { "socket": "/tmp/rex.sock" },
+  "sidecars": {
+    "active": "stub",
+    "required": true,
+    "list": [
+      { "name": "stub", "binary": "rex-sidecar-stub", "enabled": true, "socket": "/tmp/rex-sidecar.sock" }
+    ]
+  },
+  "inference": {
+    "runtime": "http-openai-compat",
+    "openai_compat": {
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model": "llama3.2"
+    }
+  },
+  "workspace": { "root": "." },
+  "observability": {
+    "enabled": false,
+    "service_name": "rex-daemon",
+    "custom_sidecar_metrics": true,
+    "otlp": {
+      "endpoint": "http://127.0.0.1:4317",
+      "protocol": "grpc"
+    },
+    "store": { "path": "obs/store.sqlite" }
+  }
+}
+```
+
+## Observability (planned)
+
+**Status:** design documented — not read by daemon code yet. Hubs: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md). ADRs: [0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md).
+
+When `observability.enabled` is `true` in merged JSON, the daemon will enable **embedded economics store** (`$REX_ROOT/<store.path>`) and **OTLP export** together. When `false` or omitted, phase 0 **stdout grep** only.
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `observability.enabled` | `false` | Master switch: store + OTLP |
+| `observability.service_name` | `rex-daemon` | OTel resource `service.name` |
+| `observability.custom_sidecar_metrics` | `true` | When `false`, drop sidecar-registered custom metrics at export |
+| `observability.otlp.endpoint` | (none) | Operator collector OTLP URL when enabled |
+| `observability.otlp.protocol` | `grpc` | `grpc` or `http/protobuf` |
+| `observability.store.path` | `obs/store.sqlite` | Path relative to `$REX_ROOT` |
+
+Your **OpenTelemetry Collector** may use its own env or yaml; Rex reads only the `observability` JSON section.
+
+## Legacy environment variables (deprecated)
+
+The tables below document **former** env-based tuning. **Do not use** for new setups — they are ignored by the daemon (warning only). Tests and the extension should set **`REX_ROOT`** and write or merge JSON instead.
+
+### Former `rex-daemon` variables
 
 | Variable | Default (if unset) | Purpose |
 |----------|--------------------|---------|
 | `REX_INFERENCE_RUNTIME` | `http-openai-compat` | Broker backend when sidecar requests inference: **`http-openai-compat`**, **`mock`** (tests/harness), **`cursor-cli`** (legacy). Direct daemon HTTP without sidecar is **harness only** for MVP acceptance. |
-| `REX_OPENAI_COMPAT_BASE_URL` | (none — **required** for HTTP runtime) | Base URL for OpenAI-compatible API (for example `http://127.0.0.1:11434/v1` for Ollama). |
+| `REX_OPENAI_COMPAT_BASE_URL` | (none — **required** for HTTP runtime) | Base URL for **OpenAI-compatible** chat/completions (protocol name — not OpenAI-only). Examples: Ollama, LiteLLM gateway, OpenAI API — [ADAPTERS.md](ADAPTERS.md#terminology-protocol-vs-vendor). |
 | `REX_OPENAI_COMPAT_API_KEY` | (none) | Optional `Bearer` token for remote APIs. |
 | `REX_OPENAI_COMPAT_MODEL` | `gpt-4o-mini` | Model id sent in chat/completions requests; reported on `GetSystemStatus` when HTTP runtime is active. |
 | `REX_OPENAI_COMPAT_TIMEOUT_SECS` | `120` | Upper bound for a single HTTP completion request. |
@@ -55,13 +131,15 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 | `REX_SIDECAR_HARNESS` | (none) | `direct` forces in-process inference (CI/tests); not MVP product acceptance |
 | `REX_DAEMON_SOCKET` | `/tmp/rex.sock` | Daemon UDS for sidecar `BrokerInference` and `BrokerReadFile` during `RunTurn` |
 
-### `rex` CLI (client metadata)
+### `rex` CLI (client)
 
 | Variable | Default (if unset) | Purpose |
 |----------|--------------------|---------|
-| `REX_TRACE_ID` | (none) | Request correlation; extension sets when spawning `rex` — [`EXTENSION.md`](EXTENSION.md). |
+| `REX_ROOT` | `~/.rex` | Layout root for `config.json`, proto paths, and daemon auto-start from the extension. |
 
-**CLI flags:** `rex complete` accepts `--format`, `--model <id>`, `--mode <ask|plan|agent>`, and `--approval-id <id>`. Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
+**CLI flags:** `rex complete` accepts `--format`, `--model <id>`, `--mode <ask|plan|agent>`, `--approval-id <id>`, and `--trace-id <id>`. Trace correlation uses **`--trace-id`** (not `REX_TRACE_ID`). Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
+
+The CLI reads `daemon.socket` from merged JSON for UDS transport (`rex_config::load_merged`).
 
 ### Related project scripts
 
@@ -70,37 +148,105 @@ Rex does **not** implement all layers below yet. **Phase 1 (today):** only **def
 | `REX_EXTENSION_EDITOR` | [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md), install scripts. |
 | `REX_TEST_STATUS_STATE_FILE` | Extension test fixtures only. |
 
-**Module map:** Daemon: `adapters`, `http_openai_compat`, `approvals`, `l1_cache`, stream service. CLI: `runtime` (`REX_TRACE_ID`).
+**Module map:** Daemon: `settings`, `adapters`, `http_openai_compat`, `approvals`, `l1_cache`, stream service. CLI: `transport` (config socket), `runtime` (`--trace-id`).
 
 ## Operator quick start (daemon + brokered HTTP)
 
-The Phase 1 product path requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Enable with `REX_SIDECAR_ENABLED=1` and related vars in the table above ([SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md)). HTTP env configures the **broker** the daemon uses for sidecar inference requests.
+The product path requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Bootstrap JSON, then start the daemon:
 
 ```bash
-export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:11434/v1"   # Ollama example
-export REX_OPENAI_COMPAT_MODEL="llama3.2"
-export REX_INFERENCE_RUNTIME="http-openai-compat"
-cargo run -p rex -- daemon
+rex config init
+# Edit $REX_ROOT/config.json — set inference.openai_compat.base_url and model; enable sidecars.list[].enabled
+rex config validate
+rex daemon
 ```
 
-CI and unit tests set `REX_INFERENCE_RUNTIME=mock` and clear `REX_OPENAI_COMPAT_BASE_URL` — see [CI.md](CI.md).
+For **Anthropic, OpenAI, and local Ollama** via one broker URL, use the [Inference Gateway](#inference-gateway-design) (`managed` or `external`) or the [LiteLLM operator profile](#operator-profile-litellm-anthropic-and-other-providers) below.
 
-## Planned: JSON configuration (R015)
+Example HTTP backend (Ollama) in `$REX_ROOT/config.json`:
 
-**Not shipped.** Target model is documented in [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md):
+```json
+"inference": {
+  "runtime": "http-openai-compat",
+  "openai_compat": {
+    "base_url": "http://127.0.0.1:11434/v1",
+    "model": "llama3.2"
+  }
+}
+```
 
-| Layer | Role |
-|-------|------|
-| `$REX_HOME/config.json` | User defaults: sidecars, inference, `proto.gen_root` |
-| `.rex/config.json` | Optional project overrides |
-| Environment | **CI override** — same variable names as today |
-| **`rex config`** / **`rex proto install`** | Operator bootstrap (**R014**–**R015**) |
+CI and unit tests set `REX_ROOT` to a temp dir and write `config.json` with `inference.runtime: "mock"` and `sidecars.harness: "direct"` — see [CI.md](CI.md).
 
-Precedence target (low → high): built-in defaults → user JSON → project JSON → environment → CLI flags. Until **R015** lands, **environment remains primary** (table above).
+## Inference Gateway (design)
 
-## Layered prompts (planned)
+**Status:** `accepted` (design) — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md). Implementation planned.
 
-**Status:** `planned` — not shipped. Economics lever: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md). Roadmap: [ROADMAP.md](ROADMAP.md) (**Could**).
+### Purpose
+
+Opt-in **`inference.gateway.mode: managed`** so `rex-daemon` spawns and controls a local LiteLLM proxy; **`external`** keeps an operator-run URL; **`disabled`** leaves gateway off (direct `openai_compat.base_url` or `mock`).
+
+### Example (`managed` — design intent)
+
+```json
+{
+  "inference": {
+    "runtime": "http-openai-compat",
+    "gateway": {
+      "mode": "managed",
+      "port": 4000,
+      "ollama": { "enabled": true, "api_base": "http://127.0.0.1:11434" }
+    },
+    "openai_compat": {
+      "model": "claude-sonnet-4-20250514",
+      "timeout_secs": 120
+    }
+  }
+}
+```
+
+Effective `openai_compat.base_url` becomes `http://127.0.0.1:4000/v1` when managed (unless override allowed). Secrets: `$REX_ROOT/gateway/.env` (gitignored). See hub for full field table and Ollama discovery template.
+
+## Operator profile: LiteLLM (Anthropic and other providers)
+
+**Status:** operator-ready on existing `http-openai-compat` runtime when gateway is **external**. Design: [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-default-api), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md).
+
+Run LiteLLM (or your deployment) with Anthropic and OpenAI keys in **LiteLLM’s** config. Rex only needs the OpenAI-compat surface LiteLLM exposes.
+
+### Configuration
+
+Do not commit secrets. Anthropic API keys belong in LiteLLM configuration, not Rex `config.json`.
+
+```json
+{
+  "inference": {
+    "runtime": "http-openai-compat",
+    "openai_compat": {
+      "base_url": "http://127.0.0.1:4000/v1",
+      "model": "claude-sonnet-4-20250514",
+      "timeout_secs": 120
+    }
+  },
+  "sidecars": {
+    "active": "stub",
+    "required": true,
+    "list": [
+      { "name": "stub", "binary": "rex-sidecar-stub", "enabled": true, "socket": "/tmp/rex-sidecar.sock" }
+    ]
+  }
+}
+```
+
+`rex complete --model <id>` overrides the model sent on each request (LiteLLM uses it for routing).
+
+### Verification
+
+1. Confirm LiteLLM responds: `curl` against `{base_url}/chat/completions` per LiteLLM docs.
+2. Start daemon with sidecar enabled; `rex complete "hello" --format ndjson --model <litellm-model>`.
+3. On failure, see broker error intent in [ADAPTERS.md](ADAPTERS.md#broker-provider-errors-intent).
+
+## Layered prompts (design accepted)
+
+**Status:** **design accepted** — not shipped. [ADR 0012](architecture/decisions/0012-layered-prompt-assemblies.md). Hub: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md). Implementation: **R015**+.
 
 ### Purpose
 
@@ -122,20 +268,19 @@ Versioned **system / project prompt assemblies** assembled in the daemon so clie
 
 ### Interfaces (intent)
 
-- Future config keys under `prompts.*` or `$REX_HOME/config.json` section (exact names TBD with **R015**).
-- Assembly **schema version** in cache keys when layered prompts affect L1 ([CACHING.md](CACHING.md)).
+- R015 JSON section `prompts`: `system`, `project` (path or glob-scoped files), `mode` overlays.
+- `prompt_assembly_revision` in L1 cache key with `context_revision` when retrieval ran ([CACHING.md](CACHING.md), [ADR 0012](architecture/decisions/0012-layered-prompt-assemblies.md)).
+- Default cap: 25% of `context.max_context_tokens` for assembled prompts (see capabilities hub budget table).
 
 ### Cross-links
 
-- [ROADMAP.md](ROADMAP.md) — **Could** row
+- [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md)
 - [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — economics matrix row
 
 ## Not implemented yet (roadmap)
 
-- Persistent user config on disk — see **Planned: JSON configuration** and **R015**.
-- Global CLI flags mirroring env keys — deferred beyond **R014** (unified binary shipped).
-- `rex config` subcommands — **R015**.
-- Project-local `.rex/config.json` — **R015** (not `.rex.toml`).
+- Global CLI flags mirroring all JSON keys — partial today (`rex complete` flags only).
+- Layered prompt assemblies — see **Layered prompts** below.
 
 ## See also
 
@@ -145,3 +290,5 @@ Versioned **system / project prompt assemblies** assembled in the daemon so clie
 - [ADAPTERS.md](ADAPTERS.md)
 - [CACHING.md](CACHING.md)
 - [EXTENSION.md](EXTENSION.md)
+- [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
+- [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)

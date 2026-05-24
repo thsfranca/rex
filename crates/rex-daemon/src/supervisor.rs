@@ -68,7 +68,7 @@ impl SidecarSupervisor {
 
     pub async fn restart(&self) -> Result<(), SupervisorError> {
         self.stop().await;
-        if !self.config.binary.exists() {
+        if !rex_config::sidecar_binary_resolvable(self.config.binary.to_string_lossy().as_ref()) {
             return Err(SupervisorError::BinaryMissing {
                 path: self.config.binary.display().to_string(),
             });
@@ -78,12 +78,15 @@ impl SidecarSupervisor {
             self.config.binary.display(),
             self.config.socket_path
         );
-        let daemon_socket = std::env::var("REX_DAEMON_SOCKET")
-            .ok()
-            .map(|v| v.trim().to_string())
-            .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| crate::domain::SOCKET_PATH.to_string());
+        let daemon_socket = crate::settings::get().daemon_socket().to_string();
+        let rex_root = crate::settings::get().rex_root.clone();
+        let proto_gen = rex_root.join("proto").join("gen");
+        let pythonpath = std::env::var_os("PYTHONPATH")
+            .map(|existing| format!("{}:{}", proto_gen.display(), existing.to_string_lossy()))
+            .unwrap_or_else(|| proto_gen.display().to_string());
         let child = Command::new(&self.config.binary)
+            .env("REX_ROOT", rex_root.display().to_string())
+            .env("PYTHONPATH", pythonpath)
             .env("REX_SIDECAR_SOCKET", &self.config.socket_path)
             .env("REX_DAEMON_SOCKET", &daemon_socket)
             .stdout(Stdio::null())
@@ -126,6 +129,8 @@ impl SidecarSupervisor {
 
 pub type SharedSupervisor = Arc<SidecarSupervisor>;
 
-pub fn supervisor_from_env() -> SharedSupervisor {
-    Arc::new(SidecarSupervisor::new(SidecarConfig::from_env()))
+pub fn supervisor_from_config() -> SharedSupervisor {
+    Arc::new(SidecarSupervisor::new(SidecarConfig::from_config(
+        &crate::settings::get(),
+    )))
 }

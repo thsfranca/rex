@@ -1,4 +1,3 @@
-use std::env;
 use std::io;
 use std::path::Path;
 use std::time::Duration;
@@ -20,6 +19,7 @@ use rex_proto::rex::sidecar::v1::{
 };
 use tokio::net::UnixListener;
 use tokio_stream::wrappers::UnixListenerStream;
+use tonic::metadata::MetadataValue;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 
@@ -59,12 +59,13 @@ impl SidecarService for StubSidecar {
         request: Request<RunTurnRequest>,
     ) -> Result<Response<Self::RunTurnStream>, Status> {
         let inner = request.into_inner();
+        let turn_id = inner.turn_id.clone();
         let mode = if inner.mode.trim().is_empty() {
             "ask"
         } else {
             inner.mode.trim()
         };
-        let mut text = match broker_inference(&inner.prompt, mode, &inner.model).await {
+        let mut text = match broker_inference(&inner.prompt, mode, &inner.model, &turn_id).await {
             Ok(content) => content,
             Err(err) => {
                 let stream = async_stream::stream! {
@@ -83,7 +84,7 @@ impl SidecarService for StubSidecar {
             }
         };
         if let Some(path) = parse_read_directive(&inner.prompt) {
-            match broker_read_file(&path).await {
+            match broker_read_file(&path, &turn_id).await {
                 Ok(content) => {
                     text.push_str(&format!("\n\n[fs.read:{path}]\n{content}"));
                 }
@@ -93,7 +94,7 @@ impl SidecarService for StubSidecar {
             }
         }
         if let Some(path) = parse_list_directive(&inner.prompt) {
-            match broker_list_dir(&path).await {
+            match broker_list_dir(&path, &turn_id).await {
                 Ok(entries) => {
                     let listing = entries
                         .iter()
@@ -114,7 +115,7 @@ impl SidecarService for StubSidecar {
             }
         }
         if let Some(command) = parse_exec_directive(&inner.prompt) {
-            match broker_exec_shell(&command).await {
+            match broker_exec_shell(&command, &turn_id).await {
                 Ok(out) => {
                     text.push_str(&format!(
                         "\n\n[exec.shell:{command}]\nstdout={}\nstderr={}",
@@ -127,7 +128,7 @@ impl SidecarService for StubSidecar {
             }
         }
         if let Some((path, content)) = parse_write_directive(&inner.prompt) {
-            match broker_write_file(&path, &content).await {
+            match broker_write_file(&path, &content, &turn_id).await {
                 Ok(()) => {
                     text.push_str(&format!("\n\n[fs.write:{path}] ok"));
                 }
@@ -158,10 +159,15 @@ impl SidecarService for StubSidecar {
 }
 
 fn daemon_socket_path() -> String {
-    env::var("REX_DAEMON_SOCKET")
-        .ok()
-        .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| "/tmp/rex.sock".to_string())
+    if let Ok(raw) = std::env::var("REX_DAEMON_SOCKET") {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            return trimmed.to_string();
+        }
+    }
+    rex_config::load_merged()
+        .map(|loaded| loaded.daemon_socket().to_string())
+        .unwrap_or_else(|_| "/tmp/rex.sock".to_string())
 }
 
 async fn connect_daemon(
@@ -186,15 +192,33 @@ async fn connect_daemon(
     Ok(RexServiceClient::new(channel))
 }
 
-async fn broker_inference(prompt: &str, mode: &str, model: &str) -> Result<String, String> {
+fn with_turn_id<T>(mut request: Request<T>, turn_id: &str) -> Request<T> {
+    if !turn_id.is_empty() {
+        if let Ok(value) = MetadataValue::try_from(turn_id) {
+            request.metadata_mut().insert("x-rex-turn-id", value);
+        }
+    }
+    request
+}
+
+async fn broker_inference(
+    prompt: &str,
+    mode: &str,
+    model: &str,
+    turn_id: &str,
+) -> Result<String, String> {
     let socket = daemon_socket_path();
     let mut client = connect_daemon(&socket).await?;
-    let response = client
-        .broker_inference(BrokerInferenceRequest {
+    let request = with_turn_id(
+        Request::new(BrokerInferenceRequest {
             prompt: prompt.to_string(),
             mode: mode.to_string(),
             model: model.to_string(),
-        })
+        }),
+        turn_id,
+    );
+    let response = client
+        .broker_inference(request)
         .await
         .map_err(|e| e.to_string())?
         .into_inner();
@@ -235,13 +259,17 @@ fn parse_exec_directive(prompt: &str) -> Option<String> {
     }
 }
 
-async fn broker_exec_shell(command: &str) -> Result<ShellOut, String> {
+async fn broker_exec_shell(command: &str, turn_id: &str) -> Result<ShellOut, String> {
     let socket = daemon_socket_path();
     let mut client = connect_daemon(&socket).await?;
-    let response = client
-        .broker_exec_shell(BrokerExecShellRequest {
+    let request = with_turn_id(
+        Request::new(BrokerExecShellRequest {
             command: command.to_string(),
-        })
+        }),
+        turn_id,
+    );
+    let response = client
+        .broker_exec_shell(request)
         .await
         .map_err(|e| e.to_string())?
         .into_inner();
@@ -272,14 +300,18 @@ fn parse_write_directive(prompt: &str) -> Option<(String, String)> {
     Some((path.to_string(), content.to_string()))
 }
 
-async fn broker_write_file(path: &str, content: &str) -> Result<(), String> {
+async fn broker_write_file(path: &str, content: &str, turn_id: &str) -> Result<(), String> {
     let socket = daemon_socket_path();
     let mut client = connect_daemon(&socket).await?;
-    let response = client
-        .broker_write_file(BrokerWriteFileRequest {
+    let request = with_turn_id(
+        Request::new(BrokerWriteFileRequest {
             path: path.to_string(),
             content: content.to_string(),
-        })
+        }),
+        turn_id,
+    );
+    let response = client
+        .broker_write_file(request)
         .await
         .map_err(|e| e.to_string())?
         .into_inner();
@@ -290,13 +322,17 @@ async fn broker_write_file(path: &str, content: &str) -> Result<(), String> {
     }
 }
 
-async fn broker_read_file(path: &str) -> Result<String, String> {
+async fn broker_read_file(path: &str, turn_id: &str) -> Result<String, String> {
     let socket = daemon_socket_path();
     let mut client = connect_daemon(&socket).await?;
-    let response = client
-        .broker_read_file(BrokerReadFileRequest {
+    let request = with_turn_id(
+        Request::new(BrokerReadFileRequest {
             path: path.to_string(),
-        })
+        }),
+        turn_id,
+    );
+    let response = client
+        .broker_read_file(request)
         .await
         .map_err(|e| e.to_string())?
         .into_inner();
@@ -312,13 +348,17 @@ struct BrokerListEntry {
     is_dir: bool,
 }
 
-async fn broker_list_dir(path: &str) -> Result<Vec<BrokerListEntry>, String> {
+async fn broker_list_dir(path: &str, turn_id: &str) -> Result<Vec<BrokerListEntry>, String> {
     let socket = daemon_socket_path();
     let mut client = connect_daemon(&socket).await?;
-    let response = client
-        .broker_list_dir(BrokerListDirRequest {
+    let request = with_turn_id(
+        Request::new(BrokerListDirRequest {
             path: path.to_string(),
-        })
+        }),
+        turn_id,
+    );
+    let response = client
+        .broker_list_dir(request)
         .await
         .map_err(|e| e.to_string())?
         .into_inner();

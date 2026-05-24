@@ -1,6 +1,3 @@
-/// Unix Domain Socket path for local daemon-client transport.
-pub const SOCKET_PATH: &str = "/tmp/rex.sock";
-
 /// Daemon semantic version exposed over status endpoint.
 pub const DAEMON_VERSION: &str = env!("CARGO_PKG_VERSION");
 
