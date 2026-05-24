@@ -24,12 +24,49 @@ This project keeps documentation standards in this file and in the `documentatio
 | **Architecture guidelines** (policies, ownership, doc discipline) | [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) |
 | **Architecture Decision Records** | [architecture/decisions/](architecture/decisions/) — supersede stale decisions by status + successor ADR |
 
+Diátaxis **role routing** (tutorials, how-to, explanation, reference) is maintained in [docs/README.md](README.md). Do **not** create empty top-level Diátaxis folders; extend the README index when a new role needs a home.
+
+## Documentation by purpose (Diátaxis)
+
+Match each document to **one primary reader need**. Full role lists live in [docs/README.md](README.md).
+
+| Mode | Reader need | What to write | Rex examples | Do not |
+|------|-------------|---------------|--------------|--------|
+| **Tutorial** | Learn by doing; first success | Step-by-step path to a working outcome; assume little context | [README.md](../README.md) quickstart, [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) | Dump API tables, ADR history, or full architecture |
+| **How-to** | Accomplish a specific task | Goal-oriented recipe; prerequisites + ordered steps | [RELEASE.md](RELEASE.md), [CI.md](CI.md), [CONFIGURATION.md](CONFIGURATION.md) | Teach fundamentals or restate full feature design |
+| **Explanation** | Understand why and how things fit | Design intent, boundaries, trade-offs, hub-level bets | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), feature hubs, [ARCHITECTURE.md](ARCHITECTURE.md) | Replace reference catalogs or operator runbooks |
+| **Reference** | Look up facts quickly | Accurate, complete, scannable facts; structure mirrors the thing described | [ADAPTERS.md](ADAPTERS.md), [EXTENSION.md](EXTENSION.md), `proto/rex/v1/rex.proto` | Narrative onboarding or undecided design bets |
+
+## Choosing a location
+
+Use this flow before creating or materially editing a doc:
+
+1. **Behavior or contract facts** (API, env vars, capabilities) → **reference** hub under `docs/` or proto source.
+2. **Accepted architectural fork** with trade-offs → **ADR** under [architecture/decisions/](architecture/decisions/) (see [README](architecture/decisions/README.md); supersede, do not rewrite accepted ADRs).
+3. **Cross-feature policy or ownership** → [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md).
+4. **Feature shape, bets, or interface intent** → **one** feature hub under `docs/` (see [Feature-area hubs](#feature-area-hubs)).
+5. **Operator or contributor task** → **how-to** doc (release, CI, configuration, dependencies, …).
+6. **Onboarding / first run** → top-level [README.md](../README.md) quickstart or [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md).
+7. **Unsure** → add a row to [docs/README.md](README.md) repository map only after the doc exists; pick the closest mode above.
+
+## When to create vs update
+
+| Situation | Action |
+|-----------|--------|
+| Shipped behavior or contract change | Update the **feature hub** (and reference doc if facts changed) in the **same PR** when feasible |
+| New top-level `docs/*.md` file | Add a row to [docs/README.md](README.md) (repository map and/or Diátaxis role table) in the same change |
+| Architectural yes/no with consequences | New **ADR** at decision time; link from hub or [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) |
+| Accepted ADR superseded | New ADR with **Supersedes** / status update on the old record — see [architecture/decisions/README.md](architecture/decisions/README.md) |
+| New roadmap feature row | **Hub first**, then row — see [Roadmap and new features](#roadmap-and-new-features) |
+| Deliberate doc lag | One-line scope note in [ROADMAP.md](ROADMAP.md); do not leave silent drift |
+
 ## Writing requirements
 
 - Use active voice.
 - Avoid passive voice.
 - Avoid dense paragraphs.
 - Prefer bullet points or tables for clear explanations.
+- **Lead with relevance:** state the most important information first so readers can tell whether the page applies to them.
 
 ## What to say (and what to skip)
 
@@ -71,6 +108,36 @@ Architecture hubs, ADRs, and design-intent roadmaps follow the **`technical-arch
 - Use [`.github/pull_request_template.md`](../.github/pull_request_template.md) for every PR.
 - If a change updates **shipped behavior, setup, or operations** but the matching **`docs/`** edits are **only** in **another open pull request**, add under **Summary** a line **`Documentation:`** with a link to that PR (`#NNN` or full URL for this repository). Leave the template’s docs checklist item **unchecked** on the code-only PR until documentation is merged or included on that branch. Do not enable auto-merge until the checklist is honestly complete — see [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) (CI and PR expectations).
 
+## Roadmap and new features
+
+Applies when adding or materially expanding a **product/feature** row in [ROADMAP.md](ROADMAP.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), or [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md).
+
+**Exempt (no new hub required):**
+
+- Status-only updates (Met, Done, priority shuffle with unchanged scope).
+- **Engineering backlog** `R0xx` rows that harden an **existing** contract under an existing hub (link the hub in Notes).
+- Rows that only **link** to an existing hub with unchanged scope.
+
+**Minimum first design** — create or extend a feature hub under `docs/` before the roadmap row. Exemplar: [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md). Follow the **`rex-documentation-for-agents`** user guide for shape and placement (policy name only in committed rules).
+
+| Section | Required content |
+|---------|------------------|
+| **Purpose** | 1–3 sentences; align with [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) |
+| **Status** | `planned`, `design bet`, or `accepted` (with ADR link if accepted) |
+| **Scope** | In/out for this design stage (bullets) |
+| **Boundaries** | Policy vs mechanism ownership; link [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) or ADR when architectural |
+| **Interfaces (intent)** | Contract names (proto, NDJSON, env)—no full implementations in `docs/` |
+| **Roadmap linkage** | Roadmap **Source(s)** column points to this hub; hub **Cross-links** back to the roadmap |
+
+**Order of work:**
+
+1. Create or extend the feature hub per this file and [docs/README.md](README.md).
+2. Add a row to the [feature hub map](README.md#feature-area-hub-map) when the area is new.
+3. Add the roadmap row with **Source(s)** = hub link (not prose-only).
+4. Run the [minimum checklist before merge](#minimum-checklist-before-merge).
+
+Optional on first pass: mermaid diagram, design-bet table, economics row in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) when the feature is a cost lever.
+
 ## Minimum checklist before merge
 
 - Is the document easy to scan?
@@ -80,3 +147,4 @@ Architecture hubs, ADRs, and design-intent roadmaps follow the **`technical-arch
 - Is the file still **one coherent topic**, or should part of it move to a linked page?
 - Does the text **add value** on its own, or does it mostly restate what Rex does **not** do / what was **decided in conversation** without helping a future reader? If so, trim or refocus.
 - For architecture/design docs: prefer **diagrams** over source listings; see **Technical architecture documentation** above.
+- For new roadmap feature rows: hub exists per **Roadmap and new features** above.

@@ -19,7 +19,7 @@ Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view toward **[V1_0.md
 | **Must** | Unmet **Must** release criteria (**RC-***) in [V1_0.md](V1_0.md)—or breaks contract, safety, or CI. Economics matrix must stay coherent ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)). |
 | **Should** | Clear **learning** or “local demo” value; risk is manageable; fits [ARCHITECTURE.md](ARCHITECTURE.md) and [ADAPTERS.md](ADAPTERS.md). |
 | **Could** | A solid next step after current items; more work or groundwork first. |
-| **Won’t (now)** | **Parked** for this period. Add a **pointer** in a design doc so the idea can be picked up later with context (see [DOCUMENTATION.md](DOCUMENTATION.md) for how we write scope). |
+| **Won’t (now)** | **Parked** for this period. New **Could** / **Won’t (now)** capabilities need a feature hub per [DOCUMENTATION.md — Roadmap and new features](DOCUMENTATION.md#roadmap-and-new-features) before a roadmap row. |
 
 ## R-ICE (quick rank inside a bucket)
 

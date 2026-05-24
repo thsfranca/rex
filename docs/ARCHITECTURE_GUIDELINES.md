@@ -83,7 +83,7 @@ Canonical **decision** owner means “writes the norm in the referenced doc / AD
 
 ## Documentation quality expectations
 
-Align with [DOCUMENTATION.md](DOCUMENTATION.md) and arc42-style documentation goals:
+Align with [DOCUMENTATION.md](DOCUMENTATION.md) and arc42-style documentation goals. For **Diátaxis purpose**, **location**, **create vs update**, and **roadmap feature design**, see [DOCUMENTATION.md](DOCUMENTATION.md#documentation-by-purpose-diátaxis).
 
 | Expectation | Rex practice |
 |-------------|--------------|
@@ -105,7 +105,7 @@ Align with [DOCUMENTATION.md](DOCUMENTATION.md) and arc42-style documentation go
 - [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) — daemon-first extensibility and sidecar phasing.
 - [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)
 - [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — economics lever matrix.
-- [DOCUMENTATION.md](DOCUMENTATION.md) — writing norms and doc-type portfolio.
+- [DOCUMENTATION.md](DOCUMENTATION.md) — writing norms, Diátaxis purpose, location rules, roadmap gate, and doc-type portfolio.
 
 ## See also
 
