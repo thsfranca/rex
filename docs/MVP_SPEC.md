@@ -10,6 +10,15 @@
 - **`StreamInference`** for assistant work is **fulfilled through the sidecar**; the daemon maps chunks to the existing NDJSON contract.
 - Keep **dogfooding** `rex` from the IDE as the success narrative.
 
+## Stub vs product agent (today vs planned)
+
+| | **Shipped today** | **Planned** ([AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)) |
+|---|---|---|
+| Sidecar binary | **`rex-sidecar-stub`** — harness; `__rex_*` prompt directives | **`rex-agent`** — LangGraph ReAct loop, broker-only LLM/tools |
+| CLI | **`rex-cli`** / **`rex-daemon`** | Unified **`rex`** binary (**R014**) |
+| Config | Environment variables ([CONFIGURATION.md](CONFIGURATION.md)) | JSON config + `rex proto install` (**R015**) |
+| v1.0 **RC-*** | **Met** on stub + platform path | Product agent evidence deferred to **R019** |
+
 ## Architecture
 
 ```mermaid
@@ -134,5 +143,6 @@ Required for IDE dogfood after preflight passes. Use a running OpenAI-compatible
 ## Related
 
 - [V1_0.md](V1_0.md) — **done** definition (**RC-***)
+- [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) — product agent program (planned)
 - [ROADMAP.md](ROADMAP.md) — work queue
 - [ARCHITECTURE.md](ARCHITECTURE.md) — system architecture

@@ -51,6 +51,40 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 | **Should** | Long-session extension stress | RC-S2 | Cancel-to-idle under load |
 | **Should** | Stream/log polish beyond baseline | RC-07 (Met) | Optional hardening only |
 
+## Next — product agent program
+
+Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Today the supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** is planned.
+
+| Order | Theme | ID | Outcome |
+|-------|-------|-----|---------|
+| 1 | Doc truth (stub vs product) | — | Hubs state planned agent; stub = harness |
+| 2 | Platform enablers | **R013** | `BrokerListDir`, `RunTurn.model`, stream passthrough |
+| 3 | Unified `rex` CLI | **R014** | Single `rex` binary; subcommands |
+| 4 | Config + proto SDK | **R015** | JSON config, `rex proto install`, `proto.gen_root` |
+| 5 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (open decision) |
+| 6 | `rex-agent` scaffold | **R017** | gRPC server + broker client |
+| 7 | LangGraph agent core | **R018** | ReAct loop, broker adapters |
+| 8 | Integration / E2E | **R019** | Operator path, extension defaults, RC evidence when proven |
+
+```mermaid
+flowchart TD
+  doc[DocTruth]
+  plat[R013_Platform]
+  cli[R014_rex_CLI]
+  cfg[R015_Config_proto]
+  multi[R016_Multi_active]
+  scaffold[R017_agent_scaffold]
+  graph[R018_LangGraph]
+  e2e[R019_Integration]
+  doc --> plat
+  plat --> multi
+  cli --> cfg
+  cfg --> multi
+  multi --> scaffold
+  scaffold --> graph
+  graph --> e2e
+```
+
 ## Next — after v1.0 or in parallel if healthy
 
 | Priority | What / why | Source(s) | Notes |
@@ -67,7 +101,7 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 |----------|------|-----------|--------|
 | **Could** | L2 **semantic** cache | [CACHING.md](CACHING.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | Out of v1.0 |
 | **Could** | **Apple MLX** local model path | [ARCHITECTURE.md](ARCHITECTURE.md), [MVP_SPEC.md](MVP_SPEC.md) | Post-v1.0 |
-| **Later** | More sidecars or gateway adapters | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | After router story matures |
+| **Later** | Gateway adapters beyond broker HTTP | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | After router story matures; multi-sidecar broadcast → **R016** |
 | **Won't (now)** | VM/container as **default Mac** sidecar envelope | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Process + broker instead |
 
 ## Engineering backlog (refactor / contract IDs)
@@ -82,6 +116,13 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 | R010 | Broker `fs.write` | Done |
 | R011 | Broker `exec.shell` allowlist | Done |
 | **R012** | **AccessPolicy broker centralization** (RC-05) | **Done** |
+| **R013** | Platform enablers (`BrokerListDir`, `RunTurn.model`, stream passthrough) | Should |
+| **R014** | Unified `rex` CLI (replace `rex-cli` / `rex-daemon`) | Should |
+| **R015** | JSON config + `rex proto install` + `proto.gen_root` | Should |
+| **R016** | Multi-active sidecar broadcast | Should |
+| **R017** | `rex-agent` scaffold (gRPC + broker client) | Should |
+| **R018** | LangGraph agent core (ReAct, broker tools) | Should |
+| **R019** | Integration / E2E (operator path, extension defaults) | Should |
 
 ## Parked in design docs
 
@@ -89,7 +130,7 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 |--------|-----------------|--------|
 | **Remote** networking, **TLS**, **production auth** | Operator story + threat model ready | [MVP_SPEC.md](MVP_SPEC.md), [ARCHITECTURE.md](ARCHITECTURE.md) |
 | **Wasm** in-process plugins | Sidecar path mature enough to compare | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
-| **On-disk** config, **`rex config`**, `.rex.toml` | Precedence specified | [CONFIGURATION.md](CONFIGURATION.md) |
+| **JSON config** via **R015** (`$REX_HOME/config.json`, `rex config`, `proto.gen_root`) | R013–R014 landed or in parallel | [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [CONFIGURATION.md](CONFIGURATION.md) |
 | **Node gRPC `StreamInference`** in extension | New ADR supersedes hybrid policy | [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
 | **Large** multi-plugin orchestration | Single-plugin supervision stable | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
 | **Long-term / project memory** | Economics path clear | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
