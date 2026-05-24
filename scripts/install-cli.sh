@@ -9,8 +9,8 @@ print_bin_paths() {
   cat <<EOF
 Copy-paste when the editor host PATH omits ${base} (see docs/EXTENSION_LOCAL_E2E.md):
 
-  rex.cliPath         ${base}/rex-cli
-  rex.daemonBinaryPath ${base}/rex-daemon
+  rex.cliPath          ${base}/rex
+  rex.daemonBinaryPath ${base}/rex
 EOF
 }
 
@@ -21,7 +21,7 @@ Usage:
 
 Options:
   --configure-shell   Add ~/.cargo/bin to ~/.zshrc if missing.
-  --print-bin-path    Print absolute paths to rex-cli and rex-daemon in ~/.cargo/bin, then exit.
+  --print-bin-path    Print absolute paths to rex in ~/.cargo/bin, then exit.
   -h, --help          Show this help message.
 EOF
 }
@@ -65,8 +65,9 @@ if ! command -v cargo > /dev/null 2>&1; then
   exit 127
 fi
 
-echo "Installing rex-daemon and rex-cli from ${ROOT_DIR}"
+echo "Installing rex (and compatibility shims) from ${ROOT_DIR}"
 
+cargo install --path "${ROOT_DIR}/crates/rex" --force
 cargo install --path "${ROOT_DIR}/crates/rex-daemon" --force
 cargo install --path "${ROOT_DIR}/crates/rex-cli" --force
 
@@ -86,9 +87,10 @@ if [[ "${CONFIGURE_SHELL}" == "true" ]]; then
 fi
 
 echo "Install complete."
-echo "Commands available:"
-echo "  rex-daemon"
-echo "  rex-cli"
+echo "Primary command:"
+echo "  rex"
+echo "Compatibility shims (deprecated):"
+echo "  rex-daemon  (use: rex daemon)"
+echo "  rex-cli     (use: rex status | rex complete)"
 echo "If PATH is not updated yet, run:"
-echo "  ${HOME}/.cargo/bin/rex-daemon"
-echo "  ${HOME}/.cargo/bin/rex-cli"
+echo "  ${HOME}/.cargo/bin/rex"

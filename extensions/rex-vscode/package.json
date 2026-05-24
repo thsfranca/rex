@@ -98,26 +98,26 @@
       "properties": {
         "rex.cliPath": {
           "type": "string",
-          "default": "rex-cli",
-          "description": "Executable path or name for rex-cli. Defaults to lookup on PATH.",
+          "default": "rex",
+          "description": "Executable path or name for the REX CLI (status and complete subcommands). Defaults to lookup on PATH.",
           "scope": "machine-overridable"
         },
         "rex.daemonBinaryPath": {
           "type": "string",
-          "default": "rex-daemon",
-          "description": "Executable path or name for rex-daemon. Used only when auto-start is enabled.",
+          "default": "rex",
+          "description": "Executable path or name for the REX binary when auto-starting the daemon (rex daemon). Used only when auto-start is enabled.",
           "scope": "machine-overridable"
         },
         "rex.daemonAutoStart": {
           "type": "boolean",
           "default": false,
-          "description": "Spawn rex-daemon automatically if it is not running. Disabled by default.",
+          "description": "Spawn rex daemon automatically if it is not running. Disabled by default.",
           "scope": "machine-overridable"
         },
         "rex.modelId": {
           "type": "string",
           "default": "",
-          "description": "Optional model id passed to rex-cli as --model on every complete. Leave empty to use the daemon default.",
+          "description": "Optional model id passed to rex complete as --model on every request. Leave empty to use the daemon default.",
           "scope": "machine-overridable"
         }
       }
@@ -126,12 +126,12 @@
       {
         "id": "rex.getStarted",
         "title": "REX: get started (local)",
-        "description": "Point the extension at **rex-cli**, run **rex-daemon** with brokered HTTP and an enabled sidecar for **plan/agent** modes, then open chat. **ask** mode may use mock when the daemon is configured for harness-only paths.",
+        "description": "Point the extension at the **rex** CLI, run **rex daemon** with brokered HTTP and an enabled sidecar for **plan/agent** modes, then open chat. **ask** mode may use mock when the daemon is configured for harness-only paths.",
         "steps": [
           {
             "id": "rex.getStarted.cli",
-            "title": "rex-cli must be visible to the editor",
-            "description": "The extension spawns **rex-cli** with the **extension host** environment, which may have a smaller `PATH` than your terminal. If the status bar shows **REX unavailable** while the same command works in a terminal, set **REX: Cli Path** to the **absolute** path to `rex-cli`.\n\n[Open the REX output channel](command:rex.openOutput)",
+            "title": "rex must be visible to the editor",
+            "description": "The extension spawns **rex status** and **rex complete** with the **extension host** environment, which may have a smaller `PATH` than your terminal. If the status bar shows **REX unavailable** while the same command works in a terminal, set **REX: Cli Path** to the **absolute** path to `rex`.\n\n[Open the REX output channel](command:rex.openOutput)",
             "media": {
               "path": "media/rex-activity.svg",
               "altText": "REX"
@@ -142,8 +142,8 @@
           },
           {
             "id": "rex.getStarted.daemon",
-            "title": "Start rex-daemon (or enable auto-start)",
-            "description": "**User-managed (default):** run `rex-daemon` in a terminal so it listens on `/tmp/rex.sock`.\n\n**Extension-managed:** set **rex.daemonAutoStart** to `true` and, if needed, set **REX: Daemon Binary Path** to the absolute `rex-daemon` binary.\n\n[How to start the daemon](command:rex.howToStartDaemon)\n[Show daemon status](command:rex.showStatus)",
+            "title": "Start rex daemon (or enable auto-start)",
+            "description": "**User-managed (default):** run `rex daemon` in a terminal so it listens on `/tmp/rex.sock`.\n\n**Extension-managed:** set **rex.daemonAutoStart** to `true` and, if needed, set **REX: Daemon Binary Path** to the absolute `rex` binary.\n\n[How to start the daemon](command:rex.howToStartDaemon)\n[Show daemon status](command:rex.showStatus)",
             "media": {
               "path": "media/rex-activity.svg",
               "altText": "REX"
@@ -155,7 +155,7 @@
           {
             "id": "rex.getStarted.sidecar",
             "title": "Configure brokered HTTP and sidecar (plan/agent)",
-            "description": "In the terminal where you start **rex-daemon**, export brokered HTTP (example Ollama):\n\n`REX_OPENAI_COMPAT_BASE_URL=http://127.0.0.1:11434/v1`\n`REX_OPENAI_COMPAT_MODEL=llama3.2`\n\nEnable the supervised sidecar:\n\n`REX_SIDECAR_ENABLED=1`\n`cargo build -p rex-sidecar-stub` (ensure `rex-sidecar-stub` is on `PATH`)\n\nDetails: **docs/EXTENSION_LOCAL_E2E.md** and **docs/CONFIGURATION.md** in the REX repo.\n\n[How to start the daemon](command:rex.howToStartDaemon)",
+            "description": "In the terminal where you run **rex daemon**, export brokered HTTP (example Ollama):\n\n`REX_OPENAI_COMPAT_BASE_URL=http://127.0.0.1:11434/v1`\n`REX_OPENAI_COMPAT_MODEL=llama3.2`\n\nEnable the supervised sidecar:\n\n`REX_SIDECAR_ENABLED=1`\n`cargo build -p rex-sidecar-stub` (ensure `rex-sidecar-stub` is on `PATH`)\n\nDetails: **docs/EXTENSION_LOCAL_E2E.md** and **docs/CONFIGURATION.md** in the REX repo.\n\n[How to start the daemon](command:rex.howToStartDaemon)",
             "media": {
               "path": "media/rex-activity.svg",
               "altText": "REX"

@@ -44,9 +44,9 @@ describe("parseStatusOutput", () => {
 });
 
 describe("fetchStatus", () => {
-  it("includes onboarding hint when rex-cli executable is missing", async () => {
+  it("includes onboarding hint when rex executable is missing", async () => {
     await expect(
-      fetchStatus({ cliPath: "/__rex_vitest_nonexistent__/rex-cli", timeoutMs: 5_000 }),
+      fetchStatus({ cliPath: "/__rex_vitest_nonexistent__/rex", timeoutMs: 5_000 }),
     ).rejects.toSatisfy((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
       return msg.includes(EXTENSION_LOCAL_E2E_DOC_PATH) && msg.includes("rex.cliPath");

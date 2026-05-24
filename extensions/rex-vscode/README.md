@@ -6,13 +6,13 @@ This extension is in early development. See [`docs/EXTENSION_ROADMAP.md`](../../
 
 ## Status
 
-- PR 1: status bar, daemon detection via `rex-cli status`, typed NDJSON stream client, capability detection.
+- PR 1: status bar, daemon detection via `rex status`, typed NDJSON stream client, capability detection.
 - PR 2: activity-bar chat webview with streaming markdown, syntax-highlighted code blocks, Copy/Insert/Apply actions, native-diff Apply flow, editor context chip, and `REX: Explain/Fix/Refactor Selection` commands.
 - PR 3: shipped — opt-in daemon auto-start, tag-driven release pipeline (validated VSIX + optional Open VSX / Marketplace publish), docs in [`docs/EXTENSION_RELEASE.md`](../../docs/EXTENSION_RELEASE.md).
 
 ## Using the chat view
 
-1. Start `rex-daemon` (user-managed by default) so the status bar reads `REX ready`.
+1. Run `rex daemon` (user-managed by default) so the status bar reads `REX ready`.
 2. Open the `REX` view container from the activity bar, or run `REX: Open Chat`.
 3. Type a prompt and send (`Cmd/Ctrl+Enter`); the assistant response streams with live markdown.
 4. Per code block you can `Copy`, `Insert at cursor`, or `Apply` (opens a diff and asks for confirmation before writing a `WorkspaceEdit`).
@@ -25,22 +25,22 @@ Stream reliability notes:
 - The host enforces exactly one terminal stream transition per request (`done` or `error`).
 - Cancellation is deterministic for a stream id (no duplicate terminal states on cancel/resend).
 - Error events can include stable codes (for example `daemon_unavailable`, `stream_timeout`, `invalid_response`) to map UI behavior consistently.
-- Each request is trace-correlated across extension host, `rex-cli`, and daemon logs.
+- Each request is trace-correlated across extension host, `rex`, and daemon logs.
 
 ## Requirements
 
-- `rex-cli` available on `PATH` (or set `rex.cliPath` to an absolute path if the editor was not started from a shell that configures `PATH`, which is common on macOS).
-- `rex-daemon` running locally on `/tmp/rex.sock` (user-managed by default, or set `rex.daemonAutoStart: true`). With auto-start, set `rex.daemonBinaryPath` to an absolute path if `rex-daemon` is not on the editor `PATH`.
+- `rex` available on `PATH` (or set `rex.cliPath` to an absolute path if the editor was not started from a shell that configures `PATH`, which is common on macOS).
+- Daemon running locally on `/tmp/rex.sock` (user-managed: `rex daemon`; or set `rex.daemonAutoStart: true`). With auto-start, set `rex.daemonBinaryPath` to an absolute path if `rex` is not on the editor `PATH` (same binary as `rex.cliPath`).
 - VS Code `^1.90` or Cursor with a compatible VS Code engine.
 
 **End-to-end from this repository:** follow [`docs/EXTENSION_LOCAL_E2E.md`](../../docs/EXTENSION_LOCAL_E2E.md) (build, install binaries, daemon, VSIX, verification). Quick combined script from repo root: `./scripts/dev-rex-extension.sh` (then start the daemon or enable auto-start as described in that doc).
 
 ## Daemon auto-start (opt-in)
 
-Flip `"rex.daemonAutoStart": true` in settings to let the extension spawn `rex-daemon` automatically when the view activates. The extension:
+Flip `"rex.daemonAutoStart": true` in settings to let the extension spawn `rex daemon` automatically when the view activates. The extension:
 
-1. Probes `rex-cli status`; if the daemon is already running, nothing else happens.
-2. Otherwise, spawns the binary at `rex.daemonBinaryPath` and polls status until it is ready (default timeout 10s).
+1. Probes `rex status`; if the daemon is already running, nothing else happens.
+2. Otherwise, spawns `rex daemon` via `rex.daemonBinaryPath` and polls status until it is ready (default timeout 10s).
 3. Terminates the spawned child on `deactivate()` so the IDE never leaks daemon processes.
 
 If the spawn or probe fails, the status bar moves to `REX unavailable` and the reason is logged to the `REX` output channel.
@@ -84,10 +84,10 @@ npm run package
 
 | Key | Default | Purpose |
 |---|---|---|
-| `rex.cliPath` | `rex-cli` | Resolvable path or name for `rex-cli`. |
-| `rex.daemonBinaryPath` | `rex-daemon` | Resolvable path or name for `rex-daemon`. |
+| `rex.cliPath` | `rex` | Resolvable path or name for `rex` (`status` / `complete`). |
+| `rex.daemonBinaryPath` | `rex` | Same binary; spawned with `daemon` subcommand when auto-start is on. |
 | `rex.daemonAutoStart` | `false` | Opt-in extension-managed daemon lifecycle. |
-| `rex.modelId` | *(empty)* | When set, passed as `--model` on every `rex-cli complete`. |
+| `rex.modelId` | *(empty)* | When set, passed as `--model` on every `rex complete`. |
 
 ## License
 

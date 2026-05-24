@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Build REX Rust binaries, install rex-cli/rex-daemon via install-cli.sh, then
+# Build REX Rust binaries, install rex via install-cli.sh, then
 # build and install the VS Code/Cursor extension (pass-through args go to install-extension.sh).
-# Does not start rex-daemon; see docs/EXTENSION_LOCAL_E2E.md for daemon steps.
+# Does not start rex daemon; see docs/EXTENSION_LOCAL_E2E.md for daemon steps.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,7 +17,7 @@ cat <<EOF
 --- REX extension dev ---
 
 If the extension uses user-managed daemon mode (default), start the daemon in another terminal, for example:
-  cargo run -p rex-daemon
+  cargo run -p rex -- daemon
 Or enable rex.daemonAutoStart in editor settings (see docs/EXTENSION_LOCAL_E2E.md).
 
 Full checklist: ${ROOT_DIR}/docs/EXTENSION_LOCAL_E2E.md

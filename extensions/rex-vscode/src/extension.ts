@@ -105,7 +105,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(
     vscode.commands.registerCommand("rex.howToStartDaemon", async () => {
       const pick = await vscode.window.showInformationMessage(
-        "MVP agent/plan path: start rex-daemon with brokered HTTP (REX_OPENAI_COMPAT_*) and sidecar (REX_SIDECAR_ENABLED=1, rex-sidecar-stub on PATH). See docs/EXTENSION_LOCAL_E2E.md and docs/CONFIGURATION.md in the REX repository.",
+        "MVP agent/plan path: run `rex daemon` with brokered HTTP (REX_OPENAI_COMPAT_*) and sidecar (REX_SIDECAR_ENABLED=1, rex-sidecar-stub on PATH). See docs/EXTENSION_LOCAL_E2E.md and docs/CONFIGURATION.md in the REX repository.",
         "Open Output",
       );
       if (pick === "Open Output") {

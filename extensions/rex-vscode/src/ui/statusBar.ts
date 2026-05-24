@@ -37,19 +37,19 @@ function renderState(item: vscode.StatusBarItem, state: DaemonLifecycleState): v
   switch (state.kind) {
     case "ready": {
       item.text = "$(zap) REX ready";
-      item.tooltip = `rex-daemon ${state.status.daemonVersion} (uptime ${state.status.uptimeSeconds}s)`;
+      item.tooltip = `rex daemon ${state.status.daemonVersion} (uptime ${state.status.uptimeSeconds}s)`;
       item.backgroundColor = undefined;
       return;
     }
     case "starting": {
       item.text = "$(sync~spin) REX starting";
-      item.tooltip = "Waiting for rex-daemon to become ready.";
+      item.tooltip = "Waiting for rex daemon to become ready.";
       item.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground");
       return;
     }
     case "unavailable": {
       item.text = "$(circle-slash) REX unavailable";
-      item.tooltip = `rex-daemon unavailable: ${elideForTooltip(state.reason, UNAVAILABLE_TOOLTIP_MAX_CHARS)}`;
+      item.tooltip = `rex daemon unavailable: ${elideForTooltip(state.reason, UNAVAILABLE_TOOLTIP_MAX_CHARS)}`;
       item.backgroundColor = new vscode.ThemeColor("statusBarItem.errorBackground");
       return;
     }

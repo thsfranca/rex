@@ -15,14 +15,14 @@ export function appendCliExecutableNotFoundHint(err: unknown, message: string): 
   if (!isExecutableNotFoundError(err)) {
     return message;
   }
-  return `${message} Set rex.cliPath to the absolute path to rex-cli (see ${EXTENSION_LOCAL_E2E_DOC_PATH} in the REX repository).`;
+  return `${message} Set rex.cliPath to the absolute path to rex (see ${EXTENSION_LOCAL_E2E_DOC_PATH} in the REX repository).`;
 }
 
 export function appendDaemonExecutableNotFoundHint(err: unknown, message: string): string {
   if (!isExecutableNotFoundError(err)) {
     return message;
   }
-  return `${message} Set rex.daemonBinaryPath to the absolute path to rex-daemon (see ${EXTENSION_LOCAL_E2E_DOC_PATH} in the REX repository).`;
+  return `${message} Set rex.daemonBinaryPath to the absolute path to rex (see ${EXTENSION_LOCAL_E2E_DOC_PATH} in the REX repository).`;
 }
 
 /**
@@ -37,7 +37,7 @@ export function appendStreamSetupHint(message: string): string {
     return `${message} Configure brokered HTTP: REX_OPENAI_COMPAT_BASE_URL and REX_OPENAI_COMPAT_MODEL (see ${EXTENSION_LOCAL_E2E_DOC_PATH} §3 in the REX repository).`;
   }
   if (lower.includes("daemon is unavailable") || lower.includes("daemon unavailable")) {
-    return `${message} Start rex-daemon with sidecar and HTTP env (see ${EXTENSION_LOCAL_E2E_DOC_PATH} in the REX repository).`;
+    return `${message} Start rex daemon with sidecar and HTTP env (see ${EXTENSION_LOCAL_E2E_DOC_PATH} in the REX repository).`;
   }
   return message;
 }

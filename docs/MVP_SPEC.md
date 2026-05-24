@@ -5,7 +5,7 @@
 ## Product goals
 
 - Deliver a **basic development agent** in the VS Code/Cursor extension whose **reasoning and runtime live in a daemon-supervised sidecar** — not in the extension and not as “daemon calls the model directly.”
-- Keep the extension a **thin client**: modes, approvals, apply/insert, streaming via **`rex-cli`** NDJSON ([EXTENSION.md](EXTENSION.md), [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)).
+- Keep the extension a **thin client**: modes, approvals, apply/insert, streaming via **`rex complete`** NDJSON ([EXTENSION.md](EXTENSION.md), [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)).
 - **`rex-daemon`** supervises the sidecar, **brokers** inference (OpenAI-compatible HTTP) and **at least one host tool** (`fs.read` recommended), and remains **stream- and policy-authoritative** for `rex.v1`.
 - **`StreamInference`** for assistant work is **fulfilled through the sidecar**; the daemon maps chunks to the existing NDJSON contract.
 - Keep **dogfooding** `rex` from the IDE as the success narrative.
@@ -15,7 +15,7 @@
 | | **Shipped today** | **Planned** ([AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)) |
 |---|---|---|
 | Sidecar binary | **`rex-sidecar-stub`** — harness; `__rex_*` prompt directives | **`rex-agent`** — LangGraph ReAct loop, broker-only LLM/tools |
-| CLI | **`rex-cli`** / **`rex-daemon`** | Unified **`rex`** binary (**R014**) |
+| CLI | Unified **`rex`** binary (**R014** — shipped) | JSON config + `rex proto install` (**R015**) |
 | Config | Environment variables ([CONFIGURATION.md](CONFIGURATION.md)) | JSON config + `rex proto install` (**R015**) |
 | v1.0 **RC-*** | **Met** on stub + platform path | Product agent evidence deferred to **R019** |
 

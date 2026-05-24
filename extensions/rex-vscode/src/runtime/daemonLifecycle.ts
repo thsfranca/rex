@@ -16,7 +16,7 @@ export interface DaemonLifecycleOptions {
   readonly cli: CliBridgeOptions;
   readonly daemonBinaryPath: string;
   /**
-   * Merged into `process.env` for the spawned `rex-daemon` child only (not for CLI status calls).
+   * Merged into `process.env` for the spawned `rex daemon` child only (not for CLI status calls).
    */
   readonly daemonEnv?: Readonly<Record<string, string>>;
   /**
@@ -72,7 +72,7 @@ export class DaemonLifecycle {
   }
 
   /**
-   * Spawn `rex-daemon` and poll `rex-cli status` until ready or the timeout
+   * Spawn `rex daemon` and poll `rex status` until ready or the timeout
    * elapses. Caller owns the lifecycle result; failures return `unavailable`
    * with a reason.
    *
@@ -134,7 +134,7 @@ export class DaemonLifecycle {
         this.options.daemonEnv !== undefined
           ? { ...process.env, ...this.options.daemonEnv }
           : process.env;
-      this.ownedChild = spawn(this.options.daemonBinaryPath, [], {
+      this.ownedChild = spawn(this.options.daemonBinaryPath, ["daemon"], {
         stdio: ["ignore", "pipe", "pipe"],
         detached: false,
         env: daemonEnv,
@@ -169,7 +169,7 @@ export class DaemonLifecycle {
       if (this.lastState.kind !== "ready") {
         this.transition({
           kind: "unavailable",
-          reason: `rex-daemon exited with code ${code}`,
+          reason: `rex daemon exited with code ${code}`,
         });
       }
       this.ownedChild = undefined;

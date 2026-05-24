@@ -17,6 +17,11 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
+### Changed
+
+- Default **`rex.cliPath`** and **`rex.daemonBinaryPath`** to **`rex`**; auto-start spawns **`rex daemon`**.
+- User-facing errors and hints reference the unified **`rex`** binary (legacy `rex-cli` / `rex-daemon` shims remain in the Rust workspace).
+
 ### Added
 
 - **`rex.modelId`** setting: passes `--model` on every chat `complete` when non-empty.

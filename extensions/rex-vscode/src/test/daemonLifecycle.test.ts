@@ -123,10 +123,10 @@ describe("DaemonLifecycle.ensureRunning", () => {
     expect(transitions.map((t) => t.kind)).toEqual(["ready"]);
   });
 
-  it("includes onboarding hint when rex-daemon executable is missing", async () => {
+  it("includes onboarding hint when rex daemon executable is missing", async () => {
     const lifecycle = makeLifecycle({
       cli: { cliPath: FIXTURE_CLI_STATUS_FAIL, timeoutMs: 2_000 },
-      daemonBinaryPath: "/__rex_vitest_nonexistent__/rex-daemon",
+      daemonBinaryPath: "/__rex_vitest_nonexistent__/rex",
       readyTimeoutMs: 3_000,
       pollIntervalMs: 50,
     });

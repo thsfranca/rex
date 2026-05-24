@@ -42,7 +42,7 @@ export function classifyStreamErrorMessage(message: string): ClassifiedStreamErr
   if (normalized.includes("malformed ndjson") || normalized.includes("unknown ndjson event type")) {
     return { code: "invalid_response", message, retryable: false };
   }
-  if (normalized.includes("failed to spawn rex-cli")) {
+  if (normalized.includes("failed to spawn rex")) {
     return { code: "spawn_failed", message, retryable: false };
   }
   if (normalized.includes("sidecar required")) {

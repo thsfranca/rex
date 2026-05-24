@@ -10,12 +10,12 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 
 REX provides a local AI runtime with one daemon as the **system authority** for **streaming contracts, adapter policy, caches, pipelines, and the agent/economics roadmap** ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). Isolated **agent runtime environments** (when implemented) remain **supervised and policy-bound** to the daemon—see [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). **Sidecar ↔ daemon** integration uses a **dedicated brokered API**, not **`rex.v1`** — [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
-The editor extension keeps **`rex-cli` NDJSON** as the **primary** streaming path; optional unary **`rex.v1`** over UDS is allowed per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**.
+The editor extension keeps **`rex complete` NDJSON** as the **primary** streaming path; optional unary **`rex.v1`** over UDS is allowed per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**.
 
 | Component | Responsibility |
 |---|---|
+| `rex` | Unified CLI: `daemon`, `status`, `complete` (NDJSON transport for editors). |
 | `rex-daemon` | Model/agent **policy trajectory**, adapters, caches, **`StreamInference`** lifecycle, queues. |
-| `rex-cli` | Thin transport façade; deterministic NDJSON for editors. |
 | `rex-proto` | `rex.v1` gRPC contract. |
 
 Architecture intent:
@@ -38,12 +38,14 @@ Core commands:
 export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:11434/v1"  # broker backend (e.g. Ollama)
 export REX_OPENAI_COMPAT_MODEL="llama3.2"
 cargo build --workspace
-cargo run -p rex-daemon   # MVP: supervises sidecar when REX_SIDECAR_ENABLED=1
-cargo run -p rex-cli -- status
-cargo run -p rex-cli -- complete "hello from rex" --format ndjson --mode agent
+cargo run -p rex -- daemon   # MVP: supervises sidecar when REX_SIDECAR_ENABLED=1
+cargo run -p rex -- status
+cargo run -p rex -- complete "hello from rex" --format ndjson --mode agent
 ```
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Enable `REX_SIDECAR_ENABLED=1` and `rex-sidecar-stub` on `PATH`; set `REX_OPENAI_COMPAT_*` for brokered HTTP. CI may use `REX_SIDECAR_HARNESS=direct` (harness only).
+
+**Observability (planned):** enable daemon OTLP with `REX_OBS_ENABLED=1` and point `OTEL_EXPORTER_OTLP_ENDPOINT` at your collector — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md).
 
 ### Working modes
 

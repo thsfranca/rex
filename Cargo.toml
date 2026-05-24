@@ -3,6 +3,7 @@ members = [
   "crates/rex-proto",
   "crates/rex-daemon",
   "crates/rex-cli",
+  "crates/rex",
   "crates/rex-sidecar-stub",
 ]
 resolver = "2"
