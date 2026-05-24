@@ -9,6 +9,18 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 | **Explanation** (design intent) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [V1_0.md](V1_0.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | **Reference** (narrow facts) | [ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [EXTENSION.md](EXTENSION.md), `proto/rex/v1/rex.proto`, [DOCUMENTATION.md](DOCUMENTATION.md) |
 
+## New documentation checklist
+
+Before adding or materially editing a doc under `docs/`:
+
+1. Pick the **Diátaxis mode** (tutorial, how-to, explanation, reference) — see [DOCUMENTATION.md](DOCUMENTATION.md#documentation-by-purpose-diátaxis).
+2. Pick the **target path** from the repository map below (or extend an existing hub).
+3. Keep **one dominant topic** per file; split at section boundaries when needed.
+4. **Link** to feature hubs and ADRs instead of copying long inventories.
+5. **Update this README** — add a row to the repository map and/or Diátaxis role table in the same change.
+6. For **new roadmap features**, create the hub first — see [DOCUMENTATION.md — Roadmap and new features](DOCUMENTATION.md#roadmap-and-new-features).
+7. Run the [minimum checklist before merge](DOCUMENTATION.md#minimum-checklist-before-merge) in DOCUMENTATION.md.
+
 ## Repository map (`docs/`)
 
 | Path | Purpose |
