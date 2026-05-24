@@ -1,6 +1,6 @@
 # Agent environment access policy (design hub)
 
-Canonical **architecture-level** design for how Rex constrains **agent workloads** in the **sidecar process**. Phase 1 scope requires **at least one brokered capability** ([MVP_SPEC.md](MVP_SPEC.md)); full broker matrix is **planned**. **Done:** [V1_0.md](V1_0.md) **RC-05**. Aligns with [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) and [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md).
+Canonical **architecture-level** design for how Rex constrains **agent workloads** in the **sidecar process**. Phase 1 scope requires **at least one brokered capability** ([MVP_SPEC.md](MVP_SPEC.md)); full broker matrix is **planned**. **Done:** [V1_0.md](V1_0.md) **RC-05** (protected-path read/list via **R012**). **Next:** mode × capability enforcement and write/exec policy — [ROADMAP.md](ROADMAP.md) **R020** ([ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md)). Aligns with [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) and [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md).
 
 ## MVP broker scope (Phase 1)
 
@@ -92,9 +92,22 @@ If a capability is missing, the fix is a **scoped broker verb**, not punching a 
 
 Multi-agent work on one repo: **shared** facts and locks on the daemon; per-agent scratch in each sidecar.
 
+## Mode × capability (ADR 0013)
+
+Daemon enforces before host execution (implementation **R020**):
+
+| Capability | `ask` | `plan` | `agent` |
+|------------|-------|--------|---------|
+| `fs.read` / `fs.list` | Allow workspace | Allow workspace | Allow workspace |
+| `fs.write` | Deny | Deny | Allow workspace (policy) |
+| `exec.shell` | Deny | Deny | Allow allowlist |
+
+Sidecar graphs must not be the only enforcement layer once **`rex-agent`** ships.
+
 ## Related
 
 - [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) — spawn, API, transport.
 - [POLICY_ENGINE.md](POLICY_ENGINE.md) — daemon policy pipeline.
+- [ROADMAP.md](ROADMAP.md) — **R020** broker access policy completion
 - [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) — phasing.
 - [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) · [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md)

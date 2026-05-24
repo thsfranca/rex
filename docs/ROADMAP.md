@@ -62,25 +62,31 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Today the supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** is planned.
 
-**Priority rationale:** Primary focus is **R015 → R019** (JSON config, then single-active **`rex-agent`**). **R013** and **R014** are **Done**. **RC-S2** may run in parallel (extension-only blast radius).
+**Priority rationale:** **R015** is **Done**. Next: **R020** and **R021** in parallel (daemon prerequisites), then **R017–R018** (`rex-agent`), **R022** daemon workspace fail-closed alongside **R019** extension integration. **R016** remains **Could** after **R019**. **RC-S2** may run in parallel (extension-only blast radius).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
-| 1 | Doc truth (stub vs product) | — | Hubs state planned agent; stub = harness |
+| 1 | Doc truth (stub vs product) | — | Hubs state planned agent; stub = harness; JSON config primary ([CONFIGURATION.md](CONFIGURATION.md)) |
 | 2 | Platform enablers | **R013** | Done — `BrokerListDir`, `RunTurn.model`, stream passthrough |
 | 3 | Unified `rex` CLI | **R014** | Done — single `rex` binary; subcommands |
-| 4 | Config + proto SDK | **R015** | JSON config, `rex proto install`, `proto.gen_root` |
-| 5 | `rex-agent` scaffold | **R017** | gRPC server + broker client |
-| 6 | LangGraph agent core | **R018** | ReAct loop, broker adapters |
-| 7 | Integration / E2E | **R019** | Operator path, extension defaults, RC evidence when proven |
-| 8 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (**Could** — deferred Phase 1, [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md)) |
+| 4 | Config + proto SDK | **R015** | Done — JSON config, `rex proto install`, `proto.gen_root` |
+| 5 | Broker access policy completion | **R020** | Mode × capability matrix; write/exec protected paths; `max_tool_result_bytes` — [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) |
+| 6 | Turn correlation Phase 1b | **R021** | Populate `turn_id`, `context_revision` on `RunTurn` — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
+| 7 | Workspace binding (daemon) | **R022** | Fail-closed `workspace.root`; harness cwd fallback documented — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
+| 8 | `rex-agent` scaffold | **R017** | gRPC server + broker client |
+| 9 | LangGraph agent core | **R018** | ReAct loop, broker adapters |
+| 10 | Integration / E2E | **R019** | Extension workspace + defaults; client hints; live-model E2E — [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md#r019-integration--e2e-acceptance) |
+| 11 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (**Could** — deferred Phase 1, [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md)) |
 
 ```mermaid
 flowchart TD
   doc[DocTruth]
   plat[R013_Platform]
   cli[R014_rex_CLI]
-  cfg[R015_Config_proto]
+  cfg[R015_Config_Done]
+  policy[R020_BrokerPolicy]
+  turn[R021_TurnCorrelation]
+  workspace[R022_WorkspaceBinding]
   scaffold[R017_agent_scaffold]
   graph[R018_LangGraph]
   e2e[R019_Integration]
@@ -88,9 +94,13 @@ flowchart TD
   doc --> plat
   plat --> cli
   cli --> cfg
-  cfg --> scaffold
+  cfg --> policy
+  cfg --> turn
+  policy --> scaffold
+  turn --> scaffold
   scaffold --> graph
   graph --> e2e
+  workspace --> e2e
   e2e -.-> multi
 ```
 
@@ -130,11 +140,14 @@ flowchart TD
 | **R012** | **AccessPolicy broker centralization** (RC-05) | **Done** |
 | **R013** | Platform enablers (`BrokerListDir`, `RunTurn.model`, stream passthrough) | Done |
 | **R014** | Unified `rex` CLI (replace `rex-cli` / `rex-daemon`) | Done |
-| **R015** | JSON config + `rex proto install` + `proto.gen_root` | Should |
+| **R015** | JSON config + `rex proto install` + `proto.gen_root` | Done |
 | **R016** | Multi-active sidecar broadcast | Could — deferred Phase 1 per [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md) |
 | **R017** | `rex-agent` scaffold (gRPC + broker client) | Should |
 | **R018** | LangGraph agent core (ReAct, broker tools) | Should |
 | **R019** | Integration / E2E (operator path, extension defaults) | Should |
+| **R020** | Broker access policy completion (ADR 0013; follows R012) | Should — [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) |
+| **R021** | Turn correlation Phase 1b (`turn_id`, `context_revision`) | Should — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
+| **R022** | Workspace binding product path (fail-closed daemon) | Should — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
 
 ## Parked in design docs
 
@@ -142,7 +155,7 @@ flowchart TD
 |--------|-----------------|--------|
 | **Remote** networking, **TLS**, **production auth** | Operator story + threat model ready | [MVP_SPEC.md](MVP_SPEC.md), [ARCHITECTURE.md](ARCHITECTURE.md) |
 | **Wasm** in-process plugins | Sidecar path mature enough to compare | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
-| **JSON config** via **R015** (`$REX_HOME/config.json`, `rex config`, `proto.gen_root`) | R013–R014 landed or in parallel | [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [CONFIGURATION.md](CONFIGURATION.md) |
+| ~~JSON config via **R015**~~ | **Landed** — see engineering backlog **R015** Done | [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [CONFIGURATION.md](CONFIGURATION.md) |
 | **Node gRPC `StreamInference`** in extension | New ADR supersedes hybrid policy | [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
 | **Large** multi-plugin orchestration | Single-plugin supervision stable | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
 | **Long-term / project memory** | ADR 0014 accepted; implement after benchmark gate | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md) |

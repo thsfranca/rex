@@ -39,7 +39,7 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 | Agent knowledge retrieval | Curated design/agent reference; budgeted inject vs repo markdown sprawl | `KnowledgeRetrieval` stage | [ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md), [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) | **design accepted** |
 | Economics validation harness | Prove token/cost deltas (paid API + local OSS) vs baseline | Benchmark / CI smoke (future) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | **planned** |
 | MCP / standard tool interoperability | MCP **primarily** in **isolated sidecar**; host reach **brokered**; lazy tool discovery | Sidecar envelope + daemon broker | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | **design accepted** — implementation deferred |
-| Human approvals + sandbox for tools | Extension modes today; daemon `ApprovalGate`; `AccessPolicy` broker | [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | **partial** — approvals shipped; access policy **design accepted** |
+| Human approvals + sandbox for tools | Extension modes today; daemon `ApprovalGate`; `AccessPolicy` broker | [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [ROADMAP.md](ROADMAP.md) **R020** | **partial** — approvals shipped; **R012** read/list policy; **R020** completes mode matrix + write/exec |
 
 ## Evidence-informed defaults
 

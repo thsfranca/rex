@@ -14,11 +14,14 @@
 
 | | **Shipped today** | **Planned** ([AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)) |
 |---|---|---|
-| Sidecar binary | **`rex-sidecar-stub`** — harness; `__rex_*` prompt directives | **`rex-agent`** — LangGraph ReAct loop, broker-only LLM/tools |
-| CLI | Unified **`rex`** binary (**R014** — shipped) | JSON config + `rex proto install` (**R015**) |
-| Config | Environment variables ([CONFIGURATION.md](CONFIGURATION.md)) | JSON config + `rex proto install` (**R015**) |
+| Sidecar binary | **`rex-sidecar-stub`** — harness; `__rex_*` prompt directives | **`rex-agent`** — LangGraph ReAct loop, broker-only LLM/tools (**R017–R018**) |
+| CLI | Unified **`rex`** binary (**R014** — shipped) | — |
+| Config | JSON config + `rex config` (**R015** — shipped) | — |
+| Daemon broker policy | Protected-path read/list (**R012**); partial mode matrix | **R020** completes ADR 0013 |
+| Turn correlation | Proto fields exist; empty on wire | **R021** populates `turn_id`, `context_revision` |
+| Workspace binding | Config `workspace.root`; cwd fallback today | **R022** fail-closed daemon; **R019** extension supplies root |
 | v1.0 **RC-*** | **Met** on stub + platform path | Product agent evidence deferred to **R019** |
-| Capability design | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) + ADRs 0011–0017 | **R019** sets `REX_WORKSPACE_ROOT` from editor workspace |
+| Capability design | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) + ADRs 0011–0017 | **R019** extension integration; **R020–R022** daemon prerequisites |
 
 ## Architecture
 

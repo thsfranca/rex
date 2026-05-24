@@ -22,7 +22,7 @@ Broker RPCs, the lexical indexer, and L1 cache fingerprinting scope to `REX_WORK
 
 - **Positive:** Consistent broker sandbox; attributable economics; `rex-agent` can document inputs without proto churn in Phase 1.
 - **Negative:** Extension and R015 must set workspace root before product use; fail-closed may break scripts that depended on silent cwd.
-- **Risks / follow-up:** Migrate extension off full selection-in-prompt (**C1** in [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](../../DEVELOPMENT_ASSISTANCE_CAPABILITIES.md)); implement R015 `workspace.root` and R019 extension env.
+- **Risks / follow-up:** Migrate extension off full selection-in-prompt (**C1** — **R019**); daemon fail-closed workspace — **R022**; extension supplies `workspace.root` on spawn — **R019** (R015 config shipped).
 
 ## Related
 
