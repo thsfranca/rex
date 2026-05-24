@@ -159,7 +159,7 @@ In scope for the first product shape:
 Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 
 - Apple MLX runtime integration.
-- **gRPC** sidecar plugin supervision and multi-plugin orchestration in the daemon (MVP uses **in-process** inference plugins only; see [`docs/PLUGIN_ROADMAP.md`](docs/PLUGIN_ROADMAP.md)).
+- Multi-active sidecar broadcast (**R016** deferred — [ADR 0017](docs/architecture/decisions/0017-single-active-sidecar-phase-1.md)). Phase 1 uses a **supervised sidecar** + daemon broker ([`docs/MVP_SPEC.md`](docs/MVP_SPEC.md), [`docs/SIDECAR_RUNTIME.md`](docs/SIDECAR_RUNTIME.md)).
 - Remote networking, TLS, and production authentication.
 
 ## Documentation map
@@ -183,7 +183,8 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | [`docs/DEPENDENCIES.md`](docs/DEPENDENCIES.md) | Local build/runtime prerequisites by layer. |
 | [`docs/CI.md`](docs/CI.md) | CI strategy, gate contracts, and merge protections. |
 | [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) | Documentation checklist and writing standards. |
-| [`docs/LONG_TERM_MEMORY.md`](docs/LONG_TERM_MEMORY.md) | Long-term memory design hub (**bets**, optimization-first; not Phase 1). |
+| [`docs/DEVELOPMENT_ASSISTANCE_CAPABILITIES.md`](docs/DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) | Daemon-owned context, turn contract, budget pipeline (ADRs 0011–0017). |
+| [`docs/LONG_TERM_MEMORY.md`](docs/LONG_TERM_MEMORY.md) | Long-term memory design hub (**bets**, optimization-first; ADR 0014). |
 
 ## Workspace layout
 

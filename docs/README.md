@@ -64,7 +64,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Feature area | Canonical hub |
 |---|---|
 | Inference adapters | [ADAPTERS.md](ADAPTERS.md), [ADR 0002](architecture/decisions/0002-inference-adapter-contract.md) |
-| Layered prompts (planned) | [CONFIGURATION.md](CONFIGURATION.md#layered-prompts-planned) |
+| Layered prompts (design accepted) | [ADR 0012](architecture/decisions/0012-layered-prompt-assemblies.md), [CONFIGURATION.md](CONFIGURATION.md#layered-prompts-design-accepted) |
 | Local MLX adapter (planned) | [ADAPTERS.md](ADAPTERS.md#local-mlx-path-planned) |
 | Vendor KV / prompt cache hints (planned) | [CACHING.md](CACHING.md#vendor-kv-and-prompt-cache-hints-planned) |
 | Daemon extensibility / sidecars | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
@@ -75,10 +75,11 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 | Agent knowledge for AI sessions (planned) | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
 | Observability suite + economics validation (planned) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
-| MCP-style tool interoperability (planned) | [ARCHITECTURE.md](ARCHITECTURE.md) interoperability rows, matrix in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
+| MCP-style tool interoperability (design accepted) | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Purpose and principles | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) |
 | Agent access + sidecar runtime | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Product agent delivery (planned) | [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [ROADMAP.md](ROADMAP.md) R013–R019 |
+| Development assistance capabilities (daemon-owned context, turn contract) | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md), [ADRs 0011–0017](architecture/decisions/README.md) |
 
 ## Scripts (related)
 

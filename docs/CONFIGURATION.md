@@ -98,9 +98,9 @@ CI and unit tests set `REX_INFERENCE_RUNTIME=mock` and clear `REX_OPENAI_COMPAT_
 
 Precedence target (low → high): built-in defaults → user JSON → project JSON → environment → CLI flags. Until **R015** lands, **environment remains primary** (table above).
 
-## Layered prompts (planned)
+## Layered prompts (design accepted)
 
-**Status:** `planned` — not shipped. Economics lever: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md). Roadmap: [ROADMAP.md](ROADMAP.md) (**Could**).
+**Status:** **design accepted** — not shipped. [ADR 0012](architecture/decisions/0012-layered-prompt-assemblies.md). Hub: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md). Implementation: **R015**+.
 
 ### Purpose
 
@@ -122,12 +122,13 @@ Versioned **system / project prompt assemblies** assembled in the daemon so clie
 
 ### Interfaces (intent)
 
-- Future config keys under `prompts.*` or `$REX_HOME/config.json` section (exact names TBD with **R015**).
-- Assembly **schema version** in cache keys when layered prompts affect L1 ([CACHING.md](CACHING.md)).
+- R015 JSON section `prompts`: `system`, `project` (path or glob-scoped files), `mode` overlays.
+- `prompt_assembly_revision` in L1 cache key with `context_revision` when retrieval ran ([CACHING.md](CACHING.md), [ADR 0012](architecture/decisions/0012-layered-prompt-assemblies.md)).
+- Default cap: 25% of `REX_MAX_CONTEXT_TOKENS` for assembled prompts (see capabilities hub budget table).
 
 ### Cross-links
 
-- [ROADMAP.md](ROADMAP.md) — **Could** row
+- [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md)
 - [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — economics matrix row
 
 ## Not implemented yet (roadmap)
