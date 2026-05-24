@@ -8,19 +8,19 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 
 Canonical **purpose and operating principles** (single source of truth): **[docs/PURPOSE_AND_PRINCIPLES.md](docs/PURPOSE_AND_PRINCIPLES.md)**.
 
-**Configuration policy** (precedence, `REX_*` catalog, and roadmap for CLI and user config files): [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+**Configuration policy** (JSON-first via `$REX_ROOT`, `rex config`, legacy env deprecation): [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## What works today (high-value capabilities)
 
 | Capability | What it gives you |
 |---|---|
-| **gRPC + UDS** | Low-latency local transport on `/tmp/rex.sock` with generated types from one `rex.v1` contract. |
+| **gRPC + UDS** | Low-latency local transport; socket path from `$REX_ROOT/config.json` (`daemon.socket`). |
 | **Streaming completion** | `StreamInference`-style chunks with deterministic lifecycle logging on the daemon for triage. |
 | **`rex` CLI** | Unified binary: `rex daemon`, `rex status`, `rex complete`; **`--format ndjson`** for one JSON event per line (`chunk`, `done`, `error`) so extensions and CI can parse streams safely. Legacy `rex-cli` / `rex-daemon` shims remain for compatibility. |
 | **Startup and failure behavior** | Bounded retry when the daemon is still booting; clear CLI errors for unavailable daemon, interrupted streams, and bad stream endings. |
 | **VS Code / Cursor extension** | Activity-bar chat with streaming markdown, selection-based commands, optional **daemon auto-start**, and install/release docs—see [`extensions/rex-vscode/README.md`](extensions/rex-vscode/README.md) and [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md). |
 | **Development agent (extension)** | Chat with **`ask` / `plan` / `agent`**, guarded apply/insert, NDJSON via **`rex complete`** — assistant runtime in a **daemon-supervised sidecar** ([docs/EXTENSION.md](docs/EXTENSION.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md)). |
-| **Brokered HTTP inference** | Daemon invokes **OpenAI-compatible** backend on behalf of the sidecar (`REX_OPENAI_COMPAT_*`); **mock** / **cursor-cli** for tests only — [docs/ADAPTERS.md](docs/ADAPTERS.md), [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
+| **Brokered HTTP inference** | Daemon invokes **OpenAI-compatible** backend on behalf of the sidecar (`inference.openai_compat` in JSON); **mock** / **cursor-cli** for tests — [docs/ADAPTERS.md](docs/ADAPTERS.md), [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
 | **Quality gates** | Workspace `cargo` checks plus UDS end-to-end tests covering failure paths, startup races, and post-interruption behavior (see [Operational checks](#operational-checks)). |
 
 ## Project status
@@ -28,7 +28,7 @@ Canonical **purpose and operating principles** (single source of truth): **[docs
 - **Experimental scope:** APIs, docs, and behavior can change as the study evolves; use this workspace for learning and prototypes, not production SLAs.
 - **Local operator path:** **clone → configure HTTP backend → daemon (sidecar) → REX chat** — [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). Product shape: [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md).
 - **Done / v1.0:** [`docs/V1_0.md`](docs/V1_0.md) (**RC-*** release criteria, **`1.0.0`** tag gate); [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks open gaps; [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) buckets work.
-- **Product agent (planned):** [`docs/AGENT_DELIVERY_ROADMAP.md`](docs/AGENT_DELIVERY_ROADMAP.md) — `rex-agent`, JSON config (**R015–R019**); unified **`rex`** CLI shipped (**R014**); today uses **`rex-sidecar-stub`**.
+- **Product agent (planned):** [`docs/AGENT_DELIVERY_ROADMAP.md`](docs/AGENT_DELIVERY_ROADMAP.md) — `rex-agent`, JSON config (**R015** landed; **R016–R019** follow); unified **`rex`** CLI shipped (**R014**); today uses **`rex-sidecar-stub`**.
 - Engineering focus: **stream reliability** plus **stable NDJSON** across CLI/extension.
 - Product-learning focus: daemon **economics** (routing, compaction, caches, metrics per [docs/CONTEXT_EFFICIENCY.md](docs/CONTEXT_EFFICIENCY.md)); implementation incremental.
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
@@ -40,8 +40,8 @@ Linear recipe from a clone to **REX** chat in the editor (requires **HTTP backen
 
 1. **Build** the Rust workspace: `cargo build --workspace` — or one shot: `chmod +x ./scripts/dev-rex-extension.sh && ./scripts/dev-rex-extension.sh`.
 2. **Put** `rex` where the **editor** can find it — [`scripts/install-cli.sh`](scripts/install-cli.sh) (same binary for CLI and daemon auto-start).
-3. **Configure** brokered HTTP (example Ollama): `export REX_OPENAI_COMPAT_BASE_URL=http://127.0.0.1:11434/v1` and `REX_OPENAI_COMPAT_MODEL=…` — [docs/CONFIGURATION.md](docs/CONFIGURATION.md). Enable the supervised sidecar: `export REX_SIDECAR_ENABLED=1` and ensure `rex-sidecar-stub` is on `PATH` (or set `REX_SIDECAR_BINARY`) — [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md).
-4. **Run** `rex daemon` with those env vars (supervisor spawns the sidecar when enabled). Socket: `/tmp/rex.sock` (override with `REX_DAEMON_SOCKET` for the stub broker path).
+3. **Configure** brokered HTTP and sidecar in `$REX_ROOT/config.json` — run `rex config init`, then edit `inference.openai_compat` and `sidecars` — [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md).
+4. **Run** `rex daemon` (supervisor spawns the sidecar when enabled in config). Socket defaults to `/tmp/rex.sock` unless overridden in JSON.
 5. **Install** the extension — [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md).
 6. **In the editor:** **REX: Open Chat**, try **agent** mode, send a prompt, cancel once, and apply a code block with approval. Verify sidecar health in daemon logs and brokered `fs.read` via a prompt containing `__rex_read:<path>`.
 

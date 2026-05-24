@@ -68,7 +68,7 @@ Daemon-side approval **context** over gRPC is **Should** follow-on ([ADR 0009](a
 
 ### Reliability and trace correlation
 
-Bounded CLI retries for daemon-unavailable races; interrupted streams terminate with `error`. Per-request **`REX_TRACE_ID`** correlates CLI, daemon, extension logs — [`CONFIGURATION.md`](CONFIGURATION.md).
+Bounded CLI retries for daemon-unavailable races; interrupted streams terminate with `error`. Per-request **`--trace-id`** on `rex complete` correlates CLI, daemon, and extension logs — [`CONFIGURATION.md`](CONFIGURATION.md).
 
 ### MVP non-goals
 

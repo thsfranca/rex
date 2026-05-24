@@ -78,12 +78,12 @@ impl SidecarSupervisor {
             self.config.binary.display(),
             self.config.socket_path
         );
-        let daemon_socket = std::env::var("REX_DAEMON_SOCKET")
-            .ok()
-            .map(|v| v.trim().to_string())
-            .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| crate::domain::SOCKET_PATH.to_string());
+        let daemon_socket = crate::settings::get().daemon_socket().to_string();
         let child = Command::new(&self.config.binary)
+            .env(
+                "REX_ROOT",
+                crate::settings::get().rex_root.display().to_string(),
+            )
             .env("REX_SIDECAR_SOCKET", &self.config.socket_path)
             .env("REX_DAEMON_SOCKET", &daemon_socket)
             .stdout(Stdio::null())
@@ -126,6 +126,8 @@ impl SidecarSupervisor {
 
 pub type SharedSupervisor = Arc<SidecarSupervisor>;
 
-pub fn supervisor_from_env() -> SharedSupervisor {
-    Arc::new(SidecarSupervisor::new(SidecarConfig::from_env()))
+pub fn supervisor_from_config() -> SharedSupervisor {
+    Arc::new(SidecarSupervisor::new(SidecarConfig::from_config(
+        &crate::settings::get(),
+    )))
 }

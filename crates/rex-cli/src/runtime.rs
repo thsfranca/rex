@@ -1,7 +1,7 @@
 use std::io::{self, Write};
+use std::process;
 use std::process::ExitCode;
-use std::time::Duration;
-use std::{env, process, time::SystemTime};
+use std::time::{Duration, SystemTime};
 
 use rex_proto::rex::v1::{GetSystemStatusRequest, StreamInferenceRequest};
 use serde_json::json;
@@ -53,8 +53,9 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
             model,
             mode,
             approval_id,
+            trace_id,
             format,
-        } => run_complete(prompt, model, mode, approval_id, format).await,
+        } => run_complete(prompt, model, mode, approval_id, trace_id, format).await,
     }
 }
 
@@ -76,9 +77,10 @@ async fn run_complete(
     model: String,
     mode: String,
     approval_id: String,
+    trace_id: String,
     format: CompleteOutputFormat,
 ) -> Result<(), CliError> {
-    let trace_id = resolve_trace_id();
+    let trace_id = resolve_trace_id(trace_id);
     eprintln!("trace_id={trace_id} phase=start operation=complete");
     let mut attempt: u32 = 0;
     loop {
@@ -285,11 +287,9 @@ fn ndjson_terminal_event_count_for_tests(output: &str) -> usize {
         .count()
 }
 
-fn resolve_trace_id() -> String {
-    if let Ok(existing) = env::var("REX_TRACE_ID") {
-        if !existing.trim().is_empty() {
-            return existing;
-        }
+fn resolve_trace_id(explicit: String) -> String {
+    if !explicit.trim().is_empty() {
+        return explicit;
     }
     let millis = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)

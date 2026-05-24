@@ -2,18 +2,15 @@
 //!
 //! `ApprovalGate` is the single decision point for whether an `agent`-mode
 //! request is allowed to proceed. Default `AlwaysAllow`; opt-in enforcement
-//! via `REX_AGENT_APPROVALS` and client `approval_id` (extension/CLI). See
+//! via `agent.approvals_enabled` in config and client `approval_id` (extension/CLI). See
 //! [`docs/architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md`].
 
-use std::env;
 use std::sync::Arc;
 
 use crate::adapters::RuntimeKind;
 
-/// Environment variable that opts the daemon into agent-mode approval
-/// enforcement. Default off; when set to `1` or `true` (case-insensitive),
-/// `agent` requests are denied until a client supplies approval context. See
-/// `docs/CONFIGURATION.md` and ADR 0009.
+/// **Deprecated catalog name** — retained for stable deny-reason text (ADR 0009).
+#[allow(dead_code)]
 pub const APPROVALS_ENV: &str = "REX_AGENT_APPROVALS";
 
 /// Per-request inputs the gate may inspect when authorizing `agent` mode.
@@ -86,13 +83,11 @@ impl ApprovalGate for EnforceWithoutContext {
     }
 }
 
-/// Selects the daemon's startup gate based on `REX_AGENT_APPROVALS`. Called
+/// Selects the daemon's startup gate based on `agent.approvals_enabled`. Called
 /// once at daemon boot in `runtime.rs`; tests construct the concrete gate
-/// they need directly to keep environment isolation simple.
-pub fn approval_gate_from_env() -> Arc<dyn ApprovalGate> {
-    let raw = env::var(APPROVALS_ENV).unwrap_or_default();
-    let trimmed = raw.trim();
-    if trimmed == "1" || trimmed.eq_ignore_ascii_case("true") {
+/// they need directly to keep config isolation simple.
+pub fn approval_gate_from_config() -> Arc<dyn ApprovalGate> {
+    if crate::settings::get().approvals_enabled() {
         Arc::new(EnforceWithoutContext)
     } else {
         Arc::new(AlwaysAllow)
@@ -144,15 +139,20 @@ mod tests {
         );
     }
 
-    /// Mutates `REX_AGENT_APPROVALS` so the env-driven selector tests must run
-    /// serially. `serial_test::serial` is already a daemon dev-dependency.
+    /// Mutates loaded config so the config-driven selector tests must run serially.
     #[test]
     #[serial_test::serial]
-    fn approval_gate_from_env_defaults_to_always_allow() {
-        let prev = env::var(APPROVALS_ENV).ok();
-        env::remove_var(APPROVALS_ENV);
+    fn approval_gate_from_config_defaults_to_always_allow() {
+        crate::settings::reset_for_test();
+        let cfg = rex_config::RexConfig::defaults();
+        crate::settings::init_for_test(std::sync::Arc::new(rex_config::LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-approvals-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
 
-        let gate = approval_gate_from_env();
+        let gate = approval_gate_from_config();
         let runtime = tokio::runtime::Runtime::new().expect("runtime should build");
         let decision = runtime.block_on(gate.check(&ApprovalContext {
             mode: "agent".to_string(),
@@ -161,9 +161,7 @@ mod tests {
         }));
         assert_eq!(decision, ApprovalDecision::Allow);
 
-        if let Some(value) = prev {
-            env::set_var(APPROVALS_ENV, value);
-        }
+        crate::settings::reset_for_test();
     }
 
     #[test]
@@ -180,58 +178,53 @@ mod tests {
 
     #[test]
     #[serial_test::serial]
-    fn approval_gate_from_env_selects_enforcement_for_truthy_values() {
-        let prev = env::var(APPROVALS_ENV).ok();
+    fn approval_gate_from_config_selects_enforcement_when_enabled() {
+        crate::settings::reset_for_test();
+        let mut cfg = rex_config::RexConfig::defaults();
+        cfg.agent.approvals_enabled = Some(true);
+        crate::settings::init_for_test(std::sync::Arc::new(rex_config::LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-approvals-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
         let runtime = tokio::runtime::Runtime::new().expect("runtime should build");
-        for value in ["1", "true", "TRUE", "  true  "] {
-            env::set_var(APPROVALS_ENV, value);
-            let gate = approval_gate_from_env();
-            let decision = runtime.block_on(gate.check(&ApprovalContext {
-                mode: "agent".to_string(),
-                runtime: RuntimeKind::Mock,
-                approval_id: None,
-            }));
-            assert_eq!(
-                decision,
-                ApprovalDecision::Deny {
-                    reason: ENFORCEMENT_DENY_REASON.to_string(),
-                },
-                "value {value:?} should select enforcement",
-            );
-        }
-
-        if let Some(value) = prev {
-            env::set_var(APPROVALS_ENV, value);
-        } else {
-            env::remove_var(APPROVALS_ENV);
-        }
+        let gate = approval_gate_from_config();
+        let decision = runtime.block_on(gate.check(&ApprovalContext {
+            mode: "agent".to_string(),
+            runtime: RuntimeKind::Mock,
+            approval_id: None,
+        }));
+        assert_eq!(
+            decision,
+            ApprovalDecision::Deny {
+                reason: ENFORCEMENT_DENY_REASON.to_string(),
+            }
+        );
+        crate::settings::reset_for_test();
     }
 
     #[test]
     #[serial_test::serial]
-    fn approval_gate_from_env_ignores_unknown_values() {
-        let prev = env::var(APPROVALS_ENV).ok();
+    fn approval_gate_from_config_keeps_always_allow_when_disabled() {
+        crate::settings::reset_for_test();
+        let mut cfg = rex_config::RexConfig::defaults();
+        cfg.agent.approvals_enabled = Some(false);
+        crate::settings::init_for_test(std::sync::Arc::new(rex_config::LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-approvals-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
         let runtime = tokio::runtime::Runtime::new().expect("runtime should build");
-        for value in ["0", "false", "yes", "no", ""] {
-            env::set_var(APPROVALS_ENV, value);
-            let gate = approval_gate_from_env();
-            let decision = runtime.block_on(gate.check(&ApprovalContext {
-                mode: "agent".to_string(),
-                runtime: RuntimeKind::Mock,
-                approval_id: None,
-            }));
-            assert_eq!(
-                decision,
-                ApprovalDecision::Allow,
-                "value {value:?} should keep AlwaysAllow",
-            );
-        }
-
-        if let Some(value) = prev {
-            env::set_var(APPROVALS_ENV, value);
-        } else {
-            env::remove_var(APPROVALS_ENV);
-        }
+        let gate = approval_gate_from_config();
+        let decision = runtime.block_on(gate.check(&ApprovalContext {
+            mode: "agent".to_string(),
+            runtime: RuntimeKind::Mock,
+            approval_id: None,
+        }));
+        assert_eq!(decision, ApprovalDecision::Allow);
+        crate::settings::reset_for_test();
     }
 
     #[tokio::test]

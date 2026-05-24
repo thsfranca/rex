@@ -1,4 +1,3 @@
-use std::env;
 use std::io;
 use std::path::Path;
 use std::time::Duration;
@@ -158,10 +157,15 @@ impl SidecarService for StubSidecar {
 }
 
 fn daemon_socket_path() -> String {
-    env::var("REX_DAEMON_SOCKET")
-        .ok()
-        .filter(|s| !s.trim().is_empty())
-        .unwrap_or_else(|| "/tmp/rex.sock".to_string())
+    if let Ok(raw) = std::env::var("REX_DAEMON_SOCKET") {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            return trimmed.to_string();
+        }
+    }
+    rex_config::load_merged()
+        .map(|loaded| loaded.daemon_socket().to_string())
+        .unwrap_or_else(|_| "/tmp/rex.sock".to_string())
 }
 
 async fn connect_daemon(

@@ -1,8 +1,7 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
-use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 use crate::adapters::AdapterCapabilities;
@@ -27,24 +26,13 @@ impl Default for TokenBudget {
 }
 
 impl TokenBudget {
-    pub fn from_env() -> Self {
-        let default = Self::default();
+    pub fn from_config() -> Self {
+        let (max_prompt_tokens, max_context_tokens) = crate::settings::get().token_budget();
         Self {
-            max_prompt_tokens: parse_usize_env("REX_MAX_PROMPT_TOKENS", default.max_prompt_tokens),
-            max_context_tokens: parse_usize_env(
-                "REX_MAX_CONTEXT_TOKENS",
-                default.max_context_tokens,
-            ),
+            max_prompt_tokens: max_prompt_tokens.max(1),
+            max_context_tokens: max_context_tokens.max(1),
         }
     }
-}
-
-fn parse_usize_env(name: &str, default: usize) -> usize {
-    env::var(name)
-        .ok()
-        .and_then(|v| v.trim().parse().ok())
-        .filter(|&n| n > 0)
-        .unwrap_or(default)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -143,17 +131,13 @@ impl LexicalWorkspaceIndexer {
         Self::with_seed_docs(docs)
     }
 
-    pub fn from_env() -> Self {
-        let mode = env::var("REX_INDEXER").unwrap_or_else(|_| "workspace".to_string());
+    pub fn from_config() -> Self {
+        let loaded = crate::settings::get();
+        let mode = loaded.workspace_indexer_mode();
         if mode.trim().eq_ignore_ascii_case("seeded") {
             return Self::default_seeded();
         }
-        let root = env::var("REX_WORKSPACE_ROOT")
-            .ok()
-            .map(|v| PathBuf::from(v.trim().to_string()))
-            .filter(|p| !p.as_os_str().is_empty())
-            .or_else(|| env::current_dir().ok())
-            .unwrap_or_else(|| PathBuf::from("."));
+        let root = loaded.workspace_root();
         Self::from_workspace_root(&root)
     }
 
@@ -327,14 +311,14 @@ pub struct ContextPipeline {
 }
 
 impl ContextPipeline {
-    /// Production pipeline: workspace indexer unless `REX_INDEXER=seeded`.
+    /// Production pipeline: workspace indexer unless config indexer is `seeded`.
     pub fn production_default() -> Self {
-        Self::with_indexer(LexicalWorkspaceIndexer::from_env())
+        Self::with_indexer(LexicalWorkspaceIndexer::from_config())
     }
 
     pub(crate) fn with_indexer(indexer: LexicalWorkspaceIndexer) -> Self {
         Self {
-            budget: TokenBudget::from_env(),
+            budget: TokenBudget::from_config(),
             indexer,
             compressor: ExtractiveContextCompressor,
             cache: ExactPrefixCache::new(Duration::from_secs(600)),
@@ -580,23 +564,38 @@ mod tests {
         ContextRequest, ExtractiveContextCompressor, LexicalWorkspaceIndexer, TokenBudget,
     };
     use crate::adapters::{AdapterCapabilities, RuntimeKind};
-    use std::env;
     use std::fs;
+    use std::sync::Arc;
 
     fn test_pipeline() -> ContextPipeline {
         ContextPipeline::with_indexer(LexicalWorkspaceIndexer::default_seeded())
     }
 
-    #[test]
-    fn token_budget_from_env_overrides_defaults() {
-        let _guard = EnvGuard::set("REX_MAX_PROMPT_TOKENS", "64");
-        let budget = TokenBudget::from_env();
-        assert_eq!(budget.max_prompt_tokens, 64);
+    fn init_token_budget(max_prompt_tokens: usize) {
+        crate::settings::reset_for_test();
+        let mut cfg = rex_config::RexConfig::defaults();
+        cfg.context.max_prompt_tokens = max_prompt_tokens;
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-plugins-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
     }
 
     #[test]
-    fn prompt_budget_truncates_when_env_limits_tokens() {
-        let _guard = EnvGuard::set("REX_MAX_PROMPT_TOKENS", "4");
+    #[serial_test::serial]
+    fn token_budget_from_config_overrides_defaults() {
+        init_token_budget(64);
+        let budget = TokenBudget::from_config();
+        assert_eq!(budget.max_prompt_tokens, 64);
+        crate::settings::reset_for_test();
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn prompt_budget_truncates_when_config_limits_tokens() {
+        init_token_budget(4);
         let mut pipeline = ContextPipeline::with_indexer(LexicalWorkspaceIndexer::default_seeded());
         let long = "a".repeat(200);
         let request = ContextRequest {
@@ -611,28 +610,7 @@ mod tests {
             AdapterCapabilities::for_runtime(RuntimeKind::Mock),
         );
         assert!(result.effective_prompt.chars().count() <= 16);
-    }
-
-    struct EnvGuard {
-        key: &'static str,
-        previous: Option<String>,
-    }
-
-    impl EnvGuard {
-        fn set(key: &'static str, value: &str) -> Self {
-            let previous = env::var(key).ok();
-            env::set_var(key, value);
-            Self { key, previous }
-        }
-    }
-
-    impl Drop for EnvGuard {
-        fn drop(&mut self) {
-            match &self.previous {
-                Some(v) => env::set_var(self.key, v),
-                None => env::remove_var(self.key),
-            }
-        }
+        crate::settings::reset_for_test();
     }
 
     #[test]

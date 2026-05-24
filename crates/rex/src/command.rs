@@ -1,13 +1,11 @@
-use std::process::ExitCode;
-
 #[derive(Debug, PartialEq, Eq)]
 pub enum TopLevelCommand {
     Help,
     Daemon,
     Cli(Vec<String>),
-    ConfigStub,
-    ProtoStub(Vec<String>),
-    SidecarStub,
+    Config(Vec<String>),
+    Proto(Vec<String>),
+    Sidecar(Vec<String>),
 }
 
 pub fn parse_top_level(mut args: impl Iterator<Item = String>) -> Result<TopLevelCommand, String> {
@@ -24,9 +22,9 @@ pub fn parse_top_level(mut args: impl Iterator<Item = String>) -> Result<TopLeve
             rest.extend(args);
             Ok(TopLevelCommand::Cli(rest))
         }
-        Some("config") => Ok(TopLevelCommand::ConfigStub),
-        Some("proto") => Ok(TopLevelCommand::ProtoStub(args.collect())),
-        Some("sidecar") => Ok(TopLevelCommand::SidecarStub),
+        Some("config") => Ok(TopLevelCommand::Config(args.collect())),
+        Some("proto") => Ok(TopLevelCommand::Proto(args.collect())),
+        Some("sidecar") => Ok(TopLevelCommand::Sidecar(args.collect())),
         Some(other) => Err(format!("Unknown command: {other}")),
     }
 }
@@ -37,65 +35,13 @@ pub fn print_usage() {
 Usage:
   rex daemon
   rex status
-  rex complete \"<prompt>\" [--format text|ndjson] [--model <id>] [--mode ask|plan|agent] [--approval-id <id>]
-  rex config <init|show|path|validate>   (planned — R015)
-  rex proto <install|path|doctor>        (doctor available; install/path — R015)
-  rex sidecar <list|init|doctor>         (planned — R015)
+  rex complete \"<prompt>\" [--format text|ndjson] [--model <id>] [--mode ask|plan|agent] [--approval-id <id>] [--trace-id <id>]
+  rex config <init|show|path|validate>
+  rex proto <install|path|doctor>
+  rex sidecar <list|init|doctor>
 
 Run the local daemon, query status, or stream a completion via the daemon UDS API."
     );
-}
-
-pub fn print_r015_stub(group: &str) -> ExitCode {
-    eprintln!(
-        "rex {group} is not implemented yet (JSON configuration — R015). \
-         Use environment variables until then; see docs/CONFIGURATION.md."
-    );
-    match group {
-        "config" => eprintln!("Planned: rex config init|show|path|validate"),
-        "sidecar" => eprintln!("Planned: rex sidecar list|init|doctor"),
-        _ => {}
-    }
-    ExitCode::from(2)
-}
-
-pub fn run_proto_stub(mut args: impl Iterator<Item = String>) -> ExitCode {
-    match args.next().as_deref() {
-        Some("doctor") => match std::process::Command::new("protoc")
-            .arg("--version")
-            .output()
-        {
-            Ok(output) if output.status.success() => {
-                let version = String::from_utf8_lossy(&output.stdout);
-                println!("protoc OK: {}", version.trim());
-                ExitCode::SUCCESS
-            }
-            Ok(output) => {
-                eprintln!(
-                    "protoc failed (exit {}): {}",
-                    output.status,
-                    String::from_utf8_lossy(&output.stderr).trim()
-                );
-                ExitCode::from(1)
-            }
-            Err(err) => {
-                eprintln!("protoc not found on PATH: {err}");
-                eprintln!("Install prerequisites from docs/DEPENDENCIES.md");
-                ExitCode::from(1)
-            }
-        },
-        Some("install") | Some("path") | Some("-h") | Some("--help") | None => {
-            eprintln!(
-                "rex proto install and rex proto path require JSON configuration (R015). \
-                 Use `rex proto doctor` to verify protoc."
-            );
-            ExitCode::from(2)
-        }
-        Some(other) => {
-            eprintln!("Unknown rex proto subcommand: {other}");
-            ExitCode::from(2)
-        }
-    }
 }
 
 #[cfg(test)]
@@ -124,10 +70,10 @@ mod tests {
     }
 
     #[test]
-    fn proto_install_stub_exits_two() {
+    fn parses_config_subcommand() {
         assert_eq!(
-            run_proto_stub(["install".to_string()].into_iter()),
-            ExitCode::from(2)
+            parse_top_level(["config".to_string(), "show".to_string()].into_iter()).unwrap(),
+            TopLevelCommand::Config(vec!["show".to_string()])
         );
     }
 }
