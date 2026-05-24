@@ -160,10 +160,12 @@ sequenceDiagram
 |---|---|
 | `rex.v1` gRPC | `implemented` |
 | NDJSON CLI contract | `implemented` — [EXTENSION.md](EXTENSION.md) |
-| MCP (or equivalent) for tools | `planned` — **approved direction:** MCP stacks **primarily** in the **isolated sidecar**; host-affecting work **brokered** sidecar → daemon ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix). Formal ADR when implementation is scheduled. |
+| MCP (or equivalent) for tools | `planned` — **approved direction:** MCP stacks **primarily** in the **isolated sidecar**; host-affecting work **brokered** sidecar → daemon ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix). Remote doc resources vs Rex knowledge bundles: [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md). Formal ADR when implementation is scheduled. |
 | HTTP OpenAI-compat via external gateway | `optional / deferred` — [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
 
 ## Observability
+
+Full signal catalog, validation program, and OSS UI options: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md). Agent knowledge retrieval metrics (planned): [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md).
 
 | Field / signal | Where | Purpose |
 |---|---|---|
