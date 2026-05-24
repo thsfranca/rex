@@ -175,9 +175,39 @@ jobs:
         if: ${{ steps.run_extension_verify.outcome != 'success' }}
         run: exit 1
 
+  guidelines-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run guidelines verify
+        id: run_guidelines_verify
+        continue-on-error: true
+        run: ./scripts/ci/run_guidelines_verify.sh
+
+      - name: Write Job Summary
+        if: ${{ always() }}
+        run: ./scripts/ci/write_job_summary.sh guidelines-verify
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_guidelines_verify.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-guidelines-verify-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+
+      - name: Enforce guidelines verify status
+        if: ${{ steps.run_guidelines_verify.outcome != 'success' }}
+        run: exit 1
+
   ci-checks:
     if: ${{ always() }}
-    needs: [changes, rust-verify, extension-verify]
+    needs: [changes, rust-verify, extension-verify, guidelines-verify]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -197,6 +227,7 @@ jobs:
           EXTENSION_RELEVANT: ${{ needs.changes.outputs.extension_relevant }}
           RUST_RESULT: ${{ needs.rust-verify.result }}
           EXTENSION_RESULT: ${{ needs.extension-verify.result }}
+          GUIDELINES_RESULT: ${{ needs.guidelines-verify.result }}
         run: ./scripts/ci/enforce_ci_gate.sh
 
       - name: Upload diagnostics artifact

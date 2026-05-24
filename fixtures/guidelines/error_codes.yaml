@@ -1,0 +1,44 @@
+# Machine-readable NDJSON stream error code catalog.
+# Keep in sync with docs/ERROR_HANDLING.md and extensions/rex-vscode/src/shared/messages.ts.
+version: 1
+codes:
+  - code: daemon_unavailable
+    domain: ndjson
+    retryable: true
+    owner: both
+  - code: sidecar_unavailable
+    domain: ndjson
+    retryable: false
+    owner: both
+  - code: inference_config
+    domain: ndjson
+    retryable: false
+    owner: both
+  - code: stream_timeout
+    domain: ndjson
+    retryable: true
+    owner: both
+  - code: stream_interrupted
+    domain: ndjson
+    retryable: true
+    owner: both
+  - code: stream_incomplete
+    domain: ndjson
+    retryable: false
+    owner: both
+  - code: cancelled
+    domain: ndjson
+    retryable: true
+    owner: extension
+  - code: invalid_response
+    domain: ndjson
+    retryable: false
+    owner: extension
+  - code: spawn_failed
+    domain: ndjson
+    retryable: false
+    owner: extension
+  - code: unknown
+    domain: ndjson
+    retryable: false
+    owner: both

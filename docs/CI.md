@@ -79,6 +79,7 @@ Keep failure codes low-cardinality. Current baseline set:
 - `LINT_FAIL` (extension ESLint)
 - `BUILD_FAIL` (extension esbuild bundle)
 - `PACKAGE_FAIL` (extension VSIX packaging)
+- `GUIDELINES_FAIL` (documented guideline conformance — error code catalog sync and sibling checks under `scripts/ci/guidelines/`)
 
 ### Reliability guardrails
 
@@ -103,13 +104,13 @@ Set branch protection or ruleset on `main` to require:
 - `ci-checks`
 - `Conventional PR title` (job in [`.github/workflows/pr-title-lint.yml`](../.github/workflows/pr-title-lint.yml))
 
-`ci-checks` is the merge gate for code quality. It reads `rust-verify` and `extension-verify` results with path-aware skip semantics: when a domain is not relevant, the verify job is skipped and `ci-checks` still passes. When a domain is relevant and verify fails, `ci-checks` fails with `GATE_FAIL`.
+`ci-checks` is the merge gate for code quality. It reads `rust-verify`, `extension-verify`, and `guidelines-verify` results. **`guidelines-verify`** always runs documented guideline conformance checks. `rust-verify` and `extension-verify` use path-aware skip semantics: when a domain is not relevant, the verify job is skipped and `ci-checks` still passes. When a relevant verify job fails, `ci-checks` fails with `GATE_FAIL`. When `guidelines-verify` fails, `ci-checks` fails with `GUIDELINES_FAIL`.
 
 **Conventional PR title** is required because squash-merge titles become commits on `main`, which feed release-plz and release-please (semver + changelog). See [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-Do **not** require `rust-verify`, `extension-verify`, or `changes` — verify jobs skip on docs-only PRs; `changes` is path detection only.
+Do **not** require `rust-verify`, `extension-verify`, `guidelines-verify`, or `changes` — domain verify jobs skip on docs-only PRs; `changes` is path detection only.
 
-Informational jobs (not required): `rust-verify`, `extension-verify`, `changes`.
+Informational jobs (not required): `rust-verify`, `extension-verify`, `guidelines-verify`, `changes`.
 
 ## Path-aware execution model
 
@@ -143,11 +144,25 @@ CI first evaluates changed paths, then runs only relevant domain checks.
   - `scripts/ci/**`
   - `Cargo.toml`
   - `Cargo.lock`
+  - `docs/ERROR_HANDLING.md`
+  - `fixtures/guidelines/**`
+  - `fixtures/ndjson_contract/**`
+
+### Guidelines verify (always runs)
+
+Every pull request runs [`scripts/ci/run_guidelines_verify.sh`](scripts/ci/run_guidelines_verify.sh) in the **guidelines-verify** job. It validates documented rules that are not covered by fmt, clippy, or ESLint — starting with NDJSON stream **error code catalog** sync (`fixtures/guidelines/error_codes.yaml` ↔ TypeScript ↔ docs ↔ fixtures). Failure code: `GUIDELINES_FAIL`. See [ERROR_HANDLING.md](ERROR_HANDLING.md).
+
+Local run:
+
+```bash
+./scripts/ci/run_guidelines_verify.sh
+```
 
 ### Dependency model
 
-- Verify jobs (parallel): `rust-verify`, `extension-verify`
-- Merge gate: `rust-verify` + `extension-verify` → `ci-checks`
+- Always: `guidelines-verify`
+- Verify jobs (parallel, path-aware): `rust-verify`, `extension-verify`
+- Merge gate: `guidelines-verify` + `rust-verify` + `extension-verify` → `ci-checks`
 
 When a domain is non-relevant, its verify job skips. `ci-checks` runs with `if: always()` and passes when skipped verify results are acceptable for non-relevant paths.
 

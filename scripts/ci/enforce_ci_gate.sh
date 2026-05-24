@@ -5,6 +5,7 @@ rust_relevant="${RUST_RELEVANT:-true}"
 extension_relevant="${EXTENSION_RELEVANT:-true}"
 rust_result="${RUST_RESULT:-missing}"
 extension_result="${EXTENSION_RESULT:-missing}"
+guidelines_result="${GUIDELINES_RESULT:-missing}"
 result="success"
 fail_stage="-"
 fail_code="-"
@@ -38,11 +39,18 @@ echo "::notice::No test execution in gate job."
 echo "::endgroup::"
 
 echo "::group::PostRunSummary"
-if ! domain_ok "${rust_relevant}" "${rust_result}" || ! domain_ok "${extension_relevant}" "${extension_result}"; then
+if ! domain_ok "${rust_relevant}" "${rust_result}" \
+  || ! domain_ok "${extension_relevant}" "${extension_result}" \
+  || [ "${guidelines_result}" != "success" ]; then
   result="failure"
   fail_stage="PostRunSummary"
   fail_code="GATE_FAIL"
-  hint="Inspect rust-verify and extension-verify summaries and artifacts; when a domain is not relevant, upstream verify may be skipped."
+  if [ "${guidelines_result}" != "success" ]; then
+    fail_code="GUIDELINES_FAIL"
+    hint="Guidelines verify failed; run ./scripts/ci/run_guidelines_verify.sh locally."
+  else
+    hint="Inspect rust-verify and extension-verify summaries and artifacts; when a domain is not relevant, upstream verify may be skipped."
+  fi
 fi
 
 {
@@ -56,6 +64,7 @@ fi
   echo ""
   echo "- rust-verify: ${rust_result}"
   echo "- extension-verify: ${extension_result}"
+  echo "- guidelines-verify: ${guidelines_result}"
 } >> "$GITHUB_STEP_SUMMARY"
 
 {
@@ -65,6 +74,7 @@ fi
   echo "hint=${hint}"
   echo "rust_verify=${rust_result}"
   echo "extension_verify=${extension_result}"
+  echo "guidelines_verify=${guidelines_result}"
 } > "ci-observability/ci-gate-summary.txt"
 
 if [ "${result}" != "success" ]; then

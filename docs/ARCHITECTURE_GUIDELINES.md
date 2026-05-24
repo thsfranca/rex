@@ -107,6 +107,7 @@ Align with [DOCUMENTATION.md](DOCUMENTATION.md) and arc42-style documentation go
 - [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)
 - [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — economics lever matrix.
 - [DOCUMENTATION.md](DOCUMENTATION.md) — writing norms, Diátaxis purpose, location rules, roadmap gate, and doc-type portfolio.
+- [ERROR_HANDLING.md](ERROR_HANDLING.md) — error codes, human-readable messages, and guidelines CI gate.
 
 ## See also
 
