@@ -173,6 +173,18 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("rex.sendTerminalSelectionToRex", async () => {
+      const selection = await getTerminalSelection();
+      if (selection === undefined || selection.trim().length === 0) {
+        void vscode.window.showWarningMessage("Select text in the terminal first.");
+        return;
+      }
+      resources?.chatPanel.attachTerminalContext(selection);
+      await vscode.commands.executeCommand("rex.focusChat");
+    }),
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("rex.clearChat", () => {
       resources?.chatPanel.clearChat();
     }),
@@ -338,4 +350,14 @@ function refreshDaemonConnection(
     return ensureDaemonWithWorkspaceBinding(r.lifecycle, r.settings, r.output);
   }
   return r.lifecycle.probe();
+}
+
+async function getTerminalSelection(): Promise<string | undefined> {
+  const previousClipboard = await vscode.env.clipboard.readText();
+  await vscode.commands.executeCommand("workbench.action.terminal.copySelection");
+  const selection = await vscode.env.clipboard.readText();
+  if (selection.length === 0 || selection === previousClipboard) {
+    return undefined;
+  }
+  return selection;
 }
