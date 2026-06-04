@@ -4,9 +4,24 @@
 
 ## Purpose
 
-Close the gap between Rex’s **thin-client** extension and a **Cursor-class** editor+agent experience: editor-adjacent chat, rich composer context, persisted sessions, tool visibility, and reviewable edits—while keeping **`rex complete --format ndjson`** as the primary transport ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md), [EXTENSION.md](EXTENSION.md)).
+Improve Rex’s **thin-client** extension so operators can dogfood from the IDE with **integrated editor+agent UX**: editor-adjacent chat, rich composer context, persisted sessions, tool visibility, and reviewable edits—while keeping **`rex complete --format ndjson`** as the primary transport ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md), [EXTENSION.md](EXTENSION.md)).
 
-**Primary surface:** custom React webview (same VSIX in VS Code and Cursor). Native VS Code Chat Participant is **out of scope** unless a future ADR supersedes webview-first.
+**Primary surface:** custom React webview (webview-first). Native VS Code Chat Participant is **out of scope** unless a future ADR supersedes that choice. Editor portability and hybrid install paths: [EXTENSION.md](EXTENSION.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) hybrid strategy.
+
+## Language policy
+
+Describe **target experience and acceptance criteria in Rex terms only**. Do not name other editors, assistants, or extensions as UX benchmarks in this hub or in E-UX PR text. Platform facts may cite official VS Code extension APIs and guidelines.
+
+## Target experience
+
+Operators working in a supported editor should experience AI as part of the editing flow, not only as a distant activity-bar panel.
+
+- **Layout:** chat beside the code (secondary sidebar when the host supports it; activity-bar fallback on older hosts; optional full editor-tab panel).
+- **Composer:** attach workspace file and symbol context, run slash commands, send terminal selections into chat.
+- **Sessions:** workspace-scoped threads that survive window reload.
+- **Agent visibility:** expandable tool and step cards when the host receives structured execution events.
+- **Edits:** inline edit on selection through the existing virtual-doc apply path; batch multi-file review when multiple proposals exist.
+- **Keyboard:** shortcuts to focus chat, send, cancel, and clear without leaving the editor flow.
 
 ## Scope
 
@@ -24,7 +39,20 @@ Close the gap between Rex’s **thin-client** extension and a **Cursor-class** e
 - Bespoke workspace embedding / indexing servers for @-mentions.
 - MCP orchestration inside the extension (deferred per [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md)).
 - Node gRPC `StreamInference` in the extension.
-- Parallel multi-agent orchestration UI (Cursor Agents Window class).
+- Parallel multi-agent orchestration UI.
+
+## Current vs target gap
+
+| Capability | Rex today | Target |
+|------------|-----------|--------|
+| Chat placement | Activity bar only | Secondary sidebar + editor panel |
+| Streaming markdown | Shipped | Keep |
+| Apply | Native diff tab | Keep; add multi-file batch review |
+| Context | File + selection chip | @-picker (files, symbols) |
+| Sessions | In-memory | Workspace persistence |
+| Tool UI | Execution timeline | Expandable tool/step cards |
+| Inline edit | Context-menu prefill | Inline edit on selection |
+| Keyboard UX | Few shortcuts | Focus / send / cancel / clear shortcuts |
 
 ## Boundaries
 
@@ -51,18 +79,6 @@ flowchart LR
 - **NDJSON:** keep `chunk` / `done` / `error`. Optional additive kinds (`step`, `tool`) require [fixtures/ndjson_contract/](../fixtures/ndjson_contract/) updates and [ERROR_HANDLING.md](ERROR_HANDLING.md) catalog entries when they carry error semantics.
 - **Host ↔ webview:** extend [`messages.ts`](../extensions/rex-vscode/src/shared/messages.ts) additively (sessions, extra context chips, tool cards). Existing handlers remain backward compatible.
 - **Context attachment:** prompt trailers and client hints follow the pattern in [`context.ts`](../extensions/rex-vscode/src/editor/context.ts).
-
-## Cursor vs Rex gap (baseline)
-
-| Capability | Rex foundation | Target (this hub) |
-|------------|----------------|-------------------|
-| Chat placement | Activity bar only | Secondary sidebar + editor panel |
-| Streaming markdown | Shipped | Keep |
-| Apply | Native diff tab | Keep; add multi-file batch review |
-| Context | File + selection chip | @-picker (files, symbols) |
-| Sessions | In-memory | Workspace persistence |
-| Tool UI | Execution timeline | Expandable tool/step cards |
-| Inline edit | Context-menu prefill | Cmd+K-style flow on selection |
 
 ## Delivery items and acceptance
 

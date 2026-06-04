@@ -5,7 +5,7 @@ This document records the phased delivery of the REX editor extension for both V
 ## Current purpose
 
 - Keep one hybrid VS Code and Cursor extension on the **`rex-cli` NDJSON** contract summarized in **[EXTENSION.md](EXTENSION.md)**; optional unary **`rex.v1`** over UDS is allowed per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)** when maintainers choose it.
-- Deliver **Cursor-class editor+agent UX** per **[EXTENSION_UX.md](EXTENSION_UX.md)** (webview-first; stable CLI boundary).
+- Deliver **integrated editor+agent UX** per **[EXTENSION_UX.md](EXTENSION_UX.md)** (webview-first; stable CLI boundary).
 - Keep Cursor-specific features optional behind runtime capability detection so the same VSIX installs cleanly in plain VS Code.
 - Keep daemon lifecycle user-managed by default; opt-in auto-start remains behind `rex.daemonAutoStart` (default off).
 
@@ -96,4 +96,4 @@ Revisit the monorepo decision if any of the following become true:
 - [ARCHITECTURE.md](ARCHITECTURE.md): REX system architecture.
 - [MVP_SPEC.md](MVP_SPEC.md): Phase 1 product architecture; done: [V1_0.md](V1_0.md).
 - **[EXTENSION.md](EXTENSION.md)**: consolidated extension contract + component layout.
-- **[EXTENSION_UX.md](EXTENSION_UX.md)**: Cursor-class UX design hub.
+- **[EXTENSION_UX.md](EXTENSION_UX.md)**: integrated extension UX design hub.
