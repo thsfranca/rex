@@ -20,7 +20,8 @@ const POLICY_BY_MODE: Record<InteractionMode, ModePolicy> = {
     canMutateFiles: true,
     requiresExecutionApproval: true,
     requiresMutationApproval: true,
-    summary: "Guarded execution mode with approval checkpoints.",
+    summary:
+      "Guarded execution mode with approval checkpoints. Broker tools may modify the workspace without Apply approval.",
   },
 };
 

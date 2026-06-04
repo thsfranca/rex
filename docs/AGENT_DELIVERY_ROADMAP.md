@@ -172,7 +172,7 @@ Ship before **`rex-agent`** dogfood (**R017–R018**). Design: [DEVELOPMENT_ASSI
 
 ## R019 — Integration and E2E acceptance
 
-**Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, and operator checklist in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md#8-r019-acceptance--live-model-operator-not-ci).
+**Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, operator checklist in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md#8-r019-acceptance--live-model-operator-not-ci), and extension operator alignment with **`rex-agent`** (JSON setup hints, **`rex.productAgentConfig`** default, NDJSON **`tool`**/**`step`** cards).
 
 | Criterion | Evidence |
 |-----------|----------|

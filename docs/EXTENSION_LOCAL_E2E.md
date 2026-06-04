@@ -84,7 +84,7 @@ Build and install binaries so `rex-agent` is on `PATH` when the daemon starts (`
 
 For automated preflight only (no live LLM), CI uses `inference.runtime: mock` and/or `sidecars.harness: "direct"` — not the operator acceptance path below.
 
-Optional extension overlay: with `"rex.productAgentConfig": true`, auto-start merges `sidecars.active: agent` into project `.rex/config.json` (default remains stub-friendly for CI).
+Optional extension overlay: **`rex.productAgentConfig`** defaults to **true** and merges `sidecars.active: agent` plus `agent.approvals_enabled: true` into project `.rex/config.json` on auto-start.
 
 ## 4) Run `rex daemon`
 
@@ -164,7 +164,7 @@ Open **REX: Open Chat**, select **agent** or **plan** mode, send a short prompt,
 | Cancel → idle | `streamClient.test.ts` | Optional smoke in chat |
 | Daemon probe **ready → unavailable** | `daemonLifecycle.test.ts` (fixture `cli_status_ok_then_fail.sh`) | Stop daemon while extension open |
 | Daemon probe **unavailable → ready** | `daemonLifecycle.test.ts` (fixture `cli_status_fail_then_ok.sh`) | Restart daemon after stop |
-| `--approval-id` on `complete` | `cliBridgeArgs.test.ts` | Agent send with `REX_AGENT_APPROVALS=1` |
+| `--approval-id` on `complete` | `cliBridgeArgs.test.ts` | Agent send with `agent.approvals_enabled: true` in JSON |
 | Long multi-turn session | — | Checklist below |
 
 ## 8) R019 acceptance — live model (operator; not CI)
