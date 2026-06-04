@@ -58,6 +58,7 @@ Before adding or materially editing a doc under `docs/`:
 | [EXTENSION_RELEASE.md](EXTENSION_RELEASE.md) | Install & extension release |
 | [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) | Clone → working editor |
 | [CI.md](CI.md) | Automation gates |
+| [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | Planned CI quality and security gates (**R023–R026**) |
 | [DEPENDENCIES.md](DEPENDENCIES.md) | Toolchain prerequisites |
 
 ## Feature-area hub map
@@ -84,6 +85,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Purpose and principles | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) |
 | Agent access + sidecar runtime | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Product agent delivery (planned) | [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [ROADMAP.md](ROADMAP.md) R013–R022 |
+| CI quality and security gates (planned) | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md), [ROADMAP.md](ROADMAP.md) R023–R026 |
 | Development assistance capabilities (daemon-owned context, turn contract) | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md), [ADRs 0011–0017](architecture/decisions/README.md) |
 
 ## Scripts (related)
