@@ -46,11 +46,16 @@ export async function runInlineEditOnSelection(deps: InlineEditDependencies): Pr
         buffer += event.text;
         continue;
       }
+      if (event.kind === "tool" || event.kind === "step") {
+        continue;
+      }
       if (event.kind === "done") {
         break;
       }
-      void vscode.window.showErrorMessage(event.message);
-      return;
+      if (event.kind === "error") {
+        void vscode.window.showErrorMessage(event.message);
+        return;
+      }
     }
   } catch (error) {
     void vscode.window.showErrorMessage(error instanceof Error ? error.message : String(error));

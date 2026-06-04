@@ -17,6 +17,31 @@ describe("NdjsonLineParser", () => {
     ]);
   });
 
+  it("parses tool and step events", () => {
+    const parser = new NdjsonLineParser();
+    const events = parser.push(
+      '{"event":"tool","index":1,"name":"fs.read","phase":"running","detail":"src/main.rs"}\n' +
+        '{"event":"step","index":2,"phase":"running","summary":"Orchestrator routing"}\n' +
+        '{"event":"done","index":3}\n',
+    );
+    expect(events).toEqual([
+      {
+        kind: "tool",
+        index: 1,
+        name: "fs.read",
+        phase: "running",
+        detail: "src/main.rs",
+      },
+      {
+        kind: "step",
+        index: 2,
+        phase: "running",
+        summary: "Orchestrator routing",
+      },
+      { kind: "done", index: 3 },
+    ]);
+  });
+
   it("buffers partial lines across multiple pushes", () => {
     const parser = new NdjsonLineParser();
     const first = parser.push('{"event":"chunk","index":0,"te');

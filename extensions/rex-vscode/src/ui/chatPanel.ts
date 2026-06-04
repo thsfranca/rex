@@ -475,6 +475,20 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
           this.postMessage({ type: "streamChunk", id: message.id, text: event.text });
           continue;
         }
+        if (event.kind === "tool") {
+          this.emitExecutionStep(
+            message.id,
+            mapToolPhase(event.phase),
+            event.name,
+            "tool",
+            event.detail,
+          );
+          continue;
+        }
+        if (event.kind === "step") {
+          this.emitExecutionStep(message.id, "running", event.summary, "step", event.summary);
+          continue;
+        }
         if (event.kind === "done") {
           this.emitExecutionStep(message.id, "completed", "Execution completed.", "step");
           this.postMessage({ type: "streamDone", id: message.id });
@@ -705,12 +719,23 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     phase: ExecutionStepPayload["phase"],
     summary: string,
     kind?: ExecutionStepPayload["kind"],
+    detail?: string,
   ): void {
     this.postMessage({
       type: "executionStep",
-      payload: { id, phase, summary, kind, detail: summary },
+      payload: { id, phase, summary, kind, detail: detail ?? summary },
     });
   }
+}
+
+function mapToolPhase(phase: string): ExecutionStepPayload["phase"] {
+  if (phase === "completed") {
+    return "completed";
+  }
+  if (phase === "failed") {
+    return "failed";
+  }
+  return "running";
 }
 
 function mapThemeKind(theme: vscode.ColorTheme): ThemeKind {
