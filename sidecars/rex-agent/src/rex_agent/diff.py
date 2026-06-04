@@ -1,4 +1,4 @@
-"""Unified diff application for sidecar-local patch-before-write."""
+"""Unified diff application for Editor writes (R030). Sidecar-local patch-before-write."""
 
 from __future__ import annotations
 
