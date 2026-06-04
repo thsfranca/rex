@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 
+import { formatAttachmentsForPrompt, pickContextAttachments } from "../editor/contextPicker";
 import { snapshotActiveEditor } from "../editor/context";
 import { RexProposalProvider } from "../editor/virtualDocs";
 import type { CliBridgeOptions } from "../runtime/cliBridge";
@@ -11,6 +12,8 @@ import { streamComplete } from "../runtime/streamClient";
 import type {
   ApprovalDecisionPayload,
   ApprovalScope,
+  ContextAttachment,
+  ExecutionStepPayload,
   ExtensionToWebview,
   InteractionMode,
   ModePolicy,
@@ -60,6 +63,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   private readonly sessionStore: SessionStore;
   private sessionSnapshot: SessionStoreSnapshot;
   private mode: InteractionMode = "ask";
+  private terminalAttachments: ContextAttachment[] = [];
 
   constructor(private readonly deps: ChatPanelDependencies) {
     this.sessionStore = new SessionStore(deps.context);
@@ -102,7 +106,6 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     return new vscode.Disposable(() => this.dispose());
   }
 
-
   async handleExternalMessage(raw: unknown): Promise<void> {
     if (!isIncomingMessage(raw)) {
       return;
@@ -115,7 +118,6 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       this.cancelPendingStream(id);
     }
   }
-
 
   dispose(): void {
     for (const pending of this.pendingStreams.values()) {
@@ -254,6 +256,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
         });
         this.sendContextSnapshot();
         this.broadcastSessions();
+        this.postMessage({ type: "contextAttachments", attachments: this.terminalAttachments });
         this.flushPendingPrefills();
         return;
       case "submitPrompt":
@@ -345,6 +348,21 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       case "saveSessionState":
         await this.persistActiveSession(message.messages, message.mode);
         return;
+      case "requestContextPicker": {
+        const picked = await pickContextAttachments();
+        if (picked.length === 0) {
+          return;
+        }
+        this.terminalAttachments = [...this.terminalAttachments, ...picked];
+        this.postMessage({ type: "contextAttachments", attachments: this.terminalAttachments });
+        return;
+      }
+      case "removeContextAttachment":
+        this.terminalAttachments = this.terminalAttachments.filter(
+          (item) => item.id !== message.id,
+        );
+        this.postMessage({ type: "contextAttachments", attachments: this.terminalAttachments });
+        return;
     }
   }
 
@@ -355,7 +373,8 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     const controller = new AbortController();
     this.pendingStreams.set(message.id, { controller });
 
-    const promptForDaemon = message.prompt;
+    const attachmentText = formatAttachmentsForPrompt(message.attachments ?? this.terminalAttachments);
+    const promptForDaemon = `${message.prompt}${attachmentText}`;
     const clientHints =
       message.attachContext && message.context !== undefined
         ? {
@@ -410,7 +429,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
         }
       }
 
-      this.emitExecutionStep(message.id, "running", "Execution started.");
+      this.emitExecutionStep(message.id, "running", "Execution started.", "step");
       const configuredModel = this.deps.getModelId().trim();
       for await (const event of streamComplete(this.deps.getCliOptions(), {
         prompt: promptForDaemon,
@@ -434,12 +453,12 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
           continue;
         }
         if (event.kind === "done") {
-          this.emitExecutionStep(message.id, "completed", "Execution completed.");
+          this.emitExecutionStep(message.id, "completed", "Execution completed.", "step");
           this.postMessage({ type: "streamDone", id: message.id });
           continue;
         }
         const classified = classifyStreamError(event);
-        this.emitExecutionStep(message.id, "failed", `Execution failed: ${classified.code}.`);
+        this.emitExecutionStep(message.id, "failed", `Execution failed: ${classified.code}.`, "step");
         this.postMessage({
           type: "streamError",
           id: message.id,
@@ -453,7 +472,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       const errText = error instanceof Error ? error.message : String(error);
       const classified = classifyStreamErrorMessage(errText);
       this.deps.log(`[chat] stream failure: ${errText}`);
-      this.emitExecutionStep(message.id, "failed", `Execution failed: ${classified.code}.`);
+      this.emitExecutionStep(message.id, "failed", `Execution failed: ${classified.code}.`, "step");
       this.postMessage({
         type: "streamError",
         id: message.id,
@@ -624,7 +643,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     title: string,
     detail: string,
   ): Promise<boolean> {
-    this.emitExecutionStep(id, "awaiting_approval", `${title}: ${detail}`);
+    this.emitExecutionStep(id, "awaiting_approval", `${title}: ${detail}`, "step");
     this.postMessage({
       type: "approvalRequested",
       payload: { id, scope, title, detail },
@@ -645,6 +664,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       payload.id,
       payload.approved ? "running" : "blocked",
       payload.approved ? "Approval granted." : "Approval denied.",
+      "step",
     );
   }
 
@@ -657,11 +677,18 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     pending.resolve(approved);
   }
 
-  private emitExecutionStep(id: string, phase: "queued" | "running" | "awaiting_approval" | "completed" | "blocked" | "failed" | "cancelled", summary: string): void {
-    this.postMessage({ type: "executionStep", payload: { id, phase, summary } });
+  private emitExecutionStep(
+    id: string,
+    phase: ExecutionStepPayload["phase"],
+    summary: string,
+    kind?: ExecutionStepPayload["kind"],
+  ): void {
+    this.postMessage({
+      type: "executionStep",
+      payload: { id, phase, summary, kind, detail: summary },
+    });
   }
 }
-
 
 function mapThemeKind(theme: vscode.ColorTheme): ThemeKind {
   switch (theme.kind) {
