@@ -1,26 +1,30 @@
 import * as React from "react";
 
 import type {
-  ApprovalRequestPayload,
   ApplyGranularity,
+  ContextAttachment,
   InteractionMode,
   ModePolicy,
   PromptContextSnapshot,
+  SessionSummary,
   ThemeKind,
 } from "../../src/shared/messages";
 
 import { Message, type RenderedMessage } from "./Message";
+import { ToolCard } from "./ToolCard";
 
 export interface ChatProps {
   readonly messages: ReadonlyArray<RenderedMessage>;
   readonly theme: ThemeKind;
   readonly context: PromptContextSnapshot | null;
   readonly attachContext: boolean;
+  readonly attachments: ReadonlyArray<ContextAttachment>;
+  readonly sessions: ReadonlyArray<SessionSummary>;
   readonly streaming: boolean;
   readonly daemonReady: boolean;
   readonly modePolicy: ModePolicy;
-  readonly timeline: ReadonlyArray<{ id: string; summary: string; phase: string }>;
-  readonly pendingApprovals: ReadonlyArray<ApprovalRequestPayload>;
+  readonly timeline: ReadonlyArray<{ id: string; summary: string; phase: string; kind?: string; detail?: string }>;
+  readonly pendingApprovals: ReadonlyArray<{ id: string; title: string; detail: string }>;
   readonly prompt: string;
   readonly onPromptChange: (value: string) => void;
   readonly onAttachContextChange: (value: boolean) => void;
@@ -37,6 +41,10 @@ export interface ChatProps {
     code: string;
     granularity: ApplyGranularity;
   }) => void;
+  readonly onCreateSession: () => void;
+  readonly onSwitchSession: (sessionId: string) => void;
+  readonly onRequestContextPicker: () => void;
+  readonly onRemoveAttachment: (id: string) => void;
 }
 
 export function Chat(props: ChatProps): React.ReactElement {
@@ -59,6 +67,10 @@ export function Chat(props: ChatProps): React.ReactElement {
         props.onSubmit();
       }
     }
+    if (event.key === "@" && props.prompt.length === 0) {
+      event.preventDefault();
+      props.onRequestContextPicker();
+    }
   };
 
   return (
@@ -78,6 +90,7 @@ export function Chat(props: ChatProps): React.ReactElement {
             <select
               value={props.modePolicy.mode}
               onChange={(event) => props.onModeChange(event.target.value as InteractionMode)}
+              aria-label="Interaction mode"
             >
               <option value="ask">Ask</option>
               <option value="plan">Plan</option>
@@ -86,11 +99,30 @@ export function Chat(props: ChatProps): React.ReactElement {
           </label>
         </div>
         <span className="rex-header__actions">
+          <button type="button" onClick={props.onCreateSession} aria-label="New chat session">
+            New
+          </button>
           <button type="button" onClick={props.onClear} aria-label="Clear chat">
             Clear
           </button>
         </span>
       </header>
+      {props.sessions.length > 1 ? (
+        <div className="rex-session-bar" role="tablist" aria-label="Chat sessions">
+          {props.sessions.map((session) => (
+            <button
+              key={session.id}
+              type="button"
+              role="tab"
+              aria-selected={session.isActive}
+              className={session.isActive ? "rex-session-bar__tab rex-session-bar__tab--active" : "rex-session-bar__tab"}
+              onClick={() => props.onSwitchSession(session.id)}
+            >
+              {session.title}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="rex-policy-note">{props.modePolicy.summary}</div>
       {props.pendingApprovals.map((approval) => (
         <div key={approval.id} className="rex-approval-card" role="alert">
@@ -109,8 +141,8 @@ export function Chat(props: ChatProps): React.ReactElement {
       <div ref={listRef} className="rex-messages" role="log" aria-live="polite">
         {props.messages.length === 0 ? (
           <div className="rex-hint">
-            Ask something about your code. Use `REX: Explain/Fix/Refactor Selection` from
-            the editor to prefill a prompt.
+            Ask something about your code. Use editor commands to prefill a prompt, or type @ to attach
+            context.
           </div>
         ) : (
           props.messages.map((message) => (
@@ -153,20 +185,39 @@ export function Chat(props: ChatProps): React.ReactElement {
             </div>
           </div>
         ) : null}
+        {props.attachments.length > 0 ? (
+          <div className="rex-attachment-list" aria-label="Attached context">
+            {props.attachments.map((attachment) => (
+              <span key={attachment.id} className="rex-attachment-chip">
+                @{attachment.label}
+                <button
+                  type="button"
+                  aria-label={`Remove ${attachment.label}`}
+                  onClick={() => props.onRemoveAttachment(attachment.id)}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
         <textarea
           value={props.prompt}
           onChange={(event) => props.onPromptChange(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`${props.modePolicy.mode.toUpperCase()} mode: Cmd/Ctrl+Enter to send`}
+          placeholder={`${props.modePolicy.mode.toUpperCase()} mode: Cmd/Ctrl+Enter to send; @ for context`}
           aria-label="Prompt"
         />
         {props.timeline.length > 0 ? (
           <div className="rex-timeline" role="status" aria-live="polite">
             {props.timeline.map((entry) => (
-              <div key={`${entry.id}-${entry.phase}-${entry.summary}`} className="rex-timeline__item">
-                <span className="rex-timeline__phase">{entry.phase}</span>
-                <span>{entry.summary}</span>
-              </div>
+              <ToolCard
+                key={`${entry.id}-${entry.phase}-${entry.summary}`}
+                phase={entry.phase}
+                summary={entry.summary}
+                kind={entry.kind}
+                detail={entry.detail}
+              />
             ))}
           </div>
         ) : null}
@@ -175,6 +226,9 @@ export function Chat(props: ChatProps): React.ReactElement {
             {props.streaming ? "Streaming…" : canSend ? "Ready" : props.daemonReady ? "Type a prompt" : "Daemon unavailable"}
           </span>
           <span style={{ display: "inline-flex", gap: 6 }}>
+            <button type="button" onClick={props.onRequestContextPicker} aria-label="Attach context">
+              @
+            </button>
             {props.streaming ? (
               <button
                 type="button"

@@ -9,6 +9,15 @@ import { initialState, reducer } from "./appState";
 import { Chat } from "./components/Chat";
 import { postToHost, subscribeToHost } from "./messageBus";
 
+function parseSlashCommand(raw: string): { command: string | null; prompt: string } {
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith("/")) {
+    return { command: null, prompt: raw };
+  }
+  const [first, ...rest] = trimmed.split(/\s+/);
+  return { command: first.toLowerCase(), prompt: rest.join(" ").trim() };
+}
+
 export function App(): React.ReactElement {
   const [state, dispatch] = React.useReducer(reducer, initialState);
 
@@ -26,8 +35,42 @@ export function App(): React.ReactElement {
     return () => window.clearTimeout(timer);
   }, [state.banner]);
 
+  React.useEffect(() => {
+    if (state.activeSessionId === undefined) {
+      return;
+    }
+    const persistable = state.messages
+      .filter((message) => message.role === "user" || message.role === "assistant")
+      .map((message) => ({
+        id: message.id,
+        role: message.role as "user" | "assistant",
+        buffer: message.buffer,
+        errorMessage: message.errorMessage,
+      }));
+    postToHost({
+      type: "saveSessionState",
+      sessionId: state.activeSessionId,
+      mode: state.modePolicy.mode,
+      messages: persistable,
+    });
+  }, [state.messages, state.modePolicy.mode, state.activeSessionId]);
+
   const handleSubmit = (): void => {
-    const trimmed = state.prompt.trim();
+    const { command, prompt } = parseSlashCommand(state.prompt);
+    if (command === "/clear") {
+      handleClear();
+      return;
+    }
+    if (command === "/ask" || command === "/plan" || command === "/agent") {
+      const mode = command.slice(1) as InteractionMode;
+      dispatch({ type: "setMode", value: mode });
+      postToHost({ type: "setMode", mode });
+      if (prompt.length === 0) {
+        dispatch({ type: "setPrompt", value: "" });
+        return;
+      }
+    }
+    const trimmed = (command === null ? state.prompt : prompt).trim();
     if (trimmed.length === 0) {
       return;
     }
@@ -45,6 +88,7 @@ export function App(): React.ReactElement {
       prompt: trimmed,
       context: state.context ?? undefined,
       attachContext: state.attachContext,
+      attachments: state.attachments,
     });
   };
 
@@ -109,6 +153,8 @@ export function App(): React.ReactElement {
         theme={state.theme}
         context={state.context}
         attachContext={state.attachContext}
+        attachments={state.attachments}
+        sessions={state.sessions}
         streaming={state.streaming}
         daemonReady={state.daemon.state === "ready"}
         modePolicy={state.modePolicy}
@@ -125,6 +171,10 @@ export function App(): React.ReactElement {
         onCopy={handleCopy}
         onInsert={handleInsert}
         onApply={handleApply}
+        onCreateSession={() => postToHost({ type: "createSession" })}
+        onSwitchSession={(sessionId) => postToHost({ type: "switchSession", sessionId })}
+        onRequestContextPicker={() => postToHost({ type: "requestContextPicker" })}
+        onRemoveAttachment={(id) => postToHost({ type: "removeContextAttachment", id })}
       />
     </>
   );

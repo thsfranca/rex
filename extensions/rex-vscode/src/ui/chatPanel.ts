@@ -1,7 +1,6 @@
-import * as crypto from "node:crypto";
-
 import * as vscode from "vscode";
 
+import { formatAttachmentsForPrompt, pickContextAttachments } from "../editor/contextPicker";
 import { snapshotActiveEditor } from "../editor/context";
 import { RexProposalProvider } from "../editor/virtualDocs";
 import type { CliBridgeOptions } from "../runtime/cliBridge";
@@ -13,6 +12,8 @@ import { streamComplete } from "../runtime/streamClient";
 import type {
   ApprovalDecisionPayload,
   ApprovalScope,
+  ContextAttachment,
+  ExecutionStepPayload,
   ExtensionToWebview,
   InteractionMode,
   ModePolicy,
@@ -21,9 +22,23 @@ import type {
   WebviewToExtension,
 } from "../shared/messages";
 
+import { postToEditorPanel } from "./editorChatPanel";
 import { applyEditToActiveFile } from "./applyEdit";
+import {
+  reviewMultiFileProposals,
+  type FileProposal,
+} from "./multiFileReview";
+import {
+  createDefaultSession,
+  deriveSessionTitle,
+  SessionStore,
+  type ChatSessionRecord,
+  type SessionStoreSnapshot,
+} from "./sessionStore";
+import { buildWebviewHtml } from "./webviewHtml";
 
 export const CHAT_VIEW_ID = "rex.chatView";
+export const CHAT_VIEW_SECONDARY_ID = "rex.chatViewSecondary";
 
 export interface ChatPanelDependencies {
   readonly context: vscode.ExtensionContext;
@@ -33,7 +48,6 @@ export interface ChatPanelDependencies {
   readonly ensureDaemonReady: (signal?: AbortSignal) => Promise<DaemonLifecycleState>;
   readonly getDaemonState: () => DaemonLifecycleState | undefined;
   readonly log: (message: string) => void;
-  /** Optional: surface actionable hints (PATH, daemon) without breaking NDJSON. */
   readonly notifyStreamFailure?: (args: { code: StreamErrorCode; message: string }) => void;
 }
 
@@ -43,25 +57,32 @@ type PendingApproval = {
   readonly scope: ApprovalScope;
 };
 
-/**
- * Webview-view provider that hosts the chat UI and brokers all messages
- * between the host-side runtime (stream client, apply flow, editor context)
- * and the React webview bundle.
- */
 export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Disposable {
-  private view: vscode.WebviewView | undefined;
+  private readonly webviews = new Set<vscode.Webview>();
   private readonly proposalProvider = new RexProposalProvider();
   private readonly disposables: vscode.Disposable[] = [];
   private readonly pendingStreams = new Map<string, PendingStream>();
   private readonly pendingApprovals = new Map<string, PendingApproval>();
   private readonly pendingPrefills: PromptPrefillPayload[] = [];
+  private readonly sessionStore: SessionStore;
+  private sessionSnapshot: SessionStoreSnapshot;
   private mode: InteractionMode = "ask";
+  private terminalAttachments: ContextAttachment[] = [];
 
-  constructor(private readonly deps: ChatPanelDependencies) {}
+  constructor(private readonly deps: ChatPanelDependencies) {
+    this.sessionStore = new SessionStore(deps.context);
+    this.sessionSnapshot = this.sessionStore.load();
+    this.mode = this.activeSession().mode;
+  }
 
   register(): vscode.Disposable {
-    const providerRegistration = vscode.window.registerWebviewViewProvider(
+    const primaryRegistration = vscode.window.registerWebviewViewProvider(
       CHAT_VIEW_ID,
+      this,
+      { webviewOptions: { retainContextWhenHidden: true } },
+    );
+    const secondaryRegistration = vscode.window.registerWebviewViewProvider(
+      CHAT_VIEW_SECONDARY_ID,
       this,
       { webviewOptions: { retainContextWhenHidden: true } },
     );
@@ -78,8 +99,47 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     const themeListener = vscode.window.onDidChangeActiveColorTheme((theme) => {
       this.postMessage({ type: "theme", payload: { kind: mapThemeKind(theme) } });
     });
-    this.disposables.push(providerRegistration, docRegistration, selectionListener, activeEditorListener, themeListener);
+    this.disposables.push(
+      primaryRegistration,
+      secondaryRegistration,
+      docRegistration,
+      selectionListener,
+      activeEditorListener,
+      themeListener,
+    );
     return new vscode.Disposable(() => this.dispose());
+  }
+
+  getProposalProvider(): RexProposalProvider {
+    return this.proposalProvider;
+  }
+
+  async reviewMultiFileBatch(proposals: ReadonlyArray<FileProposal>): Promise<void> {
+    await reviewMultiFileProposals(proposals, this.proposalProvider, this.deps.log);
+  }
+
+  async handleExternalMessage(raw: unknown): Promise<void> {
+    if (!isIncomingMessage(raw)) {
+      return;
+    }
+    await this.handleWebviewMessage(raw);
+  }
+
+  cancelActiveStream(): void {
+    for (const id of this.pendingStreams.keys()) {
+      this.cancelPendingStream(id);
+    }
+  }
+
+  attachTerminalContext(text: string): void {
+    const attachment: ContextAttachment = {
+      id: `terminal-${Date.now()}`,
+      kind: "terminal",
+      label: "Terminal selection",
+      text: text.slice(0, 16_000),
+    };
+    this.terminalAttachments = [...this.terminalAttachments, attachment];
+    this.postMessage({ type: "contextAttachments", attachments: this.terminalAttachments });
   }
 
   dispose(): void {
@@ -92,22 +152,22 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     }
     this.pendingApprovals.clear();
     this.pendingPrefills.length = 0;
+    this.webviews.clear();
     this.proposalProvider.dispose();
     for (const item of this.disposables) {
       item.dispose();
     }
     this.disposables.length = 0;
-    this.view = undefined;
   }
 
   resolveWebviewView(view: vscode.WebviewView): void {
-    this.view = view;
     const { webview } = view;
     webview.options = {
       enableScripts: true,
       localResourceRoots: [vscode.Uri.joinPath(this.deps.context.extensionUri, "dist")],
     };
-    webview.html = renderWebviewHtml(webview, this.deps.context.extensionUri);
+    webview.html = buildWebviewHtml(webview, this.deps.context.extensionUri);
+    this.webviews.add(webview);
 
     const messageSub = webview.onDidReceiveMessage(async (raw: unknown) => {
       if (!isIncomingMessage(raw)) {
@@ -118,7 +178,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     const disposeSub = view.onDidDispose(() => {
       messageSub.dispose();
       disposeSub.dispose();
-      this.view = undefined;
+      this.webviews.delete(webview);
     });
   }
 
@@ -144,18 +204,68 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   }
 
   prefillPrompt(payload: PromptPrefillPayload): void {
-    if (this.view === undefined) {
+    if (this.webviews.size === 0) {
       this.pendingPrefills.push(payload);
       return;
     }
     this.postMessage({ type: "prefillPrompt", payload });
-    this.view.show?.(true);
+    void vscode.commands.executeCommand(`${CHAT_VIEW_ID}.focus`);
   }
 
   clearChat(): void {
     this.abortAllPendingStreams();
     this.rejectAllPendingApprovals();
     this.postMessage({ type: "clearChat" });
+  }
+
+  private activeSession(): ChatSessionRecord {
+    const found = this.sessionSnapshot.sessions.find(
+      (session) => session.id === this.sessionSnapshot.activeSessionId,
+    );
+    return found ?? createDefaultSession();
+  }
+
+  private broadcastSessions(): void {
+    this.postMessage({
+      type: "sessionList",
+      sessions: this.sessionSnapshot.sessions.map((session) => ({
+        id: session.id,
+        title: session.title,
+        isActive: session.id === this.sessionSnapshot.activeSessionId,
+      })),
+    });
+    const active = this.activeSession();
+    this.postMessage({
+      type: "sessionMessages",
+      payload: { sessionId: active.id, messages: active.messages },
+    });
+  }
+
+  private async persistActiveSession(
+    messages: ChatSessionRecord["messages"],
+    mode: InteractionMode,
+  ): Promise<void> {
+    const activeId = this.sessionSnapshot.activeSessionId;
+    const sessions = this.sessionSnapshot.sessions.map((session) => {
+      if (session.id !== activeId) {
+        return session;
+      }
+      const firstUser = messages.find((message) => message.role === "user");
+      const title =
+        session.title === "Chat" && firstUser !== undefined
+          ? deriveSessionTitle(firstUser.buffer)
+          : session.title;
+      return {
+        ...session,
+        title,
+        mode,
+        messages,
+        updatedAt: Date.now(),
+      };
+    });
+    this.sessionSnapshot = { sessions, activeSessionId: activeId };
+    await this.sessionStore.save(this.sessionSnapshot);
+    this.broadcastSessions();
   }
 
   private async handleWebviewMessage(message: WebviewToExtension): Promise<void> {
@@ -168,6 +278,8 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
           payload: { kind: mapThemeKind(vscode.window.activeColorTheme) },
         });
         this.sendContextSnapshot();
+        this.broadcastSessions();
+        this.postMessage({ type: "contextAttachments", attachments: this.terminalAttachments });
         this.flushPendingPrefills();
         return;
       case "submitPrompt":
@@ -209,6 +321,71 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       case "clearChatRequested":
         this.clearChat();
         return;
+      case "createSession": {
+        const session = {
+          ...createDefaultSession(),
+          id: `session-${Date.now()}`,
+          title: "New chat",
+        };
+        this.sessionSnapshot = {
+          sessions: [...this.sessionSnapshot.sessions, session],
+          activeSessionId: session.id,
+        };
+        this.mode = session.mode;
+        await this.sessionStore.save(this.sessionSnapshot);
+        this.postMessage({ type: "clearChat" });
+        this.broadcastSessions();
+        this.postMessage({ type: "modeState", payload: this.modePolicy() });
+        return;
+      }
+      case "switchSession": {
+        if (this.sessionSnapshot.sessions.some((session) => session.id === message.sessionId)) {
+          this.sessionSnapshot = {
+            ...this.sessionSnapshot,
+            activeSessionId: message.sessionId,
+          };
+          this.mode = this.activeSession().mode;
+          await this.sessionStore.save(this.sessionSnapshot);
+          this.broadcastSessions();
+          this.postMessage({ type: "modeState", payload: this.modePolicy() });
+        }
+        return;
+      }
+      case "deleteSession": {
+        if (this.sessionSnapshot.sessions.length <= 1) {
+          return;
+        }
+        const sessions = this.sessionSnapshot.sessions.filter(
+          (session) => session.id !== message.sessionId,
+        );
+        const activeSessionId =
+          this.sessionSnapshot.activeSessionId === message.sessionId
+            ? sessions[0].id
+            : this.sessionSnapshot.activeSessionId;
+        this.sessionSnapshot = { sessions, activeSessionId };
+        this.mode = this.activeSession().mode;
+        await this.sessionStore.save(this.sessionSnapshot);
+        this.broadcastSessions();
+        return;
+      }
+      case "saveSessionState":
+        await this.persistActiveSession(message.messages, message.mode);
+        return;
+      case "requestContextPicker": {
+        const picked = await pickContextAttachments();
+        if (picked.length === 0) {
+          return;
+        }
+        this.terminalAttachments = [...this.terminalAttachments, ...picked];
+        this.postMessage({ type: "contextAttachments", attachments: this.terminalAttachments });
+        return;
+      }
+      case "removeContextAttachment":
+        this.terminalAttachments = this.terminalAttachments.filter(
+          (item) => item.id !== message.id,
+        );
+        this.postMessage({ type: "contextAttachments", attachments: this.terminalAttachments });
+        return;
     }
   }
 
@@ -219,7 +396,8 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     const controller = new AbortController();
     this.pendingStreams.set(message.id, { controller });
 
-    const promptForDaemon = message.prompt;
+    const attachmentText = formatAttachmentsForPrompt(message.attachments ?? this.terminalAttachments);
+    const promptForDaemon = `${message.prompt}${attachmentText}`;
     const clientHints =
       message.attachContext && message.context !== undefined
         ? {
@@ -230,6 +408,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
         : undefined;
 
     this.postMessage({ type: "streamStarted", id: message.id });
+    void vscode.commands.executeCommand("setContext", "rex.chatStreaming", true);
     this.emitExecutionStep(message.id, "queued", `Request queued in ${this.mode.toUpperCase()} mode.`);
 
     try {
@@ -273,7 +452,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
         }
       }
 
-      this.emitExecutionStep(message.id, "running", "Execution started.");
+      this.emitExecutionStep(message.id, "running", "Execution started.", "step");
       const configuredModel = this.deps.getModelId().trim();
       for await (const event of streamComplete(this.deps.getCliOptions(), {
         prompt: promptForDaemon,
@@ -297,12 +476,12 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
           continue;
         }
         if (event.kind === "done") {
-          this.emitExecutionStep(message.id, "completed", "Execution completed.");
+          this.emitExecutionStep(message.id, "completed", "Execution completed.", "step");
           this.postMessage({ type: "streamDone", id: message.id });
           continue;
         }
         const classified = classifyStreamError(event);
-        this.emitExecutionStep(message.id, "failed", `Execution failed: ${classified.code}.`);
+        this.emitExecutionStep(message.id, "failed", `Execution failed: ${classified.code}.`, "step");
         this.postMessage({
           type: "streamError",
           id: message.id,
@@ -316,7 +495,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       const errText = error instanceof Error ? error.message : String(error);
       const classified = classifyStreamErrorMessage(errText);
       this.deps.log(`[chat] stream failure: ${errText}`);
-      this.emitExecutionStep(message.id, "failed", `Execution failed: ${classified.code}.`);
+      this.emitExecutionStep(message.id, "failed", `Execution failed: ${classified.code}.`, "step");
       this.postMessage({
         type: "streamError",
         id: message.id,
@@ -327,6 +506,9 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       this.deps.notifyStreamFailure?.({ code: classified.code, message: classified.message });
     } finally {
       this.pendingStreams.delete(message.id);
+      if (this.pendingStreams.size === 0) {
+        void vscode.commands.executeCommand("setContext", "rex.chatStreaming", false);
+      }
     }
   }
 
@@ -360,7 +542,11 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   ): Promise<void> {
     const policy = this.modePolicy();
     if (!policy.canMutateFiles) {
-      this.postMessage({ type: "applyResult", id: message.id, result: { outcome: "error", detail: "Ask mode blocks file mutations." } });
+      this.postMessage({
+        type: "applyResult",
+        id: message.id,
+        result: { outcome: "error", detail: "Ask mode blocks file mutations." },
+      });
       this.postMessage({
         type: "statusMessage",
         level: "warn",
@@ -376,7 +562,11 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
         "Apply this code block to the active editor?",
       );
       if (!approved) {
-        this.postMessage({ type: "applyResult", id: message.id, result: { outcome: "cancelled", detail: "Mutation approval was denied." } });
+        this.postMessage({
+          type: "applyResult",
+          id: message.id,
+          result: { outcome: "cancelled", detail: "Mutation approval was denied." },
+        });
         return;
       }
     }
@@ -460,7 +650,10 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   }
 
   private postMessage(message: ExtensionToWebview): void {
-    this.view?.webview.postMessage(message);
+    for (const webview of this.webviews) {
+      void webview.postMessage(message);
+    }
+    postToEditorPanel(message);
   }
 
   private modePolicy(): ModePolicy {
@@ -473,7 +666,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     title: string,
     detail: string,
   ): Promise<boolean> {
-    this.emitExecutionStep(id, "awaiting_approval", `${title}: ${detail}`);
+    this.emitExecutionStep(id, "awaiting_approval", `${title}: ${detail}`, "step");
     this.postMessage({
       type: "approvalRequested",
       payload: { id, scope, title, detail },
@@ -494,6 +687,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       payload.id,
       payload.approved ? "running" : "blocked",
       payload.approved ? "Approval granted." : "Approval denied.",
+      "step",
     );
   }
 
@@ -506,41 +700,17 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     pending.resolve(approved);
   }
 
-  private emitExecutionStep(id: string, phase: "queued" | "running" | "awaiting_approval" | "completed" | "blocked" | "failed" | "cancelled", summary: string): void {
-    this.postMessage({ type: "executionStep", payload: { id, phase, summary } });
+  private emitExecutionStep(
+    id: string,
+    phase: ExecutionStepPayload["phase"],
+    summary: string,
+    kind?: ExecutionStepPayload["kind"],
+  ): void {
+    this.postMessage({
+      type: "executionStep",
+      payload: { id, phase, summary, kind, detail: summary },
+    });
   }
-}
-
-function renderWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-  const nonce = createNonce();
-  const scriptUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, "dist", "webview.js"),
-  );
-  const csp = [
-    `default-src 'none'`,
-    `img-src ${webview.cspSource} data:`,
-    `style-src ${webview.cspSource} 'unsafe-inline'`,
-    `font-src ${webview.cspSource}`,
-    `script-src 'nonce-${nonce}'`,
-  ].join("; ");
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="${csp}" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>REX Chat</title>
-</head>
-<body>
-  <div id="rex-root"></div>
-  <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
-</body>
-</html>`;
-}
-
-function createNonce(): string {
-  return crypto.randomBytes(16).toString("base64").replace(/[+/=]/g, "");
 }
 
 function mapThemeKind(theme: vscode.ColorTheme): ThemeKind {
