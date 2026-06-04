@@ -3,9 +3,12 @@ import * as vscode from "vscode";
 import { readSettings, onSettingsChanged, type RexSettings } from "./config/settings";
 import { snapshotActiveEditor } from "./editor/context";
 import { activateCursorAdapter } from "./platform/cursorAdapter";
+import { configureChatLayoutContext } from "./platform/editorLayout";
 import { DaemonLifecycle, type DaemonLifecycleState } from "./runtime/daemonLifecycle";
 import { streamFailureWantsSetupHint } from "./runtime/userActionableFailure";
-import { ChatPanelProvider, CHAT_VIEW_ID } from "./ui/chatPanel";
+import { ChatPanelProvider, CHAT_VIEW_ID, CHAT_VIEW_SECONDARY_ID } from "./ui/chatPanel";
+import { openEditorChatPanel } from "./ui/editorChatPanel";
+import { runInlineEditOnSelection } from "./ui/inlineEdit";
 import { createStatusBar, type StatusBar } from "./ui/statusBar";
 import {
   ensureProjectRexConfig,
@@ -26,6 +29,7 @@ interface ActivationResources {
 let resources: ActivationResources | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  await configureChatLayoutContext();
   const output = vscode.window.createOutputChannel("REX");
   context.subscriptions.push(output);
   const statusBar = createStatusBar();
@@ -148,7 +152,56 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(
     vscode.commands.registerCommand("rex.focusChat", async () => {
-      await vscode.commands.executeCommand(`${CHAT_VIEW_ID}.focus`);
+      const secondary = `${CHAT_VIEW_SECONDARY_ID}.focus`;
+      try {
+        await vscode.commands.executeCommand(secondary);
+      } catch {
+        await vscode.commands.executeCommand(`${CHAT_VIEW_ID}.focus`);
+      }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("rex.openChatInEditor", () => {
+      openEditorChatPanel(context, (raw) => chatPanel.handleExternalMessage(raw));
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("rex.cancelStream", () => {
+      resources?.chatPanel.cancelActiveStream();
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("rex.inlineEditSelection", async () => {
+      const panel = resources?.chatPanel;
+      if (panel === undefined) {
+        return;
+      }
+      await runInlineEditOnSelection({
+        getCliOptions: () => {
+          const cliPath = resources?.settings.cliPath ?? settings.cliPath;
+          const binding = workspaceBindingState();
+          return binding.ok ? { cliPath, cwd: binding.workspaceRoot } : { cliPath };
+        },
+        getModelId: () => resources?.settings.modelId ?? settings.modelId,
+        getProposalProvider: () => panel.getProposalProvider(),
+        log: (message) => output.appendLine(message),
+        chatPanel: panel,
+      });
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("rex.sendTerminalSelectionToRex", async () => {
+      const selection = await getTerminalSelection();
+      if (selection === undefined || selection.trim().length === 0) {
+        void vscode.window.showWarningMessage("Select text in the terminal first.");
+        return;
+      }
+      resources?.chatPanel.attachTerminalContext(selection);
+      await vscode.commands.executeCommand("rex.focusChat");
     }),
   );
 
@@ -318,4 +371,14 @@ function refreshDaemonConnection(
     return ensureDaemonWithWorkspaceBinding(r.lifecycle, r.settings, r.output);
   }
   return r.lifecycle.probe();
+}
+
+async function getTerminalSelection(): Promise<string | undefined> {
+  const previousClipboard = await vscode.env.clipboard.readText();
+  await vscode.commands.executeCommand("workbench.action.terminal.copySelection");
+  const selection = await vscode.env.clipboard.readText();
+  if (selection.length === 0 || selection === previousClipboard) {
+    return undefined;
+  }
+  return selection;
 }

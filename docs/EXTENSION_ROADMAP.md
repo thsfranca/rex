@@ -57,17 +57,17 @@ Canonical design: **[EXTENSION_UX.md](EXTENSION_UX.md)**. One PR slice per row w
 
 | ID | Phase | Feature | Source(s) | Status |
 |----|-------|---------|-----------|--------|
-| **E-UX01** | P1 | Secondary sidebar chat + activity-bar fallback (VS Code ≥1.106) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX01 | Planned |
-| **E-UX02** | P1 | “Open REX in Editor” panel (`createWebviewPanel`) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX02 | Planned |
-| **E-UX03** | P1 | Theme / a11y / narrow-width webview hardening | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX03 | Planned |
-| **E-UX04** | P1 | Keybindings + Get Started walkthrough updates | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX04 | Planned |
-| **E-UX05** | P2 | Persisted chat sessions (workspace-scoped) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX05 | Planned |
-| **E-UX06** | P2 | @-style context picker (files + document symbols) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX06 | Planned |
-| **E-UX07** | P2 | Composer slash commands (`/ask`, `/plan`, `/agent`, `/clear`) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX07 | Planned |
-| **E-UX08** | P2 | Terminal selection → REX context menu | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX08 | Planned |
-| **E-UX09** | P3 | Tool / step cards from structured host events | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX09 | Planned |
-| **E-UX10** | P3 | Inline edit on selection (virtual-doc apply path) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX10 | Planned |
-| **E-UX11** | P3 | Multi-file diff review batch | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX11 | Planned |
+| **E-UX01** | P1 | Secondary sidebar chat + activity-bar fallback (VS Code ≥1.106) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX01 | Done |
+| **E-UX02** | P1 | “Open REX in Editor” panel (`createWebviewPanel`) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX02 | Done |
+| **E-UX03** | P1 | Theme / a11y / narrow-width webview hardening | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX03 | Done |
+| **E-UX04** | P1 | Keybindings + Get Started walkthrough updates | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX04 | Done |
+| **E-UX05** | P2 | Persisted chat sessions (workspace-scoped) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX05 | Done |
+| **E-UX06** | P2 | @-style context picker (files + document symbols) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX06 | Done |
+| **E-UX07** | P2 | Composer slash commands (`/ask`, `/plan`, `/agent`, `/clear`) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX07 | Done |
+| **E-UX08** | P2 | Terminal selection → REX context menu | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX08 | Done |
+| **E-UX09** | P3 | Tool / step cards from structured host events | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX09 | Done |
+| **E-UX10** | P3 | Inline edit on selection (virtual-doc apply path) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX10 | Done |
+| **E-UX11** | P3 | Multi-file diff review batch | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX11 | Done |
 
 ## What remains (non-UX)
 

@@ -1,11 +1,13 @@
 import type {
   ApprovalRequestPayload,
   ApplyResultPayload,
+  ContextAttachment,
   DaemonStatePayload,
   ExtensionToWebview,
   InteractionMode,
   ModePolicy,
   PromptContextSnapshot,
+  SessionSummary,
   ThemeKind,
 } from "../src/shared/messages";
 
@@ -31,7 +33,10 @@ export interface AppState {
   banner?: BannerState;
   modePolicy: ModePolicy;
   pendingApprovals: ApprovalRequestPayload[];
-  timeline: { id: string; summary: string; phase: string }[];
+  timeline: { id: string; summary: string; phase: string; kind?: string; detail?: string }[];
+  sessions: SessionSummary[];
+  attachments: ContextAttachment[];
+  activeSessionId?: string;
 }
 
 export type Action =
@@ -64,6 +69,8 @@ export const initialState: AppState = {
   },
   pendingApprovals: [],
   timeline: [],
+  sessions: [],
+  attachments: [],
 };
 
 export function reducer(state: AppState, action: Action): AppState {
@@ -220,9 +227,42 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
         ...state,
         timeline: [
           ...state.timeline,
-          { id: message.payload.id, phase: message.payload.phase, summary: message.payload.summary },
+          {
+            id: message.payload.id,
+            phase: message.payload.phase,
+            summary: message.payload.summary,
+            kind: message.payload.kind,
+            detail: message.payload.detail,
+          },
         ].slice(-20),
       };
+    case "sessionList":
+      return {
+        ...state,
+        sessions: [...message.sessions],
+        activeSessionId: message.sessions.find((session) => session.isActive)?.id,
+      };
+    case "sessionMessages": {
+      const restored = message.payload.messages.map((entry) => ({
+        id: entry.id,
+        role: entry.role,
+        buffer: entry.buffer,
+        trailingRaw: "",
+        streaming: false,
+        errorMessage: entry.errorMessage,
+      }));
+      return {
+        ...state,
+        messages: restored,
+        streams: new Map(),
+        applyResults: new Map(),
+        streaming: false,
+        activeStreamId: undefined,
+        activeSessionId: message.payload.sessionId,
+      };
+    }
+    case "contextAttachments":
+      return { ...state, attachments: [...message.attachments] };
   }
 }
 
