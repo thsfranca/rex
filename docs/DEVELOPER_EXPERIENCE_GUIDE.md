@@ -118,6 +118,8 @@ Optional before PR (error codes, fixtures, or guidelines scripts):
 ./scripts/ci/run_guidelines_verify.sh
 ```
 
+Planned post-v1.0 gates (supply chain audit, CodeQL, Ruff on `rex-agent`) are tracked in [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R023–R026**); they are not required locally until implemented.
+
 ### Documentation conventions
 
 Major product features use **one canonical hub doc** under `docs/` plus **pointers** in roadmaps and overviews—not parallel full design lists across files. Rules and hubs live in [DOCUMENTATION.md](DOCUMENTATION.md).

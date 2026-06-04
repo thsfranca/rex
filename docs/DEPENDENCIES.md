@@ -60,6 +60,7 @@ brew install protobuf
 | `cargo clippy` | Enforces lint quality gates. | CI runs with `-D warnings`. |
 | `cargo test` | Validates behavior with automated tests. | Unit tests exist for CLI parsing and daemon behavior. |
 | CI runner with protobuf compiler | Ensures reproducible checks in pull requests. | Workflow installs `protobuf-compiler` on Linux CI. |
+| Supply chain audit tooling (**planned**, **R023**) | CVE and license gates for Rust deps. | `cargo-audit`, optional `cargo-deny`; Dependabot — see [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
 
 ## 4) Plugin/tool ecosystem dependencies (planned, not required yet)
 

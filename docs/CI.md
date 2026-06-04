@@ -234,6 +234,10 @@ For lifecycle/race fixes, ensure E2E coverage includes:
 - deterministic startup race recovery path (unavailable -> ready);
 - stream interruption/terminal behavior path.
 
+## Planned quality and security gates
+
+Post-v1.0 phases **R023–R026** (supply chain, CodeQL, Ruff on `rex-agent`, Rex-specific guidelines) are **not** in CI yet. Canonical design, MoSCoW, and acceptance criteria: **[CI_QUALITY_GATES.md](CI_QUALITY_GATES.md)**.
+
 ## New CI job checklist
 
 When adding a new CI job, verify all items:
