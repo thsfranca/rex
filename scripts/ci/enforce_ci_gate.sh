@@ -3,8 +3,10 @@ set -euo pipefail
 
 rust_relevant="${RUST_RELEVANT:-true}"
 extension_relevant="${EXTENSION_RELEVANT:-true}"
+sidecar_relevant="${SIDECAR_RELEVANT:-true}"
 rust_result="${RUST_RESULT:-missing}"
 extension_result="${EXTENSION_RESULT:-missing}"
+sidecar_result="${SIDECAR_RESULT:-missing}"
 guidelines_result="${GUIDELINES_RESULT:-missing}"
 result="success"
 fail_stage="-"
@@ -41,6 +43,7 @@ echo "::endgroup::"
 echo "::group::PostRunSummary"
 if ! domain_ok "${rust_relevant}" "${rust_result}" \
   || ! domain_ok "${extension_relevant}" "${extension_result}" \
+  || ! domain_ok "${sidecar_relevant}" "${sidecar_result}" \
   || [ "${guidelines_result}" != "success" ]; then
   result="failure"
   fail_stage="PostRunSummary"
@@ -49,7 +52,7 @@ if ! domain_ok "${rust_relevant}" "${rust_result}" \
     fail_code="GUIDELINES_FAIL"
     hint="Guidelines verify failed; run ./scripts/ci/run_guidelines_verify.sh locally."
   else
-    hint="Inspect rust-verify and extension-verify summaries and artifacts; when a domain is not relevant, upstream verify may be skipped."
+    hint="Inspect rust-verify, sidecar-verify, and extension-verify summaries and artifacts; when a domain is not relevant, upstream verify may be skipped."
   fi
 fi
 
@@ -63,6 +66,7 @@ fi
   echo "- run_id: ${GITHUB_RUN_ID:-unknown}"
   echo ""
   echo "- rust-verify: ${rust_result}"
+  echo "- sidecar-verify: ${sidecar_result}"
   echo "- extension-verify: ${extension_result}"
   echo "- guidelines-verify: ${guidelines_result}"
 } >> "$GITHUB_STEP_SUMMARY"
@@ -73,6 +77,7 @@ fi
   echo "fail_code=${fail_code}"
   echo "hint=${hint}"
   echo "rust_verify=${rust_result}"
+  echo "sidecar_verify=${sidecar_result}"
   echo "extension_verify=${extension_result}"
   echo "guidelines_verify=${guidelines_result}"
 } > "ci-observability/ci-gate-summary.txt"

@@ -15,6 +15,9 @@ cargo build -p rex-sidecar-stub --quiet
 echo "==> Rust verify (fmt, clippy, tests) — see scripts/ci/run_rust_verify.sh"
 "${ROOT_DIR}/scripts/ci/run_rust_verify.sh"
 
+echo "==> Builtin sidecar verify — see scripts/ci/run_sidecar_verify.sh"
+"${ROOT_DIR}/scripts/ci/run_sidecar_verify.sh"
+
 echo "==> MVP product-path smoke (sidecar + brokered HTTP fixture + fs.read; no live LLM)"
 cargo test -p rex-daemon mvp_product_path -- --nocapture
 

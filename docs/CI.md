@@ -105,13 +105,13 @@ Set branch protection or ruleset on `main` to require:
 - `ci-checks`
 - `Conventional PR title` (job in [`.github/workflows/pr-title-lint.yml`](../.github/workflows/pr-title-lint.yml))
 
-`ci-checks` is the merge gate for code quality. It reads `rust-verify`, `extension-verify`, and `guidelines-verify` results. **`guidelines-verify`** always runs documented guideline conformance checks. `rust-verify` and `extension-verify` use path-aware skip semantics: when a domain is not relevant, the verify job is skipped and `ci-checks` still passes. When a relevant verify job fails, `ci-checks` fails with `GATE_FAIL`. When `guidelines-verify` fails, `ci-checks` fails with `GUIDELINES_FAIL`.
+`ci-checks` is the merge gate for code quality. It reads `rust-verify`, `sidecar-verify`, `extension-verify`, and `guidelines-verify` results. **`guidelines-verify`** always runs documented guideline conformance checks. `rust-verify`, `sidecar-verify`, and `extension-verify` use path-aware skip semantics: when a domain is not relevant, the verify job is skipped and `ci-checks` still passes. When a relevant verify job fails, `ci-checks` fails with `GATE_FAIL`. When `guidelines-verify` fails, `ci-checks` fails with `GUIDELINES_FAIL`.
 
 **Conventional PR title** is required because squash-merge titles become commits on `main`, which feed release-plz and release-please (semver + changelog). See [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 Do **not** require `rust-verify`, `extension-verify`, `guidelines-verify`, or `changes` — domain verify jobs skip on docs-only PRs; `changes` is path detection only.
 
-Informational jobs (not required): `rust-verify`, `extension-verify`, `guidelines-verify`, `changes`.
+Informational jobs (not required): `rust-verify`, `sidecar-verify`, `extension-verify`, `guidelines-verify`, `changes`.
 
 ## Path-aware execution model
 
@@ -123,8 +123,10 @@ CI first evaluates changed paths, then runs only relevant domain checks.
 - `extension_changed`
 - `ci_changed`
 - `global_changed`
+- `sidecar_changed`
 - `rust_relevant`
 - `extension_relevant`
+- `sidecar_relevant`
 
 ### Path relevance defaults
 
@@ -162,11 +164,21 @@ Local run:
 ./scripts/ci/run_guidelines_verify.sh
 ```
 
+### Sidecar-relevant paths
+
+- `sidecars/**`
+- `crates/rex-sidecar-stub/**`
+- `crates/rex-daemon/tests/stub_sidecar_smoke.rs`
+- `crates/rex-daemon/tests/agent_scaffold_smoke.rs`
+- `proto/rex/sidecar/**`
+- `scripts/ci/run_sidecar_verify.sh`, `run_*sidecar*.sh`, `builtin_sidecars.txt`
+- Cross-domain: `.github/workflows/**`, `scripts/ci/**`, `Cargo.toml`, `Cargo.lock` (same as other verify jobs)
+
 ### Dependency model
 
 - Always: `guidelines-verify`
-- Verify jobs (parallel, path-aware): `rust-verify`, `extension-verify`
-- Merge gate: `guidelines-verify` + `rust-verify` + `extension-verify` → `ci-checks`
+- Verify jobs (parallel, path-aware): `rust-verify`, `sidecar-verify`, `extension-verify`
+- Merge gate: `guidelines-verify` + `rust-verify` + `sidecar-verify` + `extension-verify` → `ci-checks`
 
 When a domain is non-relevant, its verify job skips. `ci-checks` runs with `if: always()` and passes when skipped verify results are acceptable for non-relevant paths.
 
@@ -179,7 +191,7 @@ Release automation is documented in [RELEASE.md](RELEASE.md). Workflows:
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `release-plz.yml` | Push to `main`, `workflow_dispatch` | Open/update core Release PR; tag `v*` and GitHub Release notes on merge |
-| `release.yml` | Push version tag, PR (dist plan) | Build binary archives with cargo-dist after `run_rust_verify.sh` on tag pushes |
+| `release.yml` | Push version tag, PR (dist plan) | Tag push: `run_rust_verify.sh` + `run_sidecar_verify.sh` in `plan`. PR: **`sidecar-verify`** job, then cargo-dist `build-local-artifacts` |
 | `release-please-extension.yml` | Push to `main`, `workflow_dispatch` | Open/update extension Release PR; tag `rex-vscode-v*` on merge |
 | `extension-release.yml` | Push tag `rex-vscode-v*`, `workflow_dispatch` | Build VSIX and optional marketplace publish |
 | `pr-title-lint.yml` | Pull request | Conventional Commits on PR titles |
@@ -216,11 +228,11 @@ chmod +x ./scripts/verify_mvp_local.sh
 ./scripts/verify_mvp_local.sh
 ```
 
-That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), then [`scripts/ci/run_extension_checks.sh`](../scripts/ci/run_extension_checks.sh), then `cargo test -p rex-daemon mvp_product_path`. It does **not** start `rex-daemon` for manual editor steps or **live LLM** dogfood ([MVP_SPEC.md](MVP_SPEC.md)).
+That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), then [`scripts/ci/run_sidecar_verify.sh`](../scripts/ci/run_sidecar_verify.sh), then [`scripts/ci/run_extension_checks.sh`](../scripts/ci/run_extension_checks.sh), then `cargo test -p rex-daemon mvp_product_path`. It does **not** start `rex-daemon` for manual editor steps or **live LLM** dogfood ([MVP_SPEC.md](MVP_SPEC.md)).
 
 **Two tiers:** PR CI uses **`mock`** / harness paths in `uds_e2e` and a **loopback OpenAI-compat HTTP fixture** in `mvp_product_path` (real `http_openai_compat`, no cloud API). Operator dogfood requires **live** `REX_OPENAI_COMPAT_*` (Ollama, LM Studio, etc.).
 
-**Builtin sidecars:** [`run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh) runs [`run_sidecar_verify.sh`](../scripts/ci/run_sidecar_verify.sh) after fmt/clippy and workspace tests (same job chain as `run_rust_fmt_clippy.sh` / `run_rust_tests.sh`). A sidecar failure sets `CI_RESULT=failure` and fails **`rust-verify`**, which fails **`ci-checks`** (`GATE_FAIL`). Manifest: [`builtin_sidecars.txt`](../scripts/ci/builtin_sidecars.txt).
+**Builtin sidecars:** [`run_sidecar_verify.sh`](../scripts/ci/run_sidecar_verify.sh) runs in the **`sidecar-verify`** job (path-aware) and in **`Release / sidecar-verify`** on pull requests. Tag pushes run `run_rust_verify.sh` then `run_sidecar_verify.sh` in the Release `plan` job. A sidecar failure fails **`sidecar-verify`** (or the Release sidecar job) and, when sidecar paths are relevant, **`ci-checks`** (`GATE_FAIL`). Manifest: [`builtin_sidecars.txt`](../scripts/ci/builtin_sidecars.txt).
 
 | Stage | Script | Content |
 |-------|--------|---------|
@@ -229,7 +241,7 @@ That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh
 | TestExecution | [`run_stub_sidecar_checks.sh`](../scripts/ci/run_stub_sidecar_checks.sh) | `cargo test -p rex-sidecar-stub`; UDS [`stub_sidecar_smoke`](../crates/rex-daemon/tests/stub_sidecar_smoke.rs) |
 | TestExecution | [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) | `pytest`; UDS [`agent_scaffold_smoke`](../crates/rex-daemon/tests/agent_scaffold_smoke.rs) |
 
-Local: `./scripts/ci/run_sidecar_verify.sh` (or `./scripts/ci/run_rust_verify.sh` for the full Rust gate). Failure code: `SIDECAR_FAIL`. Requires Python 3.10+ (`python3.11` / `python3.10` preferred).
+Local: `./scripts/ci/run_sidecar_verify.sh`. Failure code: `SIDECAR_FAIL`. Requires Python 3.10+ (`python3.11` / `python3.10` preferred).
 
 ## Local verification flow for reliability changes
 
@@ -264,4 +276,4 @@ When adding a new CI job, verify all items:
 Release workflows additionally:
 
 - [ ] Tag filters exclude the other plane (`v*` vs `rex-vscode-v*`).
-- [ ] Core release runs `run_rust_verify.sh` before dist build on tag pushes.
+- [ ] Core release runs `run_rust_verify.sh` and `run_sidecar_verify.sh` before dist build on tag pushes; PRs run **`sidecar-verify`** before `build-local-artifacts`.
