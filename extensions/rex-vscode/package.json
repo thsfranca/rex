@@ -17,7 +17,8 @@
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onView:rex.chatView"
+    "onView:rex.chatView",
+    "onView:rex.chatViewSecondary"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -26,7 +27,16 @@
         {
           "id": "rex",
           "title": "REX",
-          "icon": "media/rex-activity.svg"
+          "icon": "media/rex-activity.svg",
+          "when": "rex.useActivityBarChat"
+        }
+      ],
+      "secondarySidebar": [
+        {
+          "id": "rex-secondary",
+          "title": "REX",
+          "icon": "media/rex-activity.svg",
+          "when": "!rex.useActivityBarChat"
         }
       ]
     },
@@ -34,6 +44,14 @@
       "rex": [
         {
           "id": "rex.chatView",
+          "name": "Chat",
+          "type": "webview",
+          "contextualTitle": "REX"
+        }
+      ],
+      "rex-secondary": [
+        {
+          "id": "rex.chatViewSecondary",
           "name": "Chat",
           "type": "webview",
           "contextualTitle": "REX"

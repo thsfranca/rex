@@ -3,9 +3,10 @@ import * as vscode from "vscode";
 import { readSettings, onSettingsChanged, type RexSettings } from "./config/settings";
 import { snapshotActiveEditor } from "./editor/context";
 import { activateCursorAdapter } from "./platform/cursorAdapter";
+import { configureChatLayoutContext } from "./platform/editorLayout";
 import { DaemonLifecycle, type DaemonLifecycleState } from "./runtime/daemonLifecycle";
 import { streamFailureWantsSetupHint } from "./runtime/userActionableFailure";
-import { ChatPanelProvider, CHAT_VIEW_ID } from "./ui/chatPanel";
+import { ChatPanelProvider, CHAT_VIEW_ID, CHAT_VIEW_SECONDARY_ID } from "./ui/chatPanel";
 import { createStatusBar, type StatusBar } from "./ui/statusBar";
 import {
   ensureProjectRexConfig,
@@ -26,6 +27,7 @@ interface ActivationResources {
 let resources: ActivationResources | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+  await configureChatLayoutContext();
   const output = vscode.window.createOutputChannel("REX");
   context.subscriptions.push(output);
   const statusBar = createStatusBar();
@@ -148,7 +150,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(
     vscode.commands.registerCommand("rex.focusChat", async () => {
-      await vscode.commands.executeCommand(`${CHAT_VIEW_ID}.focus`);
+      const secondary = `${CHAT_VIEW_SECONDARY_ID}.focus`;
+      try {
+        await vscode.commands.executeCommand(secondary);
+      } catch {
+        await vscode.commands.executeCommand(`${CHAT_VIEW_ID}.focus`);
+      }
     }),
   );
 

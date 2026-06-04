@@ -24,6 +24,7 @@ import type {
 import { applyEditToActiveFile } from "./applyEdit";
 
 export const CHAT_VIEW_ID = "rex.chatView";
+export const CHAT_VIEW_SECONDARY_ID = "rex.chatViewSecondary";
 
 export interface ChatPanelDependencies {
   readonly context: vscode.ExtensionContext;
@@ -49,7 +50,7 @@ type PendingApproval = {
  * and the React webview bundle.
  */
 export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Disposable {
-  private view: vscode.WebviewView | undefined;
+  private readonly webviews = new Set<vscode.Webview>();
   private readonly proposalProvider = new RexProposalProvider();
   private readonly disposables: vscode.Disposable[] = [];
   private readonly pendingStreams = new Map<string, PendingStream>();
@@ -60,8 +61,13 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   constructor(private readonly deps: ChatPanelDependencies) {}
 
   register(): vscode.Disposable {
-    const providerRegistration = vscode.window.registerWebviewViewProvider(
+    const primaryRegistration = vscode.window.registerWebviewViewProvider(
       CHAT_VIEW_ID,
+      this,
+      { webviewOptions: { retainContextWhenHidden: true } },
+    );
+    const secondaryRegistration = vscode.window.registerWebviewViewProvider(
+      CHAT_VIEW_SECONDARY_ID,
       this,
       { webviewOptions: { retainContextWhenHidden: true } },
     );
@@ -78,7 +84,14 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     const themeListener = vscode.window.onDidChangeActiveColorTheme((theme) => {
       this.postMessage({ type: "theme", payload: { kind: mapThemeKind(theme) } });
     });
-    this.disposables.push(providerRegistration, docRegistration, selectionListener, activeEditorListener, themeListener);
+    this.disposables.push(
+      primaryRegistration,
+      secondaryRegistration,
+      docRegistration,
+      selectionListener,
+      activeEditorListener,
+      themeListener,
+    );
     return new vscode.Disposable(() => this.dispose());
   }
 
@@ -92,22 +105,22 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     }
     this.pendingApprovals.clear();
     this.pendingPrefills.length = 0;
+    this.webviews.clear();
     this.proposalProvider.dispose();
     for (const item of this.disposables) {
       item.dispose();
     }
     this.disposables.length = 0;
-    this.view = undefined;
   }
 
   resolveWebviewView(view: vscode.WebviewView): void {
-    this.view = view;
     const { webview } = view;
     webview.options = {
       enableScripts: true,
       localResourceRoots: [vscode.Uri.joinPath(this.deps.context.extensionUri, "dist")],
     };
     webview.html = renderWebviewHtml(webview, this.deps.context.extensionUri);
+    this.webviews.add(webview);
 
     const messageSub = webview.onDidReceiveMessage(async (raw: unknown) => {
       if (!isIncomingMessage(raw)) {
@@ -118,7 +131,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     const disposeSub = view.onDidDispose(() => {
       messageSub.dispose();
       disposeSub.dispose();
-      this.view = undefined;
+      this.webviews.delete(webview);
     });
   }
 
@@ -144,12 +157,12 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   }
 
   prefillPrompt(payload: PromptPrefillPayload): void {
-    if (this.view === undefined) {
+    if (this.webviews.size === 0) {
       this.pendingPrefills.push(payload);
       return;
     }
     this.postMessage({ type: "prefillPrompt", payload });
-    this.view.show?.(true);
+    void vscode.commands.executeCommand(`${CHAT_VIEW_ID}.focus`);
   }
 
   clearChat(): void {
@@ -460,7 +473,9 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   }
 
   private postMessage(message: ExtensionToWebview): void {
-    this.view?.webview.postMessage(message);
+    for (const webview of this.webviews) {
+      void webview.postMessage(message);
+    }
   }
 
   private modePolicy(): ModePolicy {
