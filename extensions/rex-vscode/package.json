@@ -76,6 +76,10 @@
         "title": "REX: Open Chat"
       },
       {
+        "command": "rex.openChatInEditor",
+        "title": "REX: Open Chat in Editor"
+      },
+      {
         "command": "rex.clearChat",
         "title": "REX: Clear Chat"
       },
