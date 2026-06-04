@@ -1,4 +1,4 @@
-//! R017 smoke: Python rex-agent sidecar gRPC + broker path (no LangGraph).
+//! R017/R018 smoke: Python rex-agent sidecar gRPC + broker + LangGraph path (no live LLM).
 
 use std::fs;
 use std::path::PathBuf;
@@ -316,7 +316,7 @@ async fn agent_sidecar_health_and_broker_error_without_daemon() {
         .map(|c| c.text.as_str())
         .collect();
     assert!(
-        text.contains("[broker.inference error"),
+        text.contains("[broker.inference error") || text.contains("Inference failed"),
         "expected broker error without daemon, got: {text}"
     );
 }

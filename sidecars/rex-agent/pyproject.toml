@@ -5,12 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rex-agent"
 version = "0.1.0"
-description = "REX product development agent sidecar (scaffold)"
+description = "REX product development agent sidecar (LangGraph ReAct)"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
   "grpcio>=1.60",
   "protobuf>=4.25",
+  "langgraph>=0.2.0",
+  "langchain-core>=0.3.0",
 ]
 
 [project.optional-dependencies]

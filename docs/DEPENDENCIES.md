@@ -37,12 +37,13 @@ brew install protobuf
 - Reachable **chat/completions** endpoint for brokered inference (Ollama, LM Studio, vLLM, OpenAI API, or compatible proxy).
 - Configure inference via `$REX_ROOT/config.json` — [CONFIGURATION.md](CONFIGURATION.md).
 
-### Python sidecar (`rex-agent` scaffold)
+### Python sidecar (`rex-agent`)
 
 | Dependency | Why | Notes |
 |---|---|---|
-| Python 3.10+ | Runs `rex-agent` | 3.9 may work with editable-install limitations |
+| Python 3.10+ | Runs `rex-agent` (LangGraph state typing) | CI prefers `python3.11` / `python3.10` when available |
 | `grpcio`, `protobuf` | gRPC runtime for sidecar + broker client | `pip install` with the sidecar package |
+| `langgraph`, `langchain-core` | ReAct graphs (**R018**) | Installed in CI via [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) |
 | `grpcio-tools` | Maintainer: `rex proto install` | Same as `rex proto doctor` toolchain |
 | `pytest` | Sidecar unit tests | CI: [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) |
 

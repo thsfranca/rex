@@ -43,3 +43,26 @@ def test_defaults_without_config(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("REX_DAEMON_SOCKET", raising=False)
     assert config.sidecar_socket() == config.DEFAULT_SIDECAR_SOCKET
     assert config.daemon_socket() == config.DEFAULT_DAEMON_SOCKET
+
+
+def test_agent_limits_from_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    root = tmp_path / "rex"
+    root.mkdir()
+    (root / "config.json").write_text(
+        json.dumps(
+            {
+                "agent": {"max_tool_steps": 3},
+                "broker": {"max_tool_result_bytes": 1024},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
+    assert config.max_tool_steps() == 3
+    assert config.max_tool_result_bytes() == 1024
+
+
+def test_agent_limits_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
+    assert config.max_tool_steps() == config.DEFAULT_MAX_TOOL_STEPS
+    assert config.max_tool_result_bytes() == config.DEFAULT_MAX_TOOL_RESULT_BYTES

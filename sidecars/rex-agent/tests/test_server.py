@@ -90,19 +90,21 @@ def test_health_returns_version() -> None:
 def test_run_turn_success_chunks() -> None:
     servicer = AgentServicer()
     request = _RunTurnRequest(prompt="hello", mode="ask", model="")
-    with patch("rex_agent.server.broker_inference", return_value=(True, "ok")):
+    with patch("rex_agent.server.stream_turn", return_value=iter(["ok"])):
         chunks = list(servicer.RunTurn(request, None))
     assert chunks[-1].done
     assert "ok" in "".join(c.text for c in chunks if not c.done)
 
 
-def test_run_turn_broker_error_prefix() -> None:
+def test_run_turn_inference_failure_message() -> None:
     servicer = AgentServicer()
     request = _RunTurnRequest(prompt="x", mode="agent", model="")
     with patch(
-        "rex_agent.server.broker_inference",
-        return_value=(False, "connection refused"),
+        "rex_agent.server.stream_turn",
+        return_value=iter(
+            ["Inference failed. Check that the daemon is running and HTTP inference is configured."]
+        ),
     ):
         chunks = list(servicer.RunTurn(request, None))
     text = "".join(c.text for c in chunks if not c.done)
-    assert "[broker.inference error" in text
+    assert "Inference failed" in text

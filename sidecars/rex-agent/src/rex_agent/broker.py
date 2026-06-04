@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
 import grpc
 
-from rex_agent.config import daemon_socket
+from rex_agent.config import daemon_socket, max_tool_result_bytes
+
+if TYPE_CHECKING:
+    from rex.v1 import rex_pb2, rex_pb2_grpc
 
 try:
     from rex.v1 import rex_pb2, rex_pb2_grpc
@@ -13,6 +19,8 @@ except ImportError as exc:  # pragma: no cover
         "rex.v1 protobuf stubs not found. Run `rex proto install` and set "
         "PYTHONPATH to $(rex proto path)."
     ) from exc
+
+BROKER_TIMEOUT_SEC = 30.0
 
 
 def _daemon_channel(socket_path: str) -> grpc.Channel:
@@ -36,36 +44,149 @@ def _metadata(turn_id: str | None) -> tuple[tuple[str, str], ...]:
     return ()
 
 
-def broker_inference(
-    prompt: str,
-    mode: str,
-    model: str,
-    turn_id: str | None = None,
-) -> tuple[bool, str]:
-    """
-    Call BrokerInference on the daemon.
+@dataclass
+class ShellResult:
+    stdout: str
+    stderr: str
 
-    Returns (ok, text_or_error_message).
-    """
-    socket = daemon_socket()
-    channel = _daemon_channel(socket)
-    try:
-        stub = rex_pb2_grpc.RexServiceStub(channel)
+
+class BrokerClient:
+    """One gRPC channel per turn; closes on exit."""
+
+    def __init__(self, turn_id: str | None = None) -> None:
+        self._socket = daemon_socket()
+        self._channel = _daemon_channel(self._socket)
+        self._stub = rex_pb2_grpc.RexServiceStub(self._channel)
+        self._turn_id = turn_id
+        self._mode = "ask"
+
+    def close(self) -> None:
+        self._channel.close()
+
+    def __enter__(self) -> BrokerClient:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
+    def inference(self, prompt: str, mode: str, model: str) -> tuple[bool, str]:
+        self._mode = mode or "ask"
         request = rex_pb2.BrokerInferenceRequest(
             prompt=prompt,
-            mode=mode or "ask",
+            mode=self._mode,
             model=model or "",
         )
         try:
-            response = stub.BrokerInference(
+            response = self._stub.BrokerInference(
                 request,
-                timeout=30.0,
-                metadata=_metadata(turn_id),
+                timeout=BROKER_TIMEOUT_SEC,
+                metadata=_metadata(self._turn_id),
             )
         except grpc.RpcError as err:
             return False, str(err)
         if response.ok:
             return True, response.text
         return False, response.error or "broker inference failed"
-    finally:
-        channel.close()
+
+    def read_file(self, path: str, mode: str | None = None) -> tuple[bool, str]:
+        request = rex_pb2.BrokerReadFileRequest(
+            path=path,
+            mode=mode or self._mode,
+        )
+        return self._read_file_response(request)
+
+    def list_dir(self, path: str, mode: str | None = None) -> tuple[bool, str]:
+        request = rex_pb2.BrokerListDirRequest(
+            path=path,
+            mode=mode or self._mode,
+        )
+        try:
+            response = self._stub.BrokerListDir(
+                request,
+                timeout=BROKER_TIMEOUT_SEC,
+                metadata=_metadata(self._turn_id),
+            )
+        except grpc.RpcError as err:
+            return False, str(err)
+        if not response.ok:
+            return False, response.error or "broker list_dir failed"
+        lines = []
+        for entry in response.entries:
+            name = entry.name
+            lines.append(f"{name}/" if entry.is_dir else name)
+        text = ", ".join(lines) if lines else "(empty)"
+        return True, truncate_tool_result(text)
+
+    def write_file(
+        self, path: str, content: str, mode: str | None = None
+    ) -> tuple[bool, str]:
+        request = rex_pb2.BrokerWriteFileRequest(
+            path=path,
+            content=content,
+            mode=mode or self._mode,
+        )
+        try:
+            response = self._stub.BrokerWriteFile(
+                request,
+                timeout=BROKER_TIMEOUT_SEC,
+                metadata=_metadata(self._turn_id),
+            )
+        except grpc.RpcError as err:
+            return False, str(err)
+        if response.ok:
+            return True, "ok"
+        return False, response.error or "broker write_file failed"
+
+    def exec_shell(self, command: str, mode: str | None = None) -> tuple[bool, str]:
+        request = rex_pb2.BrokerExecShellRequest(
+            command=command,
+            mode=mode or self._mode,
+        )
+        try:
+            response = self._stub.BrokerExecShell(
+                request,
+                timeout=BROKER_TIMEOUT_SEC,
+                metadata=_metadata(self._turn_id),
+            )
+        except grpc.RpcError as err:
+            return False, str(err)
+        if not response.ok:
+            return False, response.error or "broker exec_shell failed"
+        combined = f"stdout={response.stdout}\nstderr={response.stderr}"
+        return True, truncate_tool_result(combined)
+
+    def _read_file_response(
+        self, request: rex_pb2.BrokerReadFileRequest
+    ) -> tuple[bool, str]:
+        try:
+            response = self._stub.BrokerReadFile(
+                request,
+                timeout=BROKER_TIMEOUT_SEC,
+                metadata=_metadata(self._turn_id),
+            )
+        except grpc.RpcError as err:
+            return False, str(err)
+        if response.ok:
+            return True, truncate_tool_result(response.content)
+        return False, response.error or "broker read_file failed"
+
+
+def broker_inference(
+    prompt: str,
+    mode: str,
+    model: str,
+    turn_id: str | None = None,
+) -> tuple[bool, str]:
+    """Call BrokerInference on the daemon (one-shot; opens a channel per call)."""
+    with BrokerClient(turn_id=turn_id) as client:
+        return client.inference(prompt, mode, model)
+
+
+def truncate_tool_result(text: str) -> str:
+    """Align sidecar scratch with broker.max_tool_result_bytes."""
+    limit = max_tool_result_bytes()
+    encoded = text.encode("utf-8")
+    if len(encoded) <= limit:
+        return text
+    trimmed = encoded[:limit].decode("utf-8", errors="ignore")
+    return trimmed + "…"

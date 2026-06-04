@@ -9,6 +9,8 @@ from typing import Any, Optional
 
 DEFAULT_DAEMON_SOCKET = "/tmp/rex.sock"
 DEFAULT_SIDECAR_SOCKET = "/tmp/rex-sidecar.sock"
+DEFAULT_MAX_TOOL_STEPS = 8
+DEFAULT_MAX_TOOL_RESULT_BYTES = 8192
 REX_ROOT_ENV = "REX_ROOT"
 
 
@@ -55,3 +57,23 @@ def daemon_socket() -> str:
         if daemon.get("socket"):
             return str(daemon["socket"])
     return DEFAULT_DAEMON_SOCKET
+
+
+def max_tool_steps() -> int:
+    cfg = _load_config_json()
+    if cfg:
+        agent = cfg.get("agent") or {}
+        steps = agent.get("max_tool_steps")
+        if isinstance(steps, int) and steps > 0:
+            return steps
+    return DEFAULT_MAX_TOOL_STEPS
+
+
+def max_tool_result_bytes() -> int:
+    cfg = _load_config_json()
+    if cfg:
+        broker = cfg.get("broker") or {}
+        limit = broker.get("max_tool_result_bytes")
+        if isinstance(limit, int) and limit > 0:
+            return limit
+    return DEFAULT_MAX_TOOL_RESULT_BYTES

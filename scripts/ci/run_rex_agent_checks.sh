@@ -5,8 +5,13 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT"
 
-if ! command -v python3 >/dev/null 2>&1; then
-  echo "run_rex_agent_checks: python3 not found" >&2
+PYTHON="python3"
+if command -v python3.11 >/dev/null 2>&1; then
+  PYTHON="python3.11"
+elif command -v python3.10 >/dev/null 2>&1; then
+  PYTHON="python3.10"
+elif ! command -v python3 >/dev/null 2>&1; then
+  echo "run_rex_agent_checks: python3 not found (need 3.10+)" >&2
   exit 1
 fi
 
@@ -20,7 +25,7 @@ echo "run_rex_agent_checks: REX_ROOT=$REX_ROOT"
 cargo build -p rex --locked
 cargo build -p rex-sidecar-stub --locked
 
-python3 -m pip install -q grpcio-tools grpcio protobuf
+"$PYTHON" -m pip install -q grpcio-tools grpcio protobuf
 
 REX_BIN="${CARGO_TARGET_DIR:-$ROOT/target}/debug/rex"
 if [[ ! -x "$REX_BIN" ]]; then
@@ -28,10 +33,10 @@ if [[ ! -x "$REX_BIN" ]]; then
 fi
 "$REX_BIN" proto install
 
-python3 -m pip install -q pytest
+"$PYTHON" -m pip install -q pytest "langgraph>=0.2.0" "langchain-core>=0.3.0"
 export PYTHONPATH="$AGENT_DIR/src:$("$REX_BIN" proto path):${PYTHONPATH:-}"
 
-python3 -m pytest "$AGENT_DIR/tests" -q
+"$PYTHON" -m pytest "$AGENT_DIR/tests" -q
 
 export REX_AGENT_BINARY="${REX_AGENT_BINARY:-$AGENT_DIR/rex-agent}"
 export REX_RUN_AGENT_SMOKE=1

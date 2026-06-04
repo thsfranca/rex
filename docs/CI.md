@@ -216,7 +216,7 @@ That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh
 
 **Two tiers:** PR CI uses **`mock`** / harness paths in `uds_e2e` and a **loopback OpenAI-compat HTTP fixture** in `mvp_product_path` (real `http_openai_compat`, no cloud API). Operator dogfood requires **live** `REX_OPENAI_COMPAT_*` (Ollama, LM Studio, etc.).
 
-**Python sidecar (R017):** [`run_rust_tests.sh`](../scripts/ci/run_rust_tests.sh) calls [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) after the workspace test run — `pytest` for `sidecars/rex-agent` and `cargo test --test agent_scaffold_smoke` (no live LLM). Requires `python3` and `pip install grpcio-tools` on the runner.
+**Python sidecar (R017–R018):** [`run_rust_tests.sh`](../scripts/ci/run_rust_tests.sh) calls [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) after the workspace test run — `pytest` for `sidecars/rex-agent` (LangGraph + broker mocks) and `cargo test --test agent_scaffold_smoke` (no live LLM). Requires Python 3.10+ (script prefers `python3.11` / `python3.10`), `grpcio-tools`, and `langgraph` / `langchain-core` on the runner.
 
 ## Local verification flow for reliability changes
 

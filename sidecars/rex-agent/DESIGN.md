@@ -1,6 +1,6 @@
 # rex-agent — design contract
 
-**Status:** scaffold shipped (**R017**). LangGraph ReAct loop: **R018**. Operator defaults: **R019**. Broker policy completion: **R020–R022** per [ROADMAP.md](../../docs/ROADMAP.md).
+**Status:** LangGraph ReAct loop shipped (**R018**). gRPC scaffold (**R017**). Operator defaults (**R019**). Broker policy (**R020–R022**). Interim tool protocol: JSON in model text until native `tools` on `BrokerInference` (follow-up).
 
 Bootstrap: [README.md](README.md).
 

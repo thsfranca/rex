@@ -60,9 +60,9 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 ## Next — product agent program
 
-Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** scaffold is shipped (**R017** Done).
+Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar for CI/harness is **`rex-sidecar-stub`**; **`rex-agent`** ships LangGraph ReAct (**R018** Done) on the gRPC scaffold (**R017** Done).
 
-**Priority rationale:** **R015**, **R017**, **R020**, **R021**, **R022**, and **R019** are **Done**. Next: **R018** (LangGraph). **R016** remains **Could** after **R019**. **RC-S2** may run in parallel (extension-only blast radius).
+**Priority rationale:** **R013–R022**, **R017**, **R018**, and **R019** are **Done**. Next product-agent follow-up: **R016** (**Could**). **RC-S2** may run in parallel (extension-only blast radius).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
@@ -74,7 +74,7 @@ Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. De
 | 6 | Turn correlation Phase 1b | **R021** | Done — `turn_id`, `context_revision` on `RunTurn` — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | 7 | Workspace binding (daemon) | **R022** | Done — fail-closed `workspace.root`; harness cwd fallback — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
 | 8 | `rex-agent` scaffold | **R017** | Done — gRPC server + broker client ([sidecars/rex-agent/README.md](../sidecars/rex-agent/README.md)) |
-| 9 | LangGraph agent core | **R018** | ReAct loop, broker adapters |
+| 9 | LangGraph agent core | **R018** | Done — ReAct loop, broker adapters ([sidecars/rex-agent/DESIGN.md](../sidecars/rex-agent/DESIGN.md)) |
 | 10 | Integration / E2E | **R019** | Extension workspace + defaults; client hints; live-model E2E — [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md#r019-integration--e2e-acceptance) |
 | 11 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (**Could** — deferred Phase 1, [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md)) |
 
@@ -144,8 +144,8 @@ flowchart TD
 | **R015** | JSON config + `rex proto install` + `proto.gen_root` | Done |
 | **R016** | Multi-active sidecar broadcast | Could — deferred Phase 1 per [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md) |
 | **R017** | `rex-agent` scaffold (gRPC + broker client) | Done |
-| **R018** | LangGraph agent core (ReAct, broker tools) | Should |
-| **R019** | Integration / E2E (operator path, extension defaults) | Should |
+| **R018** | LangGraph agent core (ReAct, broker tools) | **Done** — [sidecars/rex-agent/DESIGN.md](../sidecars/rex-agent/DESIGN.md) |
+| **R019** | Integration / E2E (operator path, extension defaults) | **Done** |
 | **R020** | Broker access policy completion (ADR 0013; follows R012) | **Done** — [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) |
 | **R021** | Turn correlation Phase 1b (`turn_id`, `context_revision`) | **Done** — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | **R022** | Workspace binding product path (fail-closed daemon) | **Done** — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
