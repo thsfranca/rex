@@ -17,13 +17,9 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 
 ## [Unreleased]
 
-### Changed
-
-- Default **`rex.cliPath`** and **`rex.daemonBinaryPath`** to **`rex`**; auto-start spawns **`rex daemon`**.
-- User-facing errors and hints reference the unified **`rex`** binary (legacy `rex-cli` / `rex-daemon` shims remain in the Rust workspace).
-
 ### Added
 
+- **RC-S2** automated tests: cancel mid-stream and cancel during agent approval return idle (`appState.test.ts`, `chatPanel.test.ts`).
 - **`rex.modelId`** setting: passes `--model` on every chat `complete` when non-empty.
 - Daemon lifecycle test for **ready → unavailable** probe transitions; stream cancel test asserts no events after terminal.
 - [docs/EXTENSION_LOCAL_E2E.md](../../docs/EXTENSION_LOCAL_E2E.md): manual long-session stress checklist.
@@ -46,6 +42,10 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - `docs/EXTENSION_LOCAL_E2E.md` and `scripts/dev-rex-extension.sh`: ordered path from clone to **REX ready** in the editor (Rust build, `install-cli.sh`, extension install; daemon steps documented, not auto-started by the script).
 
 ### Changed
+
+- Chat cancel hardening: resolve execution approval on cancel; abort in-flight streams on clear chat; webview ignores stale terminal events for non-active stream ids.
+- Default **`rex.cliPath`** and **`rex.daemonBinaryPath`** to **`rex`**; auto-start spawns **`rex daemon`**.
+- User-facing errors and hints reference the unified **`rex`** binary (legacy `rex-cli` / `rex-daemon` shims remain in the Rust workspace).
 - When `rex-cli` or `rex-daemon` cannot be spawned (`ENOENT`), error text now points to `rex.cliPath` / `rex.daemonBinaryPath` and to `docs/EXTENSION_LOCAL_E2E.md` in this repository for local setup.
 - `streamComplete`: clearer terminal-state handling for `done` / `error` and cancellation wakeups.
 - Periodic daemon refresh uses the same auto-start vs probe policy as activation.

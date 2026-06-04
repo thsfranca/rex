@@ -153,6 +153,8 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   }
 
   clearChat(): void {
+    this.abortAllPendingStreams();
+    this.rejectAllPendingApprovals();
     this.postMessage({ type: "clearChat" });
   }
 
@@ -335,7 +337,22 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     }
     pending.controller.abort();
     this.pendingStreams.delete(id);
+    this.resolvePendingApproval(`apr-${id}`, false);
     this.emitExecutionStep(id, "cancelled", "Execution cancelled.");
+  }
+
+  private abortAllPendingStreams(): void {
+    for (const pending of this.pendingStreams.values()) {
+      pending.controller.abort();
+    }
+    this.pendingStreams.clear();
+  }
+
+  private rejectAllPendingApprovals(): void {
+    for (const pending of this.pendingApprovals.values()) {
+      pending.resolve(false);
+    }
+    this.pendingApprovals.clear();
   }
 
   private async handleApplyCodeBlock(
@@ -478,6 +495,15 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       payload.approved ? "running" : "blocked",
       payload.approved ? "Approval granted." : "Approval denied.",
     );
+  }
+
+  private resolvePendingApproval(approvalId: string, approved: boolean): void {
+    const pending = this.pendingApprovals.get(approvalId);
+    if (pending === undefined) {
+      return;
+    }
+    this.pendingApprovals.delete(approvalId);
+    pending.resolve(approved);
   }
 
   private emitExecutionStep(id: string, phase: "queued" | "running" | "awaiting_approval" | "completed" | "blocked" | "failed" | "cancelled", summary: string): void {

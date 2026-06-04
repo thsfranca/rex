@@ -51,7 +51,7 @@ Foundation milestones (three internal delivery waves covering scaffold + chat UX
 
 ## What remains after phase delivery
 
-- Continue **stress hardening** for very long chat sessions and status-bar edge cases (**Should** — **RC-S2**; [ROADMAP.md](ROADMAP.md) **Now**). Automated coverage expanding; long-session checklist stays manual in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md).
+- **RC-S2 Met:** automated cancel-to-idle coverage in [`appState.test.ts`](../extensions/rex-vscode/src/test/appState.test.ts) and [`chatPanel.test.ts`](../extensions/rex-vscode/src/test/chatPanel.test.ts); host hardening for cancel during approval and clear-chat abort. Manual long-session checklist retained in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md).
 - Keep release automation and install docs aligned with CLI/daemon lifecycle changes.
 - Add follow-up features only when they preserve the stable CLI NDJSON boundary and keep behavior symmetric across Cursor and plain VS Code.
 
