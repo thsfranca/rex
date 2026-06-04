@@ -411,6 +411,28 @@ button:focus-visible {
   background: var(--vscode-inputValidation-errorBackground, rgba(248, 81, 73, 0.1));
 }
 
+.rex-session-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--vscode-panel-border, transparent);
+  overflow-x: auto;
+}
+
+.rex-session-bar__tab {
+  font-size: 11px;
+  padding: 2px 8px;
+  border: 1px solid var(--vscode-panel-border, transparent);
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.rex-session-bar__tab--active {
+  background: var(--vscode-button-secondaryBackground, rgba(127, 127, 127, 0.15));
+  border-color: var(--vscode-focusBorder, transparent);
+}
+
 @media (max-width: 320px) {
   .rex-header {
     flex-direction: column;

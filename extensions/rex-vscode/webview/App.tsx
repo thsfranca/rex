@@ -26,6 +26,26 @@ export function App(): React.ReactElement {
     return () => window.clearTimeout(timer);
   }, [state.banner]);
 
+  React.useEffect(() => {
+    if (state.activeSessionId === undefined) {
+      return;
+    }
+    const persistable = state.messages
+      .filter((message) => message.role === "user" || message.role === "assistant")
+      .map((message) => ({
+        id: message.id,
+        role: message.role as "user" | "assistant",
+        buffer: message.buffer,
+        errorMessage: message.errorMessage,
+      }));
+    postToHost({
+      type: "saveSessionState",
+      sessionId: state.activeSessionId,
+      mode: state.modePolicy.mode,
+      messages: persistable,
+    });
+  }, [state.messages, state.modePolicy.mode, state.activeSessionId]);
+
   const handleSubmit = (): void => {
     const trimmed = state.prompt.trim();
     if (trimmed.length === 0) {
@@ -109,6 +129,7 @@ export function App(): React.ReactElement {
         theme={state.theme}
         context={state.context}
         attachContext={state.attachContext}
+        sessions={state.sessions}
         streaming={state.streaming}
         daemonReady={state.daemon.state === "ready"}
         modePolicy={state.modePolicy}
@@ -125,6 +146,8 @@ export function App(): React.ReactElement {
         onCopy={handleCopy}
         onInsert={handleInsert}
         onApply={handleApply}
+        onCreateSession={() => postToHost({ type: "createSession" })}
+        onSwitchSession={(sessionId) => postToHost({ type: "switchSession", sessionId })}
       />
     </>
   );
