@@ -1,0 +1,4 @@
+# Builtin sidecars validated by scripts/ci/run_builtin_sidecar_checks.sh
+# Format: name<TAB>kind<TAB>check_script
+stub	cargo	rex-sidecar-stub
+agent	python	sidecars/rex-agent

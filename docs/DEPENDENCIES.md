@@ -47,6 +47,14 @@ brew install protobuf
 | `grpcio-tools` | Maintainer: `rex proto install` | Same as `rex proto doctor` toolchain |
 | `pytest` | Sidecar unit tests | CI: [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) |
 
+### Builtin sidecar CI
+
+| Script | Purpose |
+|--------|---------|
+| [`run_builtin_sidecar_checks.sh`](../scripts/ci/run_builtin_sidecar_checks.sh) | Validates all builtins in [`builtin_sidecars.txt`](../scripts/ci/builtin_sidecars.txt) |
+| [`run_stub_sidecar_checks.sh`](../scripts/ci/run_stub_sidecar_checks.sh) | `rex-sidecar-stub` build, unit tests, UDS smoke |
+| [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) | `rex-agent` pytest + UDS smoke |
+
 ### Test harness (non-MVP product path)
 
 - `REX_INFERENCE_RUNTIME=mock` for CI and UDS e2e — no network; no live sidecar required until stub harness exists.

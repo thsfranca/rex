@@ -381,3 +381,28 @@ pub async fn serve_on_socket(
     let _ = remove_stale_socket(socket_path);
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chunk_text_splits_non_empty() {
+        assert_eq!(chunk_text("abcdef", 2), vec!["ab", "cd", "ef"]);
+    }
+
+    #[test]
+    fn parse_read_directive_extracts_path() {
+        let prompt = "hello\n__rex_read: src/main.rs\nmore";
+        assert_eq!(parse_read_directive(prompt).as_deref(), Some("src/main.rs"));
+    }
+
+    #[test]
+    fn parse_write_directive_extracts_path_and_body() {
+        let prompt = "__rex_write: out.txt\nline one\nline two";
+        assert_eq!(
+            parse_write_directive(prompt),
+            Some(("out.txt".to_string(), "line one\nline two".to_string()))
+        );
+    }
+}

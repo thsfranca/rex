@@ -69,9 +69,12 @@ mod supervisor;
 #[path = "../src/turn_correlation.rs"]
 mod turn_correlation;
 
-/// Set by `scripts/ci/run_rex_agent_checks.sh`. Skips Python/proto setup during workspace `cargo nextest`.
+/// Set by `scripts/ci/run_builtin_sidecar_checks.sh` / `run_rex_agent_checks.sh`.
 fn agent_smoke_enabled() -> bool {
     matches!(
+        std::env::var("REX_RUN_BUILTIN_SIDECAR_SMOKE").as_deref(),
+        Ok("1") | Ok("true") | Ok("yes")
+    ) || matches!(
         std::env::var("REX_RUN_AGENT_SMOKE").as_deref(),
         Ok("1") | Ok("true") | Ok("yes")
     )

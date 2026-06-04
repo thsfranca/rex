@@ -135,7 +135,10 @@ CI first evaluates changed paths, then runs only relevant domain checks.
   - `Cargo.lock`
   - `scripts/install-cli.sh`
   - `scripts/ci/run_rust_*.sh`
+  - `scripts/ci/run_builtin_sidecar_checks.sh`
+  - `scripts/ci/run_stub_sidecar_checks.sh`
   - `scripts/ci/run_rex_agent_checks.sh`
+  - `scripts/ci/builtin_sidecars.txt`
 - Extension-relevant:
   - `extensions/rex-vscode/**`
   - `scripts/ci/run_extension*.sh`
@@ -216,7 +219,14 @@ That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh
 
 **Two tiers:** PR CI uses **`mock`** / harness paths in `uds_e2e` and a **loopback OpenAI-compat HTTP fixture** in `mvp_product_path` (real `http_openai_compat`, no cloud API). Operator dogfood requires **live** `REX_OPENAI_COMPAT_*` (Ollama, LM Studio, etc.).
 
-**Python sidecar (R017–R018):** [`run_rust_tests.sh`](../scripts/ci/run_rust_tests.sh) calls [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) after the workspace test run — `pytest` for `sidecars/rex-agent` (LangGraph + broker mocks) and `cargo test --test agent_scaffold_smoke` (no live LLM). Requires Python 3.10+ (script prefers `python3.11` / `python3.10`), `grpcio-tools`, and `langgraph` / `langchain-core` on the runner.
+**Builtin sidecars:** [`run_rust_tests.sh`](../scripts/ci/run_rust_tests.sh) calls [`run_builtin_sidecar_checks.sh`](../scripts/ci/run_builtin_sidecar_checks.sh) after the workspace test run. Manifest: [`builtin_sidecars.txt`](../scripts/ci/builtin_sidecars.txt).
+
+| Sidecar | Script | Checks |
+|---------|--------|--------|
+| `rex-sidecar-stub` | [`run_stub_sidecar_checks.sh`](../scripts/ci/run_stub_sidecar_checks.sh) | `cargo test -p rex-sidecar-stub`; UDS smoke [`stub_sidecar_smoke`](../crates/rex-daemon/tests/stub_sidecar_smoke.rs) |
+| `rex-agent` | [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) | `pytest` (LangGraph + broker mocks); [`agent_scaffold_smoke`](../crates/rex-daemon/tests/agent_scaffold_smoke.rs) |
+
+Requires Python 3.10+ for `rex-agent` (script prefers `python3.11` / `python3.10`), `grpcio-tools`, and `langgraph` / `langchain-core`. Set `REX_RUN_BUILTIN_SIDECAR_SMOKE=1` for integration smokes (CI sets this automatically).
 
 ## Local verification flow for reliability changes
 
