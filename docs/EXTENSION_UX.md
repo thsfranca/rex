@@ -119,7 +119,7 @@ flowchart LR
 
 ### E-UX09 — Tool / step cards
 
-- Expandable cards when host emits structured tool/step events (reuse or extend `executionStep`); graceful empty state otherwise.
+- **Done:** expandable cards when the host emits NDJSON **`tool`** / **`step`** events via `executionStep` (`kind: tool|step`); graceful empty state when the sidecar emits text only.
 
 ### E-UX10 — Inline edit on selection
 

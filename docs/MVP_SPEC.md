@@ -21,6 +21,7 @@
 | Turn correlation | `turn_id` / `context_revision` on RunTurn (**R021** Done) | — |
 | Workspace binding | Fail-closed daemon; extension supplies root (**R022**, **R019** Done) | — |
 | v1.0 **RC-*** | **Met** on stub + platform path | Live-model operator checklist for **rex-agent** |
+| Extension defaults | Manual `.rex/config.json` for product path | **`rex.productAgentConfig`** default **true** merges **`rex-agent`** + **`agent.approvals_enabled`** on auto-start |
 | Capability design | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) + ADRs 0011–0017 | Graph loop **R018**; extension **R019** |
 
 ## Architecture

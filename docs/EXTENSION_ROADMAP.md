@@ -45,7 +45,8 @@ Foundation milestones (three internal delivery waves covering scaffold + chat UX
 
 ## Shipped (foundation + recent slices)
 
-- **Daemon approval context:** extension passes `--approval-id` on **agent** sends when execution approval is required and `REX_AGENT_APPROVALS=1` ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). **Plan** mode uses in-UI mutation approvals only (no `--approval-id` on the CLI path).
+- **Extension ↔ rex-agent operator alignment:** JSON + `rex-agent` setup hints; **`rex.productAgentConfig`** default **true**; additive NDJSON **`tool`** / **`step`** events; E-UX09 tool cards in webview.
+- **Daemon approval context:** extension passes `--approval-id` on **agent** sends when execution approval is required and **`agent.approvals_enabled: true`** in JSON ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). **Plan** mode uses in-UI mutation approvals only (no `--approval-id` on the CLI path).
 - Get Started walkthrough documents **sidecar + HTTP** env for plan/agent.
 - **`rex.modelId`** setting passes `--model` on every `complete` when non-empty.
 - **Core** path: single NDJSON terminal, cancel-to-idle, **`--mode`** on every `complete`.
