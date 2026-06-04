@@ -67,7 +67,7 @@ Canonical design: **[EXTENSION_UX.md](EXTENSION_UX.md)**. One PR slice per row w
 | **E-UX08** | P2 | Terminal selection → REX context menu | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX08 | Planned |
 | **E-UX09** | P3 | Tool / step cards from structured host events | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX09 | Planned |
 | **E-UX10** | P3 | Inline edit on selection (virtual-doc apply path) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX10 | Planned |
-| **E-UX11** | P3 | Multi-file diff review batch | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX11 | Planned |
+| **E-UX11** | P3 | Multi-file diff review batch | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX11 | Done |
 
 ## What remains (non-UX)
 

@@ -1,6 +1,6 @@
 # Extension UX — design hub
 
-**Status:** `planned` (implementation tracked in [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) as **E-UX01…E-UX11**).
+**Status:** `implemented` (delivery tracked in [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) as **E-UX01…E-UX11**).
 
 ## Purpose
 

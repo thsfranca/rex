@@ -25,6 +25,10 @@ import type {
 import { postToEditorPanel } from "./editorChatPanel";
 import { applyEditToActiveFile } from "./applyEdit";
 import {
+  reviewMultiFileProposals,
+  type FileProposal,
+} from "./multiFileReview";
+import {
   createDefaultSession,
   deriveSessionTitle,
   SessionStore,
@@ -108,6 +112,10 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
 
   getProposalProvider(): RexProposalProvider {
     return this.proposalProvider;
+  }
+
+  async reviewMultiFileBatch(proposals: ReadonlyArray<FileProposal>): Promise<void> {
+    await reviewMultiFileProposals(proposals, this.proposalProvider, this.deps.log);
   }
 
   async handleExternalMessage(raw: unknown): Promise<void> {
