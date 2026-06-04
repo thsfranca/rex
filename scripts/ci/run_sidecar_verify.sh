@@ -50,29 +50,28 @@ fi
 REX_AGENT_ROOT="${REX_AGENT_ROOT:-$(mktemp -d "${TMPDIR:-/tmp}/rex-agent-ci.XXXXXX")}"
 export REX_ROOT="$REX_AGENT_ROOT"
 export REX_PROTO_SRC="$ROOT/proto"
-
-REX_BIN="${CARGO_TARGET_DIR:-$ROOT/target}/debug/rex"
-if [[ ! -x "$REX_BIN" ]]; then
-  REX_BIN="$ROOT/target/debug/rex"
-fi
-
-if [ "${result}" = "success" ]; then
-  if ! "$REX_BIN" proto install 2>&1 | tee "ci-observability/sidecar-proto.log"; then
-    mark_failure "Setup" "ENV_SETUP_FAIL" "rex proto install failed."
-  fi
-fi
 echo "::endgroup::"
 
 echo "::group::BuildAndChecks"
+TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
+REX_BIN="$TARGET_DIR/debug/rex"
+STUB_BIN="$TARGET_DIR/debug/rex-sidecar-stub"
+AGENT_LAUNCHER="$ROOT/sidecars/rex-agent/rex-agent"
+
 if [ "${result}" = "success" ]; then
   if ! cargo build -p rex-sidecar-stub -p rex --locked 2>&1 | tee "ci-observability/sidecar-build.log"; then
     mark_failure "BuildAndChecks" "BUILD_FAIL" "cargo build -p rex-sidecar-stub -p rex failed."
   fi
 fi
 
-TARGET_DIR="${CARGO_TARGET_DIR:-$ROOT/target}"
-STUB_BIN="$TARGET_DIR/debug/rex-sidecar-stub"
-AGENT_LAUNCHER="$ROOT/sidecars/rex-agent/rex-agent"
+if [ "${result}" = "success" ]; then
+  if [[ ! -x "$REX_BIN" ]]; then
+    mark_failure "BuildAndChecks" "BUILD_FAIL" "rex binary missing at ${REX_BIN} (build rex before proto install)."
+  elif ! "$REX_BIN" proto install 2>&1 | tee "ci-observability/sidecar-proto.log"; then
+    mark_failure "BuildAndChecks" "ENV_SETUP_FAIL" "rex proto install failed."
+  fi
+fi
+
 if [ "${result}" = "success" ]; then
   if [[ ! -x "$STUB_BIN" ]]; then
     mark_failure "BuildAndChecks" "BUILD_FAIL" "rex-sidecar-stub binary missing at ${STUB_BIN}."
