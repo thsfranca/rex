@@ -9,8 +9,9 @@ from typing import Any, Optional
 
 DEFAULT_DAEMON_SOCKET = "/tmp/rex.sock"
 DEFAULT_SIDECAR_SOCKET = "/tmp/rex-sidecar.sock"
-DEFAULT_MAX_TOOL_STEPS = 8
+DEFAULT_MAX_TOOL_STEPS = 12
 DEFAULT_MAX_TOOL_RESULT_BYTES = 8192
+DEFAULT_COMPACTION_SUFFIX_FRACTION = 0.25
 REX_ROOT_ENV = "REX_ROOT"
 
 
@@ -77,3 +78,23 @@ def max_tool_result_bytes() -> int:
         if isinstance(limit, int) and limit > 0:
             return limit
     return DEFAULT_MAX_TOOL_RESULT_BYTES
+
+
+def compaction_suffix_fraction() -> float:
+    cfg = _load_config_json()
+    if cfg:
+        agent = cfg.get("agent") or {}
+        fraction = agent.get("compaction_suffix_fraction")
+        if isinstance(fraction, (int, float)) and 0 < float(fraction) < 1:
+            return float(fraction)
+    return DEFAULT_COMPACTION_SUFFIX_FRACTION
+
+
+def read_pruning_enabled() -> bool:
+    cfg = _load_config_json()
+    if cfg:
+        agent = cfg.get("agent") or {}
+        flag = agent.get("read_pruning_enabled")
+        if isinstance(flag, bool):
+            return flag
+    return False
