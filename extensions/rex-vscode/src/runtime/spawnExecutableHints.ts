@@ -3,6 +3,14 @@
  * Messages are plain text; they reference the repo doc path for contributors.
  */
 export const EXTENSION_LOCAL_E2E_DOC_PATH = "docs/EXTENSION_LOCAL_E2E.md";
+export const CONFIGURATION_DOC_PATH = "docs/CONFIGURATION.md";
+
+const SIDECAR_SETUP_HINT =
+  "Configure sidecars in $REX_ROOT/config.json and project .rex/config.json: set sidecars.active to agent, binary to rex-agent, and ensure rex-agent is on PATH (pip install -e sidecars/rex-agent; rex proto install). Run rex sidecar doctor. See";
+const INFERENCE_SETUP_HINT =
+  "Set inference.runtime to http-openai-compat and inference.openai_compat.base_url / model in JSON (rex config init). See";
+const DAEMON_SETUP_HINT =
+  "Start rex daemon from a project with .rex/config.json (or enable rex.daemonAutoStart). See";
 
 export function isExecutableNotFoundError(err: unknown): boolean {
   if (typeof err !== "object" || err === null) {
@@ -31,13 +39,18 @@ export function appendDaemonExecutableNotFoundHint(err: unknown, message: string
 export function appendStreamSetupHint(message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("sidecar required") || lower.includes("sidecar unavailable")) {
-    return `${message} Enable REX_SIDECAR_ENABLED=1 and ensure rex-sidecar-stub is on PATH (see ${EXTENSION_LOCAL_E2E_DOC_PATH} §3 in the REX repository).`;
+    return `${message} ${SIDECAR_SETUP_HINT} ${EXTENSION_LOCAL_E2E_DOC_PATH} §3 and ${CONFIGURATION_DOC_PATH} in the REX repository.`;
   }
-  if (lower.includes("inference runtime") || lower.includes("rex_openai_compat")) {
-    return `${message} Configure brokered HTTP: REX_OPENAI_COMPAT_BASE_URL and REX_OPENAI_COMPAT_MODEL (see ${EXTENSION_LOCAL_E2E_DOC_PATH} §3 in the REX repository).`;
+  if (
+    lower.includes("inference runtime") ||
+    lower.includes("inference_config") ||
+    lower.includes("openai_compat") ||
+    lower.includes("inference config")
+  ) {
+    return `${message} ${INFERENCE_SETUP_HINT} ${EXTENSION_LOCAL_E2E_DOC_PATH} §3 and ${CONFIGURATION_DOC_PATH} in the REX repository.`;
   }
   if (lower.includes("daemon is unavailable") || lower.includes("daemon unavailable")) {
-    return `${message} Start rex daemon with sidecar and HTTP env (see ${EXTENSION_LOCAL_E2E_DOC_PATH} in the REX repository).`;
+    return `${message} ${DAEMON_SETUP_HINT} ${EXTENSION_LOCAL_E2E_DOC_PATH} in the REX repository.`;
   }
   return message;
 }

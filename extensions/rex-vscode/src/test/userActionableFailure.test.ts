@@ -21,7 +21,7 @@ describe("streamFailureWantsSetupHint", () => {
     expect(
       streamFailureWantsSetupHint(
         "unknown",
-        "sidecar required but REX_SIDECAR_ENABLED is off",
+        "sidecar required but sidecars.active=agent binary missing",
       ),
     ).toBe(true);
     expect(

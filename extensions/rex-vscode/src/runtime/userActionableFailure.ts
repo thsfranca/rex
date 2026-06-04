@@ -9,14 +9,15 @@ const SETUP_HINT_CODES: ReadonlySet<StreamErrorCode> = new Set([
 ]);
 
 const SETUP_HINT_MESSAGE_MARKERS: readonly string[] = [
-  "REX_SIDECAR",
-  "rex-sidecar-stub",
+  "rex-agent",
+  "config.json",
   "sidecar",
   "approval gate",
   "approval checkpoint",
   "checkpoint required",
-  "REX_AGENT_APPROVALS",
-  "REX_OPENAI_COMPAT",
+  "approvals_enabled",
+  "openai_compat",
+  "inference config",
 ];
 
 /**
