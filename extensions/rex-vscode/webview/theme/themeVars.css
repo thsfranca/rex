@@ -410,3 +410,27 @@ button:focus-visible {
 .rex-status-banner--error {
   background: var(--vscode-inputValidation-errorBackground, rgba(248, 81, 73, 0.1));
 }
+
+@media (max-width: 320px) {
+  .rex-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .rex-composer textarea {
+    min-height: 48px;
+  }
+
+  .rex-codeblock__body {
+    max-height: 200px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
