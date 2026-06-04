@@ -54,8 +54,24 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
             mode,
             approval_id,
             trace_id,
+            active_file_path,
+            language_id,
+            selection_text,
             format,
-        } => run_complete(prompt, model, mode, approval_id, trace_id, format).await,
+        } => {
+            run_complete(
+                prompt,
+                model,
+                mode,
+                approval_id,
+                trace_id,
+                active_file_path,
+                language_id,
+                selection_text,
+                format,
+            )
+            .await
+        }
     }
 }
 
@@ -72,12 +88,16 @@ async fn run_status() -> Result<(), CliError> {
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn run_complete(
     prompt: String,
     model: String,
     mode: String,
     approval_id: String,
     trace_id: String,
+    active_file_path: String,
+    language_id: String,
+    selection_text: String,
     format: CompleteOutputFormat,
 ) -> Result<(), CliError> {
     let trace_id = resolve_trace_id(trace_id);
@@ -93,11 +113,22 @@ async fn run_complete(
             }
             Err(err) => return Err(err),
         };
+        let client_hints =
+            if active_file_path.is_empty() && language_id.is_empty() && selection_text.is_empty() {
+                None
+            } else {
+                Some(rex_proto::rex::v1::ClientHints {
+                    active_file_path: active_file_path.clone(),
+                    language_id: language_id.clone(),
+                    selection_text: selection_text.clone(),
+                })
+            };
         let mut request = tonic::Request::new(StreamInferenceRequest {
             prompt: prompt.clone(),
             model: model.clone(),
             mode: mode.clone(),
             approval_id: approval_id.clone(),
+            client_hints,
         });
         let metadata_value =
             tonic::metadata::MetadataValue::try_from(trace_id.as_str()).map_err(|_| {

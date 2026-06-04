@@ -7,6 +7,9 @@ pub enum CliCommand {
         mode: String,
         approval_id: String,
         trace_id: String,
+        active_file_path: String,
+        language_id: String,
+        selection_text: String,
         format: CompleteOutputFormat,
     },
 }
@@ -27,13 +30,25 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
             if prompt.trim().is_empty() {
                 return Err("Prompt cannot be empty.".to_string());
             }
-            let (format, model, mode, approval_id, trace_id) = parse_complete_trailing(&mut args)?;
+            let (
+                format,
+                model,
+                mode,
+                approval_id,
+                trace_id,
+                active_file_path,
+                language_id,
+                selection_text,
+            ) = parse_complete_trailing(&mut args)?;
             Ok(CliCommand::Complete {
                 prompt,
                 model,
                 mode,
                 approval_id,
                 trace_id,
+                active_file_path,
+                language_id,
+                selection_text,
                 format,
             })
         }
@@ -42,15 +57,28 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
     }
 }
 
-/// Parses optional `complete` flags: `--format`, `--model`, `--model <id>`, `--mode <ask|plan|agent>` (any order).
+type CompleteTrailingArgs = (
+    CompleteOutputFormat,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+    String,
+);
+
 fn parse_complete_trailing(
     args: &mut impl Iterator<Item = String>,
-) -> Result<(CompleteOutputFormat, String, String, String, String), String> {
+) -> Result<CompleteTrailingArgs, String> {
     let mut format = CompleteOutputFormat::Text;
     let mut model = String::new();
     let mut mode = String::new();
     let mut approval_id = String::new();
     let mut trace_id = String::new();
+    let mut active_file_path = String::new();
+    let mut language_id = String::new();
+    let mut selection_text = String::new();
     while let Some(flag) = args.next() {
         match flag.as_str() {
             "--format" => {
@@ -68,42 +96,62 @@ fn parse_complete_trailing(
                 };
             }
             "--model" => {
-                let value = args
+                model = args
                     .next()
                     .ok_or_else(|| "Missing value for `--model`.".to_string())?;
-                model = value;
             }
             "--mode" => {
-                let value = args
+                mode = args
                     .next()
                     .ok_or_else(|| "Missing value for `--mode`.".to_string())?;
-                mode = value;
             }
             "--approval-id" => {
-                let value = args
+                approval_id = args
                     .next()
                     .ok_or_else(|| "Missing value for `--approval-id`.".to_string())?;
-                approval_id = value;
             }
             "--trace-id" => {
-                let value = args
+                trace_id = args
                     .next()
                     .ok_or_else(|| "Missing value for `--trace-id`.".to_string())?;
-                trace_id = value;
             }
-            other => {
-                return Err(format!("Unknown argument for `complete`: {other}"));
+            "--active-file" => {
+                active_file_path = args
+                    .next()
+                    .ok_or_else(|| "Missing value for `--active-file`.".to_string())?;
             }
+            "--language-id" => {
+                language_id = args
+                    .next()
+                    .ok_or_else(|| "Missing value for `--language-id`.".to_string())?;
+            }
+            "--selection-text" => {
+                selection_text = args
+                    .next()
+                    .ok_or_else(|| "Missing value for `--selection-text`.".to_string())?;
+            }
+            other => return Err(format!("Unknown argument for `complete`: {other}")),
         }
     }
-    Ok((format, model, mode, approval_id, trace_id))
+    Ok((
+        format,
+        model,
+        mode,
+        approval_id,
+        trace_id,
+        active_file_path,
+        language_id,
+        selection_text,
+    ))
 }
 
 pub fn print_usage() {
     eprintln!("Usage:");
     eprintln!("  rex-cli status");
     eprintln!("  rex-cli complete \"<prompt>\"");
-    eprintln!("  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ] [ --trace-id <id> ]");
+    eprintln!(
+        "  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ] [ --trace-id <id> ] [ --active-file <path> ] [ --language-id <id> ] [ --selection-text <text> ]"
+    );
 }
 
 #[cfg(test)]
@@ -129,6 +177,9 @@ mod tests {
                 mode: String::new(),
                 approval_id: String::new(),
                 trace_id: String::new(),
+                active_file_path: String::new(),
+                language_id: String::new(),
+                selection_text: String::new(),
                 format: CompleteOutputFormat::Text,
             }
         );
@@ -161,6 +212,9 @@ mod tests {
                 mode: String::new(),
                 approval_id: String::new(),
                 trace_id: String::new(),
+                active_file_path: String::new(),
+                language_id: String::new(),
+                selection_text: String::new(),
                 format: CompleteOutputFormat::Ndjson,
             }
         );
@@ -207,7 +261,42 @@ mod tests {
                 mode: "ask".to_string(),
                 approval_id: String::new(),
                 trace_id: String::new(),
+                active_file_path: String::new(),
+                language_id: String::new(),
+                selection_text: String::new(),
                 format: CompleteOutputFormat::Ndjson,
+            }
+        );
+    }
+
+    #[test]
+    fn parses_client_hint_flags() {
+        let cmd = parse_command(
+            vec![
+                "complete".to_string(),
+                "hi".to_string(),
+                "--active-file".to_string(),
+                "/proj/a.ts".to_string(),
+                "--language-id".to_string(),
+                "typescript".to_string(),
+                "--selection-text".to_string(),
+                "fn main".to_string(),
+            ]
+            .into_iter(),
+        )
+        .expect("parse hints");
+        assert_eq!(
+            cmd,
+            CliCommand::Complete {
+                prompt: "hi".to_string(),
+                model: String::new(),
+                mode: String::new(),
+                approval_id: String::new(),
+                trace_id: String::new(),
+                active_file_path: "/proj/a.ts".to_string(),
+                language_id: "typescript".to_string(),
+                selection_text: "fn main".to_string(),
+                format: CompleteOutputFormat::Text,
             }
         );
     }

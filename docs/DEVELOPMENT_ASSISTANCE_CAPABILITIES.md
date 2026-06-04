@@ -152,14 +152,14 @@ Hard conflicts (**C***) and resolutions recorded in ADRs.
 
 | ID | Tension | Resolution |
 |----|---------|------------|
-| **C1** | Thin `client_hints` vs extension embedding full selection in prompt | Migrate extension to hints (**R019**); until then document **double-count risk**; daemon may strip duplicate `File:/Selection:` blocks when `context_revision` set |
+| **C1** | Thin `client_hints` vs extension embedding full selection in prompt | **Partial (R019):** extension sends CLI hint flags; daemon strips trailing `File:/Selection:` when hints are set. Selection **range** on wire deferred (`selection_text` today). |
 | **C2** | Retrieve-on-demand vs agent `fs.read` tools | Daemon injects **initial** snapshot; broker tools for **deltas** only |
 | **C3** | Assemble once vs LangGraph multi-step loop | **Once per turn start**; intra-turn state in sidecar scratch |
 | **C4** | No daemon transcript vs LTM ingestion | LTM ingests **exported events** / extracted facts, not UI transcript DB |
 | **C5** | Large layered prompts vs retrieval/memory/knowledge | `ContextBudgetAllocator` with stage caps (table above) |
 | **C6** | Git Copilot-style files vs Rex bundles | Single ingestion path per source; dedupe by content hash ([ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md)) |
 | **C7** | Drift `fail-closed` (agent) vs `prefer-git` (ask) | Intentional per-mode policy |
-| **C8** | Fail-closed workspace vs cwd fallback | Product: require root; harness: `REX_ALLOW_CWD_WORKSPACE=1` |
+| **C8** | Fail-closed workspace vs cwd fallback | **Implemented (R022):** product requires `workspace.root`; harness: `workspace.allow_cwd_fallback` or `REX_ALLOW_CWD_WORKSPACE=1` |
 | **C9** | Single `REX_WORKSPACE_ROOT` vs multi-root IDE | Phase 1 primary folder only |
 | **C10** | MCP in sidecar vs broker-only host | Host effects map to broker verbs only ([ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md)) |
 | **C11** | KnowledgeBroker vs MCP resources | One `KnowledgeRetrieval` stage; MCP is transport profile |

@@ -74,8 +74,12 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
         sidecar.clone(),
     );
 
+    let workspace_log = match settings::get().resolve_workspace_root() {
+        Ok(root) => format!("workspace.root={}", root.display()),
+        Err(_) => "workspace.error=not_configured".to_string(),
+    };
     println!(
-        "rex-daemon event=listen socket={} inference_runtime={} daemon_version={}",
+        "rex-daemon event=listen socket={} inference_runtime={} daemon_version={} {workspace_log}",
         socket_path,
         RuntimeKind::from_config().log_label(),
         DAEMON_VERSION

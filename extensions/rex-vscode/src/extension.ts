@@ -7,6 +7,10 @@ import { DaemonLifecycle, type DaemonLifecycleState } from "./runtime/daemonLife
 import { streamFailureWantsSetupHint } from "./runtime/userActionableFailure";
 import { ChatPanelProvider, CHAT_VIEW_ID } from "./ui/chatPanel";
 import { createStatusBar, type StatusBar } from "./ui/statusBar";
+import {
+  ensureProjectRexConfig,
+  workspaceBindingState,
+} from "./workspace/binding";
 
 const PROBE_INTERVAL_MS = 10_000;
 
@@ -32,7 +36,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const chatPanel = new ChatPanelProvider({
     context,
-    getCliOptions: () => ({ cliPath: resources?.settings.cliPath ?? settings.cliPath }),
+    getCliOptions: () => {
+      const cliPath = resources?.settings.cliPath ?? settings.cliPath;
+      const binding = workspaceBindingState();
+      return binding.ok
+        ? { cliPath, cwd: binding.workspaceRoot }
+        : { cliPath };
+    },
     getModelId: () => resources?.settings.modelId ?? settings.modelId,
     getDaemonAutoStart: () => resources?.settings.daemonAutoStart ?? settings.daemonAutoStart,
     ensureDaemonReady: (signal) => {
@@ -43,7 +53,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           reason: "REX extension is not active",
         } as DaemonLifecycleState);
       }
-      return r.lifecycle.ensureRunning(signal);
+      return ensureDaemonWithWorkspaceBinding(r.lifecycle, r.settings, r.output, signal);
     },
     getDaemonState: () => lastLifecycleState,
     log: (message) => output.appendLine(message),
@@ -73,7 +83,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   let lastLifecycleState: DaemonLifecycleState | undefined;
 
-  const lifecycle = buildLifecycle(settings, statusBar, output, (state) => {
+  const initialBinding = workspaceBindingState();
+  let initialSpawnCwd: string | undefined;
+  if (initialBinding.ok) {
+    try {
+      ensureProjectRexConfig(initialBinding.workspaceRoot, {
+        productAgentConfig: settings.productAgentConfig,
+      });
+      initialSpawnCwd = initialBinding.workspaceRoot;
+      if (initialBinding.multiRoot) {
+        output.appendLine("[activate] workspace.warning=multi_root (binding primary folder only)");
+      }
+    } catch (err) {
+      output.appendLine(`[activate] workspace binding failed: ${String(err)}`);
+    }
+  }
+
+  const lifecycle = buildLifecycle(settings, statusBar, output, initialSpawnCwd, (state) => {
     lastLifecycleState = state;
     chatPanel.broadcastDaemonState(state);
   });
@@ -158,7 +184,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
       const previousLifecycle = resources.lifecycle;
       resources.settings = updated;
-      resources.lifecycle = buildLifecycle(updated, statusBar, output, (state) => {
+      resources.lifecycle = buildLifecycle(updated, statusBar, output, undefined, (state) => {
         lastLifecycleState = state;
         chatPanel.broadcastDaemonState(state);
       });
@@ -183,7 +209,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   if (settings.daemonAutoStart) {
     output.appendLine("[activate] daemonAutoStart=true -> ensuring daemon is running");
-    void lifecycle.ensureRunning().then((state) => {
+    void ensureDaemonWithWorkspaceBinding(lifecycle, settings, output).then((state) => {
       output.appendLine(`[activate] auto-start result -> ${describeState(state)}`);
     });
   } else {
@@ -220,20 +246,48 @@ function buildLifecycle(
   settings: RexSettings,
   statusBar: StatusBar,
   output: vscode.OutputChannel,
+  spawnCwd: string | undefined,
   onStateChange: (state: DaemonLifecycleState) => void,
 ): DaemonLifecycle {
   const daemonEnv =
     settings.rexRoot.length > 0 ? { REX_ROOT: settings.rexRoot } : undefined;
   return new DaemonLifecycle({
-    cli: { cliPath: settings.cliPath },
+    cli: { cliPath: settings.cliPath, cwd: spawnCwd },
     daemonBinaryPath: settings.daemonBinaryPath,
     daemonEnv,
+    spawnCwd,
     onState: (state) => {
       statusBar.update(state);
       output.appendLine(`[lifecycle] ${describeState(state)}`);
       onStateChange(state);
     },
   });
+}
+
+async function ensureDaemonWithWorkspaceBinding(
+  lifecycle: DaemonLifecycle,
+  settings: RexSettings,
+  output: vscode.OutputChannel,
+  signal?: AbortSignal,
+): Promise<DaemonLifecycleState> {
+  const binding = workspaceBindingState();
+  if (!binding.ok) {
+    output.appendLine(`[lifecycle] workspace binding skipped: ${binding.reason}`);
+    return { kind: "unavailable", reason: binding.reason };
+  }
+  try {
+    ensureProjectRexConfig(binding.workspaceRoot, {
+      productAgentConfig: settings.productAgentConfig,
+    });
+    if (binding.multiRoot) {
+      output.appendLine("[lifecycle] workspace.warning=multi_root (binding primary folder only)");
+    }
+  } catch (err) {
+    const reason = `failed to write project .rex/config.json: ${String(err)}`;
+    output.appendLine(`[lifecycle] ${reason}`);
+    return { kind: "unavailable", reason };
+  }
+  return lifecycle.ensureRunning(signal);
 }
 
 function describeState(state: DaemonLifecycleState | undefined): string {
@@ -261,7 +315,7 @@ function refreshDaemonConnection(
     return Promise.resolve(undefined);
   }
   if (r.settings.daemonAutoStart) {
-    return r.lifecycle.ensureRunning();
+    return ensureDaemonWithWorkspaceBinding(r.lifecycle, r.settings, r.output);
   }
   return r.lifecycle.probe();
 }

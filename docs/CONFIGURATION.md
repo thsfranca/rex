@@ -21,7 +21,7 @@ This document is the **canonical** policy for how REX settings work: merged **JS
 | Built-in defaults | Used when a JSON field is unset. |
 | `$REX_ROOT/config.json` | User defaults: daemon socket, sidecars, inference, workspace, broker, agent. |
 | `.rex/config.json` | Optional project overrides (walked from cwd upward). |
-| CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--trace-id` per invocation. |
+| CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--trace-id`, `--active-file`, `--language-id`, `--selection-text` per invocation. |
 
 **Layout root:** `$REX_ROOT` defaults to `~/.rex` when unset. Run `rex config init` to create the layout and template `config.json`.
 
@@ -38,7 +38,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `daemon` | `socket` | Daemon UDS path (default `/tmp/rex.sock`). |
 | `sidecars` | `active`, `required`, `harness`, `list[]` | Supervised sidecar; `harness: "direct"` skips spawn (CI/tests). |
 | `inference` | `runtime`, `openai_compat`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. |
-| `workspace` | `root`, `indexer` | Broker root and lexical indexer (`workspace` or `seeded`). |
+| `workspace` | `root`, `indexer`, `allow_cwd_fallback` | Broker root and lexical indexer (`workspace` or `seeded`). Product path requires non-empty `root` (not `"."`). Harness/CI: `allow_cwd_fallback: true` or `REX_ALLOW_CWD_WORKSPACE=1`. |
 | `context` | `max_prompt_tokens`, `max_context_tokens` | Context pipeline budgets. |
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
@@ -65,7 +65,7 @@ Minimal example:
       "model": "llama3.2"
     }
   },
-  "workspace": { "root": "." },
+  "workspace": { "root": "/absolute/path/to/your/project" },
   "observability": {
     "enabled": false,
     "service_name": "rex-daemon",
@@ -78,6 +78,8 @@ Minimal example:
   }
 }
 ```
+
+**Workspace root (product path):** Set `workspace.root` to an absolute project path in `.rex/config.json` (extension auto-start writes this when a folder is open). Unset or `"."` without `allow_cwd_fallback` causes broker and `StreamInference` to fail closed. For harness tests only: `workspace.allow_cwd_fallback: true` in JSON or `REX_ALLOW_CWD_WORKSPACE=1` in the environment.
 
 ## Observability (planned)
 

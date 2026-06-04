@@ -56,9 +56,9 @@ pub fn compute_context_revision(
 
 fn workspace_fingerprint() -> String {
     crate::settings::get()
-        .workspace_root()
-        .display()
-        .to_string()
+        .resolve_workspace_root()
+        .map(|p| p.display().to_string())
+        .unwrap_or_default()
 }
 
 /// Strip extension-embedded `---` / `File:` / `Selection:` trailer (conflict C1).

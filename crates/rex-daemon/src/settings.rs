@@ -55,6 +55,7 @@ fn default_loaded_config() -> Arc<LoadedConfig> {
     #[cfg(test)]
     let effective = {
         let mut cfg = rex_config::RexConfig::defaults();
+        cfg.workspace.allow_cwd_fallback = Some(true);
         cfg.sidecars.harness = Some("direct".to_string());
         cfg.sidecars.required = Some(false);
         if let Some(entry) = cfg.sidecars.list.first_mut() {

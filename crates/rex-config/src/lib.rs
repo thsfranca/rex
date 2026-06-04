@@ -4,6 +4,7 @@ mod merge;
 mod model;
 mod paths;
 mod sidecar_binary;
+mod workspace;
 
 pub use error::ConfigError;
 pub use layout::{ensure_global_layout, EnsureResult};
@@ -15,6 +16,7 @@ pub use model::{
 };
 pub use paths::{global_config_path, proto_gen_path, proto_src_path, rex_root, REX_ROOT_ENV};
 pub use sidecar_binary::sidecar_binary_resolvable;
+pub use workspace::WorkspaceRootError;
 
 use std::env;
 use std::path::PathBuf;

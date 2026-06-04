@@ -42,28 +42,49 @@ source ~/.zshrc
 
 Then **fully quit and reopen** Cursor or VS Code (not only Reload Window).
 
-## 3) Configure brokered HTTP and sidecar (MVP)
+## 3) Configure JSON (product path: `rex-agent` + live HTTP)
 
-Phase 1 expects a **daemon-supervised sidecar agent** plus **brokered OpenAI-compatible HTTP** ([MVP_SPEC.md](./MVP_SPEC.md), [SIDECAR_RUNTIME.md](./SIDECAR_RUNTIME.md), [CONFIGURATION.md](./CONFIGURATION.md)). Example with **Ollama**:
+Phase 1 expects a **daemon-supervised sidecar** plus **brokered OpenAI-compatible HTTP** ([MVP_SPEC.md](./MVP_SPEC.md), [CONFIGURATION.md](./CONFIGURATION.md)). Use JSON under `$REX_ROOT` and project `.rex/config.json` — legacy `REX_*` tuning env vars are ignored.
 
-```bash
-export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:11434/v1"
-export REX_OPENAI_COMPAT_MODEL="llama3.2"
-export REX_INFERENCE_RUNTIME="http-openai-compat"
-```
-
-For automated preflight only (no live LLM), CI uses `REX_INFERENCE_RUNTIME=mock` and/or a stub sidecar — not the product MVP path.
-
-**Sidecar (product path):** enable supervision and install the stub binary:
+From the repo root (with [Ollama](https://ollama.com/) or another OpenAI-compatible server on port 11434):
 
 ```bash
-export REX_SIDECAR_ENABLED=1
-export REX_SIDECAR_BINARY=rex-sidecar-stub   # or absolute path after cargo install
-cargo build -p rex-sidecar-stub
-# ensure target/debug or install path is on PATH when starting rex-daemon
+rex config init
 ```
 
-See [CONFIGURATION.md](./CONFIGURATION.md) for `REX_SIDECAR_REQUIRED`, socket path, and harness `REX_SIDECAR_HARNESS=direct` (CI/tests only).
+Edit `$REX_ROOT/config.json` or create `.rex/config.json` in your project:
+
+```json
+{
+  "version": 1,
+  "sidecars": {
+    "active": "agent",
+    "required": true,
+    "list": [
+      {
+        "name": "agent",
+        "binary": "rex-agent",
+        "enabled": true,
+        "socket": "/tmp/rex-sidecar.sock"
+      }
+    ]
+  },
+  "inference": {
+    "runtime": "http-openai-compat",
+    "openai_compat": {
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model": "llama3.2"
+    }
+  },
+  "workspace": { "root": "/absolute/path/to/your/project" }
+}
+```
+
+Build and install binaries so `rex-agent` is on `PATH` when the daemon starts (`cargo build --workspace` and `./scripts/install-cli.sh`).
+
+For automated preflight only (no live LLM), CI uses `inference.runtime: mock` and/or `sidecars.harness: "direct"` — not the operator acceptance path below.
+
+Optional extension overlay: with `"rex.productAgentConfig": true`, auto-start merges `sidecars.active: agent` into project `.rex/config.json` (default remains stub-friendly for CI).
 
 ## 4) Run `rex daemon`
 
@@ -85,7 +106,7 @@ The daemon listens on **`/tmp/rex.sock`**.
 
 **Extension-managed (opt-in)**
 
-In editor settings, set `"rex.daemonAutoStart": true`. The extension spawns `rex daemon` via `rex.daemonBinaryPath` (default `rex`). If `rex` is not on the editor `PATH`, set `rex.daemonBinaryPath` and `rex.cliPath` to the **absolute path** to the same binary.
+In editor settings, set `"rex.daemonAutoStart": true`. The extension writes `workspace.root` into project `.rex/config.json`, spawns `rex daemon` with `cwd` set to the primary workspace folder, and passes `REX_ROOT` when configured. If `rex` is not on the editor `PATH`, set `rex.daemonBinaryPath` and `rex.cliPath` to the **absolute path** to the same binary. Multi-root workspaces log `workspace.warning=multi_root` and bind the **primary** folder only.
 
 ## 5) Verify from a terminal
 
@@ -146,17 +167,18 @@ Open **REX: Open Chat**, select **agent** or **plan** mode, send a short prompt,
 | `--approval-id` on `complete` | `cliBridgeArgs.test.ts` | Agent send with `REX_AGENT_APPROVALS=1` |
 | Long multi-turn session | — | Checklist below |
 
-## 8) Operator live HTTP dogfood (RC-02; not CI)
+## 8) R019 acceptance — live model (operator; not CI)
 
-After `./scripts/verify_mvp_local.sh` passes, validate the **product path** against a **live** OpenAI-compatible server (Ollama, LM Studio, etc.). CI uses loopback fixtures and harness env; this section is required for operator acceptance per [MVP_SPEC.md](./MVP_SPEC.md).
+After `./scripts/verify_mvp_local.sh` passes, validate the **product path** with **`rex-agent`** and **live** OpenAI-compatible HTTP (Ollama, LiteLLM, etc.). CI uses mock/stub harness config; this checklist is the integration acceptance gate for **R019**.
 
-Prerequisites: HTTP server running (example Ollama: `ollama serve`), `REX_OPENAI_COMPAT_*` and `REX_SIDECAR_*` set on the **same** `rex-daemon` process as in steps 3–4.
+Prerequisites: HTTP server running (example: `ollama serve`), JSON from step 3 on the **same** daemon process, workspace folder open in the editor with `rex.daemonAutoStart: true` (or manual `rex daemon` started from that project directory).
 
-- [ ] Daemon logs show sidecar spawn/health and `broker.inference=ok` on agent turns (not stub echo-only text).
-- [ ] **REX: Open Chat** → **agent** mode: response text comes from the **live model** (not `sidecar-stub[agent]:` echo).
-- [ ] **Cancel** mid-stream twice; composer returns to idle (no stuck streaming state).
-- [ ] **Apply** on a code block with approval in agent/plan mode.
-- [ ] Prompt with `__rex_read:<workspace-file>` returns file content; `__rex_read:.env` is **denied** (policy).
+- [ ] Daemon listen log includes `workspace.root=<absolute path>` (not `workspace.error=not_configured`).
+- [ ] Extension output shows project `.rex/config.json` merge when auto-start runs; multi-root logs `workspace.warning=multi_root` when applicable.
+- [ ] **ask**, **plan**, and **agent** modes each complete a turn against the **live model** (not stub echo-only text).
+- [ ] With **Attach editor context** enabled, daemon log shows `client_hints.active_file=...`; prompt does not duplicate large `File:`/`Selection:` blocks (hints on wire).
+- [ ] **Cancel** mid-stream twice; composer returns to idle.
+- [ ] Brokered **`__rex_read:<workspace-file>`** succeeds under workspace root; **`__rex_read:.env`** is denied.
 - [ ] Stop `rex-daemon`; status bar shows unavailable until restart.
 
 ## Long-session stress (manual)

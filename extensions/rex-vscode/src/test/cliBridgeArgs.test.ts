@@ -52,4 +52,27 @@ describe("buildCompleteNdjsonArgs", () => {
       "agent",
     ]);
   });
+
+  it("includes client hint flags when set", () => {
+    expect(
+      buildCompleteNdjsonArgs("hi", {
+        clientHints: {
+          activeFilePath: "/proj/src/a.ts",
+          languageId: "typescript",
+          selectionText: "fn main",
+        },
+      }),
+    ).toEqual([
+      "complete",
+      "hi",
+      "--format",
+      "ndjson",
+      "--active-file",
+      "/proj/src/a.ts",
+      "--language-id",
+      "typescript",
+      "--selection-text",
+      "fn main",
+    ]);
+  });
 });

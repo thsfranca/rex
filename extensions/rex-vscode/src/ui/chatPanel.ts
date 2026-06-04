@@ -217,10 +217,15 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     const controller = new AbortController();
     this.pendingStreams.set(message.id, { controller });
 
-    const fullPrompt = buildPromptWithContext(
-      message.prompt,
-      message.attachContext ? message.context : undefined,
-    );
+    const promptForDaemon = message.prompt;
+    const clientHints =
+      message.attachContext && message.context !== undefined
+        ? {
+            activeFilePath: message.context.filePath,
+            languageId: message.context.languageId,
+            selectionText: message.context.selectionText,
+          }
+        : undefined;
 
     this.postMessage({ type: "streamStarted", id: message.id });
     this.emitExecutionStep(message.id, "queued", `Request queued in ${this.mode.toUpperCase()} mode.`);
@@ -269,7 +274,8 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       this.emitExecutionStep(message.id, "running", "Execution started.");
       const configuredModel = this.deps.getModelId().trim();
       for await (const event of streamComplete(this.deps.getCliOptions(), {
-        prompt: fullPrompt,
+        prompt: promptForDaemon,
+        clientHints,
         mode: this.mode,
         model: configuredModel.length > 0 ? configuredModel : undefined,
         approvalId: this.modePolicy().requiresExecutionApproval ? approvalId : undefined,
@@ -522,23 +528,6 @@ function mapThemeKind(theme: vscode.ColorTheme): ThemeKind {
     default:
       return "high-contrast-light";
   }
-}
-
-function buildPromptWithContext(
-  prompt: string,
-  context: ReturnType<typeof snapshotActiveEditor> | undefined,
-): string {
-  if (context === undefined) {
-    return prompt;
-  }
-  const lines = [prompt.trim(), "", "---", `File: ${context.filePath}`, `Language: ${context.languageId}`];
-  if (context.selectionText !== undefined) {
-    lines.push("Selection:");
-    lines.push("```");
-    lines.push(context.selectionText);
-    lines.push("```");
-  }
-  return lines.join("\n");
 }
 
 function isIncomingMessage(value: unknown): value is WebviewToExtension {

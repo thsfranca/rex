@@ -46,11 +46,9 @@ impl From<PolicyDeny> for BrokerError {
 }
 
 pub fn workspace_root_from_config() -> Result<PathBuf, BrokerError> {
-    let root = crate::settings::get().workspace_root();
-    if root.as_os_str().is_empty() {
-        return Err(BrokerError::NoWorkspaceRoot);
-    }
-    Ok(root)
+    crate::settings::get()
+        .resolve_workspace_root()
+        .map_err(|_| BrokerError::NoWorkspaceRoot)
 }
 
 fn max_tool_result_bytes() -> usize {
@@ -290,6 +288,24 @@ mod tests {
             effective: cfg,
         }));
         SettingsGuard
+    }
+
+    #[test]
+    #[serial]
+    fn broker_fails_when_workspace_unconfigured() {
+        let _guard = {
+            crate::settings::reset_for_test();
+            let cfg = rex_config::RexConfig::defaults();
+            crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
+                rex_root: std::path::PathBuf::from("/tmp/rex-broker-test"),
+                global_path: None,
+                project_path: None,
+                effective: cfg,
+            }));
+            SettingsGuard
+        };
+        let err = broker_read_file("README.md", "agent").unwrap_err();
+        assert_eq!(err, BrokerError::NoWorkspaceRoot);
     }
 
     #[test]

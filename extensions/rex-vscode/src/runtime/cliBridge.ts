@@ -52,10 +52,17 @@ export async function fetchStatus(
   return parseStatusOutput(stdout);
 }
 
+export interface ClientHintsOptions {
+  readonly activeFilePath?: string;
+  readonly languageId?: string;
+  readonly selectionText?: string;
+}
+
 export interface CompleteStreamOptions {
   readonly mode?: string;
   readonly model?: string;
   readonly approvalId?: string;
+  readonly clientHints?: ClientHintsOptions;
 }
 
 export function buildCompleteNdjsonArgs(
@@ -75,6 +82,16 @@ export function buildCompleteNdjsonArgs(
   }
   if (traceId !== undefined && traceId.length > 0) {
     args.push("--trace-id", traceId);
+  }
+  const hints = stream?.clientHints;
+  if (hints?.activeFilePath !== undefined && hints.activeFilePath.length > 0) {
+    args.push("--active-file", hints.activeFilePath);
+  }
+  if (hints?.languageId !== undefined && hints.languageId.length > 0) {
+    args.push("--language-id", hints.languageId);
+  }
+  if (hints?.selectionText !== undefined && hints.selectionText.length > 0) {
+    args.push("--selection-text", hints.selectionText);
   }
   return args;
 }
