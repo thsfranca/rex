@@ -167,6 +167,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand("rex.cancelStream", () => {
+      resources?.chatPanel.cancelActiveStream();
+    }),
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand("rex.clearChat", () => {
       resources?.chatPanel.clearChat();
     }),

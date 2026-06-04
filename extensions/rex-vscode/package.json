@@ -84,6 +84,10 @@
         "title": "REX: Clear Chat"
       },
       {
+        "command": "rex.cancelStream",
+        "title": "REX: Stop Generation"
+      },
+      {
         "command": "rex.explainSelection",
         "title": "REX: Explain Selection"
       },
@@ -94,6 +98,28 @@
       {
         "command": "rex.refactorSelection",
         "title": "REX: Refactor Selection"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "rex.focusChat",
+        "key": "ctrl+shift+l",
+        "mac": "cmd+shift+l"
+      },
+      {
+        "command": "rex.cancelStream",
+        "key": "escape",
+        "when": "rex.chatStreaming"
+      },
+      {
+        "command": "rex.clearChat",
+        "key": "ctrl+shift+k",
+        "mac": "cmd+shift+k"
+      },
+      {
+        "command": "rex.openChatInEditor",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e"
       }
     ],
     "menus": {
@@ -201,7 +227,7 @@
           {
             "id": "rex.getStarted.chat",
             "title": "Open REX chat and send a prompt",
-            "description": "When the status bar is **REX ready**, open the REX view. Try **ask** for a quick check; use **plan** or **agent** after HTTP + sidecar env from the previous step.\n\n[REX: Open Chat](command:rex.focusChat)",
+            "description": "When the status bar is **REX ready**, open chat beside the editor (secondary sidebar on recent VS Code hosts) or from the activity bar on older hosts. Use **REX: Open Chat in Editor** for a full tab. Shortcuts: focus chat (Cmd/Ctrl+Shift+L), stop generation (Escape while streaming), clear chat (Cmd/Ctrl+Shift+K).\n\n[REX: Open Chat](command:rex.focusChat)",
             "media": {
               "path": "media/rex-activity.svg",
               "altText": "REX"

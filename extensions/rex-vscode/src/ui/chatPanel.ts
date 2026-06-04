@@ -102,6 +102,12 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     await this.handleWebviewMessage(raw);
   }
 
+  cancelActiveStream(): void {
+    for (const id of this.pendingStreams.keys()) {
+      this.cancelPendingStream(id);
+    }
+  }
+
   dispose(): void {
     for (const pending of this.pendingStreams.values()) {
       pending.controller.abort();
@@ -250,6 +256,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
         : undefined;
 
     this.postMessage({ type: "streamStarted", id: message.id });
+    void vscode.commands.executeCommand("setContext", "rex.chatStreaming", true);
     this.emitExecutionStep(message.id, "queued", `Request queued in ${this.mode.toUpperCase()} mode.`);
 
     try {
@@ -347,6 +354,9 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       this.deps.notifyStreamFailure?.({ code: classified.code, message: classified.message });
     } finally {
       this.pendingStreams.delete(message.id);
+      if (this.pendingStreams.size === 0) {
+        void vscode.commands.executeCommand("setContext", "rex.chatStreaming", false);
+      }
     }
   }
 
