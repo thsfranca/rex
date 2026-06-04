@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from rex_agent.broker import BrokerClient
+from rex_agent.config import max_tool_result_bytes, read_pruning_enabled
+from rex_agent.diff import apply_unified_diff, editor_write_prompt_suffix, reject_whole_file_write
 
 TOOL_READ = "fs.read"
 TOOL_LIST = "fs.list"
@@ -20,6 +22,9 @@ TOOLS_BY_MODE: dict[str, frozenset[str]] = {
     "agent": frozenset({TOOL_READ, TOOL_LIST, TOOL_WRITE, TOOL_EXEC}),
 }
 
+VIEWER_TOOLS = frozenset({TOOL_READ, TOOL_LIST})
+EDITOR_TOOLS = frozenset({TOOL_READ, TOOL_WRITE, TOOL_EXEC})
+
 
 @dataclass(frozen=True)
 class ToolCall:
@@ -29,10 +34,21 @@ class ToolCall:
 
 @dataclass(frozen=True)
 class ParsedModelOutput:
-    kind: str  # "final" | "tool" | "error"
+    kind: str
     answer: str = ""
     tool_call: ToolCall | None = None
     message: str = ""
+
+
+@dataclass
+class ReadCache:
+    entries: dict[str, str] = field(default_factory=dict)
+
+    def get(self, path: str) -> str | None:
+        return self.entries.get(path)
+
+    def put(self, path: str, content: str) -> None:
+        self.entries[path] = content
 
 
 def tools_for_mode(mode: str) -> frozenset[str]:
@@ -40,8 +56,17 @@ def tools_for_mode(mode: str) -> frozenset[str]:
     return TOOLS_BY_MODE.get(normalized, TOOLS_BY_MODE["ask"])
 
 
-def system_prompt_for_tools(mode: str) -> str:
+def tools_for_subagent(subagent: str, mode: str) -> frozenset[str]:
     allowed = tools_for_mode(mode)
+    if subagent == "viewer":
+        return allowed & VIEWER_TOOLS
+    if subagent == "editor":
+        return allowed & EDITOR_TOOLS
+    return allowed
+
+
+def system_prompt_for_tools(mode: str, *, subagent: str = "orchestrator") -> str:
+    allowed = tools_for_subagent(subagent, mode)
     if not allowed:
         return (
             "You are a helpful assistant. Respond with your final answer as plain text. "
@@ -49,32 +74,29 @@ def system_prompt_for_tools(mode: str) -> str:
         )
     tool_docs = []
     if TOOL_READ in allowed:
-        tool_docs.append(
-            f'- "{TOOL_READ}": args {{"path": "<relative path>"}}'
-        )
+        tool_docs.append(f'- "{TOOL_READ}": args {{"path": "<relative path>"}}')
     if TOOL_LIST in allowed:
-        tool_docs.append(
-            f'- "{TOOL_LIST}": args {{"path": "<relative dir or empty for root>"}}'
-        )
+        tool_docs.append(f'- "{TOOL_LIST}": args {{"path": "<relative dir or empty for root>"}}')
     if TOOL_WRITE in allowed:
         tool_docs.append(
-            f'- "{TOOL_WRITE}": args {{"path": "<relative path>", "content": "<text>"}}'
+            f'- "{TOOL_WRITE}": args {{"path": "<relative path>", '
+            '"content": "<text>" OR "diff": "<unified diff>"}}'
         )
     if TOOL_EXEC in allowed:
-        tool_docs.append(
-            f'- "{TOOL_EXEC}": args {{"command": "<shell command>"}}'
-        )
-    tools_block = "\n".join(tool_docs)
-    return (
+        tool_docs.append(f'- "{TOOL_EXEC}": args {{"command": "<shell command>"}}')
+    base = (
         "You are a development agent. Use at most one tool per step.\n"
         "When you need a tool, respond with ONLY a JSON object on one line:\n"
         '{"type":"tool","tool":"<name>","args":{...}}\n'
         "When you are done, respond with ONLY:\n"
         '{"type":"final","answer":"<your reply>"}\n'
         "Allowed tools:\n"
-        f"{tools_block}\n"
+        f"{chr(10).join(tool_docs)}\n"
         "If the user message already contains file contents, do not re-read those paths."
     )
+    if subagent == "editor" and TOOL_WRITE in allowed:
+        base += "\n" + editor_write_prompt_suffix()
+    return base
 
 
 def _extract_json_object(text: str) -> str | None:
@@ -95,12 +117,12 @@ def parse_model_output(text: str, mode: str) -> ParsedModelOutput:
 
     blob = _extract_json_object(raw)
     if blob is None:
-        if not allowed:
-            return ParsedModelOutput(kind="final", answer=raw)
-        return ParsedModelOutput(
-            kind="final",
-            answer=raw,
-        )
+        if raw.startswith("{") and allowed:
+            return ParsedModelOutput(
+                kind="error",
+                message="Could not parse model output as JSON. Reply with a final answer or valid tool JSON.",
+            )
+        return ParsedModelOutput(kind="final", answer=raw)
 
     try:
         payload = json.loads(blob)
@@ -123,47 +145,98 @@ def parse_model_output(text: str, mode: str) -> ParsedModelOutput:
         if not isinstance(args, dict):
             return ParsedModelOutput(kind="error", message="Tool call JSON must include an args object.")
         if tool not in allowed:
-            return ParsedModelOutput(
-                kind="error",
-                message=f"Tool {tool!r} is not allowed in {mode} mode.",
-            )
+            return ParsedModelOutput(kind="error", message=f"Tool {tool!r} is not allowed in {mode} mode.")
         return ParsedModelOutput(kind="tool", tool_call=ToolCall(tool=tool, args=args))
 
-    return ParsedModelOutput(
-        kind="error",
-        message='Model JSON must use type "final" or "tool".',
-    )
+    return ParsedModelOutput(kind="error", message='Model JSON must use type "final" or "tool".')
+
+
+def prune_read_result(content: str, goal_hint: str) -> str:
+    lines = content.splitlines()
+    if len(lines) <= 100:
+        return content
+    hint_tokens = {t.lower() for t in re.findall(r"\w+", goal_hint) if len(t) > 2}
+    if not hint_tokens:
+        return "\n".join(lines[:40]) + f"\n… [{len(lines) - 50} lines pruned] …\n" + "\n".join(lines[-10:])
+    scored = [(sum(1 for t in hint_tokens if t in line.lower()), line) for line in lines]
+    scored = [(s, ln) for s, ln in scored if s]
+    if not scored:
+        return prune_read_result(content, "")
+    scored.sort(key=lambda x: -x[0])
+    selected = sorted(scored[:60], key=lambda x: lines.index(x[1]))
+    return f"[pruned read: {len(lines)} lines → {len(selected)} goal-relevant lines]\n" + "\n".join(l for _, l in selected)
 
 
 def execute_tool(
     client: BrokerClient,
     call: ToolCall,
     mode: str,
-) -> tuple[bool, str]:
+    *,
+    read_cache: ReadCache | None = None,
+    goal_hint: str = "",
+) -> tuple[bool, str, bool]:
     tool = call.tool
     args = call.args
+    truncated = False
+
     if tool == TOOL_READ:
         path = str(args.get("path", "")).strip()
         if not path:
-            return False, "fs.read requires path"
-        return client.read_file(path, mode)
+            return False, "fs.read requires path", False
+        if read_cache is not None:
+            cached = read_cache.get(path)
+            if cached is not None:
+                return True, f"[cached read of {path}]\n{cached}", False
+        ok, result = client.read_file(path, mode)
+        if ok and read_pruning_enabled() and goal_hint:
+            result = prune_read_result(result, goal_hint)
+        if ok and read_cache is not None:
+            read_cache.put(path, result)
+        if ok and len(result.encode("utf-8")) >= max_tool_result_bytes():
+            truncated = True
+        return ok, result, truncated
+
     if tool == TOOL_LIST:
         path = str(args.get("path", "")).strip()
-        return client.list_dir(path, mode)
+        ok, result = client.list_dir(path, mode)
+        return ok, result, False
+
     if tool == TOOL_WRITE:
         path = str(args.get("path", "")).strip()
-        content = str(args.get("content", ""))
         if not path:
-            return False, "fs.write requires path"
-        return client.write_file(path, content, mode)
+            return False, "fs.write requires path", False
+        diff_text = args.get("diff")
+        content = args.get("content")
+        if diff_text is not None and str(diff_text).strip():
+            ok_read, existing = client.read_file(path, mode)
+            if not ok_read:
+                existing = ""
+            ok_patch, patched = apply_unified_diff(existing, str(diff_text))
+            if not ok_patch:
+                return False, patched, False
+            ok, msg = client.write_file(path, patched, mode)
+            return ok, msg if ok else msg, False
+        if content is None:
+            return False, "fs.write requires content or diff", False
+        content_str = str(content)
+        ok_read, existing = client.read_file(path, mode)
+        if not ok_read:
+            existing = ""
+        reject = reject_whole_file_write(path, content_str, existing)
+        if reject:
+            return False, reject, False
+        ok, msg = client.write_file(path, content_str, mode)
+        return ok, msg if ok else msg, False
+
     if tool == TOOL_EXEC:
         command = str(args.get("command", "")).strip()
         if not command:
-            return False, "exec.shell requires command"
-        return client.exec_shell(command, mode)
-    return False, f"Unknown tool: {tool}"
+            return False, "exec.shell requires command", False
+        ok, result = client.exec_shell(command, mode)
+        return ok, result, False
+
+    return False, f"Unknown tool: {tool}", False
 
 
 def format_tool_status(call: ToolCall, ok: bool, result: str) -> str:
-    status = "ok" if ok else "error"
-    return f"\n[tool {call.tool} {status}]\n{result}\n"
+    return f"\n[tool {call.tool} {'ok' if ok else 'error'}]\n{result}\n"
