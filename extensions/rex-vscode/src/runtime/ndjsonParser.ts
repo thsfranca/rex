@@ -4,8 +4,7 @@
  * The upstream contract defined in `docs/EXTENSION.md` is:
  * - one JSON object per stdout line;
  * - exactly one terminal event (`done` or `error`);
- * - events: `chunk` (`event`, `index`, `text`), `done` (`event`, `index`),
- *   `error` (`event`, `message`).
+ * - events: `chunk`, `done`, `error`, and additive non-terminal `tool`, `step`.
  *
  * The parser is intentionally defensive: malformed lines surface as synthetic
  * `error` events so downstream code can terminate the stream instead of
@@ -16,6 +15,21 @@ export interface StreamChunkEvent {
   readonly kind: "chunk";
   readonly index: number;
   readonly text: string;
+}
+
+export interface StreamToolEvent {
+  readonly kind: "tool";
+  readonly index: number;
+  readonly name: string;
+  readonly phase: string;
+  readonly detail?: string;
+}
+
+export interface StreamStepEvent {
+  readonly kind: "step";
+  readonly index: number;
+  readonly phase: string;
+  readonly summary: string;
 }
 
 export interface StreamDoneEvent {
@@ -29,7 +43,12 @@ export interface StreamErrorEvent {
   readonly code?: StreamErrorCode;
 }
 
-export type StreamEvent = StreamChunkEvent | StreamDoneEvent | StreamErrorEvent;
+export type StreamEvent =
+  | StreamChunkEvent
+  | StreamToolEvent
+  | StreamStepEvent
+  | StreamDoneEvent
+  | StreamErrorEvent;
 
 export type StreamErrorCode =
   | "daemon_unavailable"
@@ -110,6 +129,25 @@ function parseLine(raw: string): StreamEvent | undefined {
       return { kind: "error", message: "chunk event missing numeric index" };
     }
     return { kind: "chunk", index, text };
+  }
+  if (event === "tool") {
+    const index = asFiniteNumber(parsed["index"]);
+    const name = typeof parsed["name"] === "string" ? parsed["name"] : "";
+    const phase = typeof parsed["phase"] === "string" ? parsed["phase"] : "";
+    const detail = typeof parsed["detail"] === "string" ? parsed["detail"] : undefined;
+    if (index === undefined || name.length === 0 || phase.length === 0) {
+      return { kind: "error", message: "tool event missing required fields" };
+    }
+    return { kind: "tool", index, name, phase, ...(detail === undefined ? {} : { detail }) };
+  }
+  if (event === "step") {
+    const index = asFiniteNumber(parsed["index"]);
+    const phase = typeof parsed["phase"] === "string" ? parsed["phase"] : "";
+    const summary = typeof parsed["summary"] === "string" ? parsed["summary"] : "";
+    if (index === undefined || phase.length === 0 || summary.length === 0) {
+      return { kind: "error", message: "step event missing required fields" };
+    }
+    return { kind: "step", index, phase, summary };
   }
   if (event === "done") {
     const index = asFiniteNumber(parsed["index"]) ?? 0;

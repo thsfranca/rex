@@ -9,6 +9,10 @@ const happyPathFixture = path.resolve(
   process.cwd(),
   "../../fixtures/ndjson_contract/happy_path.ndjson",
 );
+const toolStepFixture = path.resolve(
+  process.cwd(),
+  "../../fixtures/ndjson_contract/tool_step_stream.ndjson",
+);
 
 describe("NDJSON cross-boundary fixture", () => {
   it("parses the shared repo fixture used by rex-cli conformance tests", () => {
@@ -20,5 +24,14 @@ describe("NDJSON cross-boundary fixture", () => {
       { kind: "chunk", index: 1, text: "world" },
       { kind: "done", index: 2 },
     ]);
+  });
+
+  it("parses tool and step events from the shared fixture", () => {
+    const raw = readFileSync(toolStepFixture, "utf8");
+    const parser = new NdjsonLineParser();
+    const events = parser.push(raw);
+    expect(events.filter((event) => event.kind === "tool")).toHaveLength(2);
+    expect(events.filter((event) => event.kind === "step")).toHaveLength(1);
+    expect(events.at(-1)).toEqual({ kind: "done", index: 5 });
   });
 });
