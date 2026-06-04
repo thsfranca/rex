@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import grpc
 
 from rex_agent.broker import BrokerClient, truncate_tool_result
+from rex_agent.config import DEFAULT_MAX_TOOL_RESULT_BYTES
 
 
 class _ReadOk:
@@ -28,8 +29,10 @@ class _ListOk:
 
 
 def test_truncate_tool_result_adds_ellipsis() -> None:
-    with patch("rex_agent.broker.max_tool_result_bytes", return_value=4):
-        assert truncate_tool_result("abcdef").endswith("…")
+    text = "x" * (DEFAULT_MAX_TOOL_RESULT_BYTES + 64)
+    result = truncate_tool_result(text)
+    assert len(result.encode("utf-8")) <= DEFAULT_MAX_TOOL_RESULT_BYTES + 4
+    assert result.endswith("\u2026")
 
 
 def test_broker_inference_sends_turn_metadata() -> None:
