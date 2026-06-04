@@ -23,7 +23,8 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.
 - **`rex.modelId`** setting: passes `--model` on every chat `complete` when non-empty.
 - Daemon lifecycle test for **ready → unavailable** probe transitions; stream cancel test asserts no events after terminal.
 - [docs/EXTENSION_LOCAL_E2E.md](../../docs/EXTENSION_LOCAL_E2E.md): manual long-session stress checklist.
-- Get Started walkthrough step for **brokered HTTP** and **sidecar** env (`REX_OPENAI_COMPAT_*`, `REX_SIDECAR_ENABLED`).
+- Get Started walkthrough step for **brokered HTTP** and **rex-agent** sidecar via JSON config (`inference.openai_compat`, `sidecars.active=agent`).
+- **`rex.productAgentConfig`** defaults to **true**: auto-start merges `rex-agent` sidecar and `agent.approvals_enabled` into project `.rex/config.json`.
 - Setup hints for stream errors whose messages mention sidecar, approval gate, or OpenAI-compat configuration.
 - Foundations scaffold: extension host entry, typed message bus contracts, settings accessor, NDJSON stream client, daemon lifecycle probe, capability detection, editor context snapshot.
 - Status bar with `ready`, `starting`, `unavailable` states.
