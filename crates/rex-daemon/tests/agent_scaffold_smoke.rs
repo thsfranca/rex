@@ -1,4 +1,4 @@
-//! R017 smoke: Python rex-agent sidecar gRPC + broker path (no LangGraph).
+//! R017/R018 smoke: Python rex-agent sidecar gRPC + broker + LangGraph path (no live LLM).
 
 use std::fs;
 use std::path::PathBuf;
@@ -69,9 +69,12 @@ mod supervisor;
 #[path = "../src/turn_correlation.rs"]
 mod turn_correlation;
 
-/// Set by `scripts/ci/run_rex_agent_checks.sh`. Skips Python/proto setup during workspace `cargo nextest`.
+/// Set by `scripts/ci/run_builtin_sidecar_checks.sh` / `run_rex_agent_checks.sh`.
 fn agent_smoke_enabled() -> bool {
     matches!(
+        std::env::var("REX_RUN_BUILTIN_SIDECAR_SMOKE").as_deref(),
+        Ok("1") | Ok("true") | Ok("yes")
+    ) || matches!(
         std::env::var("REX_RUN_AGENT_SMOKE").as_deref(),
         Ok("1") | Ok("true") | Ok("yes")
     )
@@ -316,7 +319,7 @@ async fn agent_sidecar_health_and_broker_error_without_daemon() {
         .map(|c| c.text.as_str())
         .collect();
     assert!(
-        text.contains("[broker.inference error"),
+        text.contains("[broker.inference error") || text.contains("Inference failed"),
         "expected broker error without daemon, got: {text}"
     );
 }

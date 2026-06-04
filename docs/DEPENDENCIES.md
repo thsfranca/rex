@@ -37,14 +37,23 @@ brew install protobuf
 - Reachable **chat/completions** endpoint for brokered inference (Ollama, LM Studio, vLLM, OpenAI API, or compatible proxy).
 - Configure inference via `$REX_ROOT/config.json` — [CONFIGURATION.md](CONFIGURATION.md).
 
-### Python sidecar (`rex-agent` scaffold)
+### Python sidecar (`rex-agent`)
 
 | Dependency | Why | Notes |
 |---|---|---|
-| Python 3.10+ | Runs `rex-agent` | 3.9 may work with editable-install limitations |
+| Python 3.10+ | Runs `rex-agent` (LangGraph state typing) | CI prefers `python3.11` / `python3.10` when available |
 | `grpcio`, `protobuf` | gRPC runtime for sidecar + broker client | `pip install` with the sidecar package |
+| `langgraph`, `langchain-core` | ReAct graphs (**R018**) | Installed in CI via [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) |
 | `grpcio-tools` | Maintainer: `rex proto install` | Same as `rex proto doctor` toolchain |
 | `pytest` | Sidecar unit tests | CI: [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) |
+
+### Builtin sidecar CI
+
+| Script | Purpose |
+|--------|---------|
+| [`run_sidecar_verify.sh`](../scripts/ci/run_sidecar_verify.sh) | CI gate for builtins in [`builtin_sidecars.txt`](../scripts/ci/builtin_sidecars.txt) |
+| [`run_stub_sidecar_checks.sh`](../scripts/ci/run_stub_sidecar_checks.sh) | TestExecution slice for `rex-sidecar-stub` (called by verify) |
+| [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) | TestExecution slice for `rex-agent` (called by verify) |
 
 ### Test harness (non-MVP product path)
 

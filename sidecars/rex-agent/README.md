@@ -2,7 +2,7 @@
 
 Python sidecar implementing `rex.sidecar.v1` for the REX product agent program.
 
-**R017 scaffold:** gRPC server on a Unix socket, broker-only `BrokerInference`, incremental `RunTurn` streaming. LangGraph and tool loops are **R018**.
+**R018:** LangGraph ReAct loops (`ask` / `plan` / `agent`) with broker-only `BrokerInference` and `Broker*` tools. **R017** gRPC server and incremental `RunTurn` streaming.
 
 ## Prerequisites
 

@@ -1,6 +1,6 @@
-# Product agent delivery (planned)
+# Product agent delivery
 
-**Status: planned — not shipped.** Today the supervised sidecar is **`rex-sidecar-stub`** (harness); **`rex-agent`** is the planned product sidecar. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)) with legacy env warnings. Implementation order: [ROADMAP.md](ROADMAP.md) **R013–R022**.
+**Status: partial — product loop shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)). Implementation order: [ROADMAP.md](ROADMAP.md) **R013–R022**.
 
 ## Problem
 
@@ -188,10 +188,10 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | R015 | JSON config + proto install | Done |
 | R020 | Broker access policy completion | Done |
 | R021 | Turn correlation Phase 1b | Done |
-| R022 | Workspace binding (daemon fail-closed) | Should |
-| R017 | `rex-agent` scaffold | Done (broker-only `RunTurn`; LangGraph **R018**) |
-| R018 | LangGraph agent core | Should |
-| R019 | Integration / E2E | Should |
+| R022 | Workspace binding (daemon fail-closed) | Done |
+| R017 | `rex-agent` scaffold | Done |
+| R018 | LangGraph agent core | Done — prompt JSON tool protocol; [sidecars/rex-agent/DESIGN.md](../sidecars/rex-agent/DESIGN.md) |
+| R019 | Integration / E2E | Done |
 | R016 | Multi-active broadcast | Could |
 
 ## Out of scope (this program)

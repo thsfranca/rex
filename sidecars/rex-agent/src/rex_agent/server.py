@@ -7,8 +7,8 @@ from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 from rex_agent import __version__
-from rex_agent.broker import broker_inference
-from rex_agent.streaming import run_turn_chunks
+from rex_agent.graph import stream_turn
+from rex_agent.streaming import chunk_text
 
 if TYPE_CHECKING:
     import grpc
@@ -26,7 +26,7 @@ RUN_TURN_CAPABILITY = "run_turn"
 
 
 class AgentServicer(sidecar_pb2_grpc.SidecarServiceServicer):
-    """Minimal scaffold: broker inference only, streaming chunks."""
+    """LangGraph ReAct agent with broker-only LLM and tools."""
 
     def Health(self, request, context):  # noqa: N802, ARG002
         return sidecar_pb2.HealthResponse(healthy=True, version=__version__)
@@ -39,18 +39,24 @@ class AgentServicer(sidecar_pb2_grpc.SidecarServiceServicer):
         model = request.model or ""
         turn_id = getattr(request, "turn_id", "") or ""
         if turn_id:
-            print(f"rex-agent event=run_turn turn_id={turn_id}")
-        ok, text = broker_inference(request.prompt, mode, model, turn_id or None)
-        if not ok:
-            text = f"[broker.inference error: {text}]"
-        for chunk in run_turn_chunks(text):
-            if not chunk.done and CHUNK_DELAY_SEC > 0:
-                time.sleep(CHUNK_DELAY_SEC)
-            yield sidecar_pb2.RunTurnChunk(
-                text=chunk.text,
-                index=chunk.index,
-                done=chunk.done,
-            )
+            print(f"rex-agent event=run_turn turn_id={turn_id} mode={mode}")
+
+        index = 0
+        for segment in stream_turn(request.prompt, mode, model, turn_id):
+            for piece in chunk_text(segment):
+                if CHUNK_DELAY_SEC > 0:
+                    time.sleep(CHUNK_DELAY_SEC)
+                yield sidecar_pb2.RunTurnChunk(
+                    text=piece,
+                    index=index,
+                    done=False,
+                )
+                index += 1
+        yield sidecar_pb2.RunTurnChunk(
+            text="",
+            index=index,
+            done=True,
+        )
 
 
 def add_to_server(servicer: AgentServicer, server: grpc.Server) -> None:

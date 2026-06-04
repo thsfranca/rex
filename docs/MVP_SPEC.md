@@ -14,14 +14,14 @@
 
 | | **Shipped today** | **Planned** ([AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)) |
 |---|---|---|
-| Sidecar binary | **`rex-sidecar-stub`** — harness; `__rex_*` prompt directives | **`rex-agent`** — LangGraph ReAct loop, broker-only LLM/tools (**R017–R018**) |
+| Sidecar binary | **`rex-sidecar-stub`** — harness default; `__rex_*` directives | **`rex-agent`** — LangGraph ReAct (**R018** Done); live-model proof via [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) |
 | CLI | Unified **`rex`** binary (**R014** — shipped) | — |
 | Config | JSON config + `rex config` (**R015** — shipped) | — |
-| Daemon broker policy | Protected-path read/list (**R012**); partial mode matrix | **R020** completes ADR 0013 |
-| Turn correlation | `turn_id` / `context_revision` populated on RunTurn; stream and broker logs correlated | Done (**R021**) |
-| Workspace binding | Config `workspace.root`; cwd fallback today | **R022** fail-closed daemon; **R019** extension supplies root |
-| v1.0 **RC-*** | **Met** on stub + platform path | Product agent evidence deferred to **R019** |
-| Capability design | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) + ADRs 0011–0017 | **R019** extension integration; **R020–R022** daemon prerequisites |
+| Daemon broker policy | Mode × capability matrix; protected paths (**R020** Done) | — |
+| Turn correlation | `turn_id` / `context_revision` on RunTurn (**R021** Done) | — |
+| Workspace binding | Fail-closed daemon; extension supplies root (**R022**, **R019** Done) | — |
+| v1.0 **RC-*** | **Met** on stub + platform path | Live-model operator checklist for **rex-agent** |
+| Capability design | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) + ADRs 0011–0017 | Graph loop **R018**; extension **R019** |
 
 ## Architecture
 

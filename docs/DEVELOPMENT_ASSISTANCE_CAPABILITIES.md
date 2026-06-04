@@ -35,7 +35,7 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for hub conventions. Align with [PURPOS
 | Lexical retrieval + compression | Daemon `ContextPipeline` | 1 — shipped |
 | Layered system/project prompts | Daemon assembly | 1 — design accepted; 2 — impl |
 | Editor selection / chat transcript | Extension / client UX | 1 |
-| Graph state, tool loop | `rex-agent` sidecar | 1 — **R018** |
+| Graph state, tool loop | `rex-agent` sidecar | 1 — **R018** Done |
 | Session scratch (tool outputs, partial plans) | Sidecar ephemeral | 1 — design accepted |
 | Turn/session correlation ids | Daemon issues; clients echo | 1b — **R021** |
 | Durable project memory | Daemon store + pipeline stage | 2 — [ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md) |

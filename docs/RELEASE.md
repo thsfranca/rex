@@ -38,7 +38,7 @@ After changing [`dist-workspace.toml`](../dist-workspace.toml) or dist metadata 
 dist generate
 ```
 
-After `dist generate`, re-apply the **Run Rust verify** step in the `plan` job of [`.github/workflows/release.yml`](../.github/workflows/release.yml) (see [CI.md](CI.md)).
+After `dist generate`, re-apply the **Run Rust verify** and **`sidecar-verify`** jobs in [`.github/workflows/release.yml`](../.github/workflows/release.yml) (see [CI.md](CI.md)).
 
 ## Extension (rex-vscode)
 
