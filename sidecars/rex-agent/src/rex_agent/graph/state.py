@@ -8,6 +8,7 @@ from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
 from rex_agent.tools import ReadCache, ToolCall
+from rex_agent.graph.stream_queue import StreamEventList
 
 
 class AgentState(TypedDict):
@@ -23,6 +24,7 @@ class AgentState(TypedDict):
     max_steps: int
     truncation_events: list[str]
     stream_parts: Annotated[list[str], lambda left, right: left + right]
+    stream_events: StreamEventList
     final_answer: str
     done: bool
     pending_tool: Optional[ToolCall]

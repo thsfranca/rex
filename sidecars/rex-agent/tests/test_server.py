@@ -21,10 +21,25 @@ class _GetCapabilitiesResponse:
 
 
 class _RunTurnChunk:
-    def __init__(self, text: str, index: int, done: bool) -> None:
+    def __init__(
+        self,
+        text: str,
+        index: int,
+        done: bool,
+        event: str = "",
+        tool_name: str = "",
+        phase: str = "",
+        summary: str = "",
+        detail: str = "",
+    ) -> None:
         self.text = text
         self.index = index
         self.done = done
+        self.event = event
+        self.tool_name = tool_name
+        self.phase = phase
+        self.summary = summary
+        self.detail = detail
 
 
 class _RunTurnRequest:
@@ -78,6 +93,7 @@ for mod in ("rex_agent.broker", "rex_agent.server"):
     sys.modules.pop(mod, None)
 
 from rex_agent.server import AgentServicer  # noqa: E402
+from rex_agent.stream_events import TextStreamEvent  # noqa: E402
 
 
 def test_health_returns_version() -> None:
@@ -90,7 +106,7 @@ def test_health_returns_version() -> None:
 def test_run_turn_success_chunks() -> None:
     servicer = AgentServicer()
     request = _RunTurnRequest(prompt="hello", mode="ask", model="")
-    with patch("rex_agent.server.stream_turn", return_value=iter(["ok"])):
+    with patch("rex_agent.server.stream_turn", return_value=iter([TextStreamEvent(text="ok")])):
         chunks = list(servicer.RunTurn(request, None))
     assert chunks[-1].done
     assert "ok" in "".join(c.text for c in chunks if not c.done)
@@ -102,7 +118,11 @@ def test_run_turn_inference_failure_message() -> None:
     with patch(
         "rex_agent.server.stream_turn",
         return_value=iter(
-            ["Inference failed. Check that the daemon is running and HTTP inference is configured."]
+            [
+                TextStreamEvent(
+                    text="Inference failed. Check that the daemon is running and HTTP inference is configured."
+                )
+            ]
         ),
     ):
         chunks = list(servicer.RunTurn(request, None))

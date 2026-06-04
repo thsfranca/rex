@@ -14,6 +14,7 @@ from rex_agent.broker_chat_model import (
     stream_visible_text,
 )
 from rex_agent.graph.nodes.orchestrator import classify_subagent_for_tool
+from rex_agent.graph.stream_queue import append_step
 from rex_agent.graph.state import AgentState
 from rex_agent.metrics import log_subagent_event
 from rex_agent.tools import ToolCall, parse_model_output, tools_for_mode
@@ -69,10 +70,16 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
         tc = ai.tool_calls[0]
         call = ToolCall(tool=str(tc.get("name", "")), args=dict(tc.get("args") or {}))
         active = classify_subagent_for_tool(call.tool)
+        events = append_step(
+            list(state.get("stream_events") or []),
+            phase="running",
+            summary=f"Routing to {active} for {call.tool}",
+        )
         return {
             "messages": [AIMessage(content=raw_text, id=str(uuid.uuid4()))],
             "pending_tool": call,
             "active_subagent": active,
+            "stream_events": events,
         }
 
     parsed = parse_model_output(raw_text, state["mode"])
@@ -101,10 +108,16 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
 
     if parsed.kind == "tool" and parsed.tool_call is not None:
         active = classify_subagent_for_tool(parsed.tool_call.tool)
+        events = append_step(
+            list(state.get("stream_events") or []),
+            phase="running",
+            summary=f"Routing to {active} for {parsed.tool_call.tool}",
+        )
         return {
             "messages": [AIMessage(content=raw_text, id=str(uuid.uuid4()))],
             "pending_tool": parsed.tool_call,
             "active_subagent": active,
+            "stream_events": events,
         }
 
     return {}
