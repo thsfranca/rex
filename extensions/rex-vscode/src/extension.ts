@@ -8,6 +8,7 @@ import { DaemonLifecycle, type DaemonLifecycleState } from "./runtime/daemonLife
 import { streamFailureWantsSetupHint } from "./runtime/userActionableFailure";
 import { ChatPanelProvider, CHAT_VIEW_ID, CHAT_VIEW_SECONDARY_ID } from "./ui/chatPanel";
 import { openEditorChatPanel } from "./ui/editorChatPanel";
+import { runInlineEditOnSelection } from "./ui/inlineEdit";
 import { createStatusBar, type StatusBar } from "./ui/statusBar";
 import {
   ensureProjectRexConfig,
@@ -169,6 +170,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(
     vscode.commands.registerCommand("rex.cancelStream", () => {
       resources?.chatPanel.cancelActiveStream();
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("rex.inlineEditSelection", async () => {
+      const panel = resources?.chatPanel;
+      if (panel === undefined) {
+        return;
+      }
+      await runInlineEditOnSelection({
+        getCliOptions: () => {
+          const cliPath = resources?.settings.cliPath ?? settings.cliPath;
+          const binding = workspaceBindingState();
+          return binding.ok ? { cliPath, cwd: binding.workspaceRoot } : { cliPath };
+        },
+        getModelId: () => resources?.settings.modelId ?? settings.modelId,
+        getProposalProvider: () => panel.getProposalProvider(),
+        log: (message) => output.appendLine(message),
+        chatPanel: panel,
+      });
     }),
   );
 

@@ -106,6 +106,10 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     return new vscode.Disposable(() => this.dispose());
   }
 
+  getProposalProvider(): RexProposalProvider {
+    return this.proposalProvider;
+  }
+
   async handleExternalMessage(raw: unknown): Promise<void> {
     if (!isIncomingMessage(raw)) {
       return;
