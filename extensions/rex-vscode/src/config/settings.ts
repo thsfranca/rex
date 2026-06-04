@@ -20,7 +20,7 @@ export function readSettings(): RexSettings {
     daemonAutoStart: config.get<boolean>("daemonAutoStart") ?? false,
     modelId: (config.get<string>("modelId") ?? "").trim(),
     rexRoot: (config.get<string>("rexRoot") ?? "").trim(),
-    productAgentConfig: config.get<boolean>("productAgentConfig") ?? false,
+    productAgentConfig: config.get<boolean>("productAgentConfig") ?? true,
   };
 }
 

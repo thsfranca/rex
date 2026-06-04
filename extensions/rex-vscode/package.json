@@ -202,8 +202,8 @@
         },
         "rex.productAgentConfig": {
           "type": "boolean",
-          "default": false,
-          "description": "When true, merge sidecars.active=agent into project .rex/config.json on auto-start (operator dogfood; default remains stub-friendly).",
+          "default": true,
+          "description": "When true (default), merge sidecars.active=agent and agent.approvals_enabled into project .rex/config.json on auto-start. Set false for stub/harness-only workspaces.",
           "scope": "machine-overridable"
         }
       }

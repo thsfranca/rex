@@ -78,7 +78,19 @@ function applyProductAgentOverlay(config: RexConfigJson): RexConfigJson {
     });
   }
   sidecars.list = list;
-  return { ...config, sidecars };
+  const agent =
+    config.agent !== undefined &&
+    typeof config.agent === "object" &&
+    !Array.isArray(config.agent)
+      ? { ...(config.agent as Record<string, unknown>) }
+      : {};
+  agent.approvals_enabled = true;
+  return { ...config, sidecars, agent };
+}
+
+/** Exported for unit tests. */
+export function applyProductAgentOverlayForTest(config: RexConfigJson): RexConfigJson {
+  return applyProductAgentOverlay(config);
 }
 
 export function ensureProjectRexConfig(
