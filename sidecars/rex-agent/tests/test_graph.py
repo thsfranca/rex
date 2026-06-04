@@ -36,20 +36,18 @@ def test_plan_mode_executes_one_tool() -> None:
     def fake_inference(prompt: str, mode: str, model: str) -> tuple[bool, str]:
         step["n"] += 1
         if step["n"] == 1:
-            return True, (
-                '{"type":"tool","tool":"fs.read","args":{"path":"README.md"}}'
-            )
+            return True, '{"type":"tool","tool":"fs.read","args":{"path":"README.md"}}'
         return True, '{"type":"final","answer":"done reading"}'
 
     mock_client = MagicMock()
     mock_client.read_file.return_value = (True, "file contents")
-    mock_client.inference.side_effect = fake_inference
 
     graph.set_inference_fn(fake_inference)
     try:
         with patch("rex_agent.graph.BrokerClient") as broker_cls:
             broker_cls.return_value.__enter__.return_value = mock_client
             broker_cls.return_value.__exit__.return_value = None
+            _reset_graphs()
             answer, parts = graph.run_turn("read readme", "plan", "", "")
     finally:
         graph.set_inference_fn(None)
