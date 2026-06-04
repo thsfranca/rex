@@ -4,6 +4,7 @@ import {
   appendCliExecutableNotFoundHint,
   appendDaemonExecutableNotFoundHint,
   appendStreamSetupHint,
+  CONFIGURATION_DOC_PATH,
   EXTENSION_LOCAL_E2E_DOC_PATH,
   isExecutableNotFoundError,
 } from "../runtime/spawnExecutableHints";
@@ -38,12 +39,17 @@ describe("spawnExecutableHints", () => {
   });
 
   it("appends stream setup hints for sidecar and HTTP failures", () => {
-    expect(
-      appendStreamSetupHint("sidecar required but unavailable: startup timeout"),
-    ).toContain("REX_SIDECAR_ENABLED");
-    expect(
-      appendStreamSetupHint("inference runtime configuration: missing base url"),
-    ).toContain("REX_OPENAI_COMPAT");
+    const sidecarHint = appendStreamSetupHint("sidecar required but unavailable: startup timeout");
+    expect(sidecarHint).toContain("rex-agent");
+    expect(sidecarHint).toContain("config.json");
+    expect(sidecarHint).toContain(EXTENSION_LOCAL_E2E_DOC_PATH);
+    expect(sidecarHint).toContain(CONFIGURATION_DOC_PATH);
+
+    const httpHint = appendStreamSetupHint("inference runtime configuration: missing base url");
+    expect(httpHint).toContain("http-openai-compat");
+    expect(httpHint).toContain("openai_compat");
+    expect(httpHint).not.toContain("REX_OPENAI_COMPAT");
+
     expect(appendStreamSetupHint("unrelated failure")).toBe("unrelated failure");
   });
 });
