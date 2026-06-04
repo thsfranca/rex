@@ -37,6 +37,7 @@ jobs:
               - 'Cargo.lock'
               - 'scripts/install-cli.sh'
               - 'scripts/ci/run_rust_*.sh'
+              - 'scripts/ci/run_sidecar_verify.sh'
               - 'scripts/ci/run_*sidecar*.sh'
               - 'scripts/ci/builtin_sidecars.txt'
             extension_changed:

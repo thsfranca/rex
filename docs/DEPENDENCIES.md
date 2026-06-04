@@ -51,9 +51,9 @@ brew install protobuf
 
 | Script | Purpose |
 |--------|---------|
-| [`run_builtin_sidecar_checks.sh`](../scripts/ci/run_builtin_sidecar_checks.sh) | Validates all builtins in [`builtin_sidecars.txt`](../scripts/ci/builtin_sidecars.txt) |
-| [`run_stub_sidecar_checks.sh`](../scripts/ci/run_stub_sidecar_checks.sh) | `rex-sidecar-stub` build, unit tests, UDS smoke |
-| [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) | `rex-agent` pytest + UDS smoke |
+| [`run_sidecar_verify.sh`](../scripts/ci/run_sidecar_verify.sh) | CI gate for builtins in [`builtin_sidecars.txt`](../scripts/ci/builtin_sidecars.txt) |
+| [`run_stub_sidecar_checks.sh`](../scripts/ci/run_stub_sidecar_checks.sh) | TestExecution slice for `rex-sidecar-stub` (called by verify) |
+| [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) | TestExecution slice for `rex-agent` (called by verify) |
 
 ### Test harness (non-MVP product path)
 

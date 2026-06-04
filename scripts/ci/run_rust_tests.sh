@@ -33,13 +33,6 @@ if ! "${test_cmd[@]}" 2>&1 | tee "ci-observability/test.log"; then
   hint="Run cargo test --workspace --all-targets --locked locally (or: cargo install cargo-nextest && cargo nextest run --workspace --all-targets --locked)."
   echo "::error::Test execution failed."
   echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
-elif ! ./scripts/ci/run_builtin_sidecar_checks.sh 2>&1 | tee "ci-observability/builtin-sidecars.log"; then
-  result="failure"
-  fail_code="TEST_FAIL"
-  fail_stage="TestExecution"
-  hint="Run ./scripts/ci/run_builtin_sidecar_checks.sh locally."
-  echo "::error::builtin sidecar checks failed."
-  echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
 elif ! ./scripts/ci/test_enforce_ci_gate.sh 2>&1 | tee "ci-observability/gate-script-test.log"; then
   result="failure"
   fail_code="TEST_FAIL"

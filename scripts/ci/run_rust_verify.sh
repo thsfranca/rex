@@ -11,3 +11,4 @@ cd "${ROOT_DIR}"
 
 "${ROOT_DIR}/scripts/ci/run_rust_fmt_clippy.sh"
 "${ROOT_DIR}/scripts/ci/run_rust_tests.sh"
+"${ROOT_DIR}/scripts/ci/run_sidecar_verify.sh"

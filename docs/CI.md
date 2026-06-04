@@ -80,6 +80,7 @@ Keep failure codes low-cardinality. Current baseline set:
 - `BUILD_FAIL` (extension esbuild bundle)
 - `PACKAGE_FAIL` (extension VSIX packaging)
 - `GUIDELINES_FAIL` (documented guideline conformance — error code catalog sync and sibling checks under `scripts/ci/guidelines/`)
+- `SIDECAR_FAIL` (builtin sidecar verify — `rex-sidecar-stub` / `rex-agent`)
 
 ### Reliability guardrails
 
@@ -135,7 +136,7 @@ CI first evaluates changed paths, then runs only relevant domain checks.
   - `Cargo.lock`
   - `scripts/install-cli.sh`
   - `scripts/ci/run_rust_*.sh`
-  - `scripts/ci/run_builtin_sidecar_checks.sh`
+  - `scripts/ci/run_sidecar_verify.sh`
   - `scripts/ci/run_stub_sidecar_checks.sh`
   - `scripts/ci/run_rex_agent_checks.sh`
   - `scripts/ci/builtin_sidecars.txt`
@@ -219,14 +220,16 @@ That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh
 
 **Two tiers:** PR CI uses **`mock`** / harness paths in `uds_e2e` and a **loopback OpenAI-compat HTTP fixture** in `mvp_product_path` (real `http_openai_compat`, no cloud API). Operator dogfood requires **live** `REX_OPENAI_COMPAT_*` (Ollama, LM Studio, etc.).
 
-**Builtin sidecars:** [`run_rust_tests.sh`](../scripts/ci/run_rust_tests.sh) calls [`run_builtin_sidecar_checks.sh`](../scripts/ci/run_builtin_sidecar_checks.sh) after the workspace test run. Manifest: [`builtin_sidecars.txt`](../scripts/ci/builtin_sidecars.txt).
+**Builtin sidecars:** [`run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh) runs [`run_sidecar_verify.sh`](../scripts/ci/run_sidecar_verify.sh) after fmt/clippy and workspace tests (same job chain as `run_rust_fmt_clippy.sh` / `run_rust_tests.sh`). A sidecar failure sets `CI_RESULT=failure` and fails **`rust-verify`**, which fails **`ci-checks`** (`GATE_FAIL`). Manifest: [`builtin_sidecars.txt`](../scripts/ci/builtin_sidecars.txt).
 
-| Sidecar | Script | Checks |
-|---------|--------|--------|
-| `rex-sidecar-stub` | [`run_stub_sidecar_checks.sh`](../scripts/ci/run_stub_sidecar_checks.sh) | `cargo test -p rex-sidecar-stub`; UDS smoke [`stub_sidecar_smoke`](../crates/rex-daemon/tests/stub_sidecar_smoke.rs) |
-| `rex-agent` | [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) | `pytest` (LangGraph + broker mocks); [`agent_scaffold_smoke`](../crates/rex-daemon/tests/agent_scaffold_smoke.rs) |
+| Stage | Script | Content |
+|-------|--------|---------|
+| Setup | `run_sidecar_verify.sh` | pip deps, `rex proto install` |
+| BuildAndChecks | `run_sidecar_verify.sh` | `cargo build -p rex-sidecar-stub -p rex` |
+| TestExecution | [`run_stub_sidecar_checks.sh`](../scripts/ci/run_stub_sidecar_checks.sh) | `cargo test -p rex-sidecar-stub`; UDS [`stub_sidecar_smoke`](../crates/rex-daemon/tests/stub_sidecar_smoke.rs) |
+| TestExecution | [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) | `pytest`; UDS [`agent_scaffold_smoke`](../crates/rex-daemon/tests/agent_scaffold_smoke.rs) |
 
-Requires Python 3.10+ for `rex-agent` (script prefers `python3.11` / `python3.10`), `grpcio-tools`, and `langgraph` / `langchain-core`. Set `REX_RUN_BUILTIN_SIDECAR_SMOKE=1` for integration smokes (CI sets this automatically).
+Local: `./scripts/ci/run_sidecar_verify.sh` (or `./scripts/ci/run_rust_verify.sh` for the full Rust gate). Failure code: `SIDECAR_FAIL`. Requires Python 3.10+ (`python3.11` / `python3.10` preferred).
 
 ## Local verification flow for reliability changes
 
