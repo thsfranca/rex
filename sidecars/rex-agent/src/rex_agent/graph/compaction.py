@@ -1,4 +1,4 @@
-"""Intra-turn state compaction with RemoveMessage."""
+"""Intra-turn RemoveMessage compaction (R029)."""
 
 from __future__ import annotations
 
