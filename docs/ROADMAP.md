@@ -26,7 +26,7 @@ Canonical definitions and evidence: **[V1_0.md](V1_0.md)**. Update status there 
 | ID | Status | Notes |
 |----|--------|-------|
 | RC-S1 | Met | Extension `rex.modelId` → `--model` — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
-| RC-S2 | Open | Long-session extension stress — cancel returns UI to idle |
+| RC-S2 | Met | Long-session extension stress — cancel returns UI to idle |
 
 ## Theme order (dependency mental model)
 
@@ -55,14 +55,14 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 | Priority | What / why | RC-* | Notes |
 |----------|------------|------|-------|
-| **Should** | Long-session extension stress | RC-S2 | Cancel-to-idle under load — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
+| **Should** | CI quality gates (R023 supply chain first) | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | Extension RC-S2 **Met** — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | **Should** | Stream/log polish beyond baseline | RC-07 (Met) | Optional hardening only |
 
 ## Next — product agent program
 
 Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar for CI/harness is **`rex-sidecar-stub`**; **`rex-agent`** ships LangGraph ReAct (**R018** Done) on the gRPC scaffold (**R017** Done).
 
-**Priority rationale:** **R013–R022**, **R017**, **R018**, and **R019** are **Done**. Next product-agent follow-up: **R016** (**Could**). **RC-S2** may run in parallel (extension-only blast radius).
+**Priority rationale:** **R013–R022**, **R017**, **R018**, and **R019** are **Done**. **RC-S2** is **Met**. Next product-agent follow-up: **R016** (**Could**). Next Should CI follow-up: **R023** ([CI_QUALITY_GATES.md](CI_QUALITY_GATES.md)).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|

@@ -1,22 +1,13 @@
 import * as React from "react";
 
-import type { ApplyGranularity, ApplyResultPayload, ThemeKind } from "../../src/shared/messages";
+import type { ApplyGranularity, ThemeKind } from "../../src/shared/messages";
 import { splitByCodeBlocks } from "../streaming/codeBlocks";
 import { renderMarkdown } from "../streaming/markdownStream";
 
 import { CodeBlock } from "./CodeBlock";
+import type { RenderedMessage } from "../renderedMessage";
 
-export type MessageRole = "user" | "assistant" | "system";
-
-export interface RenderedMessage {
-  readonly id: string;
-  readonly role: MessageRole;
-  readonly buffer: string;
-  readonly trailingRaw: string;
-  readonly streaming: boolean;
-  readonly errorMessage?: string;
-  readonly applyResults?: ReadonlyMap<string, ApplyResultPayload>;
-}
+export type { MessageRole, RenderedMessage } from "../renderedMessage";
 
 export interface MessageProps {
   readonly message: RenderedMessage;
