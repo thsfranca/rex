@@ -94,6 +94,8 @@ Open the `REX` output channel (`REX: Open Output Channel`) for details on every 
 | `Apply to file` opens diff but shows empty proposal | The proposed code block was empty or the target selection was cleared. | Re-run the action with a non-empty selection or accept a full-file replacement. |
 | Chat view is blank / stuck on loading | Webview failed to load the bundled script. | Reload the window; if it persists, capture the webview devtools console and file an issue. |
 | Streaming output flickers or stalls | Underlying `rex-cli complete` stream was interrupted. | Cancel and retry; confirm `rex-daemon` is healthy via `REX: Show Daemon Status`. |
+| `workspace root not configured` on stream or broker | Daemon started without `workspace.root` in merged config (empty/`"."` without harness fallback). | Open a workspace folder with auto-start (writes `.rex/config.json`), or set absolute `workspace.root` in project/global JSON; see [CONFIGURATION.md](CONFIGURATION.md). |
+| Auto-start skipped / no workspace | No folder open in the editor. | Open a single-root (or primary) workspace folder before enabling `rex.daemonAutoStart`. |
 
 ## Release pipeline
 

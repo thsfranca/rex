@@ -6,6 +6,7 @@ export interface RexSettings {
   readonly daemonAutoStart: boolean;
   readonly modelId: string;
   readonly rexRoot: string;
+  readonly productAgentConfig: boolean;
 }
 
 const SECTION = "rex";
@@ -19,6 +20,7 @@ export function readSettings(): RexSettings {
     daemonAutoStart: config.get<boolean>("daemonAutoStart") ?? false,
     modelId: (config.get<string>("modelId") ?? "").trim(),
     rexRoot: (config.get<string>("rexRoot") ?? "").trim(),
+    productAgentConfig: config.get<boolean>("productAgentConfig") ?? false,
   };
 }
 

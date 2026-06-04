@@ -45,9 +45,9 @@ fn hash_effective_prompt(s: &str) -> u64 {
 
 fn workspace_fingerprint() -> String {
     crate::settings::get()
-        .workspace_root()
-        .display()
-        .to_string()
+        .resolve_workspace_root()
+        .map(|p| p.display().to_string())
+        .unwrap_or_default()
 }
 
 /// Key for the L1 **exact** response cache (in-memory, process-local).

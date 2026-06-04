@@ -46,6 +46,7 @@ pub fn loaded_from_config(cfg: RexConfig, rex_root: &std::path::Path) -> Arc<Loa
 
 pub fn mock_e2e_config() -> RexConfig {
     let mut cfg = RexConfig::defaults();
+    cfg.workspace.allow_cwd_fallback = Some(true);
     cfg.inference.runtime = "mock".to_string();
     cfg.sidecars.harness = Some("direct".to_string());
     cfg.sidecars.required = Some(false);

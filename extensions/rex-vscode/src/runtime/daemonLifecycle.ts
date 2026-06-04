@@ -19,10 +19,7 @@ export interface DaemonLifecycleOptions {
    * Merged into `process.env` for the spawned `rex daemon` child only (not for CLI status calls).
    */
   readonly daemonEnv?: Readonly<Record<string, string>>;
-  /**
-   * Total time budget when waiting for the daemon to become ready during
-   * auto-start. Defaults to 10 seconds.
-   */
+  readonly spawnCwd?: string;
   readonly readyTimeoutMs?: number;
   /**
    * Poll interval while waiting for readiness. Defaults to 250ms.
@@ -137,6 +134,7 @@ export class DaemonLifecycle {
       this.ownedChild = spawn(this.options.daemonBinaryPath, ["daemon"], {
         stdio: ["ignore", "pipe", "pipe"],
         detached: false,
+        cwd: this.options.spawnCwd,
         env: daemonEnv,
       });
     } catch (err) {

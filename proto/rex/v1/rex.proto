@@ -22,6 +22,12 @@ message GetSystemStatusResponse {
   string active_model_id = 3;
 }
 
+message ClientHints {
+  string active_file_path = 1;
+  string language_id = 2;
+  string selection_text = 3;
+}
+
 message StreamInferenceRequest {
   string prompt = 1;
   // Optional. Empty string means "use daemon default" (e.g. mock model id in MVP).
@@ -30,6 +36,7 @@ message StreamInferenceRequest {
   string mode = 3;
   // Optional. Set when extension approved agent execution (ADR 0009).
   string approval_id = 4;
+  ClientHints client_hints = 5;
 }
 
 message BrokerReadFileRequest {

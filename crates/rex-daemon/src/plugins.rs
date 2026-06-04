@@ -61,6 +61,7 @@ pub struct ContextRequest {
     pub behavior_snapshot: BehaviorSnapshot,
     /// When true, skip lexical retrieval (directive or gate).
     pub retrieve_off: bool,
+    pub active_file_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -140,8 +141,10 @@ impl LexicalWorkspaceIndexer {
         if mode.trim().eq_ignore_ascii_case("seeded") {
             return Self::default_seeded();
         }
-        let root = loaded.workspace_root();
-        Self::from_workspace_root(&root)
+        match loaded.resolve_workspace_root() {
+            Ok(root) => Self::from_workspace_root(&root),
+            Err(_) => Self { docs: Vec::new() },
+        }
     }
 
     pub fn default_seeded() -> Self {
@@ -421,11 +424,14 @@ impl ContextPipeline {
             query.push(' ');
             query.push_str(diagnostics);
         }
-        let candidates = if retrieval == RetrievalDecision::Ran {
+        let mut candidates = if retrieval == RetrievalDecision::Ran {
             self.indexer.search(&query, 5)
         } else {
             Vec::new()
         };
+        if let Some(active) = &request.active_file_path {
+            boost_active_file_candidate(&mut candidates, active);
+        }
         let candidate_count = candidates.len();
         let (context, selected_tokens, truncated) =
             self.compressor
@@ -471,6 +477,20 @@ impl RetrievalDecision {
             Self::Ran => "ran",
             Self::Skipped => "skipped",
         }
+    }
+}
+
+fn boost_active_file_candidate(candidates: &mut Vec<ContextChunk>, active_path: &str) {
+    let active_norm = active_path.replace('\\', "/");
+    let Some(idx) = candidates.iter().position(|c| {
+        let source_norm = c.source.replace('\\', "/");
+        active_norm.ends_with(&source_norm) || source_norm.ends_with(&active_norm)
+    }) else {
+        return;
+    };
+    if idx > 0 {
+        let chunk = candidates.remove(idx);
+        candidates.insert(0, chunk);
     }
 }
 
@@ -623,6 +643,7 @@ mod tests {
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: true,
+            active_file_path: None,
         };
         let result = pipeline.prepare(
             &request,
@@ -704,6 +725,7 @@ mod tests {
             cache_bypass: false,
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
+            active_file_path: None,
         };
         let caps = AdapterCapabilities::for_runtime(RuntimeKind::Mock);
         let first = pipeline.prepare(&request, caps);
@@ -721,6 +743,7 @@ mod tests {
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
+            active_file_path: None,
         };
         let result = pipeline.prepare(
             &request,
@@ -738,6 +761,7 @@ mod tests {
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
+            active_file_path: None,
         };
         let result = pipeline.prepare(
             &request,
@@ -755,6 +779,7 @@ mod tests {
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
+            active_file_path: None,
         };
         let result = pipeline.prepare(
             &request,
@@ -772,6 +797,7 @@ mod tests {
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
+            active_file_path: None,
         };
         let result = pipeline.prepare(
             &request,
@@ -790,6 +816,7 @@ mod tests {
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: true,
+            active_file_path: None,
         };
         let result = pipeline.prepare(
             &request,
@@ -808,6 +835,7 @@ mod tests {
             cache_bypass: true,
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
+            active_file_path: None,
         };
         let result = pipeline.prepare(
             &request,
@@ -830,6 +858,7 @@ mod tests {
                 pause_events_last_minute: 0,
             },
             retrieve_off: false,
+            active_file_path: None,
         };
         let result = pipeline.prepare(
             &request,

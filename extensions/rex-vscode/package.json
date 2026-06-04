@@ -125,6 +125,12 @@
           "default": "",
           "description": "Optional REX_ROOT path passed to the daemon child when auto-start is enabled. Leave empty to use the default layout (~/.rex or $REX_ROOT from the environment).",
           "scope": "machine-overridable"
+        },
+        "rex.productAgentConfig": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, merge sidecars.active=agent into project .rex/config.json on auto-start (operator dogfood; default remains stub-friendly).",
+          "scope": "machine-overridable"
         }
       }
     },

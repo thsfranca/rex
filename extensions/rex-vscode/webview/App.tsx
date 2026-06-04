@@ -57,7 +57,7 @@ const initialState: AppState = {
   daemon: { state: "unavailable", detail: "probing" },
   theme: "dark",
   context: null,
-  attachContext: true,
+  attachContext: false,
   prompt: "",
   streaming: false,
   modePolicy: {

@@ -46,15 +46,6 @@ impl LoadedConfig {
         self.effective.agent.approvals_enabled.unwrap_or(false)
     }
 
-    pub fn workspace_root(&self) -> PathBuf {
-        let raw = self.effective.workspace.root.trim();
-        if raw.is_empty() || raw == "." {
-            env_current_dir()
-        } else {
-            PathBuf::from(raw)
-        }
-    }
-
     pub fn workspace_indexer_mode(&self) -> &str {
         self.effective.workspace.indexer.as_str()
     }
@@ -78,10 +69,6 @@ impl LoadedConfig {
             bytes as usize
         }
     }
-}
-
-fn env_current_dir() -> PathBuf {
-    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
 pub fn merge_config(base: &mut RexConfig, overlay: RexConfig) {
@@ -158,6 +145,9 @@ fn merge_workspace(
     }
     if !overlay.indexer.is_empty() {
         base.indexer = overlay.indexer;
+    }
+    if overlay.allow_cwd_fallback.is_some() {
+        base.allow_cwd_fallback = overlay.allow_cwd_fallback;
     }
 }
 

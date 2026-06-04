@@ -34,12 +34,15 @@ use crate::plugins::{
 };
 use crate::policy::{CacheDecision, CacheDecisionState, PolicyEngine, PolicyRequest};
 use crate::routing::decide_route;
+use crate::settings;
 use crate::sidecar_client::{
     connect_sidecar, map_sidecar_to_inference_chunks, run_turn_collect, run_turn_stream,
 };
 use crate::sidecar_config::parse_harness_only;
 use crate::supervisor::{SharedSupervisor, SupervisorError};
-use crate::turn_correlation::{build_turn_correlation, TurnCorrelation};
+use crate::turn_correlation::{
+    build_turn_correlation, strip_extension_context_blocks, TurnCorrelation,
+};
 
 pub struct RexDaemonService {
     started_at: Instant,
@@ -294,8 +297,26 @@ impl RexService for RexDaemonService {
         let request_id = self.request_sequence.fetch_add(1, Ordering::Relaxed);
         let decision_id = format!("dec-{request_id}");
         let trace_id = extract_trace_id(request.metadata(), request_id);
+        ensure_workspace_configured()?;
         let inner = request.into_inner();
-        let prompt = inner.prompt;
+        let mut prompt = inner.prompt;
+        if let Some(hints) = inner.client_hints.as_ref() {
+            if !hints.active_file_path.is_empty() {
+                println!(
+                    "stream.request_id={request_id} trace_id={trace_id} client_hints.active_file={}",
+                    hints.active_file_path
+                );
+            }
+            if !hints.active_file_path.is_empty()
+                || !hints.language_id.is_empty()
+                || !hints.selection_text.is_empty()
+            {
+                let (stripped, applied) = strip_extension_context_blocks(&prompt);
+                if applied {
+                    prompt = stripped;
+                }
+            }
+        }
         let model = inner.model;
         let mode = inner.mode;
         let route = decide_route(&mode, &model);
@@ -303,12 +324,18 @@ impl RexService for RexDaemonService {
         let inference_runtime = runtime_kind.log_label();
         let adapter_capabilities = AdapterCapabilities::for_runtime(runtime_kind);
         let directives = PromptDirectives::from_prompt(&prompt);
+        let active_file_path = inner
+            .client_hints
+            .as_ref()
+            .filter(|h| !h.active_file_path.is_empty())
+            .map(|h| h.active_file_path.clone());
         let context_request = ContextRequest {
             prompt: prompt.clone(),
             diagnostics_hint: directives.diagnostics_hint.clone(),
             cache_bypass: directives.cache_bypass || cache_bypass_from_config(),
             behavior_snapshot: directives.behavior_snapshot,
             retrieve_off: directives.retrieve_off,
+            active_file_path,
         };
         let pipeline_result = self
             .pipeline
@@ -595,6 +622,24 @@ impl RexService for RexDaemonService {
     }
 }
 
+#[allow(clippy::result_large_err)]
+fn ensure_workspace_configured() -> Result<(), Status> {
+    let loaded = settings::get();
+    if !loaded
+        .workspace_indexer_mode()
+        .trim()
+        .eq_ignore_ascii_case("workspace")
+    {
+        return Ok(());
+    }
+    loaded.resolve_workspace_root().map(|_| ()).map_err(|_| {
+        eprintln!("workspace.error=not_configured");
+        Status::failed_precondition(
+            "workspace root not configured (set workspace.root in .rex/config.json)",
+        )
+    })
+}
+
 fn extract_trace_id(metadata: &tonic::metadata::MetadataMap, request_id: u64) -> String {
     let trace_id = metadata
         .get("x-rex-trace-id")
@@ -750,12 +795,51 @@ mod tests {
     use crate::l1_cache::L1Key;
     use crate::plugins::{BehaviorDecision, CacheStatus};
     use crate::policy::{PolicyEngine, ResponseCache};
+    use crate::settings;
     use futures::StreamExt;
+    use rex_config::LoadedConfig;
     use rex_proto::rex::v1::rex_service_server::RexService;
     use rex_proto::rex::v1::{StreamInferenceRequest, StreamInferenceResponse};
+    use serial_test::serial;
     use std::sync::{Arc, Mutex};
     use std::time::Instant;
     use tonic::Request;
+
+    fn init_stream_test_settings() {
+        settings::reset_for_test();
+        let mut cfg = rex_config::RexConfig::defaults();
+        cfg.workspace.allow_cwd_fallback = Some(true);
+        cfg.sidecars.harness = Some("direct".to_string());
+        cfg.sidecars.required = Some(false);
+        if let Some(entry) = cfg.sidecars.list.first_mut() {
+            entry.enabled = false;
+        }
+        settings::init_for_test(Arc::new(LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
+    }
+
+    fn init_unconfigured_workspace_settings() {
+        settings::reset_for_test();
+        let mut cfg = rex_config::RexConfig::defaults();
+        cfg.workspace.root = String::new();
+        cfg.workspace.allow_cwd_fallback = None;
+        cfg.workspace.indexer = "workspace".to_string();
+        cfg.sidecars.harness = Some("direct".to_string());
+        cfg.sidecars.required = Some(false);
+        if let Some(entry) = cfg.sidecars.list.first_mut() {
+            entry.enabled = false;
+        }
+        settings::init_for_test(Arc::new(LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
+    }
 
     #[test]
     fn stream_chunks_end_with_done_marker() {
@@ -857,7 +941,37 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
+    async fn stream_fails_when_workspace_unconfigured() {
+        init_unconfigured_workspace_settings();
+        let svc = RexDaemonService::with_components(
+            Instant::now(),
+            Arc::new(MockInferenceRuntime),
+            PolicyEngine::with_default_layers(),
+            Arc::new(crate::approvals::AlwaysAllow),
+            disabled_sidecar(),
+        );
+        let req = Request::new(StreamInferenceRequest {
+            prompt: "hello".to_string(),
+            mode: "ask".to_string(),
+            ..Default::default()
+        });
+        let err = match svc.stream_inference(req).await {
+            Ok(_) => panic!("missing workspace.root must fail closed"),
+            Err(e) => e,
+        };
+        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
+        assert!(
+            err.message().contains("workspace root not configured"),
+            "message: {}",
+            err.message()
+        );
+    }
+
+    #[tokio::test]
+    #[serial]
     async fn stream_emits_grpc_error_when_runtime_omits_done() {
+        init_stream_test_settings();
         let svc = RexDaemonService::with_components(
             Instant::now(),
             Arc::new(MissingDoneMockRuntime),
@@ -918,7 +1032,9 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn cache_is_skipped_for_agent_mode() {
+        init_stream_test_settings();
         let cache = Arc::new(OrderingCache::default());
         let svc = RexDaemonService::with_components(
             Instant::now(),
@@ -945,7 +1061,9 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn cache_is_skipped_when_prompt_requests_bypass() {
+        init_stream_test_settings();
         let cache = Arc::new(OrderingCache::default());
         let svc = RexDaemonService::with_components(
             Instant::now(),
@@ -999,7 +1117,9 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn approval_gate_is_not_consulted_for_ask_mode() {
+        init_stream_test_settings();
         let gate = Arc::new(RecordingGate::new(ApprovalDecision::Allow));
         let svc = RexDaemonService::with_components(
             Instant::now(),
@@ -1026,7 +1146,9 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn approval_gate_is_consulted_for_agent_mode_and_allow_passes() {
+        init_stream_test_settings();
         let gate = Arc::new(RecordingGate::new(ApprovalDecision::Allow));
         let svc = RexDaemonService::with_components(
             Instant::now(),
@@ -1056,7 +1178,9 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn approval_gate_deny_returns_typed_grpc_error_for_agent_mode() {
+        init_stream_test_settings();
         let gate = Arc::new(RecordingGate::new(ApprovalDecision::Deny {
             reason: "manual approval required".to_string(),
         }));
@@ -1085,7 +1209,9 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn approval_gate_checkpoint_returns_failed_precondition() {
+        init_stream_test_settings();
         let gate = Arc::new(RecordingGate::new(ApprovalDecision::Checkpoint {
             reason: "future tool gate".to_string(),
         }));
@@ -1112,7 +1238,9 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn ask_mode_consults_cache_then_stores() {
+        init_stream_test_settings();
         let cache = Arc::new(OrderingCache::default());
         let svc = RexDaemonService::with_components(
             Instant::now(),
