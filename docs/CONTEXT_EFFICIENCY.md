@@ -40,6 +40,10 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 | Economics validation harness | Prove token/cost deltas (paid API + local OSS) vs baseline | Benchmark / CI smoke (future) | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | **planned** |
 | MCP / standard tool interoperability | MCP **primarily** in **isolated sidecar**; host reach **brokered**; lazy tool discovery | Sidecar envelope + daemon broker | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | **design accepted** — implementation deferred |
 | Human approvals + sandbox for tools | Extension modes today; daemon `ApprovalGate`; `AccessPolicy` broker | [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [ROADMAP.md](ROADMAP.md) **R020** | **partial** — approvals shipped; **R012** read/list policy; **R020** completes mode matrix + write/exec |
+| Intra-turn scratch compaction | Sidecar `RemoveMessage` + summarization after tool bursts | `rex-agent` graph compaction node | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | **design accepted** — **R029** |
+| Diff-only writes | Editor unified diff; sidecar read→patch→write before broker | `rex-agent` `fs.write` handler | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | **design accepted** — **R030** |
+| Subagent model cascade | Cheaper model hint for Viewer subgraph | `RunTurn.model` or sidecar config | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | **design accepted** — **R028** |
+| Sidecar read pruning | Goal-hint filter when read payload >100 lines | Post-`BrokerReadFile` sidecar stage | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | **planned** — **R031** (Could) |
 
 ## Evidence-informed defaults
 

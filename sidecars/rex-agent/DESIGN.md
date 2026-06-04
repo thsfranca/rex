@@ -1,6 +1,8 @@
 # rex-agent — design contract
 
-**Status:** LangGraph ReAct loop shipped (**R018**). gRPC scaffold (**R017**). Operator defaults (**R019**). Broker policy (**R020–R022**). Interim tool protocol: JSON in model text until native `tools` on `BrokerInference` (follow-up).
+**Status:** LangGraph ReAct loop shipped (**R018**). gRPC scaffold (**R017**). Operator defaults (**R019**). Broker policy (**R020–R022**). Interim tool protocol: JSON in model text until native `tools` on `BrokerInference` (**R033**).
+
+**Target graph:** Orchestrator + Viewer + Editor — [AGENT_GRAPH_ARCHITECTURE.md](../../docs/AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](../../docs/architecture/decisions/0022-viewer-editor-subagent-topology.md).
 
 Bootstrap: [README.md](README.md).
 
@@ -30,16 +32,30 @@ Python sidecar implementing the product development agent: LangGraph ReAct loop,
 ```mermaid
 flowchart TB
   DaemonAssemble[Daemon_assembles_TurnContext_once]
-  Graph[LangGraph_state_and_scratch]
+  Orch[Orchestrator_subgraph]
+  Viewer[Viewer_subgraph]
+  Editor[Editor_subgraph]
+  Compact[StateCompaction]
   Tools[Broker_tools_for_deltas]
-  DaemonAssemble --> Graph
-  Graph --> Tools
-  Tools --> Graph
+  DaemonAssemble --> Orch
+  Orch --> Viewer
+  Orch --> Editor
+  Viewer --> Tools
+  Editor --> Tools
+  Tools --> Compact
+  Compact --> Orch
 ```
+
+**Shipped (**R027–R032**):** Orchestrator / Viewer / Editor routing via `active_subagent`, `RexBrokerChatModel`, `add_messages` + compaction node, diff-only writes, read dedup, metrics — see `src/rex_agent/graph.py` and `src/rex_agent/graph/`.
 
 - **Per turn start:** Treat `RunTurn.prompt` as the authoritative initial model input (includes daemon-injected context). Do not re-read the same files via broker unless the workspace may have changed.
 - **Intra-turn:** Tool outputs live in graph/scratch state; cap size to `max_tool_result_bytes` (aligned with daemon broker truncation per [ADR 0013](../../docs/architecture/decisions/0013-access-policy-broker-completion.md)).
-- **`max_tool_steps`:** From R015 config (default 8); stop with terminal message when exceeded.
+- **`max_tool_steps`:** From R015 config (default **12**, [CONFIGURATION.md](../../docs/CONFIGURATION.md)); stop with terminal message when exceeded.
+- **`compaction_suffix_fraction`**, **`read_pruning_enabled`:** Sidecar intra-turn controls — see [CONFIGURATION.md](../../docs/CONFIGURATION.md) and [AGENT_GRAPH_ARCHITECTURE.md](../../docs/AGENT_GRAPH_ARCHITECTURE.md).
+
+## R033 (Phase 2 — deferred)
+
+Native `BrokerInference` tool schemas and MCP gRPC client remain **out of scope** until proto/daemon work lands ([ADR 0016](../../docs/architecture/decisions/0016-mcp-in-sidecar-envelope.md), milestone **R033**). Interim protocol stays JSON-in-text via `RexBrokerChatModel`; do not extend `rex.proto` in sidecar-only slices.
 
 ## Mode matrix
 
@@ -66,6 +82,7 @@ CI and local tests may use **`rex-sidecar-stub`** instead; switch via `REX_SIDEC
 
 ## Related
 
+- [AGENT_GRAPH_ARCHITECTURE.md](../../docs/AGENT_GRAPH_ARCHITECTURE.md) — target topology and token playbook
 - [AGENT_DELIVERY_ROADMAP.md](../../docs/AGENT_DELIVERY_ROADMAP.md)
 - [SIDECAR_RUNTIME.md](../../docs/SIDECAR_RUNTIME.md)
 - [proto/rex/sidecar/v1/sidecar.proto](../../proto/rex/sidecar/v1/sidecar.proto)

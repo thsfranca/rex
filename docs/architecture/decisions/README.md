@@ -27,6 +27,7 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0019](0019-inference-gateway-opt-in-litellm.md) | Inference Gateway — opt-in LiteLLM, daemon-controlled | Accepted (design) |
 | [0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) | OpenTelemetry GenAI semconv plus Rex pipeline metrics | Accepted |
 | [0021](0021-rex-owned-economics-store-byot-visualization.md) | Rex-owned economics store; BYOT visualization | Accepted |
+| [0022](0022-viewer-editor-subagent-topology.md) | Viewer/Editor subagent topology for product agent | Accepted |
 
 ## How to use
 

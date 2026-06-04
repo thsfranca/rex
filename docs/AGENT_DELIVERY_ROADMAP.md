@@ -8,6 +8,8 @@
 
 ## Target architecture
 
+**Shipped (**R018**):** monolithic LangGraph ReAct loop. **Target:** Orchestrator + **Viewer** + **Editor** subgraphs with `RexBrokerChatModel` and intra-turn compaction — canonical design [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md).
+
 ```mermaid
 flowchart TB
   subgraph clients [Clients]
@@ -24,12 +26,19 @@ flowchart TB
   end
   subgraph sidecar [rex_agent_sidecar]
     GRPC[rex_sidecar_v1_gRPC]
-    Graph[LangGraph_StateGraph]
+    Orch[Orchestrator]
+    Viewer[ViewerSubgraph]
+    Editor[EditorSubgraph]
     RexLLM[RexBrokerChatModel]
     RexTools[BrokerTool_wrappers]
-    GRPC --> Graph
-    Graph --> RexLLM
-    Graph --> RexTools
+    GRPC --> Orch
+    Orch --> Viewer
+    Orch --> Editor
+    Viewer --> RexTools
+    Editor --> RexTools
+    Orch --> RexLLM
+    Viewer --> RexLLM
+    Editor --> RexLLM
     RexLLM --> Brk
     RexTools --> Brk
   end
@@ -44,8 +53,8 @@ flowchart TB
 |-------|------|
 | Extension / CLI | UX, NDJSON, approvals |
 | Daemon | Context injection, policy, stream contract, HTTP to LLM, host execution |
-| Python sidecar | Graph state, mode routing, tool-loop logic, streaming text to daemon |
-| LangGraph | Graph structure, iteration limits (implementation detail) |
+| Python sidecar | Graph state, subagent routing, tool-loop logic, streaming text to daemon |
+| LangGraph | Subgraph structure (Orchestrator/Viewer/Editor target), iteration limits |
 
 **Capability contracts** (what the daemon assembles vs what the sidecar owns): [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) and [sidecars/rex-agent/DESIGN.md](../sidecars/rex-agent/DESIGN.md).
 
@@ -193,6 +202,13 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | R018 | LangGraph agent core | Done — prompt JSON tool protocol; [sidecars/rex-agent/DESIGN.md](../sidecars/rex-agent/DESIGN.md) |
 | R019 | Integration / E2E | Done |
 | R016 | Multi-active broadcast | Could |
+| **R027** | Broker baseline hardening | **Should** — `RexBrokerChatModel`, parse recovery, streaming buffer |
+| **R028** | Viewer/Editor subagents | **Should** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| **R029** | Intra-turn state compaction | **Should** — `RemoveMessage`, 25% suffix rule |
+| **R030** | Diff-only writes | **Should** — sidecar read→patch→write |
+| **R031** | Task-aware read pruning | **Could** — payloads >100 lines |
+| **R032** | Token playbook + subagent metrics | **Should** — dedup, hard cap, observability |
+| **R033** | Native tools + MCP client | **Could** — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) Phase 2 |
 
 ## Out of scope (this program)
 
@@ -204,6 +220,7 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 
 ## Related
 
+- [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — token-efficient graph target (**R027–R033**)
 - [MVP_SPEC.md](MVP_SPEC.md) — Phase 1 architecture
 - [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) — sidecar runtime hub
 - [CONFIGURATION.md](CONFIGURATION.md) — settings policy
