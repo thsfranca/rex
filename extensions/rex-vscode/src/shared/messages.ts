@@ -85,6 +85,15 @@ export interface ExecutionStepPayload {
   readonly id: string;
   readonly phase: "queued" | "running" | "awaiting_approval" | "completed" | "blocked" | "failed" | "cancelled";
   readonly summary: string;
+  readonly kind?: "tool" | "step";
+  readonly detail?: string;
+}
+
+export interface ContextAttachment {
+  readonly id: string;
+  readonly kind: "file" | "symbol" | "terminal";
+  readonly label: string;
+  readonly text: string;
 }
 
 export interface SessionSummary {
@@ -125,7 +134,8 @@ export type ExtensionToWebview =
   | { readonly type: "clearChat" }
   | { readonly type: "statusMessage"; readonly level: "info" | "warn" | "error"; readonly text: string }
   | { readonly type: "sessionList"; readonly sessions: ReadonlyArray<SessionSummary> }
-  | { readonly type: "sessionMessages"; readonly payload: SessionMessagesPayload };
+  | { readonly type: "sessionMessages"; readonly payload: SessionMessagesPayload }
+  | { readonly type: "contextAttachments"; readonly attachments: ReadonlyArray<ContextAttachment> };
 
 export type WebviewToExtension =
   | { readonly type: "ready" }
@@ -135,6 +145,7 @@ export type WebviewToExtension =
       readonly prompt: string;
       readonly context?: PromptContextSnapshot;
       readonly attachContext: boolean;
+      readonly attachments?: ReadonlyArray<ContextAttachment>;
     }
   | { readonly type: "cancelStream"; readonly id: StreamId }
   | {
@@ -153,4 +164,6 @@ export type WebviewToExtension =
   | { readonly type: "createSession" }
   | { readonly type: "switchSession"; readonly sessionId: string }
   | { readonly type: "deleteSession"; readonly sessionId: string }
-  | { readonly type: "saveSessionState"; readonly sessionId: string; readonly messages: SessionMessagesPayload["messages"]; readonly mode: InteractionMode };
+  | { readonly type: "saveSessionState"; readonly sessionId: string; readonly messages: SessionMessagesPayload["messages"]; readonly mode: InteractionMode }
+  | { readonly type: "requestContextPicker" }
+  | { readonly type: "removeContextAttachment"; readonly id: string };

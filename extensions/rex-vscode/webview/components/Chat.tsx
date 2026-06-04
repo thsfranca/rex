@@ -2,6 +2,7 @@ import * as React from "react";
 
 import type {
   ApplyGranularity,
+  ContextAttachment,
   InteractionMode,
   ModePolicy,
   PromptContextSnapshot,
@@ -16,11 +17,12 @@ export interface ChatProps {
   readonly theme: ThemeKind;
   readonly context: PromptContextSnapshot | null;
   readonly attachContext: boolean;
+  readonly attachments: ReadonlyArray<ContextAttachment>;
   readonly sessions: ReadonlyArray<SessionSummary>;
   readonly streaming: boolean;
   readonly daemonReady: boolean;
   readonly modePolicy: ModePolicy;
-  readonly timeline: ReadonlyArray<{ id: string; summary: string; phase: string }>;
+  readonly timeline: ReadonlyArray<{ id: string; summary: string; phase: string; kind?: string; detail?: string }>;
   readonly pendingApprovals: ReadonlyArray<{ id: string; title: string; detail: string }>;
   readonly prompt: string;
   readonly onPromptChange: (value: string) => void;
@@ -40,6 +42,8 @@ export interface ChatProps {
   }) => void;
   readonly onCreateSession: () => void;
   readonly onSwitchSession: (sessionId: string) => void;
+  readonly onRequestContextPicker: () => void;
+  readonly onRemoveAttachment: (id: string) => void;
 }
 
 export function Chat(props: ChatProps): React.ReactElement {
@@ -61,6 +65,10 @@ export function Chat(props: ChatProps): React.ReactElement {
       if (canSend) {
         props.onSubmit();
       }
+    }
+    if (event.key === "@" && props.prompt.length === 0) {
+      event.preventDefault();
+      props.onRequestContextPicker();
     }
   };
 
@@ -132,8 +140,8 @@ export function Chat(props: ChatProps): React.ReactElement {
       <div ref={listRef} className="rex-messages" role="log" aria-live="polite">
         {props.messages.length === 0 ? (
           <div className="rex-hint">
-            Ask something about your code. Use `REX: Explain/Fix/Refactor Selection` from
-            the editor to prefill a prompt.
+            Ask something about your code. Use editor commands to prefill a prompt, or type @ to attach
+            context.
           </div>
         ) : (
           props.messages.map((message) => (
@@ -176,11 +184,27 @@ export function Chat(props: ChatProps): React.ReactElement {
             </div>
           </div>
         ) : null}
+        {props.attachments.length > 0 ? (
+          <div className="rex-attachment-list" aria-label="Attached context">
+            {props.attachments.map((attachment) => (
+              <span key={attachment.id} className="rex-attachment-chip">
+                @{attachment.label}
+                <button
+                  type="button"
+                  aria-label={`Remove ${attachment.label}`}
+                  onClick={() => props.onRemoveAttachment(attachment.id)}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
         <textarea
           value={props.prompt}
           onChange={(event) => props.onPromptChange(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`${props.modePolicy.mode.toUpperCase()} mode: Cmd/Ctrl+Enter to send`}
+          placeholder={`${props.modePolicy.mode.toUpperCase()} mode: Cmd/Ctrl+Enter to send; @ for context`}
           aria-label="Prompt"
         />
         {props.timeline.length > 0 ? (
@@ -198,6 +222,9 @@ export function Chat(props: ChatProps): React.ReactElement {
             {props.streaming ? "Streaming…" : canSend ? "Ready" : props.daemonReady ? "Type a prompt" : "Daemon unavailable"}
           </span>
           <span style={{ display: "inline-flex", gap: 6 }}>
+            <button type="button" onClick={props.onRequestContextPicker} aria-label="Attach context">
+              @
+            </button>
             {props.streaming ? (
               <button
                 type="button"

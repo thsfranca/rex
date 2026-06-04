@@ -65,6 +65,7 @@ export function App(): React.ReactElement {
       prompt: trimmed,
       context: state.context ?? undefined,
       attachContext: state.attachContext,
+      attachments: state.attachments,
     });
   };
 
@@ -129,6 +130,7 @@ export function App(): React.ReactElement {
         theme={state.theme}
         context={state.context}
         attachContext={state.attachContext}
+        attachments={state.attachments}
         sessions={state.sessions}
         streaming={state.streaming}
         daemonReady={state.daemon.state === "ready"}
@@ -148,6 +150,8 @@ export function App(): React.ReactElement {
         onApply={handleApply}
         onCreateSession={() => postToHost({ type: "createSession" })}
         onSwitchSession={(sessionId) => postToHost({ type: "switchSession", sessionId })}
+        onRequestContextPicker={() => postToHost({ type: "requestContextPicker" })}
+        onRemoveAttachment={(id) => postToHost({ type: "removeContextAttachment", id })}
       />
     </>
   );
