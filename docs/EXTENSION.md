@@ -8,6 +8,7 @@ Consolidated reference for the VS Code / Cursor extension: **CLI consumer contra
 - Mode-driven UX: **`ask`**, **`plan`**, **`agent`** with deterministic guardrails and approvals where required.
 - **Thin client only:** the extension does **not** host the agent. Assistant reasoning runs in a **daemon-supervised sidecar**; `rex-daemon` brokers inference and tools ([MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md)).
 - Markdown and code-block handling stay client-side; transport contract unchanged.
+- **Cursor-class UX** (layout, composer, sessions, tool cards): design hub **[EXTENSION_UX.md](EXTENSION_UX.md)**; delivery rows **E-UX01…E-UX11** in **[EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md)**.
 
 ---
 

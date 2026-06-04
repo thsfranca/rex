@@ -5,7 +5,7 @@ This document records the phased delivery of the REX editor extension for both V
 ## Current purpose
 
 - Keep one hybrid VS Code and Cursor extension on the **`rex-cli` NDJSON** contract summarized in **[EXTENSION.md](EXTENSION.md)**; optional unary **`rex.v1`** over UDS is allowed per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)** when maintainers choose it.
-- Maintain Cursor-class chat UX (streaming markdown, highlighted code blocks, Apply-to-file with native diff) without forking per-editor code paths.
+- Deliver **Cursor-class editor+agent UX** per **[EXTENSION_UX.md](EXTENSION_UX.md)** (webview-first; stable CLI boundary).
 - Keep Cursor-specific features optional behind runtime capability detection so the same VSIX installs cleanly in plain VS Code.
 - Keep daemon lifecycle user-managed by default; opt-in auto-start remains behind `rex.daemonAutoStart` (default off).
 
@@ -41,6 +41,7 @@ Foundation milestones (three internal delivery waves covering scaffold + chat UX
 - Inline ghost-text completions.
 - Workspace @-mentions requiring bespoke indexing servers.
 - **Node `StreamInference` streaming** replacing the NDJSON **`rex-cli`** path (would need a **future ADR**; hybrid unary-only policy is **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**).
+- Native VS Code **Chat Participant** as primary surface (webview-first per [EXTENSION_UX.md](EXTENSION_UX.md)).
 
 ## Shipped (foundation + recent slices)
 
@@ -48,10 +49,28 @@ Foundation milestones (three internal delivery waves covering scaffold + chat UX
 - Get Started walkthrough documents **sidecar + HTTP** env for plan/agent.
 - **`rex.modelId`** setting passes `--model` on every `complete` when non-empty.
 - **Core** path: single NDJSON terminal, cancel-to-idle, **`--mode`** on every `complete`.
+- **RC-S2 Met:** automated cancel-to-idle coverage in [`appState.test.ts`](../extensions/rex-vscode/src/test/appState.test.ts) and [`chatPanel.test.ts`](../extensions/rex-vscode/src/test/chatPanel.test.ts).
 
-## What remains after phase delivery
+## Extension UX program (E-UX01…E-UX11)
 
-- **RC-S2 Met:** automated cancel-to-idle coverage in [`appState.test.ts`](../extensions/rex-vscode/src/test/appState.test.ts) and [`chatPanel.test.ts`](../extensions/rex-vscode/src/test/chatPanel.test.ts); host hardening for cancel during approval and clear-chat abort. Manual long-session checklist retained in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md).
+Canonical design: **[EXTENSION_UX.md](EXTENSION_UX.md)**. One PR slice per row where feasible; merge-wait between slices.
+
+| ID | Phase | Feature | Source(s) | Status |
+|----|-------|---------|-----------|--------|
+| **E-UX01** | P1 | Secondary sidebar chat + activity-bar fallback (VS Code ≥1.106) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX01 | Planned |
+| **E-UX02** | P1 | “Open REX in Editor” panel (`createWebviewPanel`) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX02 | Planned |
+| **E-UX03** | P1 | Theme / a11y / narrow-width webview hardening | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX03 | Planned |
+| **E-UX04** | P1 | Keybindings + Get Started walkthrough updates | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX04 | Planned |
+| **E-UX05** | P2 | Persisted chat sessions (workspace-scoped) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX05 | Planned |
+| **E-UX06** | P2 | @-style context picker (files + document symbols) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX06 | Planned |
+| **E-UX07** | P2 | Composer slash commands (`/ask`, `/plan`, `/agent`, `/clear`) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX07 | Planned |
+| **E-UX08** | P2 | Terminal selection → REX context menu | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX08 | Planned |
+| **E-UX09** | P3 | Tool / step cards from structured host events | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX09 | Planned |
+| **E-UX10** | P3 | Inline edit on selection (virtual-doc apply path) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX10 | Planned |
+| **E-UX11** | P3 | Multi-file diff review batch | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX11 | Planned |
+
+## What remains (non-UX)
+
 - Keep release automation and install docs aligned with CLI/daemon lifecycle changes.
 - Add follow-up features only when they preserve the stable CLI NDJSON boundary and keep behavior symmetric across Cursor and plain VS Code.
 
@@ -62,6 +81,7 @@ Foundation milestones (three internal delivery waves covering scaffold + chat UX
 - Reliability: status bar reflects daemon state within roughly 2 seconds of activation.
 - Portability: the same VSIX runs in plain VS Code and in Cursor.
 - Distribution: `.vsix` publishes to Open VSX for Cursor users.
+- UX: operator can chat beside the editor and attach file/symbol context without a custom index server ([EXTENSION_UX.md](EXTENSION_UX.md) acceptance).
 
 ## Extraction triggers
 
@@ -76,3 +96,4 @@ Revisit the monorepo decision if any of the following become true:
 - [ARCHITECTURE.md](ARCHITECTURE.md): REX system architecture.
 - [MVP_SPEC.md](MVP_SPEC.md): Phase 1 product architecture; done: [V1_0.md](V1_0.md).
 - **[EXTENSION.md](EXTENSION.md)**: consolidated extension contract + component layout.
+- **[EXTENSION_UX.md](EXTENSION_UX.md)**: Cursor-class UX design hub.
