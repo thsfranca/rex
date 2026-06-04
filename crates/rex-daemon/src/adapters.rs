@@ -286,12 +286,14 @@ pub(crate) fn stream_chunks_with_done(
             text: chunk.clone(),
             index: index as u64,
             done: false,
+            ..Default::default()
         }));
     }
     chunks.push(Ok(StreamInferenceResponse {
         text: String::new(),
         index: content_chunks.len() as u64,
         done: true,
+        ..Default::default()
     }));
     chunks
 }
@@ -353,6 +355,7 @@ impl InferenceRuntime for MissingDoneMockRuntime {
             text: "only".to_string(),
             index: 0,
             done: false,
+            ..Default::default()
         })]
     }
 }

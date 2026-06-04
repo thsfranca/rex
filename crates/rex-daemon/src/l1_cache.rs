@@ -190,6 +190,7 @@ mod tests {
             text: "a".to_string(),
             index: 0,
             done: false,
+            ..Default::default()
         })];
         assert!(l1_cachable_responses(&a).is_none());
     }
@@ -203,11 +204,13 @@ mod tests {
                 text: "x".to_string(),
                 index: 0,
                 done: false,
+                ..Default::default()
             },
             StreamInferenceResponse {
                 text: String::new(),
                 index: 1,
                 done: true,
+                ..Default::default()
             },
         ];
         cache.put(key.clone(), v.clone());

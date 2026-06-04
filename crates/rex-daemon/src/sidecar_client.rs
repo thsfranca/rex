@@ -59,6 +59,11 @@ pub fn map_run_turn_chunk(chunk: RunTurnChunk) -> StreamInferenceResponse {
         text: chunk.text,
         index: chunk.index,
         done: chunk.done,
+        event: chunk.event,
+        tool_name: chunk.tool_name,
+        phase: chunk.phase,
+        summary: chunk.summary,
+        detail: chunk.detail,
     }
 }
 
@@ -119,5 +124,24 @@ mod tests {
         let request = run_turn_request("hello", "ask", "model-a", &correlation);
         assert_eq!(request.turn_id, "turn-3");
         assert!(request.context_revision.starts_with("ctx-"));
+    }
+
+    #[test]
+    fn map_run_turn_chunk_passes_structured_event_fields() {
+        let chunk = RunTurnChunk {
+            text: String::new(),
+            index: 2,
+            done: false,
+            event: "tool".to_string(),
+            tool_name: "fs.read".to_string(),
+            phase: "running".to_string(),
+            summary: String::new(),
+            detail: "src/lib.rs".to_string(),
+        };
+        let mapped = map_run_turn_chunk(chunk);
+        assert_eq!(mapped.event, "tool");
+        assert_eq!(mapped.tool_name, "fs.read");
+        assert_eq!(mapped.phase, "running");
+        assert_eq!(mapped.detail, "src/lib.rs");
     }
 }

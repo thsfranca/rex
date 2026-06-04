@@ -1,0 +1,6 @@
+{"event":"chunk","index":0,"text":"Hello "}
+{"event":"tool","index":1,"name":"fs.read","phase":"running","detail":"src/main.rs"}
+{"event":"tool","index":2,"name":"fs.read","phase":"completed","detail":"ok"}
+{"event":"step","index":3,"phase":"running","summary":"Orchestrator routing"}
+{"event":"chunk","index":4,"text":"world"}
+{"event":"done","index":5}

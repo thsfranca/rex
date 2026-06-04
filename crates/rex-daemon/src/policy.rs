@@ -428,6 +428,7 @@ mod tests {
             text: String::new(),
             index: 0,
             done: true,
+            ..Default::default()
         }];
         let layered = LayeredCache::new(vec![
             Arc::new(TaggedRecorder::new("l1", events.clone())),
@@ -450,6 +451,7 @@ mod tests {
             text: String::new(),
             index: 0,
             done: true,
+            ..Default::default()
         }];
         let layered = LayeredCache::new(vec![
             Arc::new(TaggedRecorder::primed("l1", events.clone(), primed.clone())),
@@ -488,6 +490,7 @@ mod tests {
             text: "x".to_string(),
             index: 0,
             done: true,
+            ..Default::default()
         }];
         stack.put(key.clone(), payload.clone());
         // L1 retains, L2 (null) ignores; second `get` must hit via L1.
