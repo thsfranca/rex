@@ -10,6 +10,7 @@ from langgraph.graph import END, StateGraph
 
 from rex_agent.broker import BrokerClient
 from rex_agent.broker_chat_model import stream_visible_text
+from rex_agent.stream_events import StepStreamEvent, StreamEvent, TextStreamEvent, ToolStreamEvent
 from rex_agent.config import max_tool_steps
 from rex_agent.graph.compaction import compact_state
 from rex_agent.graph.nodes.llm import llm_node
@@ -146,6 +147,7 @@ def _initial_state(prompt: str, mode: str, model: str, turn_id: str) -> AgentSta
         max_steps=max_tool_steps(),
         truncation_events=[],
         stream_parts=[],
+        stream_events=[],
         final_answer="",
         done=False,
         pending_tool=None,
@@ -187,15 +189,57 @@ def stream_turn(
     mode: str,
     model: str,
     turn_id: str = "",
-) -> Iterator[str]:
-    answer, parts = run_turn(prompt, mode, model, turn_id)
-    emitted = False
-    for part in parts:
-        for segment in stream_visible_text(part):
-            if segment:
-                emitted = True
-                yield segment
-    if not emitted and answer:
+) -> Iterator[StreamEvent]:
+    answer, parts, events = run_turn_with_events(prompt, mode, model, turn_id)
+    emitted_text = False
+    for event in events:
+        if isinstance(event, TextStreamEvent):
+            for segment in stream_visible_text(event.text):
+                if segment:
+                    emitted_text = True
+                    yield TextStreamEvent(text=segment)
+        else:
+            yield event
+    if not emitted_text and answer:
         for segment in stream_visible_text(answer):
             if segment:
-                yield segment
+                yield TextStreamEvent(text=segment)
+    elif not emitted_text and parts:
+        for part in parts:
+            for segment in stream_visible_text(part):
+                if segment:
+                    yield TextStreamEvent(text=segment)
+
+
+def run_turn_with_events(
+    prompt: str,
+    mode: str,
+    model: str,
+    turn_id: str = "",
+) -> tuple[str, list[str], list[StreamEvent]]:
+    state = _initial_state(prompt, mode, model, turn_id)
+    with BrokerClient(turn_id=turn_id or None) as client:
+        token = _active_client.set(client)
+        try:
+            final = _invoke(state)
+        finally:
+            _active_client.reset(token)
+    answer = final.get("final_answer") or ""
+    parts = list(final.get("stream_parts") or [])
+    events = list(final.get("stream_events") or [])
+    if not answer and parts:
+        answer = "".join(p for p in parts if p.strip())
+    if not answer:
+        answer = "No response from agent."
+    visible_parts: list[StreamEvent] = []
+    for part in parts:
+        visible = "".join(stream_visible_text(part)) or part
+        if visible.strip():
+            visible_parts.append(TextStreamEvent(text=visible))
+    if visible_parts:
+        events = events + visible_parts
+    elif answer:
+        visible = "".join(stream_visible_text(answer)) or answer
+        if visible.strip():
+            events = events + [TextStreamEvent(text=visible)]
+    return answer, parts, events

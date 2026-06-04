@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from rex_agent import __version__
 from rex_agent.graph import stream_turn
+from rex_agent.stream_events import StepStreamEvent, TextStreamEvent, ToolStreamEvent
 from rex_agent.streaming import chunk_text
 
 if TYPE_CHECKING:
@@ -42,14 +43,39 @@ class AgentServicer(sidecar_pb2_grpc.SidecarServiceServicer):
             print(f"rex-agent event=run_turn turn_id={turn_id} mode={mode}")
 
         index = 0
-        for segment in stream_turn(request.prompt, mode, model, turn_id):
-            for piece in chunk_text(segment):
-                if CHUNK_DELAY_SEC > 0:
-                    time.sleep(CHUNK_DELAY_SEC)
+        for event in stream_turn(request.prompt, mode, model, turn_id):
+            if isinstance(event, TextStreamEvent):
+                for piece in chunk_text(event.text):
+                    if CHUNK_DELAY_SEC > 0:
+                        time.sleep(CHUNK_DELAY_SEC)
+                    yield sidecar_pb2.RunTurnChunk(
+                        text=piece,
+                        index=index,
+                        done=False,
+                        event="chunk",
+                    )
+                    index += 1
+                continue
+            if isinstance(event, ToolStreamEvent):
                 yield sidecar_pb2.RunTurnChunk(
-                    text=piece,
+                    text="",
                     index=index,
                     done=False,
+                    event="tool",
+                    tool_name=event.name,
+                    phase=event.phase,
+                    detail=event.detail,
+                )
+                index += 1
+                continue
+            if isinstance(event, StepStreamEvent):
+                yield sidecar_pb2.RunTurnChunk(
+                    text="",
+                    index=index,
+                    done=False,
+                    event="step",
+                    phase=event.phase,
+                    summary=event.summary,
                 )
                 index += 1
         yield sidecar_pb2.RunTurnChunk(
