@@ -88,6 +88,10 @@
         "title": "REX: Stop Generation"
       },
       {
+        "command": "rex.sendTerminalSelectionToRex",
+        "title": "REX: Send Selection to Chat"
+      },
+      {
         "command": "rex.explainSelection",
         "title": "REX: Explain Selection"
       },
@@ -138,6 +142,13 @@
           "command": "rex.refactorSelection",
           "group": "rex@3",
           "when": "editorHasSelection"
+        }
+      ],
+      "terminal/context": [
+        {
+          "command": "rex.sendTerminalSelectionToRex",
+          "group": "rex@1",
+          "when": "terminalSelection"
         }
       ]
     },

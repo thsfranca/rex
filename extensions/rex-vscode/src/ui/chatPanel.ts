@@ -119,6 +119,17 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     }
   }
 
+  attachTerminalContext(text: string): void {
+    const attachment: ContextAttachment = {
+      id: `terminal-${Date.now()}`,
+      kind: "terminal",
+      label: "Terminal selection",
+      text: text.slice(0, 16_000),
+    };
+    this.terminalAttachments = [...this.terminalAttachments, attachment];
+    this.postMessage({ type: "contextAttachments", attachments: this.terminalAttachments });
+  }
+
   dispose(): void {
     for (const pending of this.pendingStreams.values()) {
       pending.controller.abort();
