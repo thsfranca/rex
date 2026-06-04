@@ -114,6 +114,7 @@ flowchart TD
 | **Could** | Difficulty-based routing cascade (ML escalation) | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | Beyond **RC-09** env hook |
 | **Should** | Inference Gateway — opt-in managed LiteLLM (daemon control, Ollama model discovery) | [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md) | Design **accepted**; implementation: supervisor + `$REX_ROOT/gateway/` |
 | **Should** | LiteLLM default API docs (external + managed profiles) | [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-default-api), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) | Hub + ADR 0019 landed |
+| **Should** | CI quality and security gates (AI-assisted dev hardening) | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | Phases **R023–R026**; Sonar excluded |
 | **Won't (now)** | Direct daemon HTTP/mock without sidecar | [MVP_SPEC.md](MVP_SPEC.md) | CI/harness path only; not product default |
 
 ## Later — only if the core path stays healthy
@@ -149,6 +150,10 @@ flowchart TD
 | **R020** | Broker access policy completion (ADR 0013; follows R012) | **Done** — [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) |
 | **R021** | Turn correlation Phase 1b (`turn_id`, `context_revision`) | **Done** — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | **R022** | Workspace binding product path (fail-closed daemon) | **Done** — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
+| **R023** | Supply chain: `cargo-audit` / `cargo-deny`, Dependabot | Should — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
+| **R024** | Security SAST: CodeQL (primary) | Should — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
+| **R025** | `rex-agent` static analysis: Ruff | Should — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
+| **R026** | Rex-specific guidelines + optional Semgrep | Could — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
 
 ## Parked in design docs
 
@@ -166,7 +171,7 @@ flowchart TD
 | **Observability suite + economics validation** | Design documented ([ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)); implementation: OTLP + `observability` JSON ([ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md)), `rex-obs-store` ([ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md)), harness | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
 | **VM/container sidecar envelope** (server/fleet) | Linux deployment needs stronger isolation | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 
-**CI:** [CI.md](CI.md) — mock / self-contained default; live LLM not required on PRs.
+**CI:** [CI.md](CI.md) — shipped gates (mock / self-contained default; live LLM not required on PRs). **Planned:** [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R023–R026**).
 
 ## How to refresh this file
 
