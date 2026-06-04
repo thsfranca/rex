@@ -216,15 +216,6 @@ async fn consume_stream(
         }
         let chunk = maybe_chunk.expect("incomplete stream should return early");
 
-        if !chunk.text.is_empty() {
-            match format {
-                CompleteOutputFormat::Text => print!("{}", chunk.text),
-                CompleteOutputFormat::Ndjson => {
-                    let line = format_ndjson_chunk_event(chunk.index, &chunk.text);
-                    emit_ndjson_line_stdout(&line).map_err(CliError::Stdout)?;
-                }
-            }
-        }
         if chunk.done {
             match format {
                 CompleteOutputFormat::Text => println!(),
@@ -234,6 +225,19 @@ async fn consume_stream(
                 }
             }
             return Ok(StreamLifecycle::Completed);
+        }
+
+        if let Some(line) = format_ndjson_stream_event(&chunk) {
+            match format {
+                CompleteOutputFormat::Text => {
+                    if chunk.event.is_empty() || chunk.event == "chunk" {
+                        print!("{}", chunk.text);
+                    }
+                }
+                CompleteOutputFormat::Ndjson => {
+                    emit_ndjson_line_stdout(&line).map_err(CliError::Stdout)?;
+                }
+            }
         }
     }
 }
@@ -270,6 +274,54 @@ fn format_ndjson_chunk_event(index: u64, text: &str) -> String {
         "text": text
     })
     .to_string()
+}
+
+fn format_ndjson_tool_event(index: u64, name: &str, phase: &str, detail: &str) -> String {
+    json!({
+        "event": "tool",
+        "index": index,
+        "name": name,
+        "phase": phase,
+        "detail": detail
+    })
+    .to_string()
+}
+
+fn format_ndjson_step_event(index: u64, phase: &str, summary: &str) -> String {
+    json!({
+        "event": "step",
+        "index": index,
+        "phase": phase,
+        "summary": summary
+    })
+    .to_string()
+}
+
+fn format_ndjson_stream_event(
+    chunk: &rex_proto::rex::v1::StreamInferenceResponse,
+) -> Option<String> {
+    let event = chunk.event.trim();
+    match event {
+        "" | "chunk" => {
+            if chunk.text.is_empty() {
+                None
+            } else {
+                Some(format_ndjson_chunk_event(chunk.index, &chunk.text))
+            }
+        }
+        "tool" => Some(format_ndjson_tool_event(
+            chunk.index,
+            chunk.tool_name.trim(),
+            chunk.phase.trim(),
+            chunk.detail.trim(),
+        )),
+        "step" => Some(format_ndjson_step_event(
+            chunk.index,
+            chunk.phase.trim(),
+            chunk.summary.trim(),
+        )),
+        _ => None,
+    }
 }
 
 fn format_ndjson_done_event(index: u64) -> String {
@@ -475,6 +527,7 @@ mod tests {
             text: "x".to_string(),
             index: 0,
             done: false,
+            ..Default::default()
         };
         assert_eq!(classify_stream_terminal(Some(&in_progress)), None);
         assert_eq!(
@@ -486,6 +539,7 @@ mod tests {
             text: String::new(),
             index: 1,
             done: true,
+            ..Default::default()
         };
         assert_eq!(
             classify_stream_terminal(Some(&terminal)),

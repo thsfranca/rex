@@ -36,4 +36,10 @@ message RunTurnChunk {
   string text = 1;
   uint64 index = 2;
   bool done = 3;
+  // Optional structured stream event. Empty or "chunk" with text = markdown delta.
+  string event = 4;
+  string tool_name = 5;
+  string phase = 6;
+  string summary = 7;
+  string detail = 8;
 }

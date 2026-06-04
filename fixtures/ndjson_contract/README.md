@@ -10,6 +10,7 @@ Consumers:
 | File | Purpose |
 |------|---------|
 | `happy_path.ndjson` | Chunk + terminal `done` stream |
+| `tool_step_stream.ndjson` | Additive `tool` / `step` events + terminal `done` |
 | `sidecar_setup_errors.ndjson` | Terminal `error` codes for RC-08 (`sidecar_unavailable`, `inference_config`) |
 
 Update these together when the wire shape changes.

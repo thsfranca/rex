@@ -71,11 +71,13 @@ impl SidecarService for StubSidecar {
                         text: format!("[broker.inference error: {err}]"),
                         index: 0,
                         done: false,
+                        ..Default::default()
                     });
                     yield Ok(RunTurnChunk {
                         text: String::new(),
                         index: 1,
                         done: true,
+                        ..Default::default()
                     });
                 };
                 return Ok(Response::new(Box::pin(stream)));
@@ -144,12 +146,14 @@ impl SidecarService for StubSidecar {
                     text: piece,
                     index: index as u64,
                     done: false,
+                    ..Default::default()
                 });
             }
             yield Ok(RunTurnChunk {
                 text: String::new(),
                 index: terminal_index,
                 done: true,
+                ..Default::default()
             });
         };
         Ok(Response::new(Box::pin(stream)))

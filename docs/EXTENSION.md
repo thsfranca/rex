@@ -32,9 +32,18 @@ rex-cli complete "<prompt>" --format ndjson --mode <ask|plan|agent> [--model <id
 
 - Extension passes **`--mode`** matching the active session mode on every `complete` call.
 - Optional **`--model`** when the user sets **REX: Model Id** (`rex.modelId`) or passes `--model` on the CLI (otherwise daemon default applies).
-- One JSON object per stdout line (`chunk`, `done`, `error`).
+- One JSON object per stdout line (`chunk`, `done`, `error`; additive non-terminal `tool`, `step`).
 - **`rex-cli` flushes stdout after each NDJSON line** when the consumer is on a pipe (including the extension subprocess), so chunks are visible promptly instead of sitting in a block buffer.
-- Exactly **one** terminal event per request path (`done` **or** `error`).
+- Exactly **one** terminal event per request path (`done` **or** `error`); `tool` and `step` lines may appear mid-stream and are non-terminal.
+
+**Additive stream events (E-UX09):**
+
+| Event | Fields | Purpose |
+|-------|--------|---------|
+| `tool` | `index`, `name`, `phase`, `detail?` | Broker tool lifecycle (`running`, `completed`, `failed`) |
+| `step` | `index`, `phase`, `summary` | Orchestrator / subagent step visibility |
+
+Fixtures: [`fixtures/ndjson_contract/tool_step_stream.ndjson`](../fixtures/ndjson_contract/tool_step_stream.ndjson).
 - `error` objects may expose stable `code` for UX routing.
 
 **Error codes and message quality:** canonical catalog, templates, and review checklist — [ERROR_HANDLING.md](ERROR_HANDLING.md). Wire-shape table (retry guidance):
