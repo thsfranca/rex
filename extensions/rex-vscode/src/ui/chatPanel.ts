@@ -1,5 +1,3 @@
-import * as crypto from "node:crypto";
-
 import * as vscode from "vscode";
 
 import { snapshotActiveEditor } from "../editor/context";
@@ -22,6 +20,8 @@ import type {
 } from "../shared/messages";
 
 import { applyEditToActiveFile } from "./applyEdit";
+import { postToEditorPanel } from "./editorChatPanel";
+import { buildWebviewHtml } from "./webviewHtml";
 
 export const CHAT_VIEW_ID = "rex.chatView";
 export const CHAT_VIEW_SECONDARY_ID = "rex.chatViewSecondary";
@@ -95,6 +95,13 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     return new vscode.Disposable(() => this.dispose());
   }
 
+  async handleExternalMessage(raw: unknown): Promise<void> {
+    if (!isIncomingMessage(raw)) {
+      return;
+    }
+    await this.handleWebviewMessage(raw);
+  }
+
   dispose(): void {
     for (const pending of this.pendingStreams.values()) {
       pending.controller.abort();
@@ -119,7 +126,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       enableScripts: true,
       localResourceRoots: [vscode.Uri.joinPath(this.deps.context.extensionUri, "dist")],
     };
-    webview.html = renderWebviewHtml(webview, this.deps.context.extensionUri);
+    webview.html = buildWebviewHtml(webview, this.deps.context.extensionUri);
     this.webviews.add(webview);
 
     const messageSub = webview.onDidReceiveMessage(async (raw: unknown) => {
@@ -476,6 +483,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     for (const webview of this.webviews) {
       void webview.postMessage(message);
     }
+    postToEditorPanel(message);
   }
 
   private modePolicy(): ModePolicy {
@@ -524,38 +532,6 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   private emitExecutionStep(id: string, phase: "queued" | "running" | "awaiting_approval" | "completed" | "blocked" | "failed" | "cancelled", summary: string): void {
     this.postMessage({ type: "executionStep", payload: { id, phase, summary } });
   }
-}
-
-function renderWebviewHtml(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-  const nonce = createNonce();
-  const scriptUri = webview.asWebviewUri(
-    vscode.Uri.joinPath(extensionUri, "dist", "webview.js"),
-  );
-  const csp = [
-    `default-src 'none'`,
-    `img-src ${webview.cspSource} data:`,
-    `style-src ${webview.cspSource} 'unsafe-inline'`,
-    `font-src ${webview.cspSource}`,
-    `script-src 'nonce-${nonce}'`,
-  ].join("; ");
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="${csp}" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>REX Chat</title>
-</head>
-<body>
-  <div id="rex-root"></div>
-  <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
-</body>
-</html>`;
-}
-
-function createNonce(): string {
-  return crypto.randomBytes(16).toString("base64").replace(/[+/=]/g, "");
 }
 
 function mapThemeKind(theme: vscode.ColorTheme): ThemeKind {

@@ -58,7 +58,7 @@ Canonical design: **[EXTENSION_UX.md](EXTENSION_UX.md)**. One PR slice per row w
 | ID | Phase | Feature | Source(s) | Status |
 |----|-------|---------|-----------|--------|
 | **E-UX01** | P1 | Secondary sidebar chat + activity-bar fallback (VS Code ≥1.106) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX01 | Done |
-| **E-UX02** | P1 | “Open REX in Editor” panel (`createWebviewPanel`) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX02 | Planned |
+| **E-UX02** | P1 | “Open REX in Editor” panel (`createWebviewPanel`) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX02 | Done |
 | **E-UX03** | P1 | Theme / a11y / narrow-width webview hardening | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX03 | Planned |
 | **E-UX04** | P1 | Keybindings + Get Started walkthrough updates | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX04 | Planned |
 | **E-UX05** | P2 | Persisted chat sessions (workspace-scoped) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX05 | Planned |

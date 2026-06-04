@@ -7,6 +7,7 @@ import { configureChatLayoutContext } from "./platform/editorLayout";
 import { DaemonLifecycle, type DaemonLifecycleState } from "./runtime/daemonLifecycle";
 import { streamFailureWantsSetupHint } from "./runtime/userActionableFailure";
 import { ChatPanelProvider, CHAT_VIEW_ID, CHAT_VIEW_SECONDARY_ID } from "./ui/chatPanel";
+import { openEditorChatPanel } from "./ui/editorChatPanel";
 import { createStatusBar, type StatusBar } from "./ui/statusBar";
 import {
   ensureProjectRexConfig,
@@ -156,6 +157,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       } catch {
         await vscode.commands.executeCommand(`${CHAT_VIEW_ID}.focus`);
       }
+    }),
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("rex.openChatInEditor", () => {
+      openEditorChatPanel(context, (raw) => chatPanel.handleExternalMessage(raw));
     }),
   );
 
