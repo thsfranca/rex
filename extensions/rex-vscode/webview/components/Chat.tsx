@@ -11,6 +11,7 @@ import type {
 } from "../../src/shared/messages";
 
 import { Message, type RenderedMessage } from "./Message";
+import { ToolCard } from "./ToolCard";
 
 export interface ChatProps {
   readonly messages: ReadonlyArray<RenderedMessage>;
@@ -210,10 +211,13 @@ export function Chat(props: ChatProps): React.ReactElement {
         {props.timeline.length > 0 ? (
           <div className="rex-timeline" role="status" aria-live="polite">
             {props.timeline.map((entry) => (
-              <div key={`${entry.id}-${entry.phase}-${entry.summary}`} className="rex-timeline__item">
-                <span className="rex-timeline__phase">{entry.phase}</span>
-                <span>{entry.summary}</span>
-              </div>
+              <ToolCard
+                key={`${entry.id}-${entry.phase}-${entry.summary}`}
+                phase={entry.phase}
+                summary={entry.summary}
+                kind={entry.kind}
+                detail={entry.detail}
+              />
             ))}
           </div>
         ) : null}
