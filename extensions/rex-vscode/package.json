@@ -92,6 +92,10 @@
         "title": "REX: Send Selection to Chat"
       },
       {
+        "command": "rex.inlineEditSelection",
+        "title": "REX: Inline Edit Selection"
+      },
+      {
         "command": "rex.explainSelection",
         "title": "REX: Explain Selection"
       },
@@ -124,6 +128,12 @@
         "command": "rex.openChatInEditor",
         "key": "ctrl+shift+e",
         "mac": "cmd+shift+e"
+      },
+      {
+        "command": "rex.inlineEditSelection",
+        "key": "ctrl+shift+i",
+        "mac": "cmd+shift+i",
+        "when": "editorHasSelection"
       }
     ],
     "menus": {
@@ -141,6 +151,11 @@
         {
           "command": "rex.refactorSelection",
           "group": "rex@3",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "rex.inlineEditSelection",
+          "group": "rex@4",
           "when": "editorHasSelection"
         }
       ],
