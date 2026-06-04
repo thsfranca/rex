@@ -9,6 +9,15 @@ import { initialState, reducer } from "./appState";
 import { Chat } from "./components/Chat";
 import { postToHost, subscribeToHost } from "./messageBus";
 
+function parseSlashCommand(raw: string): { command: string | null; prompt: string } {
+  const trimmed = raw.trim();
+  if (!trimmed.startsWith("/")) {
+    return { command: null, prompt: raw };
+  }
+  const [first, ...rest] = trimmed.split(/\s+/);
+  return { command: first.toLowerCase(), prompt: rest.join(" ").trim() };
+}
+
 export function App(): React.ReactElement {
   const [state, dispatch] = React.useReducer(reducer, initialState);
 
@@ -47,7 +56,21 @@ export function App(): React.ReactElement {
   }, [state.messages, state.modePolicy.mode, state.activeSessionId]);
 
   const handleSubmit = (): void => {
-    const trimmed = state.prompt.trim();
+    const { command, prompt } = parseSlashCommand(state.prompt);
+    if (command === "/clear") {
+      handleClear();
+      return;
+    }
+    if (command === "/ask" || command === "/plan" || command === "/agent") {
+      const mode = command.slice(1) as InteractionMode;
+      dispatch({ type: "setMode", value: mode });
+      postToHost({ type: "setMode", mode });
+      if (prompt.length === 0) {
+        dispatch({ type: "setPrompt", value: "" });
+        return;
+      }
+    }
+    const trimmed = (command === null ? state.prompt : prompt).trim();
     if (trimmed.length === 0) {
       return;
     }
