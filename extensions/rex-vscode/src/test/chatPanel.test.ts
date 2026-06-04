@@ -59,9 +59,15 @@ function makeHarness(cliPath: string) {
     show: vi.fn(),
   };
 
+  const workspaceState = {
+    get: vi.fn(() => undefined),
+    update: vi.fn(async () => undefined),
+  };
+
   const context = {
     extensionUri: Uri.from({ scheme: "file", path: "/tmp/rex-extension" }),
     subscriptions: [],
+    workspaceState,
   };
 
   const provider = new ChatPanelProvider({

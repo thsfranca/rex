@@ -87,6 +87,22 @@ export interface ExecutionStepPayload {
   readonly summary: string;
 }
 
+export interface SessionSummary {
+  readonly id: string;
+  readonly title: string;
+  readonly isActive: boolean;
+}
+
+export interface SessionMessagesPayload {
+  readonly sessionId: string;
+  readonly messages: ReadonlyArray<{
+    readonly id: string;
+    readonly role: "user" | "assistant";
+    readonly buffer: string;
+    readonly errorMessage?: string;
+  }>;
+}
+
 export type ExtensionToWebview =
   | { readonly type: "streamStarted"; readonly id: StreamId }
   | { readonly type: "streamChunk"; readonly id: StreamId; readonly text: string }
@@ -107,7 +123,9 @@ export type ExtensionToWebview =
   | { readonly type: "approvalRequested"; readonly payload: ApprovalRequestPayload }
   | { readonly type: "executionStep"; readonly payload: ExecutionStepPayload }
   | { readonly type: "clearChat" }
-  | { readonly type: "statusMessage"; readonly level: "info" | "warn" | "error"; readonly text: string };
+  | { readonly type: "statusMessage"; readonly level: "info" | "warn" | "error"; readonly text: string }
+  | { readonly type: "sessionList"; readonly sessions: ReadonlyArray<SessionSummary> }
+  | { readonly type: "sessionMessages"; readonly payload: SessionMessagesPayload };
 
 export type WebviewToExtension =
   | { readonly type: "ready" }
@@ -131,4 +149,8 @@ export type WebviewToExtension =
   | { readonly type: "setMode"; readonly mode: InteractionMode }
   | { readonly type: "approvalDecision"; readonly payload: ApprovalDecisionPayload }
   | { readonly type: "requestContextSnapshot" }
-  | { readonly type: "clearChatRequested" };
+  | { readonly type: "clearChatRequested" }
+  | { readonly type: "createSession" }
+  | { readonly type: "switchSession"; readonly sessionId: string }
+  | { readonly type: "deleteSession"; readonly sessionId: string }
+  | { readonly type: "saveSessionState"; readonly sessionId: string; readonly messages: SessionMessagesPayload["messages"]; readonly mode: InteractionMode };

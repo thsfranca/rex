@@ -6,6 +6,8 @@ import type {
   InteractionMode,
   ModePolicy,
   PromptContextSnapshot,
+  SessionMessagesPayload,
+  SessionSummary,
   ThemeKind,
 } from "../src/shared/messages";
 
@@ -32,6 +34,8 @@ export interface AppState {
   modePolicy: ModePolicy;
   pendingApprovals: ApprovalRequestPayload[];
   timeline: { id: string; summary: string; phase: string }[];
+  sessions: SessionSummary[];
+  activeSessionId?: string;
 }
 
 export type Action =
@@ -64,7 +68,9 @@ export const initialState: AppState = {
   },
   pendingApprovals: [],
   timeline: [],
+  sessions: [],
 };
+
 
 export function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -223,6 +229,31 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
           { id: message.payload.id, phase: message.payload.phase, summary: message.payload.summary },
         ].slice(-20),
       };
+    case "sessionList":
+      return {
+        ...state,
+        sessions: [...message.sessions],
+        activeSessionId: message.sessions.find((session) => session.isActive)?.id,
+      };
+    case "sessionMessages": {
+      const restored = message.payload.messages.map((entry: SessionMessagesPayload["messages"][number]) => ({
+        id: entry.id,
+        role: entry.role,
+        buffer: entry.buffer,
+        trailingRaw: "",
+        streaming: false,
+        errorMessage: entry.errorMessage,
+      }));
+      return {
+        ...state,
+        messages: restored,
+        streams: new Map(),
+        applyResults: new Map(),
+        streaming: false,
+        activeStreamId: undefined,
+        activeSessionId: message.payload.sessionId,
+      };
+    }
   }
 }
 

@@ -1,11 +1,11 @@
 import * as React from "react";
 
 import type {
-  ApprovalRequestPayload,
   ApplyGranularity,
   InteractionMode,
   ModePolicy,
   PromptContextSnapshot,
+  SessionSummary,
   ThemeKind,
 } from "../../src/shared/messages";
 
@@ -16,11 +16,12 @@ export interface ChatProps {
   readonly theme: ThemeKind;
   readonly context: PromptContextSnapshot | null;
   readonly attachContext: boolean;
+  readonly sessions: ReadonlyArray<SessionSummary>;
   readonly streaming: boolean;
   readonly daemonReady: boolean;
   readonly modePolicy: ModePolicy;
   readonly timeline: ReadonlyArray<{ id: string; summary: string; phase: string }>;
-  readonly pendingApprovals: ReadonlyArray<ApprovalRequestPayload>;
+  readonly pendingApprovals: ReadonlyArray<{ id: string; title: string; detail: string }>;
   readonly prompt: string;
   readonly onPromptChange: (value: string) => void;
   readonly onAttachContextChange: (value: boolean) => void;
@@ -37,6 +38,8 @@ export interface ChatProps {
     code: string;
     granularity: ApplyGranularity;
   }) => void;
+  readonly onCreateSession: () => void;
+  readonly onSwitchSession: (sessionId: string) => void;
 }
 
 export function Chat(props: ChatProps): React.ReactElement {
@@ -78,6 +81,7 @@ export function Chat(props: ChatProps): React.ReactElement {
             <select
               value={props.modePolicy.mode}
               onChange={(event) => props.onModeChange(event.target.value as InteractionMode)}
+              aria-label="Interaction mode"
             >
               <option value="ask">Ask</option>
               <option value="plan">Plan</option>
@@ -86,11 +90,30 @@ export function Chat(props: ChatProps): React.ReactElement {
           </label>
         </div>
         <span className="rex-header__actions">
+          <button type="button" onClick={props.onCreateSession} aria-label="New chat session">
+            New
+          </button>
           <button type="button" onClick={props.onClear} aria-label="Clear chat">
             Clear
           </button>
         </span>
       </header>
+      {props.sessions.length > 1 ? (
+        <div className="rex-session-bar" role="tablist" aria-label="Chat sessions">
+          {props.sessions.map((session) => (
+            <button
+              key={session.id}
+              type="button"
+              role="tab"
+              aria-selected={session.isActive}
+              className={session.isActive ? "rex-session-bar__tab rex-session-bar__tab--active" : "rex-session-bar__tab"}
+              onClick={() => props.onSwitchSession(session.id)}
+            >
+              {session.title}
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="rex-policy-note">{props.modePolicy.summary}</div>
       {props.pendingApprovals.map((approval) => (
         <div key={approval.id} className="rex-approval-card" role="alert">
