@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: Rex Economics
+    folder: Rex Economics
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

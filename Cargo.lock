@@ -1456,6 +1456,8 @@ dependencies = [
  "rex-cli",
  "rex-config",
  "rex-daemon",
+ "rex-obs-api",
+ "rex-obs-store",
  "serde_json",
  "tempfile",
  "tokio",
@@ -1511,6 +1513,22 @@ dependencies = [
  "tokio-stream",
  "tonic 0.14.6",
  "tower 0.5.3",
+]
+
+[[package]]
+name = "rex-obs-api"
+version = "1.0.0"
+dependencies = [
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "rex-config",
+ "rex-obs-store",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
 ]
 
 [[package]]

@@ -43,7 +43,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
 | `agent` | `approvals_enabled`, `max_tool_steps`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gate; sidecar tool loop cap (default **12**); intra-turn compaction trigger as fraction of `broker.max_tool_result_bytes` (default **0.25**); optional goal-hint read pruning for payloads >100 lines (**R031**, default off). |
-| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `read_api`, `ui`, `otlp`, `store` | SQLite store + OTLP **implemented**; read API + bundled Grafana **planned** — [Observability](#observability), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md). |
+| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `read_api`, `ui`, `otlp`, `store` | SQLite store (interim) + OTLP + read API + `rex obs` **implemented**; Rex-native store target — [Observability](#observability), [OBS_READ_API.md](OBS_READ_API.md), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md). |
 
 Minimal example:
 
@@ -96,9 +96,9 @@ When `observability.enabled` is `true` in merged JSON, the daemon enables **`rex
 | `observability.enabled` | `false` | Master switch: store ingest + read API path |
 | `observability.service_name` | `rex-daemon` | OTel resource `service.name` |
 | `observability.custom_sidecar_metrics` | `true` | When `false`, drop sidecar-registered custom metrics at ingest |
-| `observability.read_api.listen` | `127.0.0.1:9470` | Loopback bind for Rex read API — **planned** |
-| `observability.ui.enabled` | `true` when observability on | Enable bundled Grafana supervision — **planned** |
-| `observability.ui.grafana.port` | `3000` | Local Grafana HTTP port — **planned** |
+| `observability.read_api.listen` | `127.0.0.1:9470` | Loopback bind for Rex read API — [OBS_READ_API.md](OBS_READ_API.md) |
+| `observability.ui.enabled` | `true` when observability on | Enable Grafana supervision in `rex obs up` |
+| `observability.ui.grafana.port` | `3000` | Local Grafana HTTP port |
 | `observability.otlp.endpoint` | (none) | Optional interop: OTLP URL when replication enabled |
 | `observability.otlp.protocol` | `grpc` | `grpc` or `http/protobuf` (interop only) |
 | `observability.store.engine` | `sqlite` | `sqlite` (default) or `mmap` (macOS opt-in) — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) |

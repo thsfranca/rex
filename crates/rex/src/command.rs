@@ -7,6 +7,7 @@ pub enum TopLevelCommand {
     Proto(Vec<String>),
     Sidecar(Vec<String>),
     Gateway(Vec<String>),
+    Obs(Vec<String>),
 }
 
 pub fn parse_top_level(mut args: impl Iterator<Item = String>) -> Result<TopLevelCommand, String> {
@@ -27,6 +28,7 @@ pub fn parse_top_level(mut args: impl Iterator<Item = String>) -> Result<TopLeve
         Some("proto") => Ok(TopLevelCommand::Proto(args.collect())),
         Some("sidecar") => Ok(TopLevelCommand::Sidecar(args.collect())),
         Some("gateway") => Ok(TopLevelCommand::Gateway(args.collect())),
+        Some("obs") => Ok(TopLevelCommand::Obs(args.collect())),
         Some(other) => Err(format!("Unknown command: {other}")),
     }
 }
@@ -42,6 +44,7 @@ Usage:
   rex proto <install|path|doctor>
   rex sidecar <list|init|doctor>
   rex gateway <init|doctor>
+  rex obs <serve|up|down|doctor|catalog>
 
 Run the local daemon, query status, or stream a completion via the daemon UDS API."
     );
@@ -77,6 +80,14 @@ mod tests {
         assert_eq!(
             parse_top_level(["config".to_string(), "show".to_string()].into_iter()).unwrap(),
             TopLevelCommand::Config(vec!["show".to_string()])
+        );
+    }
+
+    #[test]
+    fn parses_obs_subcommand() {
+        assert_eq!(
+            parse_top_level(["obs".to_string(), "serve".to_string()].into_iter()).unwrap(),
+            TopLevelCommand::Obs(vec!["serve".to_string()])
         );
     }
 }

@@ -3,6 +3,7 @@ members = [
   "crates/rex-proto",
   "crates/rex-config",
   "crates/rex-obs-store",
+  "crates/rex-obs-api",
   "crates/rex-daemon",
   "crates/rex-cli",
   "crates/rex",

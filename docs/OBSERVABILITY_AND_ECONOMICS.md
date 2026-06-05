@@ -1,6 +1,6 @@
 # Observability and economics validation (design hub)
 
-This document is the **single source** for Rex **observability beyond stdout grep** and how it connects to the **economics validation program**. **Design documented** — ADR 0026 defines Rex-owned storage and bundled Grafana; store ingest, read API, and `rex obs up` are **planned** in code.
+This document is the **single source** for Rex **observability beyond stdout grep** and how it connects to the **economics validation program**. **partial** — Phase 2 write path + Phase 3–5 read API, Grafana Rex OTel datasource plugin, and `rex obs` CLI **implemented**; mmap engine and sidecar observability API remain **planned**.
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention.
 
@@ -110,10 +110,10 @@ flowchart LR
 
 | Surface | Role | Status |
 |---------|------|--------|
-| **Rex read API** | Loopback HTTP: catalog, query streams, rollups, live SSE | planned |
-| **Rex Grafana OTel datasource** | Grafana plugin → read API; OTel field mapping | planned |
-| **`rex obs up`** | Start read API + vendored Grafana + provisioning; open `http://127.0.0.1:<port>` | planned |
-| **Provisioning paths** | `$REX_ROOT/obs/grafana/provisioning/` (datasources, dashboards) | planned |
+| **Rex read API** | Loopback HTTP: catalog, query streams, rollups, live SSE | **implemented** (SSE deferred) — [OBS_READ_API.md](OBS_READ_API.md) |
+| **Rex Grafana OTel datasource** | Grafana plugin → read API; OTel field mapping | **implemented** — `integrations/grafana-rex-otel/` |
+| **`rex obs up`** | Start read API + Grafana + provisioning; open `http://127.0.0.1:<port>` | **implemented** |
+| **Provisioning paths** | `$REX_ROOT/obs/grafana/provisioning/` (datasources, dashboards) | **implemented** via `templates/obs/` copy |
 | **`SidecarObservabilityService`** | Daemon UDS ingest for sidecar metrics | planned |
 
 ## Sidecar observability API (planned)
@@ -255,9 +255,9 @@ rg 'stream.metrics' /path/to/daemon.log
 | **1** | Design hubs, ADRs, validation program | **design documented** |
 | **2** | Store write path + bounded OTLP export (**sqlite** engine) | **partial** (sqlite + core OTLP shipped; sidecar signals pending) |
 | **2b** | **mmap** store engine (macOS opt-in) | planned |
-| **3** | Rex observability read API (loopback) | planned |
-| **4** | Bundled Grafana kit + Rex OTel datasource + default dashboards | planned |
-| **5** | **`rex obs up`** (one command local suite) | planned |
+| **3** | Rex observability read API (loopback) | **implemented** — [OBS_READ_API.md](OBS_READ_API.md) |
+| **4** | Bundled Grafana kit + Rex OTel datasource + default dashboards | **partial** — plugin + provisioning templates; vendor binary operator-provided |
+| **5** | **`rex obs up`** (one command local suite) | **implemented** — `rex obs serve|up|down|doctor|catalog` |
 | **6** | `SidecarObservabilityService` + realtime live feed | planned |
 | **7** | `rex obs` CLI helpers, retention, eval harness | planned |
 

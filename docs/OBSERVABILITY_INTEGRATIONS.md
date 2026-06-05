@@ -2,7 +2,7 @@
 
 **Diátaxis role:** how-to — run the **Rex-owned** local observability suite: storage, read API, bundled Grafana, and default dashboards.
 
-**Status:** **design documented** — bundled Grafana suite and Rex datasource are **planned** in code ([ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md)).
+**Status:** **partial** — read API + `rex obs` + Rex OTel datasource plugin shipped; Grafana binary from PATH or `$REX_ROOT/obs/vendor/grafana/bin/` ([ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md)).
 
 **Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) · [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) · **Design hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
 
@@ -20,7 +20,7 @@ Rex **owns telemetry storage** and serves **OpenTelemetry-shaped** data to **bun
 - `observability.enabled: true` in merged JSON.
 - `rex-daemon` running (started by `rex obs up` or separately).
 
-## Quick start (planned)
+## Quick start
 
 ```bash
 rex obs up

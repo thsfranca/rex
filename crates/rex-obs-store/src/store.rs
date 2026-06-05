@@ -120,6 +120,32 @@ impl ObsStore {
                 })?;
         Ok(count as u64)
     }
+
+    pub(crate) fn connection(&self) -> &Connection {
+        &self.conn
+    }
+}
+
+impl crate::query::ObsQuery for ObsStore {
+    fn query_streams(
+        &self,
+        filter: &crate::query::StreamQueryFilter,
+    ) -> Result<Vec<crate::query::QueriedStream>, ObsStoreError> {
+        crate::query::query_streams_impl(self.connection(), filter)
+    }
+}
+
+impl crate::query::ObsQuery for SharedObsStore {
+    fn query_streams(
+        &self,
+        filter: &crate::query::StreamQueryFilter,
+    ) -> Result<Vec<crate::query::QueriedStream>, ObsStoreError> {
+        let guard = self
+            .inner
+            .lock()
+            .map_err(|_| ObsStoreError::Sqlite(rusqlite::Error::InvalidQuery))?;
+        guard.query_streams(filter)
+    }
 }
 
 /// Thread-safe handle for non-blocking appends from async daemon code.

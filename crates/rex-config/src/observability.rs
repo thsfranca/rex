@@ -9,6 +9,8 @@ pub const DEFAULT_STORE_ENGINE_MMAP: &str = "mmap";
 pub const DEFAULT_STORE_PATH_SQLITE: &str = "obs/store.sqlite";
 pub const DEFAULT_STORE_PATH_MMAP: &str = "obs/store.rexobs";
 pub const DEFAULT_OTLP_PROTOCOL: &str = "grpc";
+pub const DEFAULT_READ_API_LISTEN: &str = "127.0.0.1:9470";
+pub const DEFAULT_GRAFANA_PORT: u16 = 3000;
 
 pub fn observability_enabled(obs: &ObservabilityConfig) -> bool {
     obs.enabled.unwrap_or(false)
@@ -49,7 +51,33 @@ pub fn validate_observability(obs: &ObservabilityConfig) -> Result<(), ConfigErr
         )));
     }
 
+    validate_read_api_listen(&obs.read_api.listen)?;
+
     Ok(())
+}
+
+pub fn validate_read_api_listen(listen: &str) -> Result<(), ConfigError> {
+    let trimmed = listen.trim();
+    if trimmed.is_empty() {
+        return Err(ConfigError::Validation(
+            "observability.read_api.listen must not be empty".to_string(),
+        ));
+    }
+    let host = trimmed
+        .rsplit_once(':')
+        .map(|(host, _)| host)
+        .unwrap_or(trimmed);
+    let host_lower = host.to_ascii_lowercase();
+    if host_lower != "127.0.0.1" && host_lower != "localhost" && host_lower != "::1" {
+        return Err(ConfigError::Validation(format!(
+            "observability.read_api.listen must bind loopback only (got host {host})"
+        )));
+    }
+    Ok(())
+}
+
+pub fn ui_enabled(obs: &ObservabilityConfig) -> bool {
+    obs.ui.enabled.unwrap_or_else(|| observability_enabled(obs))
 }
 
 pub fn resolve_store_path(rex_root: &Path, store: &StoreConfig) -> PathBuf {
@@ -139,6 +167,15 @@ mod tests {
         cfg.observability.store.engine = "mmap".to_string();
         let err = validate_observability(&cfg.observability).expect_err("mmap");
         assert!(err.to_string().contains("mmap store not implemented"));
+    }
+
+    #[test]
+    fn non_loopback_read_api_rejected() {
+        let mut cfg = RexConfig::defaults();
+        cfg.observability.enabled = Some(true);
+        cfg.observability.read_api.listen = "0.0.0.0:9470".to_string();
+        let err = validate_observability(&cfg.observability).expect_err("bind");
+        assert!(err.to_string().contains("loopback"));
     }
 
     #[test]
