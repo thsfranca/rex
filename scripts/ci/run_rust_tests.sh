@@ -33,6 +33,20 @@ if ! "${test_cmd[@]}" 2>&1 | tee "ci-observability/test.log"; then
   hint="Run cargo test --workspace --all-targets --locked locally (or: cargo install cargo-nextest && cargo nextest run --workspace --all-targets --locked)."
   echo "::error::Test execution failed."
   echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
+elif ! ./scripts/ci/test_ci_path_relevance.sh 2>&1 | tee "ci-observability/path-relevance-test.log"; then
+  result="failure"
+  fail_code="TEST_FAIL"
+  fail_stage="TestExecution"
+  hint="Run scripts/ci/test_ci_path_relevance.sh locally."
+  echo "::error::CI path relevance contract tests failed."
+  echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
+elif ! ./scripts/ci/test_ci_path_filters_sync.sh 2>&1 | tee "ci-observability/path-filters-sync-test.log"; then
+  result="failure"
+  fail_code="TEST_FAIL"
+  fail_stage="TestExecution"
+  hint="Run scripts/ci/test_ci_path_filters_sync.sh locally."
+  echo "::error::CI path filter sync check failed."
+  echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
 elif ! ./scripts/ci/test_enforce_ci_gate.sh 2>&1 | tee "ci-observability/gate-script-test.log"; then
   result="failure"
   fail_code="TEST_FAIL"

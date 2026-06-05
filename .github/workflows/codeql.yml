@@ -22,9 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      rust_relevant: ${{ steps.set_outputs.outputs.rust_relevant }}
-      extension_relevant: ${{ steps.set_outputs.outputs.extension_relevant }}
-      sidecar_relevant: ${{ steps.set_outputs.outputs.sidecar_relevant }}
+      rust_codeql_relevant: ${{ steps.detect.outputs.rust_codeql_relevant }}
+      extension_codeql_relevant: ${{ steps.detect.outputs.extension_codeql_relevant }}
+      python_codeql_relevant: ${{ steps.detect.outputs.python_codeql_relevant }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,76 +32,13 @@ jobs:
           fetch-depth: 1
 
       - name: Detect changed paths
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            rust_changed:
-              - 'crates/**'
-              - 'sidecars/rex-agent/**'
-              - 'proto/**'
-              - 'Cargo.toml'
-              - 'Cargo.lock'
-              - 'scripts/install-cli.sh'
-              - 'scripts/ci/run_rust_*.sh'
-              - 'scripts/ci/run_sidecar_verify.sh'
-              - 'scripts/ci/run_*sidecar*.sh'
-              - 'scripts/ci/builtin_sidecars.txt'
-            extension_changed:
-              - 'extensions/rex-vscode/**'
-              - 'scripts/ci/run_extension*.sh'
-            ci_changed:
-              - '.github/workflows/**'
-              - '.github/dependabot.yml'
-              - '.github/codeql/**'
-              - 'scripts/ci/**'
-              - 'scripts/release/**'
-              - 'release-plz.toml'
-              - 'release-please-config.json'
-              - '.release-please-manifest.json'
-              - 'dist-workspace.toml'
-            global_changed:
-              - 'Cargo.toml'
-              - 'Cargo.lock'
-            sidecar_changed:
-              - 'sidecars/**'
-              - 'crates/rex-sidecar-stub/**'
-              - 'crates/rex-daemon/tests/stub_sidecar_smoke.rs'
-              - 'crates/rex-daemon/tests/agent_scaffold_smoke.rs'
-              - 'proto/rex/sidecar/**'
-              - 'scripts/ci/run_sidecar_verify.sh'
-              - 'scripts/ci/run_*sidecar*.sh'
-              - 'scripts/ci/builtin_sidecars.txt'
-
-      - name: Set relevance outputs
-        id: set_outputs
-        env:
-          RUST_CHANGED: ${{ steps.filter.outputs.rust_changed }}
-          EXT_CHANGED: ${{ steps.filter.outputs.extension_changed }}
-          SIDECAR_CHANGED: ${{ steps.filter.outputs.sidecar_changed }}
-          CI_CHANGED: ${{ steps.filter.outputs.ci_changed }}
-          GLOBAL_CHANGED: ${{ steps.filter.outputs.global_changed }}
-        run: |
-          rust_relevant=false
-          extension_relevant=false
-          sidecar_relevant=false
-          if [ "${RUST_CHANGED}" = "true" ] || [ "${CI_CHANGED}" = "true" ] || [ "${GLOBAL_CHANGED}" = "true" ]; then
-            rust_relevant=true
-          fi
-          if [ "${EXT_CHANGED}" = "true" ] || [ "${CI_CHANGED}" = "true" ] || [ "${GLOBAL_CHANGED}" = "true" ]; then
-            extension_relevant=true
-          fi
-          if [ "${SIDECAR_CHANGED}" = "true" ] || [ "${CI_CHANGED}" = "true" ] || [ "${GLOBAL_CHANGED}" = "true" ]; then
-            sidecar_relevant=true
-          fi
-          echo "rust_relevant=${rust_relevant}" >> "$GITHUB_OUTPUT"
-          echo "extension_relevant=${extension_relevant}" >> "$GITHUB_OUTPUT"
-          echo "sidecar_relevant=${sidecar_relevant}" >> "$GITHUB_OUTPUT"
+        id: detect
+        uses: ./.github/actions/detect-ci-changes
 
   analyze-rust:
     name: Analyze (rust)
     needs: [changes]
-    if: ${{ needs.changes.outputs.rust_relevant == 'true' }}
+    if: ${{ github.event_name == 'schedule' || needs.changes.outputs.rust_codeql_relevant == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -151,7 +88,7 @@ jobs:
   analyze-javascript:
     name: Analyze (javascript)
     needs: [changes]
-    if: ${{ needs.changes.outputs.extension_relevant == 'true' }}
+    if: ${{ github.event_name == 'schedule' || needs.changes.outputs.extension_codeql_relevant == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -201,7 +138,7 @@ jobs:
   analyze-python:
     name: Analyze (python)
     needs: [changes]
-    if: ${{ needs.changes.outputs.sidecar_relevant == 'true' }}
+    if: ${{ github.event_name == 'schedule' || needs.changes.outputs.python_codeql_relevant == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

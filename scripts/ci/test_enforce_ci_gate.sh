@@ -24,6 +24,7 @@ run_gate_case() {
   local expected_exit="$7"
   local expected_signal_line="$8"
   local guidelines_res="${9:-success}"
+  local guidelines_rel="${10:-true}"
 
   local tmp_dir
   tmp_dir="$(mktemp -d)"
@@ -36,6 +37,7 @@ run_gate_case() {
     RUST_RELEVANT="${rust_rel}" \
     EXTENSION_RELEVANT="${ext_rel}" \
     SIDECAR_RELEVANT="${sidecar_rel}" \
+    GUIDELINES_RELEVANT="${guidelines_rel}" \
     RUST_RESULT="${rust_res}" \
     EXTENSION_RESULT="${ext_res}" \
     SIDECAR_RESULT="${sidecar_res}" \
@@ -77,6 +79,7 @@ run_gate_case "false" "false" "false" "skipped" "skipped" "skipped" 0 "::notice:
 run_gate_case "false" "false" "false" "success" "success" "success" 0 "::notice::Top-level CI gate passed."
 run_gate_case "false" "true" "false" "skipped" "success" "skipped" 0 "::notice::Top-level CI gate passed."
 run_gate_case "true" "false" "true" "success" "skipped" "success" 0 "::notice::Top-level CI gate passed."
+run_gate_case "false" "false" "false" "skipped" "skipped" "skipped" 0 "::notice::Top-level CI gate passed." "skipped" "false"
 run_gate_case "true" "true" "true" "success" "success" "success" 1 "CI_SIGNAL code=GUIDELINES_FAIL" "failure"
 
 echo "enforce_ci_gate contract tests passed."
