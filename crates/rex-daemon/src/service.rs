@@ -30,6 +30,7 @@ use crate::broker::{
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::http_openai_compat::broker_inference_completion;
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
+use crate::observability::{observability_from_settings, StreamEconomicsDraft};
 use crate::plugins::{
     BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
 };
@@ -53,6 +54,7 @@ pub struct RexDaemonService {
     policy: PolicyEngine,
     approval_gate: Arc<dyn ApprovalGate>,
     sidecar: SharedSupervisor,
+    observability: Option<Arc<crate::observability::ObservabilityRuntime>>,
 }
 
 const STREAM_CHUNK_DELAY_MS: u64 = 35;
@@ -76,6 +78,7 @@ impl RexDaemonService {
             policy,
             approval_gate,
             sidecar,
+            observability: observability_from_settings(),
         }
     }
 
@@ -540,6 +543,20 @@ impl RexService for RexDaemonService {
         let sidecar = self.sidecar.clone();
         let sidecar_socket = self.sidecar.config().socket_path.clone();
         let turn_id_for_stream = correlation.turn_id.clone();
+        let observability = self.observability.clone();
+        let economics_draft = observability.as_ref().map(|obs| StreamEconomicsDraft {
+            snapshot_id: obs.snapshot_id().to_string(),
+            request_id,
+            trace_id: trace_id.clone(),
+            turn_id: correlation.turn_id.clone(),
+            route: route_label.clone(),
+            cache_decision: cache_decision_state.label().to_string(),
+            decision_id: decision_id.clone(),
+            inference_runtime: inference_runtime.to_string(),
+            mode: log_mode.to_string(),
+            model: log_model.to_string(),
+            metrics: pipeline_result.metrics.clone(),
+        });
         let output = stream! {
             let mut chunk_count: u64 = 0;
             let mut done_seen = false;
@@ -580,13 +597,23 @@ impl RexService for RexDaemonService {
                             yield Ok(chunk);
                         }
                         Err(err) => {
+                            let elapsed_ms = request_started.elapsed().as_millis() as u64;
                             println!(
-                                "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
+                                "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={elapsed_ms}",
                                 StreamLifecycle::Failed.as_str(),
                                 err.code() as i32,
                                 err.message(),
-                                request_started.elapsed().as_millis()
                             );
+                            if let (Some(obs), Some(draft)) =
+                                (observability.as_ref(), economics_draft.clone())
+                            {
+                                obs.record_terminal_async(
+                                    draft,
+                                    "grpc_error",
+                                    elapsed_ms,
+                                    chunk_count,
+                                );
+                            }
                             yield Err(err);
                             return;
                         }
@@ -614,31 +641,50 @@ impl RexService for RexDaemonService {
                             }
                         }
                         Err(err) => {
+                            let elapsed_ms = request_started.elapsed().as_millis() as u64;
                             println!(
-                                "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={}",
+                                "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=error stream.terminal=grpc_error grpc_code={} message={} elapsed_ms={elapsed_ms}",
                                 StreamLifecycle::Failed.as_str(),
                                 err.code() as i32,
                                 err.message(),
-                                request_started.elapsed().as_millis()
                             );
+                            if let (Some(obs), Some(draft)) =
+                                (observability.as_ref(), economics_draft.clone())
+                            {
+                                obs.record_terminal_async(
+                                    draft,
+                                    "grpc_error",
+                                    elapsed_ms,
+                                    chunk_count,
+                                );
+                            }
                             yield Err(err);
                             return;
                         }
                     }
                 }
             }
+            let elapsed_ms = request_started.elapsed().as_millis() as u64;
             if done_seen {
                 println!(
-                    "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.terminal=done chunks_sent={chunk_count} elapsed_ms={}",
+                    "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.terminal=done chunks_sent={chunk_count} elapsed_ms={elapsed_ms}",
                     StreamLifecycle::Completed.as_str(),
-                    request_started.elapsed().as_millis()
                 );
+                if let (Some(obs), Some(draft)) =
+                    (observability.as_ref(), economics_draft.clone())
+                {
+                    obs.record_terminal_async(draft, "done", elapsed_ms, chunk_count);
+                }
             } else {
                 println!(
-                    "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=incomplete stream.terminal=missing_done chunks_sent={chunk_count} elapsed_ms={}",
+                    "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=incomplete stream.terminal=missing_done chunks_sent={chunk_count} elapsed_ms={elapsed_ms}",
                     StreamLifecycle::Interrupted.as_str(),
-                    request_started.elapsed().as_millis()
                 );
+                if let (Some(obs), Some(draft)) =
+                    (observability.as_ref(), economics_draft.clone())
+                {
+                    obs.record_terminal_async(draft, "missing_done", elapsed_ms, chunk_count);
+                }
                 yield Err(Status::internal(
                     "incomplete inference stream: missing final done chunk",
                 ));

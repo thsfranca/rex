@@ -49,6 +49,8 @@ mod gateway_supervisor;
 mod http_openai_compat;
 #[path = "../src/l1_cache.rs"]
 mod l1_cache;
+#[path = "../src/observability.rs"]
+mod observability;
 #[allow(dead_code)]
 #[path = "../src/plugins.rs"]
 mod plugins;
