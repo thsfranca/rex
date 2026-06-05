@@ -1,7 +1,7 @@
 # ADR 0010: Daemon exports observability via OTLP; sidecar observability API
 
 - **Date:** 2026-05-24
-- **Status:** Accepted
+- **Status:** Accepted — **partially superseded by [ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md)** (BYOT-default visualization and OTLP-as-primary-UI-path). Daemon ingest, semconv, and `SidecarObservabilityService` remain.
 
 ## Context
 
@@ -58,6 +58,6 @@ Rejected alternatives considered:
 ## Related
 
 - [ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md) · [ADR 0008](0008-dedicated-sidecar-control-plane-api.md)
-- [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md)
+- [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md)
 - [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md) · [OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md) · [CONFIGURATION.md](../../CONFIGURATION.md) · [SIDECAR_RUNTIME.md](../../SIDECAR_RUNTIME.md)
 - [README.md](README.md) (index)

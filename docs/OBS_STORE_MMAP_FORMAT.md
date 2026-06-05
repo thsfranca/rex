@@ -182,7 +182,7 @@ Promote v2 only when benchmarks on **1M synthetic streams** show v1 disk or inge
 | Rollup query | Incremental musli slice | SQL + row decode | Zero-copy dense |
 | Disk (1M streams) | ~4–8 MB target | ~15–20 MB | ~2–4 MB |
 | Migrations | `format_version` + layouts | `ALTER TABLE` | Multi-layout + codecs |
-| Grafana bridge | `rex obs export` | SQLite file datasource | Export only |
+| Grafana UI path | Rex read API + datasource | Rex read API + datasource | Rex read API + datasource |
 | CI | macOS tests | Linux + macOS | macOS + fuzz |
 
 ## Promotion gates (default `engine` flip sqlite → mmap)
@@ -217,6 +217,6 @@ All must pass before changing the JSON default:
 |-----|----------------|
 | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | Parent hub |
 | [CONFIGURATION.md](CONFIGURATION.md) | `observability.store.*` keys |
-| [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | BYOT bridges |
+| [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | Bundled Grafana suite |
 | [ERROR_HANDLING.md](ERROR_HANDLING.md) | Planned store error codes |
 | [ROADMAP.md](ROADMAP.md) | Implementation queue |

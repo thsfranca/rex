@@ -43,7 +43,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
 | `agent` | `approvals_enabled`, `max_tool_steps`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gate; sidecar tool loop cap (default **12**); intra-turn compaction trigger as fraction of `broker.max_tool_result_bytes` (default **0.25**); optional goal-hint read pruning for payloads >100 lines (**R031**, default off). |
-| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `otlp`, `store` | Economics telemetry, local store, OTLP export — **planned**; see [Observability (planned)](#observability-planned). |
+| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `read_api`, `ui`, `otlp`, `store` | Rex-owned store + bundled Grafana suite — **planned**; see [Observability](#observability), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md). |
 
 Minimal example:
 
@@ -85,24 +85,27 @@ Minimal example:
 
 **Workspace root (product path):** Set `workspace.root` to an absolute project path in `.rex/config.json` (extension auto-start writes this when a folder is open). Unset or `"."` without `allow_cwd_fallback` causes broker and `StreamInference` to fail closed. For harness tests only: `workspace.allow_cwd_fallback: true` in JSON or `REX_ALLOW_CWD_WORKSPACE=1` in the environment.
 
-## Observability (planned)
+## Observability
 
-**Status:** design documented — not read by daemon code yet. Hubs: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). ADRs: [0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [0025](architecture/decisions/0025-dual-economics-store-engines.md).
+**Status:** **design documented** — ADR 0026 defines Rex-owned storage and bundled Grafana via Rex OTel datasource; store ingest, read API, and `rex obs up` are **planned** in code. Hubs: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). ADRs: [0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [0025](architecture/decisions/0025-dual-economics-store-engines.md), [0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md).
 
-When `observability.enabled` is `true` in merged JSON, the daemon will enable **embedded economics store** (`$REX_ROOT/<store.path>`) and **OTLP export** together. When `false` or omitted, phase 0 **stdout grep** only.
+When `observability.enabled` is `true` in merged JSON, the daemon will enable **`rex-obs-store`** (`$REX_ROOT/<store.path>`) as system of record. Bundled Grafana will read via the **Rex observability read API** (planned), not external TSDB queries. Optional **`observability.otlp.*`** replicates to operator backends when configured (interop **Could**). When `false` or omitted, phase 0 **stdout grep** only.
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `observability.enabled` | `false` | Master switch: store + OTLP |
+| `observability.enabled` | `false` | Master switch: store ingest + read API path |
 | `observability.service_name` | `rex-daemon` | OTel resource `service.name` |
-| `observability.custom_sidecar_metrics` | `true` | When `false`, drop sidecar-registered custom metrics at export |
-| `observability.otlp.endpoint` | (none) | Operator collector OTLP URL when enabled |
-| `observability.otlp.protocol` | `grpc` | `grpc` or `http/protobuf` |
+| `observability.custom_sidecar_metrics` | `true` | When `false`, drop sidecar-registered custom metrics at ingest |
+| `observability.read_api.listen` | `127.0.0.1:9470` | Loopback bind for Rex read API — **planned** |
+| `observability.ui.enabled` | `true` when observability on | Enable bundled Grafana supervision — **planned** |
+| `observability.ui.grafana.port` | `3000` | Local Grafana HTTP port — **planned** |
+| `observability.otlp.endpoint` | (none) | Optional interop: OTLP URL when replication enabled |
+| `observability.otlp.protocol` | `grpc` | `grpc` or `http/protobuf` (interop only) |
 | `observability.store.engine` | `sqlite` | `sqlite` (default) or `mmap` (macOS opt-in) — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) |
 | `observability.store.path` | `obs/store.sqlite` when `engine=sqlite`; `obs/store.rexobs` when `engine=mmap` | Path relative to `$REX_ROOT`; should match engine |
 | `observability.store.format_version` | `1` | Mmap file header version; ignored for sqlite until needed |
 
-Your **OpenTelemetry Collector** may use its own env or yaml; Rex reads only the `observability` JSON section.
+Keys marked **planned** are documented for the bundled Grafana suite; the daemon may ignore them until implementation PRs land.
 
 ## Legacy environment variables (deprecated)
 

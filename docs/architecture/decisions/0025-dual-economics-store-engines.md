@@ -27,7 +27,7 @@ CI runs on **Linux** ([CI.md](../../CI.md)); the mmap engine must not be require
 
 6. **Default engine promotion** — Remains **`sqlite`** until promotion gates in [OBS_STORE_MMAP_FORMAT.md](../../OBS_STORE_MMAP_FORMAT.md) §Promotion gates are met; then a follow-up ADR amendment may flip the JSON default.
 
-7. **BYOT** — Grafana SQLite datasource (bridge C) applies to **`sqlite` only**; mmap operators use OTLP, Prometheus scrape, or planned **`rex obs export`** ([OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md)).
+7. **Grafana UI** — Both engines expose data via the **Rex observability read API** and Rex Grafana datasource ([ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md)); Grafana does not read store files directly.
 
 8. **Privacy** — No raw prompts or file bodies in either engine ([ADR 0021](0021-rex-owned-economics-store-byot-visualization.md)).
 
@@ -45,5 +45,5 @@ CI runs on **Linux** ([CI.md](../../CI.md)); the mmap engine must not be require
 
 ## Related
 
-- [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md)
+- [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md)
 - [OBS_STORE_MMAP_FORMAT.md](../../OBS_STORE_MMAP_FORMAT.md) · [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md) · [CONFIGURATION.md](../../CONFIGURATION.md)
