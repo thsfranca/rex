@@ -9,7 +9,7 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **`rex-daemon`**
 Concrete goals:
 
 - **Single runtime boundary.** One long-lived process holds model/runtime policy, queueing, and shutdown semantics so every client sees the same behavior.
-- **Stable tool contract.** Clients integrate through **`rex-cli`** and shared protobuf types in `rex-proto` instead of embedding vendor inference SDKs.
+- **Stable tool contract.** Clients integrate through the unified **`rex`** CLI (NDJSON + subprocess) and shared protobuf types in `rex-proto` instead of embedding vendor inference SDKs (`rex-cli` shim for compatibility).
 - **Streaming-first correctness.** Server-streaming RPCs, explicit terminal outcomes (`done` / `error`), and tests around UDS races and interruption.
 - **Local-first default.** **Supervised sidecar agent** with **brokered OpenAI-compatible HTTP** inference; **LiteLLM** is the documented **default multi-provider API**, with an **opt-in daemon-controlled gateway** ([INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md)); **mock** and direct HTTP remain for automated tests—see [ADAPTERS.md](ADAPTERS.md), [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md).
 - **Room to grow.** Additional adapters and optional isolated runtimes evolve **without breaking** `rex.v1` consumers—see [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md).
@@ -26,7 +26,7 @@ Concrete goals:
 
 3. **Incremental implementation.** Ship narrow, testable slices; separate **intent** ([MVP_SPEC.md](MVP_SPEC.md) scope) from **done** ([V1_0.md](V1_0.md) **RC-***, tracked in [ROADMAP.md](ROADMAP.md)) and MoSCoW deferrals in [PRIORITIZATION.md](PRIORITIZATION.md). Do not describe future work as shipped.
 
-4. **Stable external contract.** Preserve **`rex.v1`** and deterministic **`rex-cli --format ndjson`** behavior for integrations unless a versioned migration is intentional.
+4. **Stable external contract.** Preserve **`rex.v1`** and deterministic **`rex complete --format ndjson`** behavior for integrations unless a versioned migration is intentional.
 
 5. **Documentation hubs.** Keep **one** canonical explanation document per major feature area under `docs/`; use **links** plus one-line status elsewhere ([DOCUMENTATION.md](DOCUMENTATION.md)). Record accepted boundaries in **ADRs** when formalizing decisions.
 

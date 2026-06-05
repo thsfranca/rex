@@ -4,7 +4,7 @@ Consolidated reference for the VS Code / Cursor extension: **CLI consumer contra
 
 ## Part A — Goals
 
-- Stable boundary through **`rex-cli`** and NDJSON for streaming completion; optional unary **`rex.v1`** over UDS per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**.
+- Stable boundary through **`rex`** subprocess NDJSON for streaming completion; optional unary **`rex.v1`** over UDS per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)** (`rex-cli` shim).
 - Mode-driven UX: **`ask`**, **`plan`**, **`agent`** with deterministic guardrails and approvals where required.
 - **Thin client only:** the extension does **not** host the agent. Assistant reasoning runs in a **daemon-supervised sidecar**; `rex-daemon` brokers inference and tools ([MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md)).
 - Markdown and code-block handling stay client-side; transport contract unchanged.
@@ -27,13 +27,13 @@ Rules: one active mode per session; visible transitions; insert/apply respect mo
 ### Stream contract
 
 ```bash
-rex-cli complete "<prompt>" --format ndjson --mode <ask|plan|agent> [--model <id>]
+rex complete "<prompt>" --format ndjson --mode <ask|plan|agent> [--model <id>]
 ```
 
 - Extension passes **`--mode`** matching the active session mode on every `complete` call.
 - Optional **`--model`** when the user sets **REX: Model Id** (`rex.modelId`) or passes `--model` on the CLI (otherwise daemon default applies).
 - One JSON object per stdout line (`chunk`, `done`, `error`; additive non-terminal `tool`, `step`).
-- **`rex-cli` flushes stdout after each NDJSON line** when the consumer is on a pipe (including the extension subprocess), so chunks are visible promptly instead of sitting in a block buffer.
+- **`rex` flushes stdout after each NDJSON line** when the consumer is on a pipe (including the extension subprocess), so chunks are visible promptly instead of sitting in a block buffer.
 - Exactly **one** terminal event per request path (`done` **or** `error`); `tool` and `step` lines may appear mid-stream and are non-terminal.
 
 **Additive stream events (E-UX09):**
@@ -52,18 +52,18 @@ Fixtures: [`fixtures/ndjson_contract/tool_step_stream.ndjson`](../fixtures/ndjso
 |---|---|---|
 | `daemon_unavailable` | Daemon not reachable | Retry after daemon start |
 | `sidecar_unavailable` | Sidecar required but unavailable | Fix sidecar setup; see [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) |
-| `inference_config` | Inference backend not configured | Set `REX_OPENAI_COMPAT_*`; see [CONFIGURATION.md](CONFIGURATION.md) |
+| `inference_config` | Inference backend not configured | Edit JSON `inference.openai_compat`; see [CONFIGURATION.md](CONFIGURATION.md) |
 | `stream_timeout` | No stream activity in window | Retry usually safe |
 | `stream_interrupted` | Mid-flight failure | Retry usually safe |
 | `stream_incomplete` | No terminal marker | Inspect daemon; avoid blind retry |
 | `cancelled` | User cancelled | No retry unless user resubmits |
 | `invalid_response` | Malformed NDJSON | Inspect CLI/daemon logs |
-| `spawn_failed` | `rex-cli` could not spawn | Fix install / PATH |
+| `spawn_failed` | `rex` could not spawn | Fix install / PATH |
 | `unknown` | Uncategorized | Manual diagnosis |
 
 ### Bootstrap flow
 
-1. User selects mode. 2. Extension captures prompt/context. 3. Policy + approvals. 4. Spawn `rex-cli complete … --format ndjson --mode <mode>`. 5. Parse lines. 6. Route `chunk` / `done` / `error` to UI.
+1. User selects mode. 2. Extension captures prompt/context. 3. Policy + approvals. 4. Spawn `rex complete … --format ndjson --mode <mode>`. 5. Parse lines. 6. Route `chunk` / `done` / `error` to UI.
 
 ### MVP agent behaviors (extension-owned)
 
@@ -84,7 +84,7 @@ Bounded CLI retries for daemon-unavailable races; interrupted streams terminate 
 
 ### MVP non-goals
 
-Using Node gRPC for **`StreamInference`** instead of **`rex-cli` NDJSON**; **editor-only** RPCs on **`rex.v1`**; plugin lifecycle inside extension; fully autonomous unattended execution without approvals; coordinated multi-file agent (deferred architecture).
+Using Node gRPC for **`StreamInference`** instead of **`rex` NDJSON**; **editor-only** RPCs on **`rex.v1`**; plugin lifecycle inside extension; fully autonomous unattended execution without approvals; coordinated multi-file agent (deferred architecture).
 
 ---
 
@@ -95,7 +95,7 @@ Using Node gRPC for **`StreamInference`** instead of **`rex-cli` NDJSON**; **edi
 | Layer | Responsibility |
 |---|---|
 | `src/extension.ts` | Activation + command wiring |
-| `src/runtime/` | `rex-cli` / daemon interaction |
+| `src/runtime/` | `rex` / daemon interaction |
 | `src/ui/` | View hosts |
 | `src/editor/` | Context snapshots, virtual docs |
 | `src/platform/` | Capability detection (`cursorAdapter`) |
@@ -105,7 +105,7 @@ Using Node gRPC for **`StreamInference`** instead of **`rex-cli` NDJSON**; **edi
 
 ### Transport
 
-`rex-cli` child process `--format ndjson`; single terminal event invariant. Parsed markdown/code blocks remain extension-side only.
+`rex` child process `--format ndjson`; single terminal event invariant. Parsed markdown/code blocks remain extension-side only.
 
 ### Typed message bus (`src/shared/messages.ts`)
 
@@ -123,14 +123,14 @@ Accept/reject granularity: `file` or `selection` — unchanged behavior.
 
 ### Daemon lifecycle defaults
 
-Manual `rex-daemon` vs opt-in **`rex.daemonAutoStart`**; states `ready`/`starting`/`unavailable` surfaced in UI.
+Manual `rex daemon` vs opt-in **`rex.daemonAutoStart`**; states `ready`/`starting`/`unavailable` surfaced in UI.
 
 ### Settings snapshot
 
 | Key | Default |
 |---|---|
-| `rex.cliPath` | `rex-cli` |
-| `rex.daemonBinaryPath` | `rex-daemon` |
+| `rex.cliPath` | `rex` |
+| `rex.daemonBinaryPath` | `rex` |
 | `rex.daemonAutoStart` | `false` |
 
 ### Security / observability (extension side)

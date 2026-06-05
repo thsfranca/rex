@@ -29,7 +29,7 @@ brew install protobuf
 | Dependency | Why it is required | Notes |
 |---|---|---|
 | Unix-like OS with Unix Domain Socket support | Daemon and CLI communicate through `/tmp/rex.sock`. | macOS works out of the box. |
-| Local process execution | `rex-daemon` and `rex-cli` run as local processes. | No external DB/cache/broker required in MVP. |
+| Local process execution | Unified **`rex`** binary (`daemon`, `status`, `complete`); shims `rex-daemon` / `rex-cli`. | No external DB/cache/broker required in MVP. |
 
 ### MVP: sidecar agent + brokered HTTP
 
@@ -57,7 +57,7 @@ brew install protobuf
 
 ### Test harness (non-MVP product path)
 
-- `REX_INFERENCE_RUNTIME=mock` for CI and UDS e2e — no network; no live sidecar required until stub harness exists.
+- `REX_INFERENCE_RUNTIME=mock` for CI and UDS e2e — no network; **`rex-sidecar-stub`** harness exists for CI; operators use JSON config + live HTTP for dogfood.
 - Legacy `cursor-cli` subprocess optional.
 - Direct daemon HTTP/mock **without** sidecar — harness only per [MVP_SPEC.md](MVP_SPEC.md).
 
@@ -111,19 +111,19 @@ cargo audit
 cargo build --workspace
 ```
 
-2. Configure HTTP backend (see [CONFIGURATION.md](CONFIGURATION.md)), then start daemon:
+2. Configure JSON and start daemon:
 
 ```bash
-export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:11434/v1"
-export REX_OPENAI_COMPAT_MODEL="llama3.2"
-cargo run -p rex-daemon
+rex config init
+# Edit $REX_ROOT/config.json — inference.openai_compat, sidecars
+rex daemon
 ```
 
 3. In another terminal, run CLI:
 
 ```bash
-cargo run -p rex-cli -- status
-cargo run -p rex-cli -- complete "hello from rex" --format ndjson --mode ask
+rex status
+rex complete "hello from rex" --format ndjson --mode ask
 ```
 
 Readiness note:

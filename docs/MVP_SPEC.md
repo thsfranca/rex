@@ -10,19 +10,19 @@
 - **`StreamInference`** for assistant work is **fulfilled through the sidecar**; the daemon maps chunks to the existing NDJSON contract.
 - Keep **dogfooding** `rex` from the IDE as the success narrative.
 
-## Stub vs product agent (today vs planned)
+## Stub vs product agent
 
-| | **Shipped today** | **Planned** ([AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)) |
+| | **Shipped today** | **Operator checklist (not “planned product”)** |
 |---|---|---|
-| Sidecar binary | **`rex-sidecar-stub`** — harness default; `__rex_*` directives | **`rex-agent`** — LangGraph ReAct (**R018** Done); live-model proof via [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) |
-| CLI | Unified **`rex`** binary (**R014** — shipped) | — |
-| Config | JSON config + `rex config` (**R015** — shipped) | — |
+| Sidecar binary | **`rex-sidecar-stub`** — harness/CI default; `__rex_*` directives | **`rex-agent`** — LangGraph ReAct (**R017–R018** Done); enable via JSON or extension overlay |
+| Product sidecar | **`rex-agent`** shipped under `sidecars/rex-agent/` | Live-model proof via [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §8 |
+| CLI | Unified **`rex`** binary (**R014**); **`rex-cli`/`rex-daemon` shims** | — |
+| Config | JSON config + `rex config` (**R015**); `rex config init` defaults **stub** | Product path: set `sidecars.active` to **`rex-agent`** or use **`rex.productAgentConfig`** |
 | Daemon broker policy | Mode × capability matrix; protected paths (**R020** Done) | — |
 | Turn correlation | `turn_id` / `context_revision` on RunTurn (**R021** Done) | — |
 | Workspace binding | Fail-closed daemon; extension supplies root (**R022**, **R019** Done) | — |
-| v1.0 **RC-*** | **Met** on stub + platform path | Live-model operator checklist for **rex-agent** |
-| Extension defaults | Manual `.rex/config.json` for product path | **`rex.productAgentConfig`** default **true** merges **`rex-agent`** + **`agent.approvals_enabled`** on auto-start |
-| Capability design | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) + ADRs 0011–0017 | Graph loop **R018**; extension **R019** |
+| Extension defaults | **`rex.productAgentConfig`** default **true** merges **`rex-agent`** + **`agent.approvals_enabled`** on auto-start | Manual JSON still supported |
+| v1.0 **RC-*** | **Met** (stub + product paths) | Live HTTP backend for IDE dogfood — [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) |
 
 ## Architecture
 
@@ -54,7 +54,7 @@ Converge **routing, compaction, caches, metering, and richer tool/MCP loops** in
 | Item | Definition |
 |---|---|
 | Daemon | `/tmp/rex.sock`; `rex.v1`; policy, broker, sidecar supervisor. |
-| CLI | `rex-cli`; NDJSON; `--mode` / `--model` on `complete`. |
+| CLI | Unified **`rex`**; NDJSON; `--mode` / `--model` on `complete` (shim: `rex-cli`). |
 | **Sidecar agent** | One supervised process; agent stack pluggable per [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). |
 | **`rex.sidecar.v1`** | Control plane distinct from `rex.v1` — verbs in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). |
 | **Brokered inference** | Daemon runs HTTP OpenAI-compat adapter on sidecar request ([CONFIGURATION.md](CONFIGURATION.md), [ADAPTERS.md](ADAPTERS.md)). |
@@ -92,7 +92,7 @@ Documented in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Illustrative verbs:
 
 ## Brokered HTTP (not “daemon = agent”)
 
-- Env: `REX_OPENAI_COMPAT_*` — [CONFIGURATION.md](CONFIGURATION.md).
+- JSON: `inference.openai_compat` in `$REX_ROOT/config.json` — [CONFIGURATION.md](CONFIGURATION.md) (legacy `REX_OPENAI_COMPAT_*` env ignored with warning).
 - Daemon **`http_openai_compat`** module is the **broker implementation** when the sidecar (or harness) requests inference.
 - Operator profiles: Ollama, LM Studio, OpenAI API — [ADAPTERS.md](ADAPTERS.md).
 
@@ -100,8 +100,8 @@ Documented in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Illustrative verbs:
 
 | Command shape | Expected behavior |
 |---|---|
-| `rex-cli status` | Status from `GetSystemStatus`. |
-| `rex-cli complete "<prompt>" --format ndjson --mode <ask\|plan\|agent>` | Forwards to daemon; product path uses sidecar per **RC-03**. |
+| `rex status` | Status from `GetSystemStatus`. |
+| `rex complete "<prompt>" --format ndjson --mode <ask\|plan\|agent>` | Forwards to daemon; product path uses sidecar per **RC-03**. |
 
 ## Extension consumer contract
 
@@ -128,7 +128,7 @@ Covered by `cargo test -p rex-daemon mvp_product_path` (also run from `verify_mv
 
 - [x] Build workspace (via preflight script).
 - [x] Sidecar health under daemon supervision (stub spawn + health).
-- [x] `StreamInference` **agent** mode uses sidecar **`BrokerInference`** → daemon HTTP (loopback fixture in CI; live `REX_OPENAI_COMPAT_*` for operator dogfood).
+- [x] `StreamInference` **agent** mode uses sidecar **`BrokerInference`** → daemon HTTP (loopback fixture in CI; live JSON `inference.openai_compat` for operator dogfood).
 - [x] Brokered **`fs.read`** via prompt `__rex_read:<file>` under `REX_WORKSPACE_ROOT`.
 - [x] Required sidecar missing → clear **sidecar** error at daemon startup (no silent success).
 
@@ -136,8 +136,8 @@ Covered by `cargo test -p rex-daemon mvp_product_path` (also run from `verify_mv
 
 Required for IDE dogfood after preflight passes. Use a running OpenAI-compatible server (Ollama, LM Studio, etc.) — see [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md):
 
-- [ ] Configure `REX_OPENAI_COMPAT_*` and `REX_SIDECAR_*` on the daemon process.
-- [ ] Start `rex-daemon`; confirm sidecar health in logs.
+- [ ] `rex config init` then edit JSON (`inference.openai_compat`, `sidecars`) — [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §3.
+- [ ] Start **`rex daemon`**; confirm sidecar health in logs.
 - [ ] Extension: **agent** mode send (real model text), cancel, apply with approval.
 - [ ] Stop daemon; confirm sockets cleaned up.
 
@@ -148,6 +148,6 @@ Required for IDE dogfood after preflight passes. Use a running OpenAI-compatible
 ## Related
 
 - [V1_0.md](V1_0.md) — **done** definition (**RC-***)
-- [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) — product agent program (planned)
+- [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) — product agent program (partial — shipped)
 - [ROADMAP.md](ROADMAP.md) — work queue
 - [ARCHITECTURE.md](ARCHITECTURE.md) — system architecture
