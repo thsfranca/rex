@@ -12,7 +12,7 @@ Canonical **architecture-level** design for how Rex constrains **agent workloads
 | **`exec.shell`** | **Implemented** (broker RPC) | Allowlisted programs only (`REX_BROKER_SHELL_ALLOWLIST`); sidecar stub `__rex_exec:` directive |
 | **`net.fetch`** | Won't (now) | Default deny |
 
-**Daemon RPC surface today:** [`proto/rex/v1/rex.proto`](../proto/rex/v1/rex.proto) exposes **`BrokerReadFile`**, **`BrokerListDir`**, **`BrokerWriteFile`**, and **`BrokerExecShell`** (allowlisted programs).
+**Daemon RPC surface today:** [`proto/rex/v1/rex.proto`](../proto/rex/v1/rex.proto) exposes **`BrokerReadFile`**, **`BrokerListDir`**, **`BrokerWriteFile`**, **`BrokerSavePlan`** (plan mode only; `.rex/plans/*.md`), and **`BrokerExecShell`** (allowlisted programs).
 
 Acceptance: sidecar successfully reads a file under policy; denial paths logged for protected locations.
 

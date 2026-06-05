@@ -20,6 +20,8 @@ pub enum BrokerError {
     Io(String),
     #[error("write too large: {0} bytes (max {1})")]
     WriteTooLarge(usize, usize),
+    #[error("plan_too_large: {0} bytes (max {1})")]
+    PlanTooLarge(usize, usize),
     #[error("command not allowlisted: {0}")]
     CommandNotAllowed(String),
     #[error("shell execution failed: {0}")]
@@ -203,6 +205,23 @@ pub fn broker_write_file(
     }
     let root = workspace_root_from_config()?;
     let resolved = resolve_under_workspace_for_write(&root, relative_path)?;
+    if let Some(parent) = resolved.parent() {
+        fs::create_dir_all(parent).map_err(|e| BrokerError::Io(e.to_string()))?;
+    }
+    fs::write(&resolved, content).map_err(|e| BrokerError::Io(e.to_string()))
+}
+
+pub fn broker_save_plan(relative_path: &str, content: &str, mode: &str) -> Result<(), BrokerError> {
+    match crate::access_policy::evaluate_plan_save(relative_path, mode) {
+        AccessDecision::Allow => {}
+        AccessDecision::Deny(deny) => return Err(deny.into()),
+    }
+    if content.len() > MAX_WRITE_BYTES {
+        return Err(BrokerError::PlanTooLarge(content.len(), MAX_WRITE_BYTES));
+    }
+    let path = crate::access_policy::normalize_plan_save_path(relative_path);
+    let root = workspace_root_from_config()?;
+    let resolved = resolve_under_workspace_for_write(&root, &path)?;
     if let Some(parent) = resolved.parent() {
         fs::create_dir_all(parent).map_err(|e| BrokerError::Io(e.to_string()))?;
     }

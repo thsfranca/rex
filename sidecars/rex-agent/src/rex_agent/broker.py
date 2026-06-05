@@ -142,6 +142,26 @@ class BrokerClient:
             return True, "ok"
         return False, response.error or "broker write_file failed"
 
+    def save_plan(
+        self, path: str, content: str, mode: str | None = None
+    ) -> tuple[bool, str]:
+        request = rex_pb2.BrokerSavePlanRequest(
+            path=path,
+            content=content,
+            mode=mode or self._mode,
+        )
+        try:
+            response = self._stub.BrokerSavePlan(
+                request,
+                timeout=BROKER_TIMEOUT_SEC,
+                metadata=_metadata(self._turn_id),
+            )
+        except grpc.RpcError as err:
+            return False, str(err)
+        if response.ok:
+            return True, "ok"
+        return False, response.error or "broker save_plan failed"
+
     def exec_shell(self, command: str, mode: str | None = None) -> tuple[bool, str]:
         request = rex_pb2.BrokerExecShellRequest(
             command=command,

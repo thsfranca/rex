@@ -10,9 +10,9 @@ use rex_proto::rex::v1::rex_service_server::RexService;
 use rex_proto::rex::v1::{
     BrokerExecShellRequest, BrokerExecShellResponse, BrokerInferenceRequest,
     BrokerInferenceResponse, BrokerListDirRequest, BrokerListDirResponse, BrokerReadFileRequest,
-    BrokerReadFileResponse, BrokerWriteFileRequest, BrokerWriteFileResponse,
-    GetSystemStatusRequest, GetSystemStatusResponse, StreamInferenceRequest,
-    StreamInferenceResponse,
+    BrokerReadFileResponse, BrokerSavePlanRequest, BrokerSavePlanResponse, BrokerWriteFileRequest,
+    BrokerWriteFileResponse, GetSystemStatusRequest, GetSystemStatusResponse,
+    StreamInferenceRequest, StreamInferenceResponse,
 };
 use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
@@ -24,7 +24,8 @@ use crate::adapters::MockInferenceRuntime;
 use crate::adapters::{active_model_id_from_config, AdapterCapabilities};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
 use crate::broker::{
-    broker_exec_shell, broker_list_dir, broker_read_file, broker_write_file, BrokerError,
+    broker_exec_shell, broker_list_dir, broker_read_file, broker_save_plan, broker_write_file,
+    BrokerError,
 };
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::http_openai_compat::broker_inference_completion;
@@ -150,6 +151,32 @@ impl RexService for RexDaemonService {
                     ok: false,
                     stdout: String::new(),
                     stderr: String::new(),
+                    error: err.to_string(),
+                }))
+            }
+        }
+    }
+
+    async fn broker_save_plan(
+        &self,
+        request: Request<BrokerSavePlanRequest>,
+    ) -> Result<Response<BrokerSavePlanResponse>, Status> {
+        let inner = request.into_inner();
+        let mode = normalize_mode(&inner.mode);
+        let path = inner.path;
+        println!("broker.access_policy=evaluate capability=plan.save mode={mode} path={path}");
+        match broker_save_plan(&path, &inner.content, &mode) {
+            Ok(()) => {
+                println!("broker.access_policy=allow capability=plan.save mode={mode} path={path}");
+                Ok(Response::new(BrokerSavePlanResponse {
+                    ok: true,
+                    error: String::new(),
+                }))
+            }
+            Err(err) => {
+                log_broker_access_policy_deny("plan.save", &mode, &path, &err);
+                Ok(Response::new(BrokerSavePlanResponse {
+                    ok: false,
                     error: err.to_string(),
                 }))
             }

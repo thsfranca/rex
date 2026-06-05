@@ -24,7 +24,14 @@ class StepStreamEvent:
     summary: str
 
 
-StreamEvent = Union[TextStreamEvent, ToolStreamEvent, StepStreamEvent]
+@dataclass(frozen=True)
+class PlanStreamEvent:
+    phase: str
+    title: str
+    detail: str = ""
+
+
+StreamEvent = Union[TextStreamEvent, ToolStreamEvent, StepStreamEvent, PlanStreamEvent]
 
 DETAIL_MAX_CHARS = 240
 

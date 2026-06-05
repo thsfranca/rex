@@ -21,6 +21,7 @@
    |------------|-------|--------|---------|
    | `fs.read` / `fs.list` | Allow workspace | Allow workspace | Allow workspace |
    | `fs.write` | Deny | Deny | Allow workspace (policy) |
+   | `plan.save` | Deny | Allow `.rex/plans/*.md` only | Deny |
    | `exec.shell` | Deny | Deny | Allow allowlist |
 
 4. **Output bounds:** Broker truncates `exec.shell` stdout/stderr and large `fs.read` results to **`max_tool_result_bytes`** (config default in R015). Sidecar session scratch uses the same cap (**T5**).

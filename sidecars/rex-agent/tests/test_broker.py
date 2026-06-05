@@ -101,6 +101,24 @@ def test_list_dir_formats_entries() -> None:
     assert "main.rs" in text
 
 
+def test_save_plan_calls_broker_rpc() -> None:
+    stub = MagicMock()
+    response = MagicMock()
+    response.ok = True
+    response.error = ""
+    stub.BrokerSavePlan.return_value = response
+
+    with patch("rex_agent.broker._daemon_channel", return_value=MagicMock()):
+        with BrokerClient() as client:
+            client._stub = stub
+            ok, msg = client.save_plan(
+                ".rex/plans/feature.md", "# Plan\n", "plan"
+            )
+    assert ok is True
+    assert msg == "ok"
+    stub.BrokerSavePlan.assert_called_once()
+
+
 def test_grpc_error_surfaces_as_failure() -> None:
     stub = MagicMock()
     stub.BrokerInference.side_effect = grpc.RpcError("unavailable")
