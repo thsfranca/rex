@@ -43,7 +43,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
 | `agent` | `approvals_enabled`, `max_tool_steps`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gate; sidecar tool loop cap (default **12**); intra-turn compaction trigger as fraction of `broker.max_tool_result_bytes` (default **0.25**); optional goal-hint read pruning for payloads >100 lines (**R031**, default off). |
-| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `read_api`, `ui`, `otlp`, `store` | Rex-owned store + bundled Grafana suite — **planned**; see [Observability](#observability), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md). |
+| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `read_api`, `ui`, `otlp`, `store` | SQLite store + OTLP **implemented**; read API + bundled Grafana **planned** — [Observability](#observability), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md). |
 
 Minimal example:
 
@@ -87,9 +87,9 @@ Minimal example:
 
 ## Observability
 
-**Status:** **design documented** — ADR 0026 defines Rex-owned storage and bundled Grafana via Rex OTel datasource; store ingest, read API, and `rex obs up` are **planned** in code. Hubs: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). ADRs: [0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [0025](architecture/decisions/0025-dual-economics-store-engines.md), [0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md).
+**Status:** **partial** — daemon reads merged JSON; SQLite store append on `stream.terminal` and bounded OTLP export when `observability.otlp.endpoint` is set (**implemented**). ADR 0026 read API, bundled Grafana, and `rex obs up` remain **planned**. **mmap** engine rejected until Phase 2b. Hubs: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). ADRs: [0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [0025](architecture/decisions/0025-dual-economics-store-engines.md), [0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md).
 
-When `observability.enabled` is `true` in merged JSON, the daemon will enable **`rex-obs-store`** (`$REX_ROOT/<store.path>`) as system of record. Bundled Grafana will read via the **Rex observability read API** (planned), not external TSDB queries. Optional **`observability.otlp.*`** replicates to operator backends when configured (interop **Could**). When `false` or omitted, phase 0 **stdout grep** only.
+When `observability.enabled` is `true` in merged JSON, the daemon enables **`rex-obs-store`** (`$REX_ROOT/<store.path>`) and attempts **OTLP export** when an endpoint is configured (otherwise store-only + `obs.export=degraded` stdout). Bundled Grafana will read via the **Rex observability read API** when that path ships (planned). When `false` or omitted, phase 0 **stdout grep** only.
 
 | Key | Default | Purpose |
 |-----|---------|---------|

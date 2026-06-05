@@ -22,6 +22,9 @@ prost = "0.14"
 tonic-prost-build = "0.14"
 tonic-prost = "0.14"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+opentelemetry = { version = "0.27", features = ["metrics"] }
+opentelemetry_sdk = { version = "0.27", features = ["metrics", "rt-tokio"] }
+opentelemetry-otlp = { version = "0.27", features = ["metrics", "grpc-tonic", "http-proto"] }
 
 # The profile that 'dist' will build with
 [profile.dist]

@@ -136,6 +136,7 @@ flowchart TD
 
 | Priority | What / why | Source(s) | Notes |
 |----------|------------|-----------|--------|
+| **Should** | Observability Phase 2 — sqlite store + OTLP | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | **partial** — store + core OTLP shipped; mmap + sidecar API Phase 2b/6 |
 | **Should** | Rex observability read API (loopback) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | Planned — Grafana datasource backend; [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) |
 | **Should** | Rex Grafana OTel datasource plugin | [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | Planned — OTel-shaped read API client |
 | **Should** | `rex obs up` + vendored Grafana + default dashboards | [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | Planned — one command local suite |
@@ -210,7 +211,7 @@ flowchart TD
 | **MCP in sidecar** | ADR 0016 accepted; implementation deferred | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 | **Development assistance capabilities** (turn contract, budget pipeline) | Design hub + ADRs 0011–0017 | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | **Token-efficient agent graph** (Viewer/Editor, serialization, compaction) | Design accepted; **R027–R036** | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| **Observability suite + economics validation** | Design documented ([ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md)); implementation: store ingest, read API, bundled Grafana, mmap ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)), sidecar API, harness | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
+| **Observability suite + economics validation** | Phase 2 **partial** (sqlite store + core OTLP); follow-up: read API + bundled Grafana ([ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md)), mmap ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)), sidecar API, harness | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
 | **Apple Silicon mmap economics store** (`store.engine=mmap`, opt-in) | After SQLite `rex-obs-store` write path (Phase 2); before flipping default — **Could**; design documented | [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) |
 | **VM/container sidecar envelope** (server/fleet) | Linux deployment needs stronger isolation | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 

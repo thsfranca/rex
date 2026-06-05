@@ -16,6 +16,7 @@ tokio-stream = { version = "0.1", features = ["net"] }
 async-stream = "0.3"
 lru = "0.18"
 rex-config = { path = "../rex-config" }
+rex-obs-store = { path = "../rex-obs-store" }
 rex-proto = { path = "../rex-proto" }
 thiserror = "2"
 serde_json = "1"
@@ -23,6 +24,9 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 futures = "0.3"
 hyper-util = { version = "0.1", features = ["tokio"] }
 tower = "0.5"
+opentelemetry.workspace = true
+opentelemetry_sdk.workspace = true
+opentelemetry-otlp.workspace = true
 
 [dev-dependencies]
 futures = "0.3"

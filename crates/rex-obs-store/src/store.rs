@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::{params, Connection};
@@ -118,6 +119,62 @@ impl ObsStore {
                     row.get(0)
                 })?;
         Ok(count as u64)
+    }
+}
+
+/// Thread-safe handle for non-blocking appends from async daemon code.
+#[derive(Clone)]
+pub struct SharedObsStore {
+    inner: Arc<Mutex<ObsStore>>,
+}
+
+impl SharedObsStore {
+    pub fn open(path: impl AsRef<Path>) -> Result<Self, ObsStoreError> {
+        Ok(Self {
+            inner: Arc::new(Mutex::new(ObsStore::open(path)?)),
+        })
+    }
+
+    pub fn from_store(store: ObsStore) -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(store)),
+        }
+    }
+
+    pub fn path(&self) -> Result<PathBuf, ObsStoreError> {
+        let guard = self
+            .inner
+            .lock()
+            .map_err(|_| ObsStoreError::Sqlite(rusqlite::Error::InvalidQuery))?;
+        Ok(guard.path().to_path_buf())
+    }
+
+    pub fn upsert_config_snapshot(
+        &self,
+        snapshot_id: &str,
+        payload_json: &str,
+    ) -> Result<(), ObsStoreError> {
+        let guard = self
+            .inner
+            .lock()
+            .map_err(|_| ObsStoreError::Sqlite(rusqlite::Error::InvalidQuery))?;
+        guard.upsert_config_snapshot(snapshot_id, payload_json)
+    }
+
+    pub fn append_stream(&self, record: &StreamEconomicsRecord) -> Result<(), ObsStoreError> {
+        let guard = self
+            .inner
+            .lock()
+            .map_err(|_| ObsStoreError::Sqlite(rusqlite::Error::InvalidQuery))?;
+        guard.append_stream(record)
+    }
+
+    pub fn stream_count(&self) -> Result<u64, ObsStoreError> {
+        let guard = self
+            .inner
+            .lock()
+            .map_err(|_| ObsStoreError::Sqlite(rusqlite::Error::InvalidQuery))?;
+        guard.stream_count()
     }
 }
 
