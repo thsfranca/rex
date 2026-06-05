@@ -33,7 +33,7 @@ Portable background: research theme on LLM observability and validation (GenAI s
 
 | Concern | Owner |
 |---------|--------|
-| Telemetry during runs | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), `rex-obs-store` when `observability.enabled: true` |
+| Telemetry during runs | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), `rex-obs-store` when `observability.enabled: true` (default **`sqlite`**; **`mmap`** opt-in on macOS — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)) |
 | Lever definitions | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
 | Benchmark execution | Operator / scheduled CI (containers, pinned models) |
 
@@ -99,7 +99,7 @@ Portable background: research theme on LLM observability and validation (GenAI s
 
 ## Run manifest schema
 
-Stored in `rex-obs-store` `runs` / `run_tasks` when `observability.enabled: true`:
+Stored in `rex-obs-store` `runs` / `run_tasks` when `observability.enabled: true` (either engine; harness should use a shared **store trait** and parity-check sqlite vs mmap on macOS — design intent, not shipped):
 
 | Field | Purpose |
 |-------|---------|

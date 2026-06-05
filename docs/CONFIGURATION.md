@@ -74,7 +74,11 @@ Minimal example:
       "endpoint": "http://127.0.0.1:4317",
       "protocol": "grpc"
     },
-    "store": { "path": "obs/store.sqlite" }
+    "store": {
+      "engine": "sqlite",
+      "path": "obs/store.sqlite",
+      "format_version": 1
+    }
   }
 }
 ```
@@ -83,7 +87,7 @@ Minimal example:
 
 ## Observability (planned)
 
-**Status:** design documented — not read by daemon code yet. Hubs: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md). ADRs: [0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md).
+**Status:** design documented — not read by daemon code yet. Hubs: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). ADRs: [0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [0025](architecture/decisions/0025-dual-economics-store-engines.md).
 
 When `observability.enabled` is `true` in merged JSON, the daemon will enable **embedded economics store** (`$REX_ROOT/<store.path>`) and **OTLP export** together. When `false` or omitted, phase 0 **stdout grep** only.
 
@@ -94,7 +98,9 @@ When `observability.enabled` is `true` in merged JSON, the daemon will enable **
 | `observability.custom_sidecar_metrics` | `true` | When `false`, drop sidecar-registered custom metrics at export |
 | `observability.otlp.endpoint` | (none) | Operator collector OTLP URL when enabled |
 | `observability.otlp.protocol` | `grpc` | `grpc` or `http/protobuf` |
-| `observability.store.path` | `obs/store.sqlite` | Path relative to `$REX_ROOT` |
+| `observability.store.engine` | `sqlite` | `sqlite` (default) or `mmap` (macOS opt-in) — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) |
+| `observability.store.path` | `obs/store.sqlite` when `engine=sqlite`; `obs/store.rexobs` when `engine=mmap` | Path relative to `$REX_ROOT`; should match engine |
+| `observability.store.format_version` | `1` | Mmap file header version; ignored for sqlite until needed |
 
 Your **OpenTelemetry Collector** may use its own env or yaml; Rex reads only the `observability` JSON section.
 

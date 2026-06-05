@@ -4,7 +4,7 @@ This document is the **single source** for Rex **observability beyond stdout gre
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention.
 
-**Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · **Validation program:** [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) · **Operator how-to:** [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md)
+**Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) · **Mmap format:** [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) · **Validation program:** [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) · **Operator how-to:** [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md)
 
 ## Configuration surface
 
@@ -19,7 +19,7 @@ Rex observability is controlled only by merged JSON: **`observability.enabled`**
 
 ## Status
 
-**design documented** — ADRs 0010, 0020, 0021 accepted in docs; OTLP, `rex-obs-store`, `SidecarObservabilityService`, and `rex obs` helpers are **planned / not shipped** in code.
+**design documented** — ADRs 0010, 0020, 0021, 0025 accepted in docs; OTLP, `rex-obs-store` (dual engines), `SidecarObservabilityService`, and `rex obs` helpers are **planned / not shipped** in code.
 
 ## Scope
 
@@ -27,7 +27,7 @@ Rex observability is controlled only by merged JSON: **`observability.enabled`**
 
 - **Signal catalog** (implemented + planned) shared by stdout, OTLP, store, and dashboards.
 - **Daemon OTLP export** when `observability.enabled: true` — **planned**.
-- **`rex-obs-store`** SQLite under `$REX_ROOT` when observability enabled — **planned**.
+- **`rex-obs-store`** under `$REX_ROOT` when observability enabled — **SQLite default**, **mmap opt-in** (macOS) — **planned** — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md).
 - **`SidecarObservabilityService`** on **daemon UDS** (`daemon.socket` in config) — **planned**.
 - **BYOT visualization** — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
 
@@ -65,10 +65,15 @@ flowchart LR
     daemon -->|rollup_OTLP| otlpOut[operator_collector]
     daemon --> stdout
   end
+  subgraph engines [store engines]
+    store --> sqliteEng[sqlite_default]
+    store --> mmapEng[mmap_opt_in_macOS]
+  end
   subgraph byot [Operator BYOT]
     otlpOut --> backend[Any_backend]
     backend --> ui[Grafana_or_other]
-    store -.->|SQLite_or_scrape| ui
+    sqliteEng -.->|SQLite_file_or_scrape| ui
+    mmapEng -.->|rex_obs_export| ui
   end
 ```
 
@@ -172,10 +177,19 @@ Correlation: `trace_id`, `stream.request_id`, future `turn_id` on **span attribu
 
 ## rex-obs-store (planned)
 
-Embedded **SQLite** at `$REX_ROOT/<observability.store.path>` (default `obs/store.sqlite`). Active when **`observability.enabled: true`** in merged JSON ([ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md)).
+Active when **`observability.enabled: true`** in merged JSON ([ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)). Engine: **`observability.store.engine`** — default **`sqlite`**; opt-in **`mmap`** on macOS only.
 
-| Table | Purpose |
-|-------|---------|
+### Store engines
+
+| Engine | Default path | Platform | Format doc |
+|--------|--------------|----------|------------|
+| **`sqlite`** | `obs/store.sqlite` | macOS, Linux CI | SQL schema (ADR 0021) |
+| **`mmap`** | `obs/store.rexobs` | **macOS only** | [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) |
+
+Shared **logical** tables/records (encoding differs by engine):
+
+| Table / record | Purpose |
+|----------------|---------|
 | `config_snapshots` | Content-hash `id`; canonical economics-relevant config JSON once |
 | `streams` | Per-request economics; `snapshot_id` FK |
 | `runs` | Validation harness run metadata |
@@ -183,7 +197,7 @@ Embedded **SQLite** at `$REX_ROOT/<observability.store.path>` (default `obs/stor
 
 **Write path:** append on `stream.terminal`; harness on run complete. Non-blocking on the inference hot path.
 
-**Read paths (planned):** `rex obs compare|export|rollup`; Prometheus scrape; OTLP rollups. Grafana: [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) bridges A–D.
+**Read paths (planned):** `rex obs compare|export|rollup`; Prometheus scrape; OTLP rollups. Grafana: [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) bridges A–D (bridge C = **sqlite only**).
 
 ## Economics validation program
 
@@ -212,7 +226,8 @@ rg 'stream.metrics' /path/to/daemon.log
 |-------|-------------|--------|
 | **0** | Stdout + grep; observability off in JSON | **implemented** |
 | **1** | Design hubs, ADRs 0010/0020/0021, validation program | **design documented** |
-| **2** | OTLP + `gen_ai.*`/`rex.*` + store write path | planned |
+| **2** | OTLP + `gen_ai.*`/`rex.*` + store write path (**sqlite** engine) | planned |
+| **2b** | **mmap** store engine (macOS opt-in) | planned — after Phase 2 sqlite path |
 | **3** | `SidecarObservabilityService` + rollup export | planned |
 | **4** | CI OTLP smoke (mock adapter) | planned |
 | **5** | `rex obs` CLI, Prometheus scrape, retention | planned |
@@ -245,5 +260,6 @@ rg 'stream.metrics' /path/to/daemon.log
 | [ARCHITECTURE.md](ARCHITECTURE.md) | SAD observability |
 | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | Sidecar flow |
 | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Lever matrix |
+| [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) | Mmap on-disk format + format decision |
 | [ROADMAP.md](ROADMAP.md) | Implementation queue |
 | [CI.md](CI.md) | No live LLM on PRs |
