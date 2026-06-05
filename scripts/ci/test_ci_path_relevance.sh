@@ -20,6 +20,9 @@ assert_relevance() {
   local guidelines_changed="${12}"
   local ci_changed="${13}"
   local global_changed="${14}"
+  local rust_codeql_changed="${15:-false}"
+  local extension_codeql_changed="${16:-false}"
+  local python_codeql_changed="${17:-false}"
 
   local tmp_out
   tmp_out="$(mktemp)"
@@ -27,6 +30,9 @@ assert_relevance() {
   EXTENSION_CHANGED="${extension_changed}" \
   SIDECAR_CHANGED="${sidecar_changed}" \
   GUIDELINES_CHANGED="${guidelines_changed}" \
+  RUST_CODEQL_CHANGED="${rust_codeql_changed}" \
+  EXTENSION_CODEQL_CHANGED="${extension_codeql_changed}" \
+  PYTHON_CODEQL_CHANGED="${python_codeql_changed}" \
   CI_CHANGED="${ci_changed}" \
   GLOBAL_CHANGED="${global_changed}" \
   GITHUB_OUTPUT="${tmp_out}" \
@@ -58,11 +64,11 @@ assert_relevance() {
 assert_relevance "docs-only" false false false false false false false \
   false false false false false false
 assert_relevance "rust-only" true false false false true false false \
-  true false false false false false
+  true false false false false false true false false
 assert_relevance "extension-only" false true false false false true false \
-  false true false false false false
+  false true false false false false false true false
 assert_relevance "sidecar-only" false false true false false false true \
-  false false true false false false
+  false false true false false false false false true
 assert_relevance "guidelines-only" false false false true false false false \
   false false false true false false
 assert_relevance "ci-scripts" true true false false false false false \
@@ -70,6 +76,8 @@ assert_relevance "ci-scripts" true true false false false false false \
 assert_relevance "cargo-lock" true true false false false false false \
   false false false false false true
 assert_relevance "sidecar-plus-ci" true true true false false false true \
-  false false true false true false
+  false false true false true false false false true
+assert_relevance "rust-ci-script-only" true true false false false false false \
+  true false false false true false false false false
 
 echo "ci path relevance contract tests passed."

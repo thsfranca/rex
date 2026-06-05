@@ -52,3 +52,10 @@ guidelines_changed:
   - 'scripts/ci/guidelines/**'
   - 'scripts/ci/run_guidelines_verify.sh'
   - 'scripts/ci/test_guidelines_checks.sh'
+rust_codeql_changed:
+  - 'crates/**'
+  - 'proto/**'
+extension_codeql_changed:
+  - 'extensions/rex-vscode/**'
+python_codeql_changed:
+  - 'sidecars/**'

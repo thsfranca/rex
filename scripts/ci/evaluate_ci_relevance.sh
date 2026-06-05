@@ -6,6 +6,9 @@ rust_changed="${RUST_CHANGED:-false}"
 extension_changed="${EXTENSION_CHANGED:-false}"
 sidecar_changed="${SIDECAR_CHANGED:-false}"
 guidelines_changed="${GUIDELINES_CHANGED:-false}"
+rust_codeql_changed="${RUST_CODEQL_CHANGED:-false}"
+extension_codeql_changed="${EXTENSION_CODEQL_CHANGED:-false}"
+python_codeql_changed="${PYTHON_CODEQL_CHANGED:-false}"
 ci_changed="${CI_CHANGED:-false}"
 global_changed="${GLOBAL_CHANGED:-false}"
 
@@ -30,14 +33,14 @@ if [ "${guidelines_changed}" = "true" ]; then
   guidelines_relevant=true
 fi
 
-# CodeQL uses stricter path gates on PR/push; weekly schedule bypasses these in codeql.yml.
-if [ "${rust_changed}" = "true" ]; then
+# CodeQL uses source-only path gates on PR/push; weekly schedule bypasses these in codeql.yml.
+if [ "${rust_codeql_changed}" = "true" ]; then
   rust_codeql_relevant=true
 fi
-if [ "${extension_changed}" = "true" ]; then
+if [ "${extension_codeql_changed}" = "true" ]; then
   extension_codeql_relevant=true
 fi
-if [ "${sidecar_changed}" = "true" ]; then
+if [ "${python_codeql_changed}" = "true" ]; then
   python_codeql_relevant=true
 fi
 

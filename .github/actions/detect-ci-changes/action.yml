@@ -19,6 +19,15 @@ outputs:
   guidelines_changed:
     description: Guideline conformance paths changed.
     value: ${{ steps.filter.outputs.guidelines_changed }}
+  rust_codeql_changed:
+    description: Rust source paths changed (CodeQL).
+    value: ${{ steps.filter.outputs.rust_codeql_changed }}
+  extension_codeql_changed:
+    description: Extension source paths changed (CodeQL).
+    value: ${{ steps.filter.outputs.extension_codeql_changed }}
+  python_codeql_changed:
+    description: Python sidecar source paths changed (CodeQL).
+    value: ${{ steps.filter.outputs.python_codeql_changed }}
   rust_relevant:
     description: Whether rust-verify should run.
     value: ${{ steps.relevance.outputs.rust_relevant }}
@@ -97,6 +106,13 @@ runs:
             - 'scripts/ci/guidelines/**'
             - 'scripts/ci/run_guidelines_verify.sh'
             - 'scripts/ci/test_guidelines_checks.sh'
+          rust_codeql_changed:
+            - 'crates/**'
+            - 'proto/**'
+          extension_codeql_changed:
+            - 'extensions/rex-vscode/**'
+          python_codeql_changed:
+            - 'sidecars/**'
 
     - name: Set relevance outputs
       id: relevance
@@ -106,6 +122,9 @@ runs:
         EXTENSION_CHANGED: ${{ steps.filter.outputs.extension_changed }}
         SIDECAR_CHANGED: ${{ steps.filter.outputs.sidecar_changed }}
         GUIDELINES_CHANGED: ${{ steps.filter.outputs.guidelines_changed }}
+        RUST_CODEQL_CHANGED: ${{ steps.filter.outputs.rust_codeql_changed }}
+        EXTENSION_CODEQL_CHANGED: ${{ steps.filter.outputs.extension_codeql_changed }}
+        PYTHON_CODEQL_CHANGED: ${{ steps.filter.outputs.python_codeql_changed }}
         CI_CHANGED: ${{ steps.filter.outputs.ci_changed }}
         GLOBAL_CHANGED: ${{ steps.filter.outputs.global_changed }}
       run: bash "$(cd "${GITHUB_ACTION_PATH}/../../.." && pwd)/scripts/ci/evaluate_ci_relevance.sh"

@@ -107,7 +107,7 @@ CodeQL runs in a **separate** workflow ([`.github/workflows/codeql.yml`](../.git
 
 - CodeQL is **not** a required branch protection check on first land.
 - Default **security** query suite only — not a substitute for clippy, ESLint, or Ruff (R025).
-- Path-aware jobs on PR/push use **stricter** gates than functional verify: Rust, JavaScript (extension), and Python (`rex-agent`) analyze only when their `*_changed` paths match — not on `ci_changed` or `global_changed` alone. The **weekly schedule** runs all three jobs for full-repo coverage.
+- Path-aware jobs on PR/push use **source-only** gates (`rust_codeql_changed`, `extension_codeql_changed`, `python_codeql_changed`) — not on CI scripts, lockfiles, or workflow edits alone. The **weekly schedule** runs all three jobs for full-repo coverage.
 
 ### Triage workflow
 
