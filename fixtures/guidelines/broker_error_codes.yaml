@@ -1,0 +1,12 @@
+# Machine-readable broker / policy deny codes (not NDJSON stream codes).
+# Keep in sync with docs/ERROR_HANDLING.md broker catalog and daemon access_policy.rs.
+version: 1
+codes:
+  - code: protected_path
+    layer: daemon_broker
+  - code: path_empty
+    layer: daemon_broker
+  - code: plan_save_denied
+    layer: daemon_broker
+  - code: plan_path_invalid
+    layer: daemon_broker

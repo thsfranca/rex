@@ -118,6 +118,8 @@ Documented for broker responses and future structured fields; **not** in `error_
 |------|---------|-------|
 | `protected_path` | Path blocked by workspace policy | daemon broker |
 | `path_empty` | Empty path on fs operation | daemon broker |
+| `plan_save_denied` | `plan.save` not allowed in current mode | daemon broker |
+| `plan_path_invalid` | `plan.save` path outside `.rex/plans/*.md` or malformed | daemon broker |
 
 ## Known gaps (current codebase)
 
@@ -161,18 +163,20 @@ These are **documented inconsistencies**; fixing them is follow-up work, not req
 
 Runs executable checks under [`scripts/ci/guidelines/`](../scripts/ci/guidelines/). On failure, CI emits `CI_SIGNAL code=GUIDELINES_FAIL` — see [CI.md](CI.md).
 
-**Initial check — error codes** (`check_error_codes.sh`):
+**Checks** (R026 shipped):
 
-1. `error_codes.yaml` ↔ `StreamErrorCode` union in `messages.ts` (bi-directional)
-2. Every yaml code appears in this document's catalog table
-3. NDJSON contract fixtures use only registered codes on terminal `error` events
+| Script | Guideline source | Rule |
+|--------|------------------|------|
+| `check_error_codes.sh` | This catalog + [EXTENSION.md](EXTENSION.md) | `error_codes.yaml` ↔ TypeScript ↔ docs ↔ NDJSON error fixtures |
+| `check_ndjson_terminal.sh` | [EXTENSION.md](EXTENSION.md) | Each `fixtures/ndjson_contract/*.ndjson` has exactly one terminal event |
+| `check_ndjson_plan_contract.sh` | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | `plan` events include `index`, `phase`, `title`, `detail`; phases are `draft` \| `clarify` \| `ready` |
+| `check_broker_policy_codes.sh` | Broker table above | `broker_error_codes.yaml` ↔ docs ↔ `access_policy.rs` |
 
 **Extensibility** — add sibling scripts (same job, no new workflow):
 
 | Script (future) | Guideline source | Example rule |
 |-----------------|------------------|--------------|
 | `check_doc_hub_index.sh` | [DOCUMENTATION.md](DOCUMENTATION.md) | Every major `docs/*.md` hub listed in [README.md](README.md) |
-| `check_ndjson_terminal.sh` | [EXTENSION.md](EXTENSION.md) | Fixture streams have exactly one terminal event |
 | `check_no_home_paths.sh` | Project policy | No editor home paths in committed files |
 
 Run locally before PRs that touch error codes or guidelines:
