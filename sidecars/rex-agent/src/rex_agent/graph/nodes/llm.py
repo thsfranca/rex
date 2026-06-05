@@ -14,8 +14,8 @@ from rex_agent.broker_chat_model import (
     stream_visible_text,
 )
 from rex_agent.graph.nodes.orchestrator import classify_subagent_for_tool
-from rex_agent.graph.stream_queue import append_step
 from rex_agent.graph.state import AgentState
+from rex_agent.graph.stream_queue import append_step
 from rex_agent.metrics import log_subagent_event
 from rex_agent.tools import ToolCall, parse_model_output, tools_for_mode
 
@@ -56,7 +56,8 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
     ok, raw_text = inference_fn(prompt, state["mode"], state.get("model", ""))
     if not ok:
         message = (
-            "Inference failed. Check that the daemon is running and HTTP inference is configured."
+            "Inference failed. Check that the daemon is running and "
+            "HTTP inference is configured."
         )
         return {
             "done": True,

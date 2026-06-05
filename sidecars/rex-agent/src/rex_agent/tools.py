@@ -9,7 +9,11 @@ from typing import Any
 
 from rex_agent.broker import BrokerClient, strip_tool_result_delimiters
 from rex_agent.config import max_tool_result_bytes, read_pruning_enabled
-from rex_agent.diff import apply_unified_diff, editor_write_prompt_suffix, reject_whole_file_write
+from rex_agent.diff import (
+    apply_unified_diff,
+    editor_write_prompt_suffix,
+    reject_whole_file_write,
+)
 
 TOOL_READ = "fs.read"
 TOOL_LIST = "fs.list"
@@ -69,14 +73,16 @@ def system_prompt_for_tools(mode: str, *, subagent: str = "orchestrator") -> str
     allowed = tools_for_subagent(subagent, mode)
     if not allowed:
         return (
-            "You are a helpful assistant. Respond with your final answer as plain text. "
-            "Do not request tools."
+            "You are a helpful assistant. Respond with your final answer "
+            "as plain text. Do not request tools."
         )
     tool_docs = []
     if TOOL_READ in allowed:
         tool_docs.append(f'- "{TOOL_READ}": args {{"path": "<relative path>"}}')
     if TOOL_LIST in allowed:
-        tool_docs.append(f'- "{TOOL_LIST}": args {{"path": "<relative dir or empty for root>"}}')
+        tool_docs.append(
+            f'- "{TOOL_LIST}": args {{"path": "<relative dir or empty for root>"}}'
+        )
     if TOOL_WRITE in allowed:
         tool_docs.append(
             f'- "{TOOL_WRITE}": args {{"path": "<relative path>", '
@@ -92,7 +98,8 @@ def system_prompt_for_tools(mode: str, *, subagent: str = "orchestrator") -> str
         '{"type":"final","answer":"<your reply>"}\n'
         "Allowed tools:\n"
         f"{chr(10).join(tool_docs)}\n"
-        "If the user message already contains file contents, do not re-read those paths."
+        "If the user message already contains file contents, "
+        "do not re-read those paths."
     )
     if subagent == "editor" and TOOL_WRITE in allowed:
         base += "\n" + editor_write_prompt_suffix()
@@ -109,18 +116,26 @@ def _extract_json_object(text: str) -> str | None:
     return None
 
 
+_PARSE_JSON_ERROR = (
+    "Could not parse model output as JSON. "
+    "Reply with a final answer or valid tool JSON."
+)
+
+
 def parse_model_output(text: str, mode: str) -> ParsedModelOutput:
     allowed = tools_for_mode(mode)
     raw = text.strip()
     if not raw:
-        return ParsedModelOutput(kind="error", message="Model returned an empty response.")
+        return ParsedModelOutput(
+            kind="error", message="Model returned an empty response."
+        )
 
     blob = _extract_json_object(raw)
     if blob is None:
         if raw.startswith("{") and allowed:
             return ParsedModelOutput(
                 kind="error",
-                message="Could not parse model output as JSON. Reply with a final answer or valid tool JSON.",
+                message=_PARSE_JSON_ERROR,
             )
         return ParsedModelOutput(kind="final", answer=raw)
 
@@ -129,26 +144,35 @@ def parse_model_output(text: str, mode: str) -> ParsedModelOutput:
     except json.JSONDecodeError:
         return ParsedModelOutput(
             kind="error",
-            message="Could not parse model output as JSON. Reply with a final answer or valid tool JSON.",
+            message=_PARSE_JSON_ERROR,
         )
 
     kind = str(payload.get("type", "")).strip().lower()
     if kind == "final":
         answer = str(payload.get("answer", "")).strip()
         if not answer:
-            return ParsedModelOutput(kind="error", message="Final answer JSON must include a non-empty answer.")
+            return ParsedModelOutput(
+                kind="error",
+                message="Final answer JSON must include a non-empty answer.",
+            )
         return ParsedModelOutput(kind="final", answer=answer)
 
     if kind == "tool":
         tool = str(payload.get("tool", "")).strip()
         args = payload.get("args")
         if not isinstance(args, dict):
-            return ParsedModelOutput(kind="error", message="Tool call JSON must include an args object.")
+            return ParsedModelOutput(
+                kind="error", message="Tool call JSON must include an args object."
+            )
         if tool not in allowed:
-            return ParsedModelOutput(kind="error", message=f"Tool {tool!r} is not allowed in {mode} mode.")
+            return ParsedModelOutput(
+                kind="error", message=f"Tool {tool!r} is not allowed in {mode} mode."
+            )
         return ParsedModelOutput(kind="tool", tool_call=ToolCall(tool=tool, args=args))
 
-    return ParsedModelOutput(kind="error", message='Model JSON must use type "final" or "tool".')
+    return ParsedModelOutput(
+        kind="error", message='Model JSON must use type "final" or "tool".'
+    )
 
 
 def prune_read_result(content: str, goal_hint: str) -> str:
@@ -157,14 +181,23 @@ def prune_read_result(content: str, goal_hint: str) -> str:
         return content
     hint_tokens = {t.lower() for t in re.findall(r"\w+", goal_hint) if len(t) > 2}
     if not hint_tokens:
-        return "\n".join(lines[:40]) + f"\n… [{len(lines) - 50} lines pruned] …\n" + "\n".join(lines[-10:])
-    scored = [(sum(1 for t in hint_tokens if t in line.lower()), line) for line in lines]
+        return (
+            "\n".join(lines[:40])
+            + f"\n… [{len(lines) - 50} lines pruned] …\n"
+            + "\n".join(lines[-10:])
+        )
+    scored = [
+        (sum(1 for t in hint_tokens if t in line.lower()), line) for line in lines
+    ]
     scored = [(s, ln) for s, ln in scored if s]
     if not scored:
         return prune_read_result(content, "")
     scored.sort(key=lambda x: -x[0])
     selected = sorted(scored[:60], key=lambda x: lines.index(x[1]))
-    return f"[pruned read: {len(lines)} lines → {len(selected)} goal-relevant lines]\n" + "\n".join(l for _, l in selected)
+    return (
+        f"[pruned read: {len(lines)} lines → {len(selected)} goal-relevant lines]\n"
+        + "\n".join(line for _, line in selected)
+    )
 
 
 def execute_tool(
@@ -250,7 +283,7 @@ def execute_tool(
 
 
 def format_delimited_tool_result_for_prompt(tool: str, body: str) -> str:
-    """Re-wrap stripped body for LLM scratch when sidecar re-processed content (cache/prune)."""
+    """Re-wrap stripped body for LLM scratch when sidecar re-processed content."""
     return f"<<TOOL_RESULT:{tool}>>\n{body}\n<<END>>"
 
 

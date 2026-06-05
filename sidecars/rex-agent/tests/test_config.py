@@ -6,7 +6,9 @@ import pytest
 from rex_agent import config
 
 
-def test_sidecar_socket_env_overrides_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_sidecar_socket_env_overrides_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = tmp_path / "rex"
     root.mkdir()
     (root / "config.json").write_text(
@@ -25,7 +27,9 @@ def test_sidecar_socket_env_overrides_config(tmp_path: Path, monkeypatch: pytest
     assert config.sidecar_socket() == "/from/env.sock"
 
 
-def test_daemon_socket_from_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_daemon_socket_from_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = tmp_path / "rex"
     root.mkdir()
     (root / "config.json").write_text(
@@ -45,7 +49,9 @@ def test_defaults_without_config(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.daemon_socket() == config.DEFAULT_DAEMON_SOCKET
 
 
-def test_agent_limits_from_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_agent_limits_from_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     root = tmp_path / "rex"
     root.mkdir()
     (root / "config.json").write_text(

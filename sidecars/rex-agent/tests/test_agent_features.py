@@ -10,7 +10,13 @@ from rex_agent import graph
 from rex_agent.broker_chat_model import MAX_PARSE_RETRIES, messages_to_prompt
 from rex_agent.config import max_tool_result_bytes
 from rex_agent.diff import apply_unified_diff
-from rex_agent.tools import TOOL_READ, ReadCache, ToolCall, execute_tool, prune_read_result
+from rex_agent.tools import (
+    TOOL_READ,
+    ReadCache,
+    ToolCall,
+    execute_tool,
+    prune_read_result,
+)
 
 
 def _reset_graphs() -> None:
@@ -108,7 +114,9 @@ def test_apply_unified_diff() -> None:
 def test_diff_write_patch_failure_message() -> None:
     client = MagicMock()
     client.read_file.return_value = (True, "alpha\nbeta\n")
-    call = ToolCall(tool="fs.write", args={"path": "x.txt", "diff": "@@ invalid @@\n-bad\n+good\n"})
+    call = ToolCall(
+        tool="fs.write", args={"path": "x.txt", "diff": "@@ invalid @@\n-bad\n+good\n"}
+    )
     ok, msg, _ = execute_tool(client, call, "agent")
     assert not ok
     assert "Patch failed" in msg

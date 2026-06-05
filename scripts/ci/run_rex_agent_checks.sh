@@ -18,6 +18,13 @@ if [[ -z "${PYTHONPATH:-}" ]]; then
   exit 1
 fi
 
+echo "::notice::rex-agent ruff check"
+if ! "$PYTHON" -m ruff check "$AGENT_DIR/src" "$AGENT_DIR/tests"; then
+  echo "::error::Ruff check failed (RUFF_FAIL)"
+  echo "CI_SIGNAL code=RUFF_FAIL stage=TestExecution result=failure hint=run ruff check under sidecars/rex-agent locally"
+  exit 1
+fi
+
 echo "::notice::rex-agent pytest"
 "$PYTHON" -m pytest "$AGENT_DIR/tests" -q
 

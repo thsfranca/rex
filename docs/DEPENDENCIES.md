@@ -46,6 +46,7 @@ brew install protobuf
 | `langgraph`, `langchain-core` | ReAct graphs (**R018**) | Installed in CI via [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) |
 | `grpcio-tools` | Maintainer: `rex proto install` | Same as `rex proto doctor` toolchain |
 | `pytest` | Sidecar unit tests | CI: [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) |
+| `ruff` | Sidecar static analysis (**R025**) | Dev dep in [`sidecars/rex-agent/pyproject.toml`](../sidecars/rex-agent/pyproject.toml); CI: [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) |
 
 ### Builtin sidecar CI
 

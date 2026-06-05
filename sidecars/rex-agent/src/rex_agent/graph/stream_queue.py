@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from rex_agent.stream_events import StepStreamEvent, StreamEvent, TextStreamEvent, ToolStreamEvent
+from rex_agent.stream_events import (
+    StepStreamEvent,
+    StreamEvent,
+    TextStreamEvent,
+    ToolStreamEvent,
+)
 
 
 def merge_stream_events(

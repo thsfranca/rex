@@ -7,8 +7,8 @@ from typing import Annotated, Optional, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
 
-from rex_agent.tools import ReadCache, ToolCall
 from rex_agent.graph.stream_queue import StreamEventList
+from rex_agent.tools import ReadCache, ToolCall
 
 
 class AgentState(TypedDict):
