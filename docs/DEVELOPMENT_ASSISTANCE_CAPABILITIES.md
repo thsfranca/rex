@@ -197,7 +197,7 @@ Hard conflicts (**C***) and resolutions recorded in ADRs.
 | **R029** | Intra-turn state compaction + microcompaction | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — **T5** scratch intent |
 | **R034** | Raw delimited tool results (**Done**) | [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R030** | Diff-only writes | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
-| **R031** | Task-aware read pruning | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| **R031** | Task-aware read pruning | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R032** | Token playbook + prefix SHA metrics | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R036** | TRON static schema compression | [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | **R033** | Native tools + MCP client | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
