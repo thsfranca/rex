@@ -61,6 +61,10 @@ impl LoadedConfig {
         &self.effective.broker.shell_allowlist
     }
 
+    pub fn observability_enabled(&self) -> bool {
+        crate::observability::observability_enabled(&self.effective.observability)
+    }
+
     pub fn broker_max_tool_result_bytes(&self) -> usize {
         let bytes = self.effective.broker.max_tool_result_bytes;
         if bytes == 0 {
@@ -99,6 +103,7 @@ pub fn merge_config(base: &mut RexConfig, overlay: RexConfig) {
     merge_cache(&mut base.cache, overlay.cache);
     merge_broker(&mut base.broker, overlay.broker);
     merge_agent(&mut base.agent, overlay.agent);
+    merge_observability(&mut base.observability, overlay.observability);
 }
 
 fn merge_daemon(base: &mut crate::model::DaemonConfig, overlay: crate::model::DaemonConfig) {
@@ -241,6 +246,36 @@ fn merge_agent(base: &mut crate::model::AgentConfig, overlay: crate::model::Agen
     }
     if overlay.max_tool_steps != 0 {
         base.max_tool_steps = overlay.max_tool_steps;
+    }
+}
+
+fn merge_observability(
+    base: &mut crate::model::ObservabilityConfig,
+    overlay: crate::model::ObservabilityConfig,
+) {
+    if overlay.enabled.is_some() {
+        base.enabled = overlay.enabled;
+    }
+    if !overlay.service_name.is_empty() {
+        base.service_name = overlay.service_name;
+    }
+    if !overlay.custom_sidecar_metrics {
+        base.custom_sidecar_metrics = overlay.custom_sidecar_metrics;
+    }
+    if !overlay.otlp.endpoint.is_empty() {
+        base.otlp.endpoint = overlay.otlp.endpoint;
+    }
+    if !overlay.otlp.protocol.is_empty() {
+        base.otlp.protocol = overlay.otlp.protocol;
+    }
+    if !overlay.store.engine.is_empty() {
+        base.store.engine = overlay.store.engine;
+    }
+    if !overlay.store.path.is_empty() {
+        base.store.path = overlay.store.path;
+    }
+    if overlay.store.format_version != 0 {
+        base.store.format_version = overlay.store.format_version;
     }
 }
 

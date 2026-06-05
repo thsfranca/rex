@@ -4,6 +4,7 @@ mod gateway_layout;
 mod layout;
 mod merge;
 mod model;
+mod observability;
 mod paths;
 mod sidecar_binary;
 mod workspace;
@@ -21,8 +22,14 @@ pub use layout::{ensure_global_layout, EnsureResult};
 pub use merge::LoadedConfig;
 pub use model::{
     AgentConfig, BrokerConfig, CacheConfig, ContextConfig, CursorCliConfig, DaemonConfig,
-    GatewayConfig, GatewayOllamaConfig, InferenceConfig, OpenAiCompatConfig, RexConfig,
-    SidecarEntry, SidecarsConfig, WorkspaceConfig, DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
+    GatewayConfig, GatewayOllamaConfig, InferenceConfig, ObservabilityConfig, OpenAiCompatConfig,
+    OtlpConfig, RexConfig, SidecarEntry, SidecarsConfig, StoreConfig, WorkspaceConfig,
+    DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
+};
+pub use observability::{
+    economics_snapshot_id, economics_snapshot_json, observability_enabled, resolve_store_path,
+    validate_observability, DEFAULT_OBS_SERVICE_NAME, DEFAULT_OTLP_PROTOCOL,
+    DEFAULT_STORE_PATH_SQLITE,
 };
 pub use paths::{
     gateway_dir, gateway_env_path, global_config_path, proto_gen_path, proto_src_path, rex_root,
@@ -213,6 +220,48 @@ mod tests {
                 loaded.effective_openai_compat_base_url(),
                 "http://127.0.0.1:4000/v1"
             );
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn observability_enabled_sqlite_validate() {
+        let tmp = tempfile::tempdir().unwrap();
+        with_rex_root(tmp.path(), || {
+            env::set_current_dir(tmp.path()).unwrap();
+            ensure_global_layout().unwrap();
+            fs::write(
+                global_config_path(),
+                r#"{
+  "version": 1,
+  "observability": {
+    "enabled": true,
+    "store": { "engine": "sqlite", "path": "obs/store.sqlite" }
+  }
+}"#,
+            )
+            .unwrap();
+            load_merged().expect("valid observability config");
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn observability_mmap_rejected_when_enabled() {
+        let tmp = tempfile::tempdir().unwrap();
+        with_rex_root(tmp.path(), || {
+            env::set_current_dir(tmp.path()).unwrap();
+            ensure_global_layout().unwrap();
+            fs::write(
+                global_config_path(),
+                r#"{
+  "version": 1,
+  "observability": { "enabled": true, "store": { "engine": "mmap" } }
+}"#,
+            )
+            .unwrap();
+            let err = load_merged().expect_err("mmap");
+            assert!(err.to_string().contains("mmap store not implemented"));
         });
     }
 

@@ -23,6 +23,8 @@ pub struct RexConfig {
     pub broker: BrokerConfig,
     #[serde(default)]
     pub agent: AgentConfig,
+    #[serde(default)]
+    pub observability: ObservabilityConfig,
 }
 
 impl RexConfig {
@@ -78,6 +80,7 @@ impl RexConfig {
                 approvals_enabled: Some(false),
                 max_tool_steps: 12,
             },
+            observability: ObservabilityConfig::default(),
         }
     }
 
@@ -119,6 +122,7 @@ impl RexConfig {
                 "sidecars.active must not be empty".to_string(),
             ));
         }
+        crate::observability::validate_observability(&self.observability)?;
         Ok(())
     }
 }
@@ -304,4 +308,70 @@ pub struct AgentConfig {
     pub approvals_enabled: Option<bool>,
     #[serde(default)]
     pub max_tool_steps: u32,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct ObservabilityConfig {
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default = "default_obs_service_name")]
+    pub service_name: String,
+    #[serde(default = "default_true")]
+    pub custom_sidecar_metrics: bool,
+    #[serde(default)]
+    pub otlp: OtlpConfig,
+    #[serde(default)]
+    pub store: StoreConfig,
+}
+
+impl Default for ObservabilityConfig {
+    fn default() -> Self {
+        Self {
+            enabled: None,
+            service_name: default_obs_service_name(),
+            custom_sidecar_metrics: true,
+            otlp: OtlpConfig::default(),
+            store: StoreConfig::default(),
+        }
+    }
+}
+
+fn default_obs_service_name() -> String {
+    crate::observability::DEFAULT_OBS_SERVICE_NAME.to_string()
+}
+
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct OtlpConfig {
+    #[serde(default)]
+    pub endpoint: String,
+    #[serde(default = "default_otlp_protocol")]
+    pub protocol: String,
+}
+
+fn default_otlp_protocol() -> String {
+    crate::observability::DEFAULT_OTLP_PROTOCOL.to_string()
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct StoreConfig {
+    #[serde(default = "default_store_engine")]
+    pub engine: String,
+    #[serde(default)]
+    pub path: String,
+    #[serde(default)]
+    pub format_version: u32,
+}
+
+impl Default for StoreConfig {
+    fn default() -> Self {
+        Self {
+            engine: default_store_engine(),
+            path: String::new(),
+            format_version: 1,
+        }
+    }
+}
+
+fn default_store_engine() -> String {
+    crate::observability::DEFAULT_STORE_ENGINE_SQLITE.to_string()
 }
