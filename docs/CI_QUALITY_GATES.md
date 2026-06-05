@@ -1,6 +1,6 @@
 # CI quality and security gates (design hub)
 
-This document is the **single source** for post-v1.0 CI gates that harden Rex for AI-assisted development: supply chain, security SAST, Python static analysis on `rex-agent`, and Rex-specific invariant checks. **Shipped gates** are documented in [CI.md](CI.md); remaining backlog items are **R024–R026**.
+This document is the **single source** for post-v1.0 CI gates that harden Rex for AI-assisted development: supply chain, security SAST, Python static analysis on `rex-agent`, and Rex-specific invariant checks. **Shipped gates** are documented in [CI.md](CI.md); remaining backlog items are **R025–R026**.
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the feature-area hub convention. [ROADMAP.md](ROADMAP.md) links here; avoid duplicating the phase table elsewhere.
 
@@ -13,7 +13,7 @@ AI-assisted changes often introduce contract drift, dependency bumps, and sideca
 
 ## Status
 
-**partial** — **R023** landed (`cargo audit` in `rust-verify`, Dependabot). **R024–R026** remain in the engineering backlog. Optional **`cargo-deny`** (licenses/bans) deferred to a follow-up slice.
+**partial** — **R023** and **R024** landed (supply chain audit in `rust-verify`; advisory CodeQL in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)). **R025–R026** remain in the engineering backlog. Optional **`cargo-deny`** (licenses/bans) deferred to a follow-up slice.
 
 ## Scope
 
@@ -21,7 +21,7 @@ AI-assisted changes often introduce contract drift, dependency bumps, and sideca
 
 - Phased gates below, aligned with [PRIORITIZATION.md](PRIORITIZATION.md) (CI cost, blast radius).
 - Path-aware CI consistent with [.github/workflows/ci.yml](../.github/workflows/ci.yml) (rust-verify / extension-verify / guidelines-verify model).
-- Failure codes: `AUDIT_FAIL` (shipped — [CI.md](CI.md)); `SAST_FAIL`, `RUFF_FAIL` (planned).
+- Failure codes: `AUDIT_FAIL`, `SAST_FAIL` (shipped — [CI.md](CI.md)); `RUFF_FAIL` (planned).
 
 **Out:**
 
@@ -34,7 +34,7 @@ AI-assisted changes often introduce contract drift, dependency bumps, and sideca
 
 | Concern | Owner |
 |---------|--------|
-| Supply chain and security SAST | This program (**R023** Done, **R024** planned) |
+| Supply chain and security SAST | This program (**R023** Done, **R024** Done — advisory CodeQL) |
 | Product contracts (NDJSON error codes, protos) | [scripts/ci/guidelines/](scripts/ci/guidelines/) and [ERROR_HANDLING.md](ERROR_HANDLING.md) — extended in **R026** |
 | Broker / access policy product behavior | Daemon tests and [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md); optional Semgrep rules in **R026** |
 | Baseline fmt/clippy/test/ESLint | [CI.md](CI.md) (unchanged) |
@@ -56,7 +56,7 @@ flowchart LR
 | Phase | ID | Bucket | What | Acceptance when Done |
 |-------|-----|--------|------|----------------------|
 | 1 | **R023** | **Should** | `cargo-audit` (+ optional `cargo-deny` licenses/bans); GitHub **Dependabot** for `Cargo.lock`, `package-lock.json`, pip | **Done** — PR fails on RustSec advisories; [`.github/dependabot.yml`](../.github/dependabot.yml); [DEPENDENCIES.md](DEPENDENCIES.md) |
-| 2 | **R024** | **Should** | **CodeQL** workflow (Rust + JS + Python); start **advisory** or schedule-only if noise is high | CodeQL runs on `pull_request`; triage documented; does not duplicate clippy/ESLint as blocking style gates |
+| 2 | **R024** | **Should** | **CodeQL** workflow (Rust + JS + Python); **advisory** on first land | **Done** — [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml); triage below; default security queries only |
 | 3 | **R025** | **Should** | **Ruff** on [sidecars/rex-agent/](../sidecars/rex-agent/) via [run_rex_agent_checks.sh](../scripts/ci/run_rex_agent_checks.sh) | Ruff check in sidecar CI path; dev deps in `pyproject.toml` |
 | 4 | **R026** | **Could** | Extend [scripts/ci/guidelines/](../scripts/ci/guidelines/) + optional **Semgrep** for Rex invariants | At least 1–2 custom checks with tests; Semgrep optional if CodeQL + guidelines suffice |
 
@@ -65,7 +65,7 @@ flowchart LR
 | Item | Bucket | Rank | Rationale |
 |------|--------|------|-----------|
 | R023 | Should | 1 | Safety, low noise, small blast radius — **Done** |
-| R024 | Should | 2 | Security; separate workflow; public GitHub repo enables CodeQL |
+| R024 | Should | 2 | Security; separate workflow; public GitHub repo enables CodeQL — **Done** |
 | R025 | Should | 3 | `rex-agent` growing; CI runs pytest only today |
 | R026 | Could | 4 | Highest Rex-specific value; needs rule design |
 
@@ -87,16 +87,46 @@ Implemented and planned checks follow the [CI observability standard](CI.md#ci-o
 |-------|----------------|
 | R023 | [`.github/dependabot.yml`](../.github/dependabot.yml), [`.cargo/audit.toml`](../.cargo/audit.toml), [`run_rust_supply_chain.sh`](../scripts/ci/run_rust_supply_chain.sh), [`run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), [DEPENDENCIES.md](DEPENDENCIES.md) |
 | R023 tuning | Dependabot groups/cooldown/stagger; audit policy file; `lru >= 0.16.3` (RUSTSEC-2026-0002) |
+| R024 | [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml), [`.github/codeql/codeql-config.yml`](../.github/codeql/codeql-config.yml) |
 
 Remaining touchpoints:
 
 | Phase | Likely paths |
 |-------|----------------|
-| R024 | `.github/workflows/codeql.yml` (or equivalent) |
 | R025 | [sidecars/rex-agent/pyproject.toml](../sidecars/rex-agent/pyproject.toml), [run_rex_agent_checks.sh](../scripts/ci/run_rex_agent_checks.sh) |
 | R026 | [scripts/ci/guidelines/](../scripts/ci/guidelines/), optional `.semgrep/` rules |
 
-Recommended implementation PR order: **R024 → R025 → R026**, each updating this hub **Status** and [CI.md](CI.md) when landed. Optional **`cargo-deny`** may land before or after R024 as a small follow-up.
+Recommended implementation PR order: **R025 → R026**, each updating this hub **Status** and [CI.md](CI.md) when landed. Optional **`cargo-deny`** may land as a small follow-up. Promote CodeQL from advisory to blocking after triage baseline (see below).
+
+## CodeQL triage (R024)
+
+CodeQL runs in a **separate** workflow ([`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)), not in `ci-checks`. First land is **advisory**: the analyze step uses `continue-on-error: true`, so the workflow may be green while alerts exist.
+
+### Where to view results
+
+- GitHub **Security → Code scanning alerts** (SARIF from `github/codeql-action/analyze`).
+- Job summaries link to the Security tab; primary triage happens there, not in `CI_SIGNAL` logs.
+
+### Advisory semantics
+
+- CodeQL is **not** a required branch protection check on first land.
+- Default **security** query suite only — not a substitute for clippy, ESLint, or Ruff (R025).
+- Path-aware jobs mirror [ci.yml](../.github/workflows/ci.yml): Rust, JavaScript (extension), and Python (`rex-agent`) analyze only when relevant paths change (or when CI/config changes).
+
+### Triage workflow
+
+1. Open the alert in **Code scanning**; confirm file/line and query rule.
+2. **True positive:** fix in a follow-up PR; link the alert when closing.
+3. **False positive:** dismiss with reason (won't fix / false positive); note pattern if recurring.
+4. **Won't fix (accepted risk):** dismiss with documented rationale for local-only / study-project scope.
+
+### Promotion to blocking (follow-up slice)
+
+After **main** has a stable baseline (no open **high** or **critical** alerts for several weeks, or all remaining alerts dismissed with rationale):
+
+1. Remove `continue-on-error: true` from analyze steps.
+2. Optionally add CodeQL jobs to branch protection required checks.
+3. Register blocking failures under `SAST_FAIL` in [CI.md](CI.md) observability contract.
 
 ## Cross-links
 

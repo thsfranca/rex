@@ -55,14 +55,14 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 | Priority | What / why | RC-* | Notes |
 |----------|------------|------|-------|
-| **Should** | CI quality gates (R024 CodeQL next) | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | **R023** **Done** — supply chain audit + Dependabot |
+| **Should** | CI quality gates (R025 Ruff next) | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | **R023** **Done** — supply chain; **R024** **Done** — advisory CodeQL |
 | **Should** | Stream/log polish beyond baseline | RC-07 (Met) | Optional hardening only |
 
 ## Next — product agent program
 
 Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar for CI/harness is **`rex-sidecar-stub`**; **`rex-agent`** ships LangGraph ReAct (**R018** Done) on the gRPC scaffold (**R017** Done). **Target graph:** Viewer/Editor subagents — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md).
 
-**Priority rationale:** **R013–R022**, **R017**, **R018**, and **R019** are **Done**. **RC-S2** is **Met**. **R023** is **Done**. Next product-agent follow-up: **R027–R032**, **R034** (**Should**), then **R016** / **R031** / **R033** / **R036** (**Could**). Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md). Next Should CI follow-up: **R024** ([CI_QUALITY_GATES.md](CI_QUALITY_GATES.md)).
+**Priority rationale:** **R013–R022**, **R017**, **R018**, and **R019** are **Done**. **RC-S2** is **Met**. **R023** and **R024** are **Done**. Next product-agent follow-up: **R027–R032**, **R034** (**Should**), then **R016** / **R031** / **R033** / **R036** (**Could**). Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md). Next Should CI follow-up: **R025** ([CI_QUALITY_GATES.md](CI_QUALITY_GATES.md)).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
@@ -188,7 +188,7 @@ flowchart TD
 | **R036** | TRON static schema compression | Could — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | **R033** | Native tools + MCP gRPC client | Could — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 | **R023** | Supply chain: `cargo-audit`, Dependabot | **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md); `cargo-deny` deferred |
-| **R024** | Security SAST: CodeQL (primary) | Should — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
+| **R024** | Security SAST: CodeQL (primary) | **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md), [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml) |
 | **R025** | `rex-agent` static analysis: Ruff | Should — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
 | **R026** | Rex-specific guidelines + optional Semgrep | Could — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
 
@@ -209,7 +209,7 @@ flowchart TD
 | **Observability suite + economics validation** | Design documented ([ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)); implementation: OTLP + `observability` JSON ([ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md)), `rex-obs-store` ([ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md)), harness | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
 | **VM/container sidecar envelope** (server/fleet) | Linux deployment needs stronger isolation | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 
-**CI:** [CI.md](CI.md) — shipped gates (mock / self-contained default; live LLM not required on PRs). **Planned:** [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R024–R026**; **R023** Done).
+**CI:** [CI.md](CI.md) — shipped gates (mock / self-contained default; live LLM not required on PRs). **Planned:** [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R025–R026**; **R023** and **R024** Done).
 
 ## How to refresh this file
 

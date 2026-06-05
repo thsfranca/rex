@@ -1,0 +1,244 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "26 3 * * 1"
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      rust_relevant: ${{ steps.set_outputs.outputs.rust_relevant }}
+      extension_relevant: ${{ steps.set_outputs.outputs.extension_relevant }}
+      sidecar_relevant: ${{ steps.set_outputs.outputs.sidecar_relevant }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            rust_changed:
+              - 'crates/**'
+              - 'sidecars/rex-agent/**'
+              - 'proto/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'scripts/install-cli.sh'
+              - 'scripts/ci/run_rust_*.sh'
+              - 'scripts/ci/run_sidecar_verify.sh'
+              - 'scripts/ci/run_*sidecar*.sh'
+              - 'scripts/ci/builtin_sidecars.txt'
+            extension_changed:
+              - 'extensions/rex-vscode/**'
+              - 'scripts/ci/run_extension*.sh'
+            ci_changed:
+              - '.github/workflows/**'
+              - '.github/dependabot.yml'
+              - '.github/codeql/**'
+              - 'scripts/ci/**'
+              - 'scripts/release/**'
+              - 'release-plz.toml'
+              - 'release-please-config.json'
+              - '.release-please-manifest.json'
+              - 'dist-workspace.toml'
+            global_changed:
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+            sidecar_changed:
+              - 'sidecars/**'
+              - 'crates/rex-sidecar-stub/**'
+              - 'crates/rex-daemon/tests/stub_sidecar_smoke.rs'
+              - 'crates/rex-daemon/tests/agent_scaffold_smoke.rs'
+              - 'proto/rex/sidecar/**'
+              - 'scripts/ci/run_sidecar_verify.sh'
+              - 'scripts/ci/run_*sidecar*.sh'
+              - 'scripts/ci/builtin_sidecars.txt'
+
+      - name: Set relevance outputs
+        id: set_outputs
+        env:
+          RUST_CHANGED: ${{ steps.filter.outputs.rust_changed }}
+          EXT_CHANGED: ${{ steps.filter.outputs.extension_changed }}
+          SIDECAR_CHANGED: ${{ steps.filter.outputs.sidecar_changed }}
+          CI_CHANGED: ${{ steps.filter.outputs.ci_changed }}
+          GLOBAL_CHANGED: ${{ steps.filter.outputs.global_changed }}
+        run: |
+          rust_relevant=false
+          extension_relevant=false
+          sidecar_relevant=false
+          if [ "${RUST_CHANGED}" = "true" ] || [ "${CI_CHANGED}" = "true" ] || [ "${GLOBAL_CHANGED}" = "true" ]; then
+            rust_relevant=true
+          fi
+          if [ "${EXT_CHANGED}" = "true" ] || [ "${CI_CHANGED}" = "true" ] || [ "${GLOBAL_CHANGED}" = "true" ]; then
+            extension_relevant=true
+          fi
+          if [ "${SIDECAR_CHANGED}" = "true" ] || [ "${CI_CHANGED}" = "true" ] || [ "${GLOBAL_CHANGED}" = "true" ]; then
+            sidecar_relevant=true
+          fi
+          echo "rust_relevant=${rust_relevant}" >> "$GITHUB_OUTPUT"
+          echo "extension_relevant=${extension_relevant}" >> "$GITHUB_OUTPUT"
+          echo "sidecar_relevant=${sidecar_relevant}" >> "$GITHUB_OUTPUT"
+
+  analyze-rust:
+    name: Analyze (rust)
+    needs: [changes]
+    if: ${{ needs.changes.outputs.rust_relevant == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RUSTFLAGS: -C link-arg=-fuse-ld=mold
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system build dependencies
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends protobuf-compiler mold
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: rust
+          config-file: .github/codeql/codeql-config.yml
+
+      - name: Build workspace
+        run: cargo build --workspace --locked
+
+      - name: Analyze
+        id: analyze
+        continue-on-error: true
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:rust
+
+      - name: Write Job Summary
+        if: always()
+        run: |
+          {
+            echo "### CodeQL (rust)"
+            echo ""
+            echo "- result: ${{ steps.analyze.outcome }}"
+            echo "- mode: advisory (continue-on-error)"
+            echo "- triage: Security → Code scanning alerts"
+            echo "- run_id: ${GITHUB_RUN_ID}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  analyze-javascript:
+    name: Analyze (javascript)
+    needs: [changes]
+    if: ${{ needs.changes.outputs.extension_relevant == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: extensions/rex-vscode
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: extensions/rex-vscode/package-lock.json
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+          config-file: .github/codeql/codeql-config.yml
+
+      - name: Install and build extension
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Analyze
+        id: analyze
+        continue-on-error: true
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:javascript
+
+      - name: Write Job Summary
+        if: always()
+        run: |
+          {
+            echo "### CodeQL (javascript)"
+            echo ""
+            echo "- result: ${{ steps.analyze.outcome }}"
+            echo "- mode: advisory (continue-on-error)"
+            echo "- triage: Security → Code scanning alerts"
+            echo "- run_id: ${GITHUB_RUN_ID}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  analyze-python:
+    name: Analyze (python)
+    needs: [changes]
+    if: ${{ needs.changes.outputs.sidecar_relevant == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+          config-file: .github/codeql/codeql-config.yml
+
+      - name: Install rex-agent
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "sidecars/rex-agent/[dev]"
+
+      - name: Analyze
+        id: analyze
+        continue-on-error: true
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:python
+
+      - name: Write Job Summary
+        if: always()
+        run: |
+          {
+            echo "### CodeQL (python)"
+            echo ""
+            echo "- result: ${{ steps.analyze.outcome }}"
+            echo "- mode: advisory (continue-on-error)"
+            echo "- triage: Security → Code scanning alerts"
+            echo "- run_id: ${GITHUB_RUN_ID}"
+          } >> "$GITHUB_STEP_SUMMARY"
