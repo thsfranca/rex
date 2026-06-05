@@ -30,9 +30,7 @@ _TOOL_RESULT_PATTERN = re.compile(
 
 def _daemon_channel(socket_path: str) -> grpc.Channel:
     target = (
-        socket_path
-        if socket_path.startswith("unix://")
-        else f"unix://{socket_path}"
+        socket_path if socket_path.startswith("unix://") else f"unix://{socket_path}"
     )
     options = (
         ("grpc.default_authority", "localhost"),

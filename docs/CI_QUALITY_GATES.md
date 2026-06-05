@@ -1,6 +1,6 @@
 # CI quality and security gates (design hub)
 
-This document is the **single source** for post-v1.0 CI gates that harden Rex for AI-assisted development: supply chain, security SAST, Python static analysis on `rex-agent`, and Rex-specific invariant checks. **Shipped gates** are documented in [CI.md](CI.md); remaining backlog items are **R025–R026**.
+This document is the **single source** for post-v1.0 CI gates that harden Rex for AI-assisted development: supply chain, security SAST, Python static analysis on `rex-agent`, and Rex-specific invariant checks. **Shipped gates** are documented in [CI.md](CI.md); remaining backlog item is **R026**.
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the feature-area hub convention. [ROADMAP.md](ROADMAP.md) links here; avoid duplicating the phase table elsewhere.
 
@@ -13,7 +13,7 @@ AI-assisted changes often introduce contract drift, dependency bumps, and sideca
 
 ## Status
 
-**partial** — **R023** and **R024** landed (supply chain audit in `rust-verify`; advisory CodeQL in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)). **R025–R026** remain in the engineering backlog. Optional **`cargo-deny`** (licenses/bans) deferred to a follow-up slice.
+**partial** — **R023**, **R024**, and **R025** landed (supply chain audit in `rust-verify`; advisory CodeQL in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml); Ruff on `rex-agent` in sidecar verify). **R026** remains in the engineering backlog. Optional **`cargo-deny`** (licenses/bans) deferred to a follow-up slice.
 
 ## Scope
 
@@ -21,7 +21,7 @@ AI-assisted changes often introduce contract drift, dependency bumps, and sideca
 
 - Phased gates below, aligned with [PRIORITIZATION.md](PRIORITIZATION.md) (CI cost, blast radius).
 - Path-aware CI consistent with [.github/workflows/ci.yml](../.github/workflows/ci.yml) (rust-verify / extension-verify / guidelines-verify model).
-- Failure codes: `AUDIT_FAIL`, `SAST_FAIL` (shipped — [CI.md](CI.md)); `RUFF_FAIL` (planned).
+- Failure codes: `AUDIT_FAIL`, `SAST_FAIL`, `RUFF_FAIL` (shipped — [CI.md](CI.md)); **R026** guidelines extensions planned.
 
 **Out:**
 
@@ -57,7 +57,7 @@ flowchart LR
 |-------|-----|--------|------|----------------------|
 | 1 | **R023** | **Should** | `cargo-audit` (+ optional `cargo-deny` licenses/bans); GitHub **Dependabot** for `Cargo.lock`, `package-lock.json`, pip | **Done** — PR fails on RustSec advisories; [`.github/dependabot.yml`](../.github/dependabot.yml); [DEPENDENCIES.md](DEPENDENCIES.md) |
 | 2 | **R024** | **Should** | **CodeQL** workflow (Rust + JS + Python); **advisory** on first land | **Done** — [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml); triage below; default security queries only |
-| 3 | **R025** | **Should** | **Ruff** on [sidecars/rex-agent/](../sidecars/rex-agent/) via [run_rex_agent_checks.sh](../scripts/ci/run_rex_agent_checks.sh) | Ruff check in sidecar CI path; dev deps in `pyproject.toml` |
+| 3 | **R025** | **Should** | **Ruff** on [sidecars/rex-agent/](../sidecars/rex-agent/) via [run_rex_agent_checks.sh](../scripts/ci/run_rex_agent_checks.sh) | **Done** — Ruff check in sidecar CI path; dev dep in `pyproject.toml`; `RUFF_FAIL` |
 | 4 | **R026** | **Could** | Extend [scripts/ci/guidelines/](../scripts/ci/guidelines/) + optional **Semgrep** for Rex invariants | At least 1–2 custom checks with tests; Semgrep optional if CodeQL + guidelines suffice |
 
 ### Prioritization (vs peers)
@@ -66,7 +66,7 @@ flowchart LR
 |------|--------|------|-----------|
 | R023 | Should | 1 | Safety, low noise, small blast radius — **Done** |
 | R024 | Should | 2 | Security; separate workflow; public GitHub repo enables CodeQL — **Done** |
-| R025 | Should | 3 | `rex-agent` growing; CI runs pytest only today |
+| R025 | Should | 3 | `rex-agent` growing; CI runs pytest only today — **Done** |
 | R026 | Could | 4 | Highest Rex-specific value; needs rule design |
 
 May run **in parallel** with **RC-S2** (extension) or **R016** (Could) when CI capacity allows — different blast radii per [PRIORITIZATION.md](PRIORITIZATION.md).
@@ -88,12 +88,12 @@ Implemented and planned checks follow the [CI observability standard](CI.md#ci-o
 | R023 | [`.github/dependabot.yml`](../.github/dependabot.yml), [`.cargo/audit.toml`](../.cargo/audit.toml), [`run_rust_supply_chain.sh`](../scripts/ci/run_rust_supply_chain.sh), [`run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), [DEPENDENCIES.md](DEPENDENCIES.md) |
 | R023 tuning | Dependabot groups/cooldown/stagger; audit policy file; `lru >= 0.16.3` (RUSTSEC-2026-0002) |
 | R024 | [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml), [`.github/codeql/codeql-config.yml`](../.github/codeql/codeql-config.yml) |
+| R025 | [sidecars/rex-agent/pyproject.toml](../sidecars/rex-agent/pyproject.toml), [run_rex_agent_checks.sh](../scripts/ci/run_rex_agent_checks.sh), [run_sidecar_verify.sh](../scripts/ci/run_sidecar_verify.sh) |
 
 Remaining touchpoints:
 
 | Phase | Likely paths |
 |-------|----------------|
-| R025 | [sidecars/rex-agent/pyproject.toml](../sidecars/rex-agent/pyproject.toml), [run_rex_agent_checks.sh](../scripts/ci/run_rex_agent_checks.sh) |
 | R026 | [scripts/ci/guidelines/](../scripts/ci/guidelines/), optional `.semgrep/` rules |
 
 Recommended implementation PR order: **R025 → R026**, each updating this hub **Status** and [CI.md](CI.md) when landed. Optional **`cargo-deny`** may land as a small follow-up. Promote CodeQL from advisory to blocking after triage baseline (see below).

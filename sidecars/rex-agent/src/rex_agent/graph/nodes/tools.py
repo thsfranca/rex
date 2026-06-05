@@ -36,7 +36,9 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
             f"Stopped after {state['max_steps']} tool steps (agent.max_tool_steps). "
             "Try a narrower request."
         )
-        events = append_tool(events, name=call.tool, phase="failed", detail="max tool steps exceeded")
+        events = append_tool(
+            events, name=call.tool, phase="failed", detail="max tool steps exceeded"
+        )
         return {
             "done": True,
             "final_answer": message,

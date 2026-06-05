@@ -1,4 +1,7 @@
-"""Unified diff application for Editor writes (R030). Sidecar-local patch-before-write."""
+"""Unified diff application for Editor writes (R030).
+
+Sidecar-local patch-before-write.
+"""
 
 from __future__ import annotations
 
@@ -19,7 +22,11 @@ def editor_write_prompt_suffix() -> str:
 
 def reject_whole_file_write(path: str, content: str, existing: str) -> str | None:
     line_count = max(len(existing.splitlines()), len(content.splitlines()), 1)
-    if line_count > WHOLE_FILE_LINE_LIMIT and content and not content.lstrip().startswith("---"):
+    if (
+        line_count > WHOLE_FILE_LINE_LIMIT
+        and content
+        and not content.lstrip().startswith("---")
+    ):
         return (
             f"Whole-file write rejected for {path!r} ({line_count} lines). "
             "Use args.diff with a unified diff (≥3 context lines)."

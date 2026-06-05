@@ -6,7 +6,11 @@ from unittest.mock import MagicMock, patch
 
 import grpc
 
-from rex_agent.broker import BrokerClient, strip_tool_result_delimiters, truncate_tool_result
+from rex_agent.broker import (
+    BrokerClient,
+    strip_tool_result_delimiters,
+    truncate_tool_result,
+)
 from rex_agent.config import DEFAULT_MAX_TOOL_RESULT_BYTES
 
 

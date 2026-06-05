@@ -69,7 +69,9 @@ def _add_sidecar_service_servicer_to_server(servicer, server) -> None:  # noqa: 
 
 
 _sidecar_pb2_grpc.SidecarServiceServicer = _SidecarServiceServicer
-_sidecar_pb2_grpc.add_SidecarServiceServicer_to_server = _add_sidecar_service_servicer_to_server
+_sidecar_pb2_grpc.add_SidecarServiceServicer_to_server = (
+    _add_sidecar_service_servicer_to_server
+)
 
 _pkg = types.ModuleType("rex.sidecar.v1")
 _pkg.sidecar_pb2 = _sidecar_pb2
@@ -106,7 +108,9 @@ def test_health_returns_version() -> None:
 def test_run_turn_success_chunks() -> None:
     servicer = AgentServicer()
     request = _RunTurnRequest(prompt="hello", mode="ask", model="")
-    with patch("rex_agent.server.stream_turn", return_value=iter([TextStreamEvent(text="ok")])):
+    with patch(
+        "rex_agent.server.stream_turn", return_value=iter([TextStreamEvent(text="ok")])
+    ):
         chunks = list(servicer.RunTurn(request, None))
     assert chunks[-1].done
     assert "ok" in "".join(c.text for c in chunks if not c.done)
@@ -120,7 +124,10 @@ def test_run_turn_inference_failure_message() -> None:
         return_value=iter(
             [
                 TextStreamEvent(
-                    text="Inference failed. Check that the daemon is running and HTTP inference is configured."
+                    text=(
+                        "Inference failed. Check that the daemon is running and "
+                        "HTTP inference is configured."
+                    )
                 )
             ]
         ),
