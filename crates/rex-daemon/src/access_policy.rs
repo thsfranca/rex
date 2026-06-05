@@ -23,6 +23,7 @@ pub enum BrokerCapability {
     FsRead,
     FsList,
     FsWrite,
+    PlanSave,
     ExecShell,
 }
 
@@ -32,6 +33,7 @@ impl BrokerCapability {
             Self::FsRead => "fs.read",
             Self::FsList => "fs.list",
             Self::FsWrite => "fs.write",
+            Self::PlanSave => "plan.save",
             Self::ExecShell => "exec.shell",
         }
     }
@@ -45,8 +47,13 @@ pub fn evaluate_broker(
 ) -> AccessDecision {
     let mode = normalize_mode(mode);
     if !capability_allowed_in_mode(capability, &mode) {
+        let code = if capability == BrokerCapability::PlanSave {
+            "plan_save_denied"
+        } else {
+            "mode_denied"
+        };
         return AccessDecision::Deny(PolicyDeny {
-            code: "mode_denied",
+            code,
             message: format!("{} denied for mode {mode}", capability.as_str()),
         });
     }
@@ -81,6 +88,7 @@ pub fn evaluate_broker(
             }
             evaluate_path_protected(trimmed, "write")
         }
+        BrokerCapability::PlanSave => evaluate_plan_save_path(relative_path.unwrap_or("")),
         BrokerCapability::ExecShell => AccessDecision::Allow,
     }
 }
@@ -89,7 +97,42 @@ fn capability_allowed_in_mode(capability: BrokerCapability, mode: &str) -> bool 
     match capability {
         BrokerCapability::FsRead | BrokerCapability::FsList => true,
         BrokerCapability::FsWrite | BrokerCapability::ExecShell => mode == "agent",
+        BrokerCapability::PlanSave => mode == "plan",
     }
+}
+
+pub fn normalize_plan_save_path(relative_path: &str) -> String {
+    let trimmed = relative_path.trim().trim_start_matches('/');
+    if trimmed.starts_with(".rex/plans/") {
+        trimmed.to_string()
+    } else {
+        let name = trimmed.strip_prefix(".rex/plans/").unwrap_or(trimmed);
+        format!(".rex/plans/{name}")
+    }
+}
+
+fn evaluate_plan_save_path(relative_path: &str) -> AccessDecision {
+    let trimmed = relative_path.trim();
+    if trimmed.is_empty() {
+        return AccessDecision::Deny(PolicyDeny {
+            code: "plan_path_invalid",
+            message: "plan.save path must not be empty".to_string(),
+        });
+    }
+    let normalized = normalize_plan_save_path(trimmed);
+    if !normalized.starts_with(".rex/plans/") || !normalized.ends_with(".md") {
+        return AccessDecision::Deny(PolicyDeny {
+            code: "plan_path_invalid",
+            message: "plan.save path must be under .rex/plans/ and end with .md".to_string(),
+        });
+    }
+    if normalized.contains("..") {
+        return AccessDecision::Deny(PolicyDeny {
+            code: "plan_path_invalid",
+            message: "plan.save path must not contain ..".to_string(),
+        });
+    }
+    evaluate_path_protected(&normalized, "plan.save")
 }
 
 fn evaluate_path_protected(trimmed: &str, operation: &str) -> AccessDecision {
@@ -120,6 +163,11 @@ pub fn evaluate_fs_write(relative_path: &str, mode: &str) -> AccessDecision {
 /// Evaluate `exec.shell` before host execution.
 pub fn evaluate_exec_shell(mode: &str) -> AccessDecision {
     evaluate_broker(BrokerCapability::ExecShell, mode, None)
+}
+
+/// Evaluate `plan.save` before host execution.
+pub fn evaluate_plan_save(relative_path: &str, mode: &str) -> AccessDecision {
+    evaluate_broker(BrokerCapability::PlanSave, mode, Some(relative_path))
 }
 
 fn is_protected_path(relative_path: &str) -> bool {
@@ -235,5 +283,29 @@ mod tests {
             evaluate_fs_read("src/main.rs", "plan"),
             AccessDecision::Allow
         );
+    }
+
+    #[test]
+    fn plan_save_allowed_in_plan_mode() {
+        assert_eq!(
+            evaluate_plan_save(".rex/plans/feature.md", "plan"),
+            AccessDecision::Allow
+        );
+    }
+
+    #[test]
+    fn plan_save_denied_in_agent_mode() {
+        match evaluate_plan_save(".rex/plans/feature.md", "agent") {
+            AccessDecision::Deny(d) => assert_eq!(d.code, "plan_save_denied"),
+            _ => panic!("expected deny"),
+        }
+    }
+
+    #[test]
+    fn plan_save_rejects_path_outside_plans_dir() {
+        match evaluate_plan_save("out.txt", "plan") {
+            AccessDecision::Deny(d) => assert_eq!(d.code, "plan_path_invalid"),
+            _ => panic!("expected deny"),
+        }
     }
 }

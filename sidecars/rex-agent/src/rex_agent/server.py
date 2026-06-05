@@ -8,7 +8,12 @@ from typing import TYPE_CHECKING
 
 from rex_agent import __version__
 from rex_agent.graph import stream_turn
-from rex_agent.stream_events import StepStreamEvent, TextStreamEvent, ToolStreamEvent
+from rex_agent.stream_events import (
+    PlanStreamEvent,
+    StepStreamEvent,
+    TextStreamEvent,
+    ToolStreamEvent,
+)
 from rex_agent.streaming import chunk_text
 
 if TYPE_CHECKING:
@@ -76,6 +81,18 @@ class AgentServicer(sidecar_pb2_grpc.SidecarServiceServicer):
                     event="step",
                     phase=event.phase,
                     summary=event.summary,
+                )
+                index += 1
+                continue
+            if isinstance(event, PlanStreamEvent):
+                yield sidecar_pb2.RunTurnChunk(
+                    text="",
+                    index=index,
+                    done=False,
+                    event="plan",
+                    phase=event.phase,
+                    summary=event.title,
+                    detail=event.detail,
                 )
                 index += 1
         yield sidecar_pb2.RunTurnChunk(

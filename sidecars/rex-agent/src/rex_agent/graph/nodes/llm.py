@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any
 
@@ -15,8 +16,9 @@ from rex_agent.broker_chat_model import (
 )
 from rex_agent.graph.nodes.orchestrator import classify_subagent_for_tool
 from rex_agent.graph.state import AgentState
-from rex_agent.graph.stream_queue import append_step
+from rex_agent.graph.stream_queue import append_plan, append_step
 from rex_agent.metrics import log_subagent_event
+from rex_agent.stream_events import cap_detail
 from rex_agent.tools import ToolCall, parse_model_output, tools_for_mode
 
 
@@ -84,7 +86,38 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
         }
 
     parsed = parse_model_output(raw_text, state["mode"])
+    if parsed.kind == "clarify" and parsed.clarify_questions:
+        detail = cap_detail(json.dumps(parsed.clarify_questions))
+        events = append_plan(
+            list(state.get("stream_events") or []),
+            phase="clarify",
+            title="Clarify",
+            detail=detail,
+        )
+        summary = "Clarifying questions ready."
+        return {
+            "done": True,
+            "final_answer": summary,
+            "stream_parts": state["stream_parts"] + [summary],
+            "stream_events": events,
+        }
+
     if parsed.kind == "final":
+        if parsed.plan is not None:
+            title = parsed.answer or "Plan"
+            detail = cap_detail(json.dumps(parsed.plan))
+            events = append_plan(
+                list(state.get("stream_events") or []),
+                phase="ready",
+                title=title,
+                detail=detail,
+            )
+            return {
+                "done": True,
+                "final_answer": title,
+                "stream_parts": state["stream_parts"] + [title],
+                "stream_events": events,
+            }
         visible = "".join(stream_visible_text(parsed.answer)) or parsed.answer
         return {
             "done": True,

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 
 from rex_agent.stream_events import (
+    PlanStreamEvent,
     StepStreamEvent,
     StreamEvent,
     TextStreamEvent,
@@ -44,3 +45,13 @@ def append_step(
     summary: str,
 ) -> list[StreamEvent]:
     return events + [StepStreamEvent(phase=phase, summary=summary)]
+
+
+def append_plan(
+    events: list[StreamEvent],
+    *,
+    phase: str,
+    title: str,
+    detail: str = "",
+) -> list[StreamEvent]:
+    return events + [PlanStreamEvent(phase=phase, title=title, detail=detail)]

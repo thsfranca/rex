@@ -2,7 +2,9 @@
 
 from rex_agent.tools import (
     TOOL_LIST,
+    TOOL_PLAN_SAVE,
     TOOL_READ,
+    normalize_plan_save_path,
     parse_model_output,
     tools_for_mode,
 )
@@ -12,6 +14,28 @@ def test_plan_mode_allows_read_and_list() -> None:
     allowed = tools_for_mode("plan")
     assert TOOL_READ in allowed
     assert TOOL_LIST in allowed
+    assert TOOL_PLAN_SAVE in allowed
+
+
+def test_normalize_plan_save_path() -> None:
+    assert normalize_plan_save_path("feature.md") == ".rex/plans/feature.md"
+    assert normalize_plan_save_path(".rex/plans/x.md") == ".rex/plans/x.md"
+
+
+def test_plan_clarify_json_parsed() -> None:
+    raw = '{"type":"clarify","questions":[{"id":"q1","prompt":"Scope?"}]}'
+    parsed = parse_model_output(raw, "plan")
+    assert parsed.kind == "clarify"
+    assert parsed.clarify_questions is not None
+    assert parsed.clarify_questions[0]["prompt"] == "Scope?"
+
+
+def test_plan_final_json_parsed() -> None:
+    raw = '{"type":"final","plan":{"title":"T","steps":[]}}'
+    parsed = parse_model_output(raw, "plan")
+    assert parsed.kind == "final"
+    assert parsed.plan is not None
+    assert parsed.answer == "T"
 
 
 def test_ask_mode_parses_plain_text_as_final() -> None:

@@ -9,6 +9,7 @@ service RexService {
   rpc BrokerReadFile(BrokerReadFileRequest) returns (BrokerReadFileResponse);
   rpc BrokerListDir(BrokerListDirRequest) returns (BrokerListDirResponse);
   rpc BrokerWriteFile(BrokerWriteFileRequest) returns (BrokerWriteFileResponse);
+  rpc BrokerSavePlan(BrokerSavePlanRequest) returns (BrokerSavePlanResponse);
   rpc BrokerExecShell(BrokerExecShellRequest) returns (BrokerExecShellResponse);
   // Sidecar broker: OpenAI-compatible HTTP inference (daemon executes backend).
   rpc BrokerInference(BrokerInferenceRequest) returns (BrokerInferenceResponse);
@@ -77,6 +78,17 @@ message BrokerWriteFileRequest {
 }
 
 message BrokerWriteFileResponse {
+  bool ok = 1;
+  string error = 2;
+}
+
+message BrokerSavePlanRequest {
+  string path = 1;
+  string content = 2;
+  string mode = 3;
+}
+
+message BrokerSavePlanResponse {
   bool ok = 1;
   string error = 2;
 }

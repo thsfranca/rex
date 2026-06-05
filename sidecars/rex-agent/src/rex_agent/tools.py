@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from rex_agent.broker import BrokerClient, strip_tool_result_delimiters
@@ -19,10 +20,19 @@ TOOL_READ = "fs.read"
 TOOL_LIST = "fs.list"
 TOOL_WRITE = "fs.write"
 TOOL_EXEC = "exec.shell"
+TOOL_PLAN_SAVE = "plan.save"
+
+MAX_CLARIFY_QUESTIONS = 3
+PLAN_PROMPT_SLICE = (
+    "Plan mode: explore with fs.read/fs.list only; no patches or shell. "
+    'Use {"type":"clarify","questions":[...]} (max 3) when scope is unclear. '
+    'Finish with {"type":"final","plan":{title,steps[],risks[],open_questions[]}} '
+    "or plan.save to .rex/plans/<name>.md when the user should persist the plan."
+)
 
 TOOLS_BY_MODE: dict[str, frozenset[str]] = {
     "ask": frozenset(),
-    "plan": frozenset({TOOL_READ, TOOL_LIST}),
+    "plan": frozenset({TOOL_READ, TOOL_LIST, TOOL_PLAN_SAVE}),
     "agent": frozenset({TOOL_READ, TOOL_LIST, TOOL_WRITE, TOOL_EXEC}),
 }
 
@@ -42,6 +52,8 @@ class ParsedModelOutput:
     answer: str = ""
     tool_call: ToolCall | None = None
     message: str = ""
+    plan: dict[str, Any] | None = None
+    clarify_questions: list[dict[str, Any]] | None = None
 
 
 @dataclass
@@ -90,6 +102,12 @@ def system_prompt_for_tools(mode: str, *, subagent: str = "orchestrator") -> str
         )
     if TOOL_EXEC in allowed:
         tool_docs.append(f'- "{TOOL_EXEC}": args {{"command": "<shell command>"}}')
+    if TOOL_PLAN_SAVE in allowed:
+        tool_docs.append(
+            f'- "{TOOL_PLAN_SAVE}": args '
+            '{"path": "<name>.md", "content": "<markdown>"} '
+            "(under .rex/plans/)"
+        )
     base = (
         "You are a development agent. Use at most one tool per step.\n"
         "When you need a tool, respond with ONLY a JSON object on one line:\n"
@@ -103,7 +121,31 @@ def system_prompt_for_tools(mode: str, *, subagent: str = "orchestrator") -> str
     )
     if subagent == "editor" and TOOL_WRITE in allowed:
         base += "\n" + editor_write_prompt_suffix()
+    if (mode or "ask").strip().lower() == "plan" and subagent in (
+        "orchestrator",
+        "viewer",
+    ):
+        base += "\n" + PLAN_PROMPT_SLICE + _workspace_plan_prompt_overlay()
     return base
+
+
+def _workspace_plan_prompt_overlay() -> str:
+    for candidate in (".rex/prompts/mode/plan.md", "prompts/mode/plan.md"):
+        try:
+            text = Path(candidate).read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if text:
+            return f"\n[project plan instructions]\n{text}"
+    return ""
+
+
+def normalize_plan_save_path(path: str) -> str:
+    trimmed = path.strip().lstrip("/")
+    if trimmed.startswith(".rex/plans/"):
+        return trimmed
+    name = trimmed.removeprefix(".rex/plans/")
+    return f".rex/plans/{name}"
 
 
 def _extract_json_object(text: str) -> str | None:
@@ -148,12 +190,51 @@ def parse_model_output(text: str, mode: str) -> ParsedModelOutput:
         )
 
     kind = str(payload.get("type", "")).strip().lower()
+    if kind == "clarify":
+        if (mode or "").strip().lower() != "plan":
+            return ParsedModelOutput(
+                kind="error",
+                message="Clarify JSON is only valid in plan mode.",
+            )
+        raw_questions = payload.get("questions")
+        if not isinstance(raw_questions, list) or not raw_questions:
+            return ParsedModelOutput(
+                kind="error",
+                message="Clarify JSON must include a non-empty questions array.",
+            )
+        questions: list[dict[str, Any]] = []
+        for item in raw_questions[:MAX_CLARIFY_QUESTIONS]:
+            if not isinstance(item, dict):
+                continue
+            qid = str(item.get("id", "")).strip() or f"q{len(questions) + 1}"
+            prompt = str(item.get("prompt", "")).strip()
+            if not prompt:
+                continue
+            entry: dict[str, Any] = {"id": qid, "prompt": prompt}
+            options = item.get("options")
+            if isinstance(options, list) and options:
+                entry["options"] = [str(o) for o in options[:8]]
+            questions.append(entry)
+        if not questions:
+            return ParsedModelOutput(
+                kind="error", message="Clarify questions must include prompts."
+            )
+        return ParsedModelOutput(kind="clarify", clarify_questions=questions)
+
     if kind == "final":
+        plan_obj = payload.get("plan")
+        if isinstance(plan_obj, dict) and (mode or "").strip().lower() == "plan":
+            title = str(plan_obj.get("title", "")).strip() or "Plan"
+            return ParsedModelOutput(
+                kind="final",
+                answer=title,
+                plan=plan_obj,
+            )
         answer = str(payload.get("answer", "")).strip()
         if not answer:
             return ParsedModelOutput(
                 kind="error",
-                message="Final answer JSON must include a non-empty answer.",
+                message="Final answer JSON must include answer or plan object.",
             )
         return ParsedModelOutput(kind="final", answer=answer)
 
@@ -171,7 +252,8 @@ def parse_model_output(text: str, mode: str) -> ParsedModelOutput:
         return ParsedModelOutput(kind="tool", tool_call=ToolCall(tool=tool, args=args))
 
     return ParsedModelOutput(
-        kind="error", message='Model JSON must use type "final" or "tool".'
+        kind="error",
+        message='Model JSON must use type "final", "tool", or "clarify" (plan mode).',
     )
 
 
@@ -278,6 +360,16 @@ def execute_tool(
             return False, "exec.shell requires command", False
         ok, result = client.exec_shell(command, mode)
         return ok, result, False
+
+    if tool == TOOL_PLAN_SAVE:
+        path = normalize_plan_save_path(str(args.get("path", "")))
+        content = str(args.get("content", ""))
+        if not path:
+            return False, "plan.save requires path", False
+        if not content.strip():
+            return False, "plan.save requires content", False
+        ok, msg = client.save_plan(path, content, mode)
+        return ok, msg if ok else msg, False
 
     return False, f"Unknown tool: {tool}", False
 
