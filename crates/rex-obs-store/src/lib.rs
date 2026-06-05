@@ -1,9 +1,16 @@
 mod error;
+mod otel;
+mod query;
 mod record;
 mod schema;
 mod store;
 
 pub use error::ObsStoreError;
+pub use otel::{
+    instrument_catalog, project_metrics, InstrumentCatalogEntry, MetricsQueryRequest,
+    MetricsQueryResponse,
+};
+pub use query::{ObsQuery, QueriedStream, StreamQueryFilter};
 pub use record::StreamEconomicsRecord;
 pub use schema::SCHEMA_VERSION;
 pub use store::{ObsStore, SharedObsStore};

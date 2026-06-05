@@ -137,9 +137,9 @@ flowchart TD
 | Priority | What / why | Source(s) | Notes |
 |----------|------------|-----------|--------|
 | **Should** | Observability Phase 2 — sqlite store + OTLP | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | **partial** — store + core OTLP shipped; mmap + sidecar API Phase 2b/6 |
-| **Should** | Rex observability read API (loopback) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | Planned — Grafana datasource backend; [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) |
-| **Should** | Rex Grafana OTel datasource plugin | [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | Planned — OTel-shaped read API client |
-| **Should** | `rex obs up` + vendored Grafana + default dashboards | [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | Planned — one command local suite |
+| **Should** | Rex observability read API (loopback) | [OBS_READ_API.md](OBS_READ_API.md) | **Done** — [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) |
+| **Should** | Rex Grafana OTel datasource plugin | [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | **Done** — `integrations/grafana-rex-otel/` |
+| **Should** | `rex obs up` + Grafana + default dashboards | [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | **Done** — Grafana from PATH or vendor dir; templates under `templates/obs/` |
 | **Could** | **MCP** interoperability (design accepted; implementation deferred) | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | Formal MCP ADR when scheduled |
 | **Could** | Learned / small-model compression; batching/async doc jobs | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Matrix **planned** rows |
 | **Could** | Layered prompts (system/project stack) | [CONFIGURATION.md](CONFIGURATION.md#layered-prompts-planned) | **planned** |

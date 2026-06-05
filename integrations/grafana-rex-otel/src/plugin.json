@@ -1,0 +1,12 @@
+{
+  "type": "datasource",
+  "name": "Rex OTel",
+  "id": "rex-otel-datasource",
+  "metrics": true,
+  "backend": false,
+  "info": {
+    "description": "Queries Rex loopback observability read API (OTel-shaped JSON)",
+    "author": { "name": "Rex" },
+    "version": "0.1.0"
+  }
+}

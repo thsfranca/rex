@@ -22,13 +22,14 @@ pub use layout::{ensure_global_layout, EnsureResult};
 pub use merge::LoadedConfig;
 pub use model::{
     AgentConfig, BrokerConfig, CacheConfig, ContextConfig, CursorCliConfig, DaemonConfig,
-    GatewayConfig, GatewayOllamaConfig, InferenceConfig, ObservabilityConfig, OpenAiCompatConfig,
-    OtlpConfig, RexConfig, SidecarEntry, SidecarsConfig, StoreConfig, WorkspaceConfig,
-    DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
+    GatewayConfig, GatewayOllamaConfig, GrafanaUiConfig, InferenceConfig, ObservabilityConfig,
+    OpenAiCompatConfig, OtlpConfig, ReadApiConfig, RexConfig, SidecarEntry, SidecarsConfig,
+    StoreConfig, UiConfig, WorkspaceConfig, DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
 };
 pub use observability::{
     economics_snapshot_id, economics_snapshot_json, observability_enabled, resolve_store_path,
-    validate_observability, DEFAULT_OBS_SERVICE_NAME, DEFAULT_OTLP_PROTOCOL,
+    ui_enabled, validate_observability, validate_read_api_listen, DEFAULT_GRAFANA_PORT,
+    DEFAULT_OBS_SERVICE_NAME, DEFAULT_OTLP_PROTOCOL, DEFAULT_READ_API_LISTEN,
     DEFAULT_STORE_PATH_SQLITE,
 };
 pub use paths::{
