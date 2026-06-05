@@ -85,7 +85,8 @@ Implemented and planned checks follow the [CI observability standard](CI.md#ci-o
 
 | Phase | Shipped paths |
 |-------|----------------|
-| R023 | [`.github/dependabot.yml`](../.github/dependabot.yml), [`run_rust_supply_chain.sh`](../scripts/ci/run_rust_supply_chain.sh), [`run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), [DEPENDENCIES.md](DEPENDENCIES.md) |
+| R023 | [`.github/dependabot.yml`](../.github/dependabot.yml), [`.cargo/audit.toml`](../.cargo/audit.toml), [`run_rust_supply_chain.sh`](../scripts/ci/run_rust_supply_chain.sh), [`run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), [DEPENDENCIES.md](DEPENDENCIES.md) |
+| R023 tuning | Dependabot groups/cooldown/stagger; audit policy file; `lru >= 0.16.3` (RUSTSEC-2026-0002) |
 
 Remaining touchpoints:
 

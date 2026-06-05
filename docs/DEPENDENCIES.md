@@ -68,8 +68,8 @@ brew install protobuf
 | `cargo fmt` | Enforces formatting consistency. | Used in CI. |
 | `cargo clippy` | Enforces lint quality gates. | CI runs with `-D warnings`. |
 | `cargo test` | Validates behavior with automated tests. | Unit tests exist for CLI parsing and daemon behavior. |
-| `cargo-audit` | Scans `Cargo.lock` for RustSec advisories. | CI: [`run_rust_supply_chain.sh`](../scripts/ci/run_rust_supply_chain.sh) inside [`run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh). Install: `cargo install cargo-audit`. |
-| GitHub Dependabot | Scheduled dependency update PRs (cargo, npm, pip). | [`.github/dependabot.yml`](../.github/dependabot.yml) |
+| `cargo-audit` | Scans `Cargo.lock` for RustSec advisories. | Policy: [`.cargo/audit.toml`](../.cargo/audit.toml) (`severity_threshold = "low"`, deny yanked). CI: [`run_rust_supply_chain.sh`](../scripts/ci/run_rust_supply_chain.sh). Install: `cargo install cargo-audit`. |
+| GitHub Dependabot | Scheduled dependency update PRs (cargo, npm, pip). | [`.github/dependabot.yml`](../.github/dependabot.yml) — grouped weekly PRs (Mon/Tue/Wed), cooldown on npm/pip; **security updates bypass cooldown**. Pip updates `pyproject.toml` constraints only (no lockfile). |
 | CI runner with protobuf compiler | Ensures reproducible checks in pull requests. | Workflow installs `protobuf-compiler` on Linux CI. |
 
 ## 4) Plugin/tool ecosystem dependencies (planned, not required yet)

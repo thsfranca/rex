@@ -1,0 +1,9 @@
+[advisories]
+severity_threshold = "low"
+
+[output]
+deny = ["yanked"]
+quiet = false
+
+[yanked]
+enabled = true

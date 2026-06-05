@@ -246,7 +246,7 @@ Local: `./scripts/ci/run_sidecar_verify.sh`. Failure code: `SIDECAR_FAIL`. Requi
 
 ### Rust supply chain audit (`rust-verify`)
 
-[`run_rust_supply_chain.sh`](../scripts/ci/run_rust_supply_chain.sh) runs in **BuildAndChecks** inside [`run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh) (after fmt/clippy, before tests). It scans `Cargo.lock` with `cargo audit`. Failure code: `AUDIT_FAIL`.
+[`run_rust_supply_chain.sh`](../scripts/ci/run_rust_supply_chain.sh) runs in **BuildAndChecks** inside [`run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh) (after fmt/clippy, before tests). It scans `Cargo.lock` with `cargo audit`, using repo policy in [`.cargo/audit.toml`](../.cargo/audit.toml) (fail on advisories and **yanked** crates). Failure code: `AUDIT_FAIL`.
 
 Local:
 
@@ -256,7 +256,7 @@ Local:
 
 Requires `cargo-audit` on `PATH` (see [DEPENDENCIES.md](DEPENDENCIES.md)). CI installs `cargo-audit@0.22` via `taiki-e/install-action` in the **`rust-verify`** job.
 
-Dependabot (cargo, npm, pip) is configured in [`.github/dependabot.yml`](../.github/dependabot.yml); version-update PRs are triaged separately from this gate.
+Dependabot (cargo, npm, pip) is configured in [`.github/dependabot.yml`](../.github/dependabot.yml): grouped weekly updates on staggered days, cooldown on npm/pip version bumps (security updates are immediate). Triage bot PRs separately from this gate.
 
 ## Local verification flow for reliability changes
 
