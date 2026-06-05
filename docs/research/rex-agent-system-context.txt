@@ -1,0 +1,198 @@
+REX AGENT SYSTEM CONTEXT (for external research)
+Version: snapshot for research — align with repo docs under docs/ when implementing.
+
+================================================================================
+1. WHAT REX IS
+================================================================================
+REX is a local development-assistance stack: Rust daemon (rex-daemon), VS Code
+extension (rex-vscode), CLI (rex), and a supervised Python sidecar (rex-agent)
+that implements the product software-engineering agent.
+
+Design principle: the sidecar REQUESTS; the daemon AUTHORIZES, assembles context,
+executes brokered host actions, meters tokens, and logs stages.
+
+Canonical hubs in the Rex repo:
+- docs/DEVELOPMENT_ASSISTANCE_CAPABILITIES.md — ownership, turn contract, budget
+- docs/AGENT_GRAPH_ARCHITECTURE.md — LangGraph topology, token playbook
+- sidecars/rex-agent/DESIGN.md — sidecar contract
+- docs/CONTEXT_EFFICIENCY.md — economics levers
+
+================================================================================
+2. RUNTIME FLOW (ONE USER CHAT TURN)
+================================================================================
+1) User types in VS Code chat (mode: ask | plan | agent).
+2) Extension builds prompt string (+ optional attachments, editor hints).
+3) CLI: rex complete → gRPC StreamInference on daemon UDS.
+4) Daemon ContextPipeline (once per turn start):
+   - Budget user prompt
+   - Optionally strip extension C1 blocks (--- / File: / Selection:) when client_hints exist
+   - Lexical workspace indexer search (unless skipped)
+   - Append retrieved snippets as:
+
+       <user prompt>
+
+       [context]
+       <compressed chunks>
+
+   Result = effective_prompt (also sent to sidecar as RunTurn.prompt).
+5) Daemon streams via rex-agent RunTurn(effective_prompt, mode, model, turn_id).
+6) Sidecar LangGraph ReAct loop; EACH LLM step:
+   - Builds one big string via messages_to_prompt()
+   - Calls BrokerInference(prompt) on daemon (NOT direct OpenAI from sidecar)
+7) Daemon BrokerInference → HTTP OpenAI-compatible chat/completions:
+   - Single message: {"role":"user","content":"<entire assembled string>"}
+   - stream: true; SSE assembled into one completion text
+8) Sidecar parses model output; may call broker tools (read/list/write/shell);
+   loops until final answer or max_tool_steps (default 12).
+9) Chunks stream back: extension NDJSON UI.
+
+IMPORTANT: There is no separate OpenAI "system" role on the HTTP wire today.
+Pseudo-roles are embedded INSIDE the one user content string:
+  [system]\n...
+  [user]\n...   (daemon_context = RunTurn.prompt)
+  [assistant]\n...
+  [user]\n...   (tool results)
+
+================================================================================
+3. OWNERSHIP (WHO OWNS WHAT)
+================================================================================
+| Concern                         | Owner        | Notes |
+|---------------------------------|--------------|-------|
+| User prompt + [context] assembly| rex-daemon   | Once per turn; lexical retrieval |
+| Layered system/project prompts  | rex-daemon   | ADR 0012 accepted; impl planned |
+| Tool loop, graph state          | rex-agent    | LangGraph; ephemeral scratch |
+| System/tool protocol text       | rex-agent    | system_prompt_for_tools() in code |
+| Chat transcript persistence     | extension    | Not sidecar |
+| LLM API keys / HTTP             | rex-daemon   | BrokerInference only from sidecar |
+| FS/shell execution              | rex-daemon   | Broker* RPCs + AccessPolicy |
+| Approvals (agent mode)          | daemon gate  | extension supplies approval_id |
+
+Sidecar must NOT: re-index workspace on every step; call LLM without broker;
+hold OpenAI keys; bypass daemon policy.
+
+================================================================================
+4. MODES AND TOOLS
+================================================================================
+| Mode  | Broker tools allowed                          |
+|-------|-----------------------------------------------|
+| ask   | none — single LLM node, no tool loop          |
+| plan  | fs.read, fs.list                              |
+| agent | fs.read, fs.list, fs.write, exec.shell        |
+
+AccessPolicy on daemon enforces paths and agent-only write/exec.
+
+================================================================================
+5. CURRENT MODEL I/O PROTOCOL (INTERIM — NOT NATIVE TOOLS API)
+================================================================================
+R033 (Could) will add native BrokerInference tool schemas; until then JSON-in-text.
+
+Model must emit ONE line JSON:
+  Tool:  {"type":"tool","tool":"<name>","args":{...}}
+  Final: {"type":"final","answer":"<reply>"}
+
+Allowed tool names: fs.read, fs.list, fs.write, exec.shell
+
+Sidecar system prompt (built in Python, not a static file) instructs:
+- at most one tool per step
+- do not re-read paths already in user message / [context]
+- editor: unified diff for large files (>50 lines)
+
+Tool results appended as HumanMessage text like:
+  [tool fs.read ok]
+  <file content truncated to max_tool_result_bytes>
+
+Parse failures: up to 3 retries with synthetic error HumanMessages.
+
+Streaming UX hides raw {"type":"tool"...} prefix from user-visible chunks.
+
+================================================================================
+6. LANGGRAPH TOPOLOGY (SHIPPED / TARGET)
+================================================================================
+Orchestrator entry → routes to Viewer (read/list) or Editor (write/exec) subgraphs
+based on tool type → ToolNode (broker) → Compaction → back to active subagent.
+
+Editor subgraph filters out prior fs.read/fs.list message content from LLM input
+(viewer isolation — reduces token pollution).
+
+State highlights:
+- daemon_context: immutable copy of RunTurn.prompt for the turn
+- messages: growing LangChain history (tool + assistant turns)
+- viewer_summary: compact exploration artifact for Editor
+- compaction_suffix_fraction, read_pruning_enabled: sidecar config
+
+================================================================================
+7. TOKEN / COST LEVERS ALREADY IN DESIGN OR CODE
+================================================================================
+Per turn (daemon):
+- Lexical retrieval cap (share of REX_MAX_CONTEXT_TOKENS)
+- L1 response cache: ask mode only; agent never cached
+- Planned: layered prompts 25%, knowledge 15%, memory 10%, lexical 50%
+- Prompt caching friendly: stable prefix (when provider supports it)
+
+Per turn (sidecar):
+- Static prefix before volatile tool results in messages_to_prompt
+- max_tool_steps default 12
+- Broker truncation on tool results
+- Intra-turn compaction node
+- Read dedup cache in sidecar
+- Diff-only writes for large files
+
+NOT YET SHIPPED (design accepted):
+- Full layered prompt files (system → project → mode) in daemon
+- Project memory / knowledge retrieval stages
+- Native OpenAI tools[] on BrokerInference (R033)
+
+================================================================================
+8. EXAMPLE: FIRST LLM CALL PROMPT BODY (agent mode)
+================================================================================
+[system]
+You are a development agent. Use at most one tool per step.
+When you need a tool, respond with ONLY a JSON object on one line:
+{"type":"tool","tool":"<name>","args":{...}}
+When you are done, respond with ONLY:
+{"type":"final","answer":"<your reply>"}
+Allowed tools:
+- "fs.read": args {"path": "<relative path>"}
+... (list, write, exec as enabled)
+
+[user]
+<user message>
+
+[context]
+<indexer snippets>
+
+(This entire block is HTTP role=user content.)
+
+================================================================================
+9. CONSTRAINTS FOR ANY PROPOSED OPTIMIZATION
+================================================================================
+- Sidecar stays broker-only for inference and host tools.
+- Daemon remains economics owner (budget, retrieval, layered prompts, L1 policy).
+- Must not break extension NDJSON stream contract without explicit version bump.
+- Prefer measurable acceptance: tokens per successful task, parse error rate,
+  steps to completion, not character count on tiny JSON blobs alone.
+- Multi-provider path today: OpenAI-compat HTTP; gateway optional (LiteLLM).
+- Security: no leaking secrets in prompts; broker sandbox unchanged by format alone.
+
+================================================================================
+10. ROADMAP IDS RELEVANT TO AGENT OPTIMIZATION
+================================================================================
+R027 Broker baseline hardening (Should)
+R028 Viewer/Editor subagents (Should) — shipped in graph/
+R029 Intra-turn compaction (Should)
+R030 Diff-only writes (Should)
+R031 Task-aware read pruning (Could)
+R032 Token playbook + metrics (Should)
+R033 Native tools + MCP client (Could) — may deprecate JSON-in-text regex protocol
+
+================================================================================
+11. RESEARCH GAP (WHY THIS CONTEXT EXISTS)
+================================================================================
+Prior external research (e.g. Gemini) may have discussed generic TOON/TRON or
+JSON alternatives without mapping to:
+- Rex's single-message HTTP boundary with embedded [system]/[user] tags
+- Per-turn daemon assembly vs per-step sidecar messages_to_prompt
+- Interim JSON-in-text vs planned native BrokerInference tools (R033)
+- Viewer/Editor isolation and compaction already in the architecture
+
+Use this file together with the Gemini research prompt in the same folder.

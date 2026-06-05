@@ -202,11 +202,15 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | R016 | Multi-active broadcast | Could |
 | **R027** | Broker baseline hardening | **Should** — `RexBrokerChatModel`, parse recovery, streaming buffer |
 | **R028** | Viewer/Editor subagents | **Should** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
-| **R029** | Intra-turn state compaction | **Should** — `RemoveMessage`, 25% suffix rule |
+| **R029** | Intra-turn state compaction | **Should** — `RemoveMessage`, 25% suffix rule; microcompaction tier |
+| **R034** | Raw delimited tool results | **Should** — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | **R030** | Diff-only writes | **Should** — sidecar read→patch→write |
 | **R031** | Task-aware read pruning | **Could** — payloads >100 lines |
-| **R032** | Token playbook + subagent metrics | **Should** — dedup, hard cap, observability |
+| **R032** | Token playbook + subagent metrics | **Should** — prefix SHA, dedup, hard cap |
+| **R036** | TRON static schema compression | **Could** — daemon prefix; optional before **R033** |
 | **R033** | Native tools + MCP client | **Could** — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) Phase 2 |
+
+**Program order:** R027 → R028 → R029 → **R034** → R030 → R032 → R031 → R033; **R036** optional before R033.
 
 ## Out of scope (this program)
 
@@ -218,7 +222,8 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 
 ## Related
 
-- [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — token-efficient graph target (**R027–R033**)
+- [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — token-efficient graph target (**R027–R036**)
+- [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) — hybrid serialization boundaries
 - [MVP_SPEC.md](MVP_SPEC.md) — Phase 1 architecture
 - [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) — sidecar runtime hub
 - [CONFIGURATION.md](CONFIGURATION.md) — settings policy

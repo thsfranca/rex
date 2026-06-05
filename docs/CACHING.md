@@ -72,6 +72,19 @@ Use when you want hits across **paraphrase**, not just identical strings.
 
 **Scope default:** L2 is **ask-only** until you have evidence that your semantic gate is safe for `plan`.
 
+## Prefix immutability and cache breakpoints (agent turns)
+
+**Status:** **design accepted** — implementation with **R027**, **R032**, optional gateway hints. Hub: [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md). Decision: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md).
+
+| Requirement | Rationale |
+|-------------|-----------|
+| **Immutable static prefix** within one `RunTurn` tool loop | Provider prompt/KV cache keys on identical leading bytes across steps 2–12 |
+| **SHA-256 contract** on `[system]` + `daemon_context` | CI and economics harness detect accidental step-varying system text |
+| **Suffix-only append** for tool transcripts | Volatile tail grows; prefix bytes must not change |
+| **Cache breakpoint** at static/volatile seam | Optional `cache_control` / provider ephemeral markers placed after daemon context, before tool results — owner TBD ([INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) vs [ADAPTERS.md](ADAPTERS.md)) |
+
+**Not a substitute for L1:** Rex application L1 remains mode-gated ([ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md)); **agent** mode does not use L1. Vendor prefix cache reduces **input prefill** cost on repeated static bytes, not completion replay.
+
 ## Vendor KV and prompt cache hints (planned)
 
 **Status:** `planned` — not shipped. Roadmap: [ROADMAP.md](ROADMAP.md) (**Could**). Economics row: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md).

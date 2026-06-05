@@ -194,10 +194,12 @@ Hard conflicts (**C***) and resolutions recorded in ADRs.
 | **R017–R019** | `rex-agent` scaffold, graph, integration | [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) |
 | **R027** | Broker baseline hardening | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — `RexBrokerChatModel` |
 | **R028** | Viewer/Editor subagents | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md) |
-| **R029** | Intra-turn state compaction | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — **T5** scratch intent |
+| **R029** | Intra-turn state compaction + microcompaction | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — **T5** scratch intent |
+| **R034** | Raw delimited tool results | [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R030** | Diff-only writes | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R031** | Task-aware read pruning | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
-| **R032** | Token playbook + subagent metrics | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| **R032** | Token playbook + prefix SHA metrics | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| **R036** | TRON static schema compression | [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | **R033** | Native tools + MCP client | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 
 Canonical order: [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-agent-program).
@@ -207,7 +209,7 @@ Canonical order: [ROADMAP.md — Next — product agent program](ROADMAP.md#next
 | Doc | Relationship |
 |-----|----------------|
 | [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) | `rex-agent` target architecture |
-| [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | LangGraph topology, token playbook, **R027–R033** |
+| [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | LangGraph topology, token playbook, **R027–R036** |
 | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Economics matrix |
 | [POLICY_ENGINE.md](POLICY_ENGINE.md) | Policy vs mechanism |
 | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | Memory/session ownership |

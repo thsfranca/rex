@@ -28,6 +28,7 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) | OpenTelemetry GenAI semconv plus Rex pipeline metrics | Accepted |
 | [0021](0021-rex-owned-economics-store-byot-visualization.md) | Rex-owned economics store; BYOT visualization | Accepted |
 | [0022](0022-viewer-editor-subagent-topology.md) | Viewer/Editor subagent topology for product agent | Accepted |
+| [0023](0023-hybrid-agent-serialization-boundaries.md) | Hybrid agent serialization at boundaries (formats per layer) | Accepted |
 
 ## How to use
 
