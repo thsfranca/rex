@@ -85,11 +85,9 @@ describe("streamComplete", () => {
     const reader = iter[Symbol.asyncIterator]();
     setTimeout(() => controller.abort(), 50);
     const events: StreamEvent[] = [];
-    let isFinished = false;
-    while (!isFinished) {
+    while (true) {
       const { value, done } = await reader.next();
       if (done) {
-        isFinished = true;
         break;
       }
       events.push(value);
