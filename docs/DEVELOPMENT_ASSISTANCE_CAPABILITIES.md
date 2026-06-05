@@ -195,7 +195,7 @@ Hard conflicts (**C***) and resolutions recorded in ADRs.
 | **R027** | Broker baseline hardening | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — `RexBrokerChatModel` |
 | **R028** | Viewer/Editor subagents | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md) |
 | **R029** | Intra-turn state compaction + microcompaction | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — **T5** scratch intent |
-| **R034** | Raw delimited tool results | [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| **R034** | Raw delimited tool results (**Done**) | [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R030** | Diff-only writes | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R031** | Task-aware read pruning | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R032** | Token playbook + prefix SHA metrics | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |

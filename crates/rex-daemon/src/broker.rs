@@ -29,6 +29,7 @@ pub enum BrokerError {
 const MAX_WRITE_BYTES: usize = 65_536;
 const MAX_LIST_DIR_ENTRIES: usize = 256;
 const TRUNCATION_MARKER: &str = " [rex: tool output truncated]";
+const TOOL_RESULT_CLOSE: &str = "\n<<END>>";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BrokerDirEntry {
@@ -55,14 +56,75 @@ fn max_tool_result_bytes() -> usize {
     crate::settings::get().broker_max_tool_result_bytes()
 }
 
-pub fn truncate_tool_result(text: &str) -> String {
-    let max = max_tool_result_bytes();
-    if text.len() <= max {
+fn tool_result_open_delimiter(tool: &str) -> String {
+    format!("<<TOOL_RESULT:{tool}>>\n")
+}
+
+fn delimited_overhead_bytes(tool: &str) -> usize {
+    tool_result_open_delimiter(tool).len() + TOOL_RESULT_CLOSE.len()
+}
+
+/// Truncate `text` to fit within `max_body_bytes` (UTF-8), ending at a line boundary.
+/// Appends [`TRUNCATION_MARKER`] when truncated.
+pub fn truncate_tool_result_at_line_boundary(text: &str, max_body_bytes: usize) -> String {
+    if text.len() <= max_body_bytes {
         return text.to_string();
     }
-    let mut out = text.chars().take(max).collect::<String>();
-    out.push_str(TRUNCATION_MARKER);
-    out
+    let marker_len = TRUNCATION_MARKER.len();
+    let budget = max_body_bytes.saturating_sub(marker_len);
+    if budget == 0 {
+        return TRUNCATION_MARKER.to_string();
+    }
+    let bytes = text.as_bytes();
+    let mut end = budget.min(bytes.len());
+    while end > 0 && std::str::from_utf8(&bytes[..end]).is_err() {
+        end -= 1;
+    }
+    if end == 0 {
+        return TRUNCATION_MARKER.to_string();
+    }
+    let prefix = std::str::from_utf8(&bytes[..end]).expect("utf8 boundary");
+    let body = match prefix.rfind('\n') {
+        Some(idx) if idx > 0 => &prefix[..idx],
+        Some(_) => "",
+        None => "",
+    };
+    if body.is_empty() {
+        TRUNCATION_MARKER.to_string()
+    } else {
+        format!("{body}{TRUNCATION_MARKER}")
+    }
+}
+
+/// Wrap `body` as `<<TOOL_RESULT:tool>>` … `<<END>>`, truncating at line boundaries when needed.
+pub fn format_delimited_tool_result(tool: &str, body: &str) -> String {
+    let max_total = max_tool_result_bytes();
+    let overhead = delimited_overhead_bytes(tool);
+    let mut max_body = max_total.saturating_sub(overhead);
+    loop {
+        let truncated = truncate_tool_result_at_line_boundary(body, max_body);
+        let formatted = format!(
+            "{open}{truncated}{TOOL_RESULT_CLOSE}",
+            open = tool_result_open_delimiter(tool),
+        );
+        if formatted.len() <= max_total || max_body == 0 {
+            return formatted;
+        }
+        max_body = max_body.saturating_sub(1);
+    }
+}
+
+fn format_shell_result_body(stdout: &str, stderr: &str) -> String {
+    if stdout.is_empty() && stderr.is_empty() {
+        return String::new();
+    }
+    if stderr.is_empty() {
+        return stdout.to_string();
+    }
+    if stdout.is_empty() {
+        return format!("stderr:\n{stderr}");
+    }
+    format!("stdout:\n{stdout}\n---\nstderr:\n{stderr}")
 }
 
 pub fn broker_read_file(relative_path: &str, mode: &str) -> Result<String, BrokerError> {
@@ -79,7 +141,7 @@ pub fn broker_read_file(relative_path: &str, mode: &str) -> Result<String, Broke
             BrokerError::Io(e.to_string())
         }
     })?;
-    Ok(truncate_tool_result(&content))
+    Ok(format_delimited_tool_result("fs.read", &content))
 }
 
 pub fn broker_list_dir(
@@ -183,9 +245,12 @@ pub fn broker_exec_shell(command: &str, mode: &str) -> Result<ShellResult, Broke
             output.status.code()
         )));
     }
+    let raw_stdout = String::from_utf8_lossy(&output.stdout);
+    let raw_stderr = String::from_utf8_lossy(&output.stderr);
+    let body = format_shell_result_body(&raw_stdout, &raw_stderr);
     Ok(ShellResult {
-        stdout: truncate_tool_result(&String::from_utf8_lossy(&output.stdout)),
-        stderr: truncate_tool_result(&String::from_utf8_lossy(&output.stderr)),
+        stdout: format_delimited_tool_result("exec.shell", &body),
+        stderr: String::new(),
     })
 }
 
@@ -317,7 +382,9 @@ mod tests {
         fs::write(&file, "broker-ok").expect("write");
         let _guard = init_workspace_root(&dir.display().to_string());
         let content = broker_read_file("hello.txt", "agent").expect("read");
-        assert_eq!(content, "broker-ok");
+        assert!(content.contains("<<TOOL_RESULT:fs.read>>"));
+        assert!(content.contains("broker-ok"));
+        assert!(content.contains("<<END>>"));
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -334,7 +401,7 @@ mod tests {
         let _guard = init_workspace_root(&dir.display().to_string());
         broker_write_file("out.txt", "written-by-broker", "agent").expect("write");
         let content = broker_read_file("out.txt", "agent").expect("read back");
-        assert_eq!(content, "written-by-broker");
+        assert!(content.contains("written-by-broker"));
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -373,7 +440,9 @@ mod tests {
         fs::create_dir_all(&root).expect("tmpdir");
         let _guard = init_workspace_root(&root.display().to_string());
         let out = broker_exec_shell("echo broker-shell-ok", "agent").expect("echo");
+        assert!(out.stdout.contains("<<TOOL_RESULT:exec.shell>>"));
         assert!(out.stdout.contains("broker-shell-ok"));
+        assert!(out.stderr.is_empty());
         let _ = fs::remove_dir_all(&root);
     }
 
@@ -461,9 +530,10 @@ mod tests {
     }
 
     #[test]
-    fn truncates_large_read_content() {
+    #[serial]
+    fn truncates_large_read_content_at_line_boundary() {
         let mut cfg = rex_config::RexConfig::defaults();
-        cfg.broker.max_tool_result_bytes = 8;
+        cfg.broker.max_tool_result_bytes = 64;
         crate::settings::reset_for_test();
         crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
             rex_root: std::path::PathBuf::from("/tmp/rex-broker-test"),
@@ -471,10 +541,39 @@ mod tests {
             project_path: None,
             effective: cfg,
         }));
-        let long = "abcdefghijklmnop";
-        let out = truncate_tool_result(long);
-        assert!(out.ends_with(TRUNCATION_MARKER));
-        assert!(out.len() <= 8 + TRUNCATION_MARKER.len());
+        let long = "line-one\nline-two\nline-three\nline-four";
+        let out = format_delimited_tool_result("fs.read", long);
+        assert!(out.contains("<<TOOL_RESULT:fs.read>>"));
+        assert!(out.contains("<<END>>"));
+        assert!(out.len() <= 64);
+        assert!(!out.contains("line-three"));
+        crate::settings::reset_for_test();
+    }
+
+    #[test]
+    fn truncate_at_line_boundary_never_splits_line() {
+        let body = format!("abcdefgh\n{}", "y".repeat(50));
+        let out = truncate_tool_result_at_line_boundary(&body, 9 + TRUNCATION_MARKER.len());
+        assert_eq!(out, format!("abcdefgh{TRUNCATION_MARKER}"));
+    }
+
+    #[test]
+    #[serial]
+    fn delimited_result_respects_utf8_byte_budget() {
+        let mut cfg = rex_config::RexConfig::defaults();
+        cfg.broker.max_tool_result_bytes = 96;
+        crate::settings::reset_for_test();
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-broker-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
+        let body = format!("café\n{}", "second-line\n".repeat(8));
+        let out = format_delimited_tool_result("fs.read", &body);
+        assert!(out.len() <= 96);
+        assert!(out.contains("<<TOOL_RESULT:fs.read>>"));
+        assert!(out.contains(TRUNCATION_MARKER) || !out.contains("second-line\nsecond-line"));
         crate::settings::reset_for_test();
     }
 }

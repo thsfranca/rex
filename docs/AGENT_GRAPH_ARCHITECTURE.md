@@ -86,7 +86,7 @@ sequenceDiagram
 - Final: `{"type":"final","answer":"..."}`
 - Diff write: `{"type":"tool","tool":"fs.write","args":{"path":"...","diff":"..."}}` — sidecar read→patch→full content→broker
 
-**Tool results (target — R034):** daemon returns markdown-delimited blocks, not JSON-wrapped stdout:
+**Tool results (R034 — shipped):** daemon returns markdown-delimited blocks, not JSON-wrapped stdout:
 
 ```text
 <<TOOL_RESULT:fs.read>>
@@ -179,12 +179,12 @@ flowchart TB
 
 | ID | Theme | MoSCoW |
 |----|-------|--------|
-| R027 | Broker baseline hardening | Should |
-| R028 | Viewer/Editor subagents | Should |
-| R029 | Intra-turn state compaction | Should |
-| R034 | Raw delimited tool results | Should |
-| R030 | Diff-only writes | Should |
-| R032 | Token playbook + metrics | Should |
+| R027 | Broker baseline hardening | Done |
+| R028 | Viewer/Editor subagents | Done |
+| R029 | Intra-turn state compaction | Done |
+| R034 | Raw delimited tool results | Done |
+| R030 | Diff-only writes | Done |
+| R032 | Token playbook + metrics | Done |
 | R031 | Task-aware read pruning | Could |
 | R036 | TRON static schema compression | Could |
 | R033 | Native tools + MCP client | Could |

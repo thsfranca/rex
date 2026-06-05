@@ -200,13 +200,13 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | R018 | LangGraph agent core | Done — prompt JSON tool protocol; [sidecars/rex-agent/DESIGN.md](../sidecars/rex-agent/DESIGN.md) |
 | R019 | Integration / E2E | Done |
 | R016 | Multi-active broadcast | Could |
-| **R027** | Broker baseline hardening | **Should** — `RexBrokerChatModel`, parse recovery, streaming buffer |
-| **R028** | Viewer/Editor subagents | **Should** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
-| **R029** | Intra-turn state compaction | **Should** — `RemoveMessage`, 25% suffix rule; microcompaction tier |
-| **R034** | Raw delimited tool results | **Should** — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| **R030** | Diff-only writes | **Should** — sidecar read→patch→write |
+| **R027** | Broker baseline hardening | **Done** — `RexBrokerChatModel`, parse recovery, streaming buffer |
+| **R028** | Viewer/Editor subagents | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| **R029** | Intra-turn state compaction | **Done** — `RemoveMessage`, 25% suffix rule; microcompaction tier |
+| **R034** | Raw delimited tool results | **Done** — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
+| **R030** | Diff-only writes | **Done** — sidecar read→patch→write |
 | **R031** | Task-aware read pruning | **Could** — payloads >100 lines |
-| **R032** | Token playbook + subagent metrics | **Should** — prefix SHA, dedup, hard cap |
+| **R032** | Token playbook + subagent metrics | **Done** — prefix SHA, dedup, hard cap |
 | **R036** | TRON static schema compression | **Could** — daemon prefix; optional before **R033** |
 | **R033** | Native tools + MCP client | **Could** — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) Phase 2 |
 

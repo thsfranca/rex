@@ -62,7 +62,7 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar for CI/harness is **`rex-sidecar-stub`**; **`rex-agent`** ships LangGraph ReAct (**R018** Done) on the gRPC scaffold (**R017** Done). **Target graph:** Viewer/Editor subagents — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md).
 
-**Priority rationale:** **R013–R022**, **R017**, **R018**, and **R019** are **Done**. **RC-S2** is **Met**. **R023** and **R024** are **Done**. Next product-agent follow-up: **R027–R032**, **R034** (**Should**), then **R016** / **R031** / **R033** / **R036** (**Could**). Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md). Next Should CI follow-up: **R025** ([CI_QUALITY_GATES.md](CI_QUALITY_GATES.md)).
+**Priority rationale:** **R013–R022**, **R017–R019**, **R027–R032**, and **R034** are **Done**. **RC-S2** is **Met**. **R023** and **R024** are **Done**. Next product-agent follow-up: **R016** / **R031** / **R033** / **R036** (**Could**). Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md). Next Should CI follow-up: **R025** ([CI_QUALITY_GATES.md](CI_QUALITY_GATES.md)).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
@@ -76,12 +76,12 @@ Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. De
 | 8 | `rex-agent` scaffold | **R017** | Done — gRPC server + broker client ([sidecars/rex-agent/README.md](../sidecars/rex-agent/README.md)) |
 | 9 | LangGraph agent core | **R018** | Done — ReAct loop, broker adapters ([sidecars/rex-agent/DESIGN.md](../sidecars/rex-agent/DESIGN.md)) |
 | 10 | Integration / E2E | **R019** | Extension workspace + defaults; client hints; live-model E2E — [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md#r019-integration--e2e-acceptance) |
-| 11 | Broker baseline hardening | **R027** | `RexBrokerChatModel`, parse recovery, streaming buffer — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
-| 12 | Viewer/Editor subagents | **R028** | Orchestrator routing; isolated contexts — [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md) |
-| 13 | Intra-turn state compaction | **R029** | `RemoveMessage`, 25% suffix rule; microcompaction tier — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
-| 14 | Raw delimited tool results | **R034** | `<<TOOL_RESULT>>` … `<<END>>`; line-safe truncation — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| 15 | Diff-only writes | **R030** | Sidecar read→patch→write — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
-| 16 | Token playbook + metrics | **R032** | Prefix SHA, read dedup, hard step cap — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| 11 | Broker baseline hardening | **R027** | Done — `RexBrokerChatModel`, parse recovery, streaming buffer — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| 12 | Viewer/Editor subagents | **R028** | Done — Orchestrator routing; isolated contexts — [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md) |
+| 13 | Intra-turn state compaction | **R029** | Done — `RemoveMessage`, 25% suffix rule; microcompaction tier — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| 14 | Raw delimited tool results | **R034** | Done — `<<TOOL_RESULT:tool>>` … `<<END>>`; line-safe truncation — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
+| 15 | Diff-only writes | **R030** | Done — Sidecar read→patch→write — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| 16 | Token playbook + metrics | **R032** | Done — Prefix SHA, read dedup, hard step cap — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | 17 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (**Could** — deferred Phase 1, [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md)) |
 | 18 | Task-aware read pruning | **R031** | Goal-hint filter for reads >100 lines (**Could**) — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | 19 | TRON static schema compression | **R036** | Daemon prefix schema compaction (**Could**) — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
@@ -178,13 +178,13 @@ flowchart TD
 | **R020** | Broker access policy completion (ADR 0013; follows R012) | **Done** — [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) |
 | **R021** | Turn correlation Phase 1b (`turn_id`, `context_revision`) | **Done** — [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | **R022** | Workspace binding product path (fail-closed daemon) | **Done** — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md) |
-| **R027** | Broker baseline hardening (`RexBrokerChatModel`) | Should — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
-| **R028** | Viewer/Editor subagent topology | Should — [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md) |
-| **R029** | Intra-turn state compaction + microcompaction tier | Should — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
-| **R034** | Raw delimited tool results | Should — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| **R030** | Diff-only writes (sidecar patch path) | Should — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| **R027** | Broker baseline hardening (`RexBrokerChatModel`) | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| **R028** | Viewer/Editor subagent topology | **Done** — [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md) |
+| **R029** | Intra-turn state compaction + microcompaction tier | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| **R034** | Raw delimited tool results | **Done** — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
+| **R030** | Diff-only writes (sidecar patch path) | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R031** | Task-aware read pruning | Could — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
-| **R032** | Token playbook + prefix SHA metrics | Should — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| **R032** | Token playbook + prefix SHA metrics | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R036** | TRON static schema compression | Could — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | **R033** | Native tools + MCP gRPC client | Could — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 | **R023** | Supply chain: `cargo-audit`, Dependabot | **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md); `cargo-deny` deferred |

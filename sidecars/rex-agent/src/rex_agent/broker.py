@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -21,6 +22,10 @@ except ImportError as exc:  # pragma: no cover
     ) from exc
 
 BROKER_TIMEOUT_SEC = 30.0
+_TOOL_RESULT_PATTERN = re.compile(
+    r"^<<TOOL_RESULT:(?P<tool>[^>]+)>>\n(?P<body>.*)\n<<END>>\s*$",
+    re.DOTALL,
+)
 
 
 def _daemon_channel(socket_path: str) -> grpc.Channel:
@@ -152,8 +157,7 @@ class BrokerClient:
             return False, str(err)
         if not response.ok:
             return False, response.error or "broker exec_shell failed"
-        combined = f"stdout={response.stdout}\nstderr={response.stderr}"
-        return True, truncate_tool_result(combined)
+        return True, response.stdout
 
     def _read_file_response(
         self, request: rex_pb2.BrokerReadFileRequest
@@ -167,7 +171,7 @@ class BrokerClient:
         except grpc.RpcError as err:
             return False, str(err)
         if response.ok:
-            return True, truncate_tool_result(response.content)
+            return True, response.content
         return False, response.error or "broker read_file failed"
 
 
@@ -182,8 +186,16 @@ def broker_inference(
         return client.inference(prompt, mode, model)
 
 
+def strip_tool_result_delimiters(text: str) -> str:
+    """Return raw tool body from daemon-delimited broker payloads (R034)."""
+    match = _TOOL_RESULT_PATTERN.match(text.strip())
+    if match:
+        return match.group("body")
+    return text
+
+
 def truncate_tool_result(text: str) -> str:
-    """Align sidecar scratch with broker.max_tool_result_bytes."""
+    """Align sidecar scratch with broker.max_tool_result_bytes (fs.list only)."""
     limit = max_tool_result_bytes()
     encoded = text.encode("utf-8")
     if len(encoded) <= limit:

@@ -6,13 +6,13 @@ from unittest.mock import MagicMock, patch
 
 import grpc
 
-from rex_agent.broker import BrokerClient, truncate_tool_result
+from rex_agent.broker import BrokerClient, strip_tool_result_delimiters, truncate_tool_result
 from rex_agent.config import DEFAULT_MAX_TOOL_RESULT_BYTES
 
 
 class _ReadOk:
     ok = True
-    content = "file-body"
+    content = "<<TOOL_RESULT:fs.read>>\nfile-body\n<<END>>"
     error = ""
 
 
@@ -26,6 +26,12 @@ class _ListOk:
             self.is_dir = is_dir
 
     entries = [_Entry("src", True), _Entry("main.rs", False)]
+
+
+def test_strip_tool_result_delimiters() -> None:
+    payload = "<<TOOL_RESULT:fs.read>>\nline-one\nline-two\n<<END>>"
+    assert strip_tool_result_delimiters(payload) == "line-one\nline-two"
+    assert strip_tool_result_delimiters("plain text") == "plain text"
 
 
 def test_truncate_tool_result_adds_ellipsis() -> None:
@@ -51,6 +57,20 @@ def test_broker_inference_sends_turn_metadata() -> None:
     assert text == "answer"
     _request, kwargs = stub.BrokerInference.call_args
     assert kwargs["metadata"] == (("x-rex-turn-id", "turn-1"),)
+
+
+def test_read_file_passes_through_delimited_content() -> None:
+    stub = MagicMock()
+    stub.BrokerReadFile.return_value = _ReadOk()
+
+    with patch("rex_agent.broker._daemon_channel", return_value=MagicMock()):
+        with BrokerClient() as client:
+            client._stub = stub
+            ok, text = client.read_file("src/main.rs", "agent")
+    assert ok is True
+    assert text.startswith("<<TOOL_RESULT:fs.read>>")
+    assert "file-body" in text
+    assert text.endswith("<<END>>")
 
 
 def test_read_file_denied_returns_error_string() -> None:
