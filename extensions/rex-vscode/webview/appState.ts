@@ -6,6 +6,7 @@ import type {
   ExtensionToWebview,
   InteractionMode,
   ModePolicy,
+  PlanArtifactPayload,
   PromptContextSnapshot,
   SessionSummary,
   ThemeKind,
@@ -34,6 +35,7 @@ export interface AppState {
   modePolicy: ModePolicy;
   pendingApprovals: ApprovalRequestPayload[];
   timeline: { id: string; summary: string; phase: string; kind?: string; detail?: string }[];
+  planArtifact?: PlanArtifactPayload;
   sessions: SessionSummary[];
   attachments: ContextAttachment[];
   activeSessionId?: string;
@@ -48,7 +50,9 @@ export type Action =
   | { type: "clearChat" }
   | { type: "cancelStream" }
   | { type: "approvalDecision"; id: string; approved: boolean }
-  | { type: "clearBanner" };
+  | { type: "clearBanner" }
+  | { type: "updatePlanContent"; content: string }
+  | { type: "updatePlanSavePath"; path: string };
 
 export const initialState: AppState = {
   messages: [],
@@ -107,6 +111,7 @@ export function reducer(state: AppState, action: Action): AppState {
         streaming: true,
         activeStreamId: action.id,
         prompt: "",
+        planArtifact: undefined,
       };
     }
     case "clearChat":
@@ -117,6 +122,7 @@ export function reducer(state: AppState, action: Action): AppState {
         applyResults: new Map(),
         streaming: false,
         activeStreamId: undefined,
+        planArtifact: undefined,
       };
     case "cancelStream":
       return state;
@@ -124,6 +130,22 @@ export function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         pendingApprovals: state.pendingApprovals.filter((pending) => pending.id !== action.id),
+      };
+    case "updatePlanContent":
+      if (state.planArtifact === undefined) {
+        return state;
+      }
+      return {
+        ...state,
+        planArtifact: { ...state.planArtifact, content: action.content },
+      };
+    case "updatePlanSavePath":
+      if (state.planArtifact === undefined) {
+        return state;
+      }
+      return {
+        ...state,
+        planArtifact: { ...state.planArtifact, savePath: action.path },
       };
     case "hostMessage":
       return handleHostMessage(state, action.payload);
@@ -141,7 +163,7 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
     case "contextSnapshot":
       return { ...state, context: message.context };
     case "streamStarted":
-      return state;
+      return { ...state, planArtifact: undefined };
     case "streamChunk": {
       const stream = state.streams.get(message.id) ?? new MarkdownStream();
       stream.push(message.text);
@@ -211,6 +233,7 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
         applyResults: new Map(),
         streaming: false,
         activeStreamId: undefined,
+        planArtifact: undefined,
       };
     case "statusMessage":
       return {
@@ -235,6 +258,23 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
             detail: message.payload.detail,
           },
         ].slice(-20),
+      };
+    case "planArtifact":
+      return {
+        ...state,
+        planArtifact: message.payload,
+      };
+    case "planSaveResult":
+      return {
+        ...state,
+        banner: {
+          level: message.payload.ok ? "info" : "error",
+          text: message.payload.message,
+        },
+        planArtifact:
+          message.payload.ok && state.planArtifact !== undefined && message.payload.path !== undefined
+            ? { ...state.planArtifact, savePath: message.payload.path }
+            : state.planArtifact,
       };
     case "sessionList":
       return {

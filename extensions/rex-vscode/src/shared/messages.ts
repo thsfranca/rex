@@ -89,6 +89,24 @@ export interface ExecutionStepPayload {
   readonly detail?: string;
 }
 
+export type PlanStreamPhase = "draft" | "clarify" | "ready";
+
+export interface PlanArtifactPayload {
+  readonly streamId: StreamId;
+  readonly phase: PlanStreamPhase;
+  readonly title: string;
+  readonly detail: string;
+  readonly content: string;
+  readonly savePath: string;
+}
+
+export interface PlanSaveResultPayload {
+  readonly streamId: StreamId;
+  readonly ok: boolean;
+  readonly path?: string;
+  readonly message: string;
+}
+
 export interface ContextAttachment {
   readonly id: string;
   readonly kind: "file" | "symbol" | "terminal";
@@ -131,6 +149,8 @@ export type ExtensionToWebview =
   | { readonly type: "modeState"; readonly payload: ModePolicy }
   | { readonly type: "approvalRequested"; readonly payload: ApprovalRequestPayload }
   | { readonly type: "executionStep"; readonly payload: ExecutionStepPayload }
+  | { readonly type: "planArtifact"; readonly payload: PlanArtifactPayload }
+  | { readonly type: "planSaveResult"; readonly payload: PlanSaveResultPayload }
   | { readonly type: "clearChat" }
   | { readonly type: "statusMessage"; readonly level: "info" | "warn" | "error"; readonly text: string }
   | { readonly type: "sessionList"; readonly sessions: ReadonlyArray<SessionSummary> }
@@ -166,4 +186,6 @@ export type WebviewToExtension =
   | { readonly type: "deleteSession"; readonly sessionId: string }
   | { readonly type: "saveSessionState"; readonly sessionId: string; readonly messages: SessionMessagesPayload["messages"]; readonly mode: InteractionMode }
   | { readonly type: "requestContextPicker" }
-  | { readonly type: "removeContextAttachment"; readonly id: string };
+  | { readonly type: "removeContextAttachment"; readonly id: string }
+  | { readonly type: "savePlan"; readonly streamId: StreamId; readonly path: string; readonly content: string }
+  | { readonly type: "buildPlan"; readonly streamId: StreamId; readonly title: string; readonly content: string; readonly savePath: string };

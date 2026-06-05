@@ -46,7 +46,7 @@ export async function runInlineEditOnSelection(deps: InlineEditDependencies): Pr
         buffer += event.text;
         continue;
       }
-      if (event.kind === "tool" || event.kind === "step") {
+      if (event.kind === "tool" || event.kind === "step" || event.kind === "plan") {
         continue;
       }
       if (event.kind === "done") {

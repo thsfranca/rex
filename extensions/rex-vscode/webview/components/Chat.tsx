@@ -10,7 +10,10 @@ import type {
   ThemeKind,
 } from "../../src/shared/messages";
 
+import type { PlanArtifactPayload } from "../../src/shared/messages";
+
 import { Message, type RenderedMessage } from "./Message";
+import { PlanCard } from "./PlanCard";
 import { ToolCard } from "./ToolCard";
 
 export interface ChatProps {
@@ -24,6 +27,7 @@ export interface ChatProps {
   readonly daemonReady: boolean;
   readonly modePolicy: ModePolicy;
   readonly timeline: ReadonlyArray<{ id: string; summary: string; phase: string; kind?: string; detail?: string }>;
+  readonly planArtifact?: PlanArtifactPayload;
   readonly pendingApprovals: ReadonlyArray<{ id: string; title: string; detail: string }>;
   readonly prompt: string;
   readonly onPromptChange: (value: string) => void;
@@ -45,6 +49,10 @@ export interface ChatProps {
   readonly onSwitchSession: (sessionId: string) => void;
   readonly onRequestContextPicker: () => void;
   readonly onRemoveAttachment: (id: string) => void;
+  readonly onPlanContentChange: (content: string) => void;
+  readonly onPlanSavePathChange: (path: string) => void;
+  readonly onPlanSave: () => void;
+  readonly onPlanBuild: () => void;
 }
 
 export function Chat(props: ChatProps): React.ReactElement {
@@ -158,6 +166,15 @@ export function Chat(props: ChatProps): React.ReactElement {
           ))
         )}
       </div>
+      {props.planArtifact !== undefined ? (
+        <PlanCard
+          artifact={props.planArtifact}
+          onContentChange={props.onPlanContentChange}
+          onSavePathChange={props.onPlanSavePathChange}
+          onSave={props.onPlanSave}
+          onBuild={props.onPlanBuild}
+        />
+      ) : null}
       <div className="rex-composer">
         {props.context !== null ? (
           <div className="rex-context-chip" role="group" aria-label="Editor context">

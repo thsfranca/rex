@@ -62,7 +62,7 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar for CI/harness is **`rex-sidecar-stub`**; **`rex-agent`** ships LangGraph ReAct (**R018** Done) on the gRPC scaffold (**R017** Done). **Target graph:** Viewer/Editor subagents — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md).
 
-**Priority rationale:** **R013–R022**, **R017–R019**, **R027–R032**, and **R034** are **Done**. **RC-S2** is **Met**. **R023**, **R024**, and **R025** are **Done**. Next **Should** product follow-up: **R037** planning tools ([PLANNING_TOOLS.md](PLANNING_TOOLS.md)). Then **Could**: **R016** / **R031** / **R033** / **R036**. Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md). Next Should CI follow-up: **R026** ([CI_QUALITY_GATES.md](CI_QUALITY_GATES.md)).
+**Priority rationale:** **R013–R022**, **R017–R019**, **R027–R032**, **R034**, and **R037** are **Done**. **RC-S2** is **Met**. **R023**, **R024**, and **R025** are **Done**. Next **Could** product follow-up: **R016** / **R031** / **R033** / **R036**. Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md). Next Should CI follow-up: **R026** ([CI_QUALITY_GATES.md](CI_QUALITY_GATES.md)).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
@@ -86,7 +86,7 @@ Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. De
 | 18 | Task-aware read pruning | **R031** | Goal-hint filter for reads >100 lines (**Could**) — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | 19 | TRON static schema compression | **R036** | Daemon prefix schema compaction (**Could**) — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | 20 | Native tools + MCP client | **R033** | Phase 2; [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) (**Could**) |
-| 21 | Plan mode planning tools | **R037** | Planned — [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md) |
+| 21 | Plan mode planning tools | **R037** | Done — [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md) |
 
 ```mermaid
 flowchart TD
