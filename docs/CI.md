@@ -295,11 +295,15 @@ For lifecycle/race fixes, ensure E2E coverage includes:
 
 **R024** ships an **advisory** CodeQL workflow separate from `ci-checks`. Triggers: `pull_request`, push to `main`, weekly schedule.
 
-| Job | When | Build trace |
-|-----|------|-------------|
-| `Analyze (rust)` | Rust-relevant paths | `cargo build --workspace --locked` (protoc + mold, same as `rust-verify`) |
-| `Analyze (javascript)` | Extension-relevant paths | `npm ci` + `npm run build` in `extensions/rex-vscode/` |
-| `Analyze (python)` | Sidecar-relevant paths | `pip install -e sidecars/rex-agent/[dev]` |
+On **pull_request** and **push**, CodeQL uses **stricter** path gates than functional verify jobs: each language runs only when its `*_changed` filter matches (not on `ci_changed` or `global_changed` alone). The **weekly schedule** runs all three language jobs regardless of path filters (full-repo backstop).
+
+| Job | PR/push gate | Schedule | Build trace |
+|-----|--------------|----------|-------------|
+| `Analyze (rust)` | `rust_changed` | always | `cargo build --workspace --locked` (protoc + mold, same as `rust-verify`) |
+| `Analyze (javascript)` | `extension_changed` | always | `npm ci` + `npm run build` in `extensions/rex-vscode/` |
+| `Analyze (python)` | `sidecar_changed` | always | `pip install -e sidecars/rex-agent/[dev]` |
+
+Relevance outputs: `rust_codeql_relevant`, `extension_codeql_relevant`, `python_codeql_relevant` from [`evaluate_ci_relevance.sh`](../scripts/ci/evaluate_ci_relevance.sh).
 
 Path exclusions: [`.github/codeql/codeql-config.yml`](../.github/codeql/codeql-config.yml). Triage and promotion to blocking: [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md#codeql-triage-r024). Failure code when blocking: `SAST_FAIL`.
 

@@ -11,12 +11,15 @@ assert_relevance() {
   local expected_ext="$3"
   local expected_sidecar="$4"
   local expected_guidelines="$5"
-  local rust_changed="$6"
-  local extension_changed="$7"
-  local sidecar_changed="$8"
-  local guidelines_changed="$9"
-  local ci_changed="${10}"
-  local global_changed="${11}"
+  local expected_rust_codeql="$6"
+  local expected_ext_codeql="$7"
+  local expected_python_codeql="$8"
+  local rust_changed="$9"
+  local extension_changed="${10}"
+  local sidecar_changed="${11}"
+  local guidelines_changed="${12}"
+  local ci_changed="${13}"
+  local global_changed="${14}"
 
   local tmp_out
   tmp_out="$(mktemp)"
@@ -46,24 +49,27 @@ assert_relevance() {
   assert_output extension_relevant "${expected_ext}"
   assert_output sidecar_relevant "${expected_sidecar}"
   assert_output guidelines_relevant "${expected_guidelines}"
+  assert_output rust_codeql_relevant "${expected_rust_codeql}"
+  assert_output extension_codeql_relevant "${expected_ext_codeql}"
+  assert_output python_codeql_relevant "${expected_python_codeql}"
   rm -f "${tmp_out}"
 }
 
-assert_relevance "docs-only" false false false false \
+assert_relevance "docs-only" false false false false false false false \
   false false false false false false
-assert_relevance "rust-only" true false false false \
+assert_relevance "rust-only" true false false false true false false \
   true false false false false false
-assert_relevance "extension-only" false true false false \
+assert_relevance "extension-only" false true false false false true false \
   false true false false false false
-assert_relevance "sidecar-only" false false true false \
+assert_relevance "sidecar-only" false false true false false false true \
   false false true false false false
-assert_relevance "guidelines-only" false false false true \
+assert_relevance "guidelines-only" false false false true false false false \
   false false false true false false
-assert_relevance "ci-scripts" true true false false \
+assert_relevance "ci-scripts" true true false false false false false \
   false false false false true false
-assert_relevance "cargo-lock" true true false false \
+assert_relevance "cargo-lock" true true false false false false false \
   false false false false false true
-assert_relevance "sidecar-plus-ci" true true true false \
+assert_relevance "sidecar-plus-ci" true true true false false false true \
   false false true false true false
 
 echo "ci path relevance contract tests passed."

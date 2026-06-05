@@ -22,9 +22,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      rust_relevant: ${{ steps.detect.outputs.rust_relevant }}
-      extension_relevant: ${{ steps.detect.outputs.extension_relevant }}
-      sidecar_relevant: ${{ steps.detect.outputs.sidecar_relevant }}
+      rust_codeql_relevant: ${{ steps.detect.outputs.rust_codeql_relevant }}
+      extension_codeql_relevant: ${{ steps.detect.outputs.extension_codeql_relevant }}
+      python_codeql_relevant: ${{ steps.detect.outputs.python_codeql_relevant }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,7 +38,7 @@ jobs:
   analyze-rust:
     name: Analyze (rust)
     needs: [changes]
-    if: ${{ needs.changes.outputs.rust_relevant == 'true' }}
+    if: ${{ github.event_name == 'schedule' || needs.changes.outputs.rust_codeql_relevant == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -88,7 +88,7 @@ jobs:
   analyze-javascript:
     name: Analyze (javascript)
     needs: [changes]
-    if: ${{ needs.changes.outputs.extension_relevant == 'true' }}
+    if: ${{ github.event_name == 'schedule' || needs.changes.outputs.extension_codeql_relevant == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -138,7 +138,7 @@ jobs:
   analyze-python:
     name: Analyze (python)
     needs: [changes]
-    if: ${{ needs.changes.outputs.sidecar_relevant == 'true' }}
+    if: ${{ github.event_name == 'schedule' || needs.changes.outputs.python_codeql_relevant == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

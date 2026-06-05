@@ -31,6 +31,15 @@ outputs:
   guidelines_relevant:
     description: Whether guidelines-verify should run.
     value: ${{ steps.relevance.outputs.guidelines_relevant }}
+  rust_codeql_relevant:
+    description: Whether CodeQL rust analysis should run on path-filtered events.
+    value: ${{ steps.relevance.outputs.rust_codeql_relevant }}
+  extension_codeql_relevant:
+    description: Whether CodeQL javascript analysis should run on path-filtered events.
+    value: ${{ steps.relevance.outputs.extension_codeql_relevant }}
+  python_codeql_relevant:
+    description: Whether CodeQL python analysis should run on path-filtered events.
+    value: ${{ steps.relevance.outputs.python_codeql_relevant }}
 runs:
   using: composite
   steps:

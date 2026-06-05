@@ -13,6 +13,9 @@ rust_relevant=false
 extension_relevant=false
 sidecar_relevant=false
 guidelines_relevant=false
+rust_codeql_relevant=false
+extension_codeql_relevant=false
+python_codeql_relevant=false
 
 if [ "${rust_changed}" = "true" ] || [ "${ci_changed}" = "true" ] || [ "${global_changed}" = "true" ]; then
   rust_relevant=true
@@ -27,10 +30,24 @@ if [ "${guidelines_changed}" = "true" ]; then
   guidelines_relevant=true
 fi
 
+# CodeQL uses stricter path gates on PR/push; weekly schedule bypasses these in codeql.yml.
+if [ "${rust_changed}" = "true" ]; then
+  rust_codeql_relevant=true
+fi
+if [ "${extension_changed}" = "true" ]; then
+  extension_codeql_relevant=true
+fi
+if [ "${sidecar_changed}" = "true" ]; then
+  python_codeql_relevant=true
+fi
+
 output_file="${GITHUB_OUTPUT:-/dev/null}"
 {
   echo "rust_relevant=${rust_relevant}"
   echo "extension_relevant=${extension_relevant}"
   echo "sidecar_relevant=${sidecar_relevant}"
   echo "guidelines_relevant=${guidelines_relevant}"
+  echo "rust_codeql_relevant=${rust_codeql_relevant}"
+  echo "extension_codeql_relevant=${extension_codeql_relevant}"
+  echo "python_codeql_relevant=${python_codeql_relevant}"
 } >> "${output_file}"
