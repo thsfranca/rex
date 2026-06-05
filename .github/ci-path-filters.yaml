@@ -1,35 +1,13 @@
 # Canonical path filters for dorny/paths-filter@v3. Keep in sync with:
 # - .github/actions/detect-ci-changes/action.yml
-# - .github/workflows/ci.yml (changes job, if not using the composite action)
-# - .github/workflows/codeql.yml (changes job, if not using the composite action)
 
-rust_changed:
+rust_verify_changed:
   - 'crates/**'
-  - 'sidecars/rex-agent/**'
   - 'proto/**'
   - 'Cargo.toml'
   - 'Cargo.lock'
-  - 'scripts/install-cli.sh'
-  - 'scripts/ci/run_rust_*.sh'
-  - 'scripts/ci/run_sidecar_verify.sh'
-  - 'scripts/ci/run_*sidecar*.sh'
-  - 'scripts/ci/builtin_sidecars.txt'
-extension_changed:
+extension_verify_changed:
   - 'extensions/rex-vscode/**'
-  - 'scripts/ci/run_extension*.sh'
-ci_changed:
-  - '.github/workflows/**'
-  - '.github/dependabot.yml'
-  - '.github/codeql/**'
-  - 'scripts/ci/**'
-  - 'scripts/release/**'
-  - 'release-plz.toml'
-  - 'release-please-config.json'
-  - '.release-please-manifest.json'
-  - 'dist-workspace.toml'
-global_changed:
-  - 'Cargo.toml'
-  - 'Cargo.lock'
 sidecar_changed:
   - 'sidecars/**'
   - 'crates/rex-sidecar-stub/**'

@@ -1,18 +1,12 @@
 name: Detect CI changes
 description: Path-aware change detection for Rex CI and CodeQL workflows.
 outputs:
-  rust_changed:
-    description: Rust source or workspace paths changed.
-    value: ${{ steps.filter.outputs.rust_changed }}
-  extension_changed:
-    description: Extension paths changed.
-    value: ${{ steps.filter.outputs.extension_changed }}
-  ci_changed:
-    description: CI or release automation paths changed.
-    value: ${{ steps.filter.outputs.ci_changed }}
-  global_changed:
-    description: Workspace manifest paths changed.
-    value: ${{ steps.filter.outputs.global_changed }}
+  rust_verify_changed:
+    description: Rust workspace or source paths changed.
+    value: ${{ steps.filter.outputs.rust_verify_changed }}
+  extension_verify_changed:
+    description: Extension source paths changed.
+    value: ${{ steps.filter.outputs.extension_verify_changed }}
   sidecar_changed:
     description: Builtin sidecar paths changed.
     value: ${{ steps.filter.outputs.sidecar_changed }}
@@ -57,33 +51,13 @@ runs:
       uses: dorny/paths-filter@v3
       with:
         filters: |
-          rust_changed:
+          rust_verify_changed:
             - 'crates/**'
-            - 'sidecars/rex-agent/**'
             - 'proto/**'
             - 'Cargo.toml'
             - 'Cargo.lock'
-            - 'scripts/install-cli.sh'
-            - 'scripts/ci/run_rust_*.sh'
-            - 'scripts/ci/run_sidecar_verify.sh'
-            - 'scripts/ci/run_*sidecar*.sh'
-            - 'scripts/ci/builtin_sidecars.txt'
-          extension_changed:
+          extension_verify_changed:
             - 'extensions/rex-vscode/**'
-            - 'scripts/ci/run_extension*.sh'
-          ci_changed:
-            - '.github/workflows/**'
-            - '.github/dependabot.yml'
-            - '.github/codeql/**'
-            - 'scripts/ci/**'
-            - 'scripts/release/**'
-            - 'release-plz.toml'
-            - 'release-please-config.json'
-            - '.release-please-manifest.json'
-            - 'dist-workspace.toml'
-          global_changed:
-            - 'Cargo.toml'
-            - 'Cargo.lock'
           sidecar_changed:
             - 'sidecars/**'
             - 'crates/rex-sidecar-stub/**'
@@ -118,13 +92,11 @@ runs:
       id: relevance
       shell: bash
       env:
-        RUST_CHANGED: ${{ steps.filter.outputs.rust_changed }}
-        EXTENSION_CHANGED: ${{ steps.filter.outputs.extension_changed }}
+        RUST_VERIFY_CHANGED: ${{ steps.filter.outputs.rust_verify_changed }}
+        EXTENSION_VERIFY_CHANGED: ${{ steps.filter.outputs.extension_verify_changed }}
         SIDECAR_CHANGED: ${{ steps.filter.outputs.sidecar_changed }}
         GUIDELINES_CHANGED: ${{ steps.filter.outputs.guidelines_changed }}
         RUST_CODEQL_CHANGED: ${{ steps.filter.outputs.rust_codeql_changed }}
         EXTENSION_CODEQL_CHANGED: ${{ steps.filter.outputs.extension_codeql_changed }}
         PYTHON_CODEQL_CHANGED: ${{ steps.filter.outputs.python_codeql_changed }}
-        CI_CHANGED: ${{ steps.filter.outputs.ci_changed }}
-        GLOBAL_CHANGED: ${{ steps.filter.outputs.global_changed }}
       run: bash "$(cd "${GITHUB_ACTION_PATH}/../../.." && pwd)/scripts/ci/evaluate_ci_relevance.sh"

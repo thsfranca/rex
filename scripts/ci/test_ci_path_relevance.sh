@@ -14,27 +14,23 @@ assert_relevance() {
   local expected_rust_codeql="$6"
   local expected_ext_codeql="$7"
   local expected_python_codeql="$8"
-  local rust_changed="$9"
-  local extension_changed="${10}"
-  local sidecar_changed="${11}"
-  local guidelines_changed="${12}"
-  local ci_changed="${13}"
-  local global_changed="${14}"
-  local rust_codeql_changed="${15:-false}"
-  local extension_codeql_changed="${16:-false}"
-  local python_codeql_changed="${17:-false}"
+  local rust_verify_changed="${9:-false}"
+  local extension_verify_changed="${10:-false}"
+  local sidecar_changed="${11:-false}"
+  local guidelines_changed="${12:-false}"
+  local rust_codeql_changed="${13:-false}"
+  local extension_codeql_changed="${14:-false}"
+  local python_codeql_changed="${15:-false}"
 
   local tmp_out
   tmp_out="$(mktemp)"
-  RUST_CHANGED="${rust_changed}" \
-  EXTENSION_CHANGED="${extension_changed}" \
+  RUST_VERIFY_CHANGED="${rust_verify_changed}" \
+  EXTENSION_VERIFY_CHANGED="${extension_verify_changed}" \
   SIDECAR_CHANGED="${sidecar_changed}" \
   GUIDELINES_CHANGED="${guidelines_changed}" \
   RUST_CODEQL_CHANGED="${rust_codeql_changed}" \
   EXTENSION_CODEQL_CHANGED="${extension_codeql_changed}" \
   PYTHON_CODEQL_CHANGED="${python_codeql_changed}" \
-  CI_CHANGED="${ci_changed}" \
-  GLOBAL_CHANGED="${global_changed}" \
   GITHUB_OUTPUT="${tmp_out}" \
   bash "${EVALUATE_SCRIPT}"
 
@@ -61,23 +57,20 @@ assert_relevance() {
   rm -f "${tmp_out}"
 }
 
-assert_relevance "docs-only" false false false false false false false \
-  false false false false false false
-assert_relevance "rust-only" true false false false true false false \
-  true false false false false false true false false
-assert_relevance "extension-only" false true false false false true false \
-  false true false false false false false true false
+assert_relevance "docs-only" false false false false false false false
+assert_relevance "rust-source" true false false false true false false \
+  true false false false true false false
+assert_relevance "extension-source" false true false false false true false \
+  false true false false false true false
 assert_relevance "sidecar-only" false false true false false false true \
-  false false true false false false false false true
+  false false true false false false true
 assert_relevance "guidelines-only" false false false true false false false \
-  false false false true false false
-assert_relevance "ci-scripts" true true false false false false false \
-  false false false false true false
-assert_relevance "cargo-lock" true true false false false false false \
-  false false false false false true
-assert_relevance "sidecar-plus-ci" true true true false false false true \
-  false false true false true false false false true
-assert_relevance "rust-ci-script-only" true true false false false false false \
-  true false false false true false false false false
+  false false false true false false false
+assert_relevance "ci-scripts" false false false false false false false
+assert_relevance "cargo-lock" true false false false false false false \
+  true false false false false false false
+assert_relevance "sidecar-plus-ci-script" false false true false false false true \
+  false false true false false false true
+assert_relevance "rust-ci-script-only" false false false false false false false
 
 echo "ci path relevance contract tests passed."

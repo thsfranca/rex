@@ -122,40 +122,32 @@ CI first evaluates changed paths, then runs only relevant domain checks.
 
 ### Change detection outputs
 
-- `rust_changed`
-- `extension_changed`
-- `ci_changed`
-- `global_changed`
+- `rust_verify_changed`
+- `extension_verify_changed`
 - `sidecar_changed`
 - `guidelines_changed`
+- `rust_codeql_changed`
+- `extension_codeql_changed`
+- `python_codeql_changed`
 - `rust_relevant`
 - `extension_relevant`
 - `sidecar_relevant`
 - `guidelines_relevant`
+- `rust_codeql_relevant`
+- `extension_codeql_relevant`
+- `python_codeql_relevant`
 
 Canonical path filters live in [`.github/ci-path-filters.yaml`](../.github/ci-path-filters.yaml) and are applied by the [`.github/actions/detect-ci-changes`](../.github/actions/detect-ci-changes/action.yml) composite action. Relevance mapping is in [`scripts/ci/evaluate_ci_relevance.sh`](../scripts/ci/evaluate_ci_relevance.sh).
 
 ### Path relevance defaults
 
-- **Rust-relevant** (`rust_changed` **or** `ci_changed` **or** `global_changed`):
+- **Rust-relevant** (`rust_verify_changed` only):
   - `crates/**`
-  - `sidecars/rex-agent/**`
   - `proto/**`
   - `Cargo.toml`
   - `Cargo.lock`
-  - `scripts/install-cli.sh`
-  - `scripts/ci/run_rust_*.sh`
-  - `scripts/ci/run_sidecar_verify.sh`
-  - `scripts/ci/run_*sidecar*.sh`
-  - `scripts/ci/builtin_sidecars.txt`
-- **Extension-relevant** (`extension_changed` **or** `ci_changed` **or** `global_changed`):
+- **Extension-relevant** (`extension_verify_changed` only):
   - `extensions/rex-vscode/**`
-  - `scripts/ci/run_extension*.sh`
-- **Cross-domain triggers** (rust + extension only):
-  - `.github/workflows/**`
-  - `scripts/ci/**`
-  - `Cargo.toml`
-  - `Cargo.lock`
 
 ### Guidelines verify (path-aware)
 

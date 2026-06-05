@@ -2,15 +2,13 @@
 # Maps paths-filter outputs to domain relevance flags for CI workflows.
 set -euo pipefail
 
-rust_changed="${RUST_CHANGED:-false}"
-extension_changed="${EXTENSION_CHANGED:-false}"
+rust_verify_changed="${RUST_VERIFY_CHANGED:-false}"
+extension_verify_changed="${EXTENSION_VERIFY_CHANGED:-false}"
 sidecar_changed="${SIDECAR_CHANGED:-false}"
 guidelines_changed="${GUIDELINES_CHANGED:-false}"
 rust_codeql_changed="${RUST_CODEQL_CHANGED:-false}"
 extension_codeql_changed="${EXTENSION_CODEQL_CHANGED:-false}"
 python_codeql_changed="${PYTHON_CODEQL_CHANGED:-false}"
-ci_changed="${CI_CHANGED:-false}"
-global_changed="${GLOBAL_CHANGED:-false}"
 
 rust_relevant=false
 extension_relevant=false
@@ -20,10 +18,10 @@ rust_codeql_relevant=false
 extension_codeql_relevant=false
 python_codeql_relevant=false
 
-if [ "${rust_changed}" = "true" ] || [ "${ci_changed}" = "true" ] || [ "${global_changed}" = "true" ]; then
+if [ "${rust_verify_changed}" = "true" ]; then
   rust_relevant=true
 fi
-if [ "${extension_changed}" = "true" ] || [ "${ci_changed}" = "true" ] || [ "${global_changed}" = "true" ]; then
+if [ "${extension_verify_changed}" = "true" ]; then
   extension_relevant=true
 fi
 if [ "${sidecar_changed}" = "true" ]; then

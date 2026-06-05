@@ -12,10 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      rust_changed: ${{ steps.detect.outputs.rust_changed }}
-      extension_changed: ${{ steps.detect.outputs.extension_changed }}
-      ci_changed: ${{ steps.detect.outputs.ci_changed }}
-      global_changed: ${{ steps.detect.outputs.global_changed }}
+      rust_verify_changed: ${{ steps.detect.outputs.rust_verify_changed }}
+      extension_verify_changed: ${{ steps.detect.outputs.extension_verify_changed }}
       sidecar_changed: ${{ steps.detect.outputs.sidecar_changed }}
       guidelines_changed: ${{ steps.detect.outputs.guidelines_changed }}
       rust_relevant: ${{ steps.detect.outputs.rust_relevant }}
