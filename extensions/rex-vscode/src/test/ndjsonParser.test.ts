@@ -17,6 +17,22 @@ describe("NdjsonLineParser", () => {
     ]);
   });
 
+  it("parses plan events", () => {
+    const parser = new NdjsonLineParser();
+    const events = parser.push(
+      '{"event":"plan","index":3,"phase":"ready","title":"Planning tools slice","detail":"{\\"steps\\":[]}"}\n',
+    );
+    expect(events).toEqual([
+      {
+        kind: "plan",
+        index: 3,
+        phase: "ready",
+        title: "Planning tools slice",
+        detail: '{"steps":[]}',
+      },
+    ]);
+  });
+
   it("parses tool and step events", () => {
     const parser = new NdjsonLineParser();
     const events = parser.push(

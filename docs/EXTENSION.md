@@ -32,7 +32,7 @@ rex complete "<prompt>" --format ndjson --mode <ask|plan|agent> [--model <id>]
 
 - Extension passes **`--mode`** matching the active session mode on every `complete` call.
 - Optional **`--model`** when the user sets **REX: Model Id** (`rex.modelId`) or passes `--model` on the CLI (otherwise daemon default applies).
-- One JSON object per stdout line (`chunk`, `done`, `error`; additive non-terminal `tool`, `step`).
+- One JSON object per stdout line (`chunk`, `done`, `error`; additive non-terminal `tool`, `step`, `plan`).
 - **`rex` flushes stdout after each NDJSON line** when the consumer is on a pipe (including the extension subprocess), so chunks are visible promptly instead of sitting in a block buffer.
 - Exactly **one** terminal event per request path (`done` **or** `error`); `tool` and `step` lines may appear mid-stream and are non-terminal.
 

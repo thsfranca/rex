@@ -8,6 +8,8 @@ const TOOL_STEP_FIXTURE: &str =
     include_str!("../../../fixtures/ndjson_contract/tool_step_stream.ndjson");
 const SETUP_ERRORS_FIXTURE: &str =
     include_str!("../../../fixtures/ndjson_contract/sidecar_setup_errors.ndjson");
+const PLAN_STREAM_FIXTURE: &str =
+    include_str!("../../../fixtures/ndjson_contract/plan_stream.ndjson");
 
 fn terminal_event_count(lines: &str) -> usize {
     lines
@@ -155,6 +157,77 @@ fn tool_step_fixture_lines_match_stream_contract_fields() {
                     .get("summary")
                     .and_then(|v| v.as_str())
                     .expect("step.summary");
+            }
+            "done" => {
+                value
+                    .get("index")
+                    .and_then(|v| v.as_u64())
+                    .expect("done.index");
+            }
+            other => panic!("unexpected event: {other}"),
+        }
+    }
+}
+
+#[test]
+fn plan_stream_fixture_has_single_terminal_event() {
+    assert_eq!(terminal_event_count(PLAN_STREAM_FIXTURE), 1);
+}
+
+#[test]
+fn plan_stream_fixture_lines_match_stream_contract_fields() {
+    for line in PLAN_STREAM_FIXTURE.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let value: Value = serde_json::from_str(trimmed).expect("each line must be JSON");
+        let event = value
+            .get("event")
+            .and_then(|e| e.as_str())
+            .expect("event field required");
+        match event {
+            "chunk" => {
+                value
+                    .get("index")
+                    .and_then(|v| v.as_u64())
+                    .expect("chunk.index");
+                value
+                    .get("text")
+                    .and_then(|v| v.as_str())
+                    .expect("chunk.text");
+            }
+            "tool" => {
+                value
+                    .get("index")
+                    .and_then(|v| v.as_u64())
+                    .expect("tool.index");
+                value
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .expect("tool.name");
+                value
+                    .get("phase")
+                    .and_then(|v| v.as_str())
+                    .expect("tool.phase");
+            }
+            "plan" => {
+                value
+                    .get("index")
+                    .and_then(|v| v.as_u64())
+                    .expect("plan.index");
+                value
+                    .get("phase")
+                    .and_then(|v| v.as_str())
+                    .expect("plan.phase");
+                value
+                    .get("title")
+                    .and_then(|v| v.as_str())
+                    .expect("plan.title");
+                value
+                    .get("detail")
+                    .and_then(|v| v.as_str())
+                    .expect("plan.detail");
             }
             "done" => {
                 value

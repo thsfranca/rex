@@ -1,6 +1,6 @@
 # Planning tools (design hub)
 
-**Status:** **accepted** — [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md). Implementation: **R037**, **E-PLAN01** (roadmaps).
+**Status:** **implemented** — [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md). **R037** / **E-PLAN01** shipped (broker, sidecar stream, extension plan card).
 
 Canonical design for Rex **`plan` mode**: concise tools, stream contract, prompts, and extension handoff to **`agent`**. Baseline: [Cursor Plan Mode](https://cursor.com/docs/agent/plan-mode).
 

@@ -159,6 +159,7 @@ export function App(): React.ReactElement {
         daemonReady={state.daemon.state === "ready"}
         modePolicy={state.modePolicy}
         timeline={state.timeline}
+        planArtifact={state.planArtifact}
         pendingApprovals={state.pendingApprovals}
         prompt={state.prompt}
         onPromptChange={(value) => dispatch({ type: "setPrompt", value })}
@@ -175,6 +176,31 @@ export function App(): React.ReactElement {
         onSwitchSession={(sessionId) => postToHost({ type: "switchSession", sessionId })}
         onRequestContextPicker={() => postToHost({ type: "requestContextPicker" })}
         onRemoveAttachment={(id) => postToHost({ type: "removeContextAttachment", id })}
+        onPlanContentChange={(content) => dispatch({ type: "updatePlanContent", content })}
+        onPlanSavePathChange={(path) => dispatch({ type: "updatePlanSavePath", path })}
+        onPlanSave={() => {
+          if (state.planArtifact === undefined) {
+            return;
+          }
+          postToHost({
+            type: "savePlan",
+            streamId: state.planArtifact.streamId,
+            path: state.planArtifact.savePath,
+            content: state.planArtifact.content,
+          });
+        }}
+        onPlanBuild={() => {
+          if (state.planArtifact === undefined) {
+            return;
+          }
+          postToHost({
+            type: "buildPlan",
+            streamId: state.planArtifact.streamId,
+            title: state.planArtifact.title,
+            content: state.planArtifact.content,
+            savePath: state.planArtifact.savePath,
+          });
+        }}
       />
     </>
   );

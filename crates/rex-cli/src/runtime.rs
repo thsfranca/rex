@@ -297,6 +297,17 @@ fn format_ndjson_step_event(index: u64, phase: &str, summary: &str) -> String {
     .to_string()
 }
 
+fn format_ndjson_plan_event(index: u64, phase: &str, title: &str, detail: &str) -> String {
+    json!({
+        "event": "plan",
+        "index": index,
+        "phase": phase,
+        "title": title,
+        "detail": detail
+    })
+    .to_string()
+}
+
 fn format_ndjson_stream_event(
     chunk: &rex_proto::rex::v1::StreamInferenceResponse,
 ) -> Option<String> {
@@ -319,6 +330,12 @@ fn format_ndjson_stream_event(
             chunk.index,
             chunk.phase.trim(),
             chunk.summary.trim(),
+        )),
+        "plan" => Some(format_ndjson_plan_event(
+            chunk.index,
+            chunk.phase.trim(),
+            chunk.summary.trim(),
+            chunk.detail.trim(),
         )),
         _ => None,
     }
@@ -396,8 +413,9 @@ mod tests {
 
     use super::{
         classify_stream_terminal, format_ndjson_chunk_event, format_ndjson_done_event,
-        format_ndjson_error_event, map_stream_status_error, ndjson_error_code,
-        ndjson_terminal_event_count_for_tests, should_retry_stream_start, write_ndjson_line,
+        format_ndjson_error_event, format_ndjson_plan_event, map_stream_status_error,
+        ndjson_error_code, ndjson_terminal_event_count_for_tests, should_retry_stream_start,
+        write_ndjson_line,
     };
     use crate::domain::StreamLifecycle;
     use crate::error::CliError;
@@ -447,6 +465,14 @@ mod tests {
     #[test]
     fn ndjson_done_event_is_stable() {
         assert_eq!(format_ndjson_done_event(3), r#"{"event":"done","index":3}"#);
+    }
+
+    #[test]
+    fn ndjson_plan_event_is_stable() {
+        assert_eq!(
+            format_ndjson_plan_event(3, "ready", "Planning tools slice", r#"{"steps":[]}"#),
+            r#"{"detail":"{\"steps\":[]}","event":"plan","index":3,"phase":"ready","title":"Planning tools slice"}"#
+        );
     }
 
     #[test]

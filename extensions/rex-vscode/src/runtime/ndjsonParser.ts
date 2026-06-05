@@ -4,7 +4,7 @@
  * The upstream contract defined in `docs/EXTENSION.md` is:
  * - one JSON object per stdout line;
  * - exactly one terminal event (`done` or `error`);
- * - events: `chunk`, `done`, `error`, and additive non-terminal `tool`, `step`.
+ * - events: `chunk`, `done`, `error`, and additive non-terminal `tool`, `step`, `plan`.
  *
  * The parser is intentionally defensive: malformed lines surface as synthetic
  * `error` events so downstream code can terminate the stream instead of
@@ -32,6 +32,16 @@ export interface StreamStepEvent {
   readonly summary: string;
 }
 
+export type PlanStreamPhase = "draft" | "clarify" | "ready";
+
+export interface StreamPlanEvent {
+  readonly kind: "plan";
+  readonly index: number;
+  readonly phase: PlanStreamPhase;
+  readonly title: string;
+  readonly detail: string;
+}
+
 export interface StreamDoneEvent {
   readonly kind: "done";
   readonly index: number;
@@ -47,6 +57,7 @@ export type StreamEvent =
   | StreamChunkEvent
   | StreamToolEvent
   | StreamStepEvent
+  | StreamPlanEvent
   | StreamDoneEvent
   | StreamErrorEvent;
 
@@ -149,6 +160,17 @@ function parseLine(raw: string): StreamEvent | undefined {
     }
     return { kind: "step", index, phase, summary };
   }
+  if (event === "plan") {
+    const index = asFiniteNumber(parsed["index"]);
+    const phaseRaw = typeof parsed["phase"] === "string" ? parsed["phase"] : "";
+    const title = typeof parsed["title"] === "string" ? parsed["title"] : "";
+    const detail = typeof parsed["detail"] === "string" ? parsed["detail"] : "";
+    const phase = asPlanPhase(phaseRaw);
+    if (index === undefined || phase === undefined || title.length === 0) {
+      return { kind: "error", message: "plan event missing required fields" };
+    }
+    return { kind: "plan", index, phase, title, detail };
+  }
   if (event === "done") {
     const index = asFiniteNumber(parsed["index"]) ?? 0;
     return { kind: "done", index };
@@ -190,6 +212,13 @@ function asErrorCode(value: unknown): StreamErrorCode | undefined {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function asPlanPhase(value: string): PlanStreamPhase | undefined {
+  if (value === "draft" || value === "clarify" || value === "ready") {
+    return value;
+  }
+  return undefined;
 }
 
 function asFiniteNumber(value: unknown): number | undefined {

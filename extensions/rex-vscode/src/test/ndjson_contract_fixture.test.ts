@@ -13,6 +13,10 @@ const toolStepFixture = path.resolve(
   process.cwd(),
   "../../fixtures/ndjson_contract/tool_step_stream.ndjson",
 );
+const planStreamFixture = path.resolve(
+  process.cwd(),
+  "../../fixtures/ndjson_contract/plan_stream.ndjson",
+);
 
 describe("NDJSON cross-boundary fixture", () => {
   it("parses the shared repo fixture used by rex-cli conformance tests", () => {
@@ -24,6 +28,17 @@ describe("NDJSON cross-boundary fixture", () => {
       { kind: "chunk", index: 1, text: "world" },
       { kind: "done", index: 2 },
     ]);
+  });
+
+  it("parses plan events from the shared fixture", () => {
+    const raw = readFileSync(planStreamFixture, "utf8");
+    const parser = new NdjsonLineParser();
+    const events = parser.push(raw);
+    expect(events.filter((event) => event.kind === "plan")).toHaveLength(2);
+    expect(events.find((event) => event.kind === "plan" && event.phase === "ready")).toMatchObject({
+      title: "Planning tools slice",
+    });
+    expect(events.at(-1)).toEqual({ kind: "done", index: 6 });
   });
 
   it("parses tool and step events from the shared fixture", () => {

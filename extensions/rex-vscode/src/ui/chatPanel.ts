@@ -6,6 +6,8 @@ import { RexProposalProvider } from "../editor/virtualDocs";
 import type { CliBridgeOptions } from "../runtime/cliBridge";
 import type { DaemonLifecycleState } from "../runtime/daemonLifecycle";
 import { classifyStreamError, classifyStreamErrorMessage } from "../runtime/errorTaxonomy";
+import { formatPlanDetailMarkdown } from "../runtime/planContent";
+import { defaultPlanSavePath, validatePlanSavePath } from "../runtime/planPath";
 import { resolveModePolicy } from "../runtime/modePolicy";
 import type { StreamErrorCode } from "../runtime/ndjsonParser";
 import { streamComplete } from "../runtime/streamClient";
@@ -386,6 +388,12 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
         );
         this.postMessage({ type: "contextAttachments", attachments: this.terminalAttachments });
         return;
+      case "savePlan":
+        await this.handleSavePlan(message);
+        return;
+      case "buildPlan":
+        await this.handleBuildPlan(message);
+        return;
     }
   }
 
@@ -487,6 +495,24 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
         }
         if (event.kind === "step") {
           this.emitExecutionStep(message.id, "running", event.summary, "step", event.summary);
+          continue;
+        }
+        if (event.kind === "plan") {
+          const content =
+            event.phase === "ready"
+              ? formatPlanDetailMarkdown(event.title, event.detail)
+              : event.detail;
+          this.postMessage({
+            type: "planArtifact",
+            payload: {
+              streamId: message.id,
+              phase: event.phase,
+              title: event.title,
+              detail: event.detail,
+              content,
+              savePath: defaultPlanSavePath(event.title),
+            },
+          });
           continue;
         }
         if (event.kind === "done") {
@@ -724,6 +750,86 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     this.postMessage({
       type: "executionStep",
       payload: { id, phase, summary, kind, detail: detail ?? summary },
+    });
+  }
+
+  private async handleSavePlan(
+    message: Extract<WebviewToExtension, { type: "savePlan" }>,
+  ): Promise<void> {
+    const validation = validatePlanSavePath(message.path);
+    if (!validation.ok) {
+      this.postMessage({
+        type: "planSaveResult",
+        payload: {
+          streamId: message.streamId,
+          ok: false,
+          message: validation.message,
+        },
+      });
+      return;
+    }
+
+    const folder = vscode.workspace.workspaceFolders?.[0];
+    if (folder === undefined) {
+      this.postMessage({
+        type: "planSaveResult",
+        payload: {
+          streamId: message.streamId,
+          ok: false,
+          message: "Open a workspace folder to save plans under .rex/plans/.",
+        },
+      });
+      return;
+    }
+
+    const relative = validation.normalized;
+    const plansDir = vscode.Uri.joinPath(folder.uri, ".rex", "plans");
+    const target = vscode.Uri.joinPath(folder.uri, ...relative.split("/"));
+    try {
+      await vscode.workspace.fs.createDirectory(plansDir);
+      await vscode.workspace.fs.writeFile(target, Buffer.from(message.content, "utf8"));
+      this.postMessage({
+        type: "planSaveResult",
+        payload: {
+          streamId: message.streamId,
+          ok: true,
+          path: relative,
+          message: `Plan saved to ${relative}.`,
+        },
+      });
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      this.postMessage({
+        type: "planSaveResult",
+        payload: {
+          streamId: message.streamId,
+          ok: false,
+          message: `Failed to save plan: ${detail}`,
+        },
+      });
+    }
+  }
+
+  private async handleBuildPlan(
+    message: Extract<WebviewToExtension, { type: "buildPlan" }>,
+  ): Promise<void> {
+    this.mode = "agent";
+    this.postMessage({ type: "modeState", payload: this.modePolicy() });
+    const pathHint = message.savePath.trim().length > 0 ? message.savePath : defaultPlanSavePath(message.title);
+    const prompt = [
+      `Execute the approved plan "${message.title}".`,
+      `Plan reference: ${pathHint}`,
+      "",
+      message.content.trim(),
+    ].join("\n");
+    this.postMessage({
+      type: "prefillPrompt",
+      payload: { prompt },
+    });
+    this.postMessage({
+      type: "statusMessage",
+      level: "info",
+      text: "Switched to AGENT mode. Review the plan prompt and send when ready.",
     });
   }
 }
