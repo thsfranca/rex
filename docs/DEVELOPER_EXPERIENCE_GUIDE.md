@@ -103,7 +103,14 @@ Required local checks before PR:
 ```bash
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
+cargo audit
 cargo test --workspace --all-targets --locked
+```
+
+Or run the full Rust CI path (includes audit):
+
+```bash
+./scripts/ci/run_rust_verify.sh
 ```
 
 Use this review checklist before accepting AI-generated changes:
@@ -119,7 +126,7 @@ Optional before PR (error codes, fixtures, or guidelines scripts):
 ./scripts/ci/run_guidelines_verify.sh
 ```
 
-Planned post-v1.0 gates (supply chain audit, CodeQL, Ruff on `rex-agent`) are tracked in [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R023–R026**); they are not required locally until implemented.
+Planned post-v1.0 gates (CodeQL, Ruff on `rex-agent`) are tracked in [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R024–R026**). Supply chain audit (**R023**) runs in `./scripts/ci/run_rust_verify.sh`.
 
 ### Documentation conventions
 

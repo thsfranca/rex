@@ -46,6 +46,7 @@ jobs:
               - 'scripts/ci/run_extension*.sh'
             ci_changed:
               - '.github/workflows/**'
+              - '.github/dependabot.yml'
               - 'scripts/ci/**'
               - 'scripts/release/**'
               - 'release-plz.toml'
@@ -120,6 +121,11 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-nextest@0.9
+
+      - name: Install cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit@0.22
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2

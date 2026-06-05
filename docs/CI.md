@@ -81,6 +81,7 @@ Keep failure codes low-cardinality. Current baseline set:
 - `PACKAGE_FAIL` (extension VSIX packaging)
 - `GUIDELINES_FAIL` (documented guideline conformance — error code catalog sync and sibling checks under `scripts/ci/guidelines/`)
 - `SIDECAR_FAIL` (builtin sidecar verify — `rex-sidecar-stub` / `rex-agent`)
+- `AUDIT_FAIL` (Rust supply chain — `cargo audit` on `Cargo.lock` in `rust-verify`)
 
 ### Reliability guardrails
 
@@ -243,6 +244,20 @@ That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh
 
 Local: `./scripts/ci/run_sidecar_verify.sh`. Failure code: `SIDECAR_FAIL`. Requires Python 3.10+ (`python3.11` / `python3.10` preferred).
 
+### Rust supply chain audit (`rust-verify`)
+
+[`run_rust_supply_chain.sh`](../scripts/ci/run_rust_supply_chain.sh) runs in **BuildAndChecks** inside [`run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh) (after fmt/clippy, before tests). It scans `Cargo.lock` with `cargo audit`. Failure code: `AUDIT_FAIL`.
+
+Local:
+
+```bash
+./scripts/ci/run_rust_supply_chain.sh
+```
+
+Requires `cargo-audit` on `PATH` (see [DEPENDENCIES.md](DEPENDENCIES.md)). CI installs `cargo-audit@0.22` via `taiki-e/install-action` in the **`rust-verify`** job.
+
+Dependabot (cargo, npm, pip) is configured in [`.github/dependabot.yml`](../.github/dependabot.yml); version-update PRs are triaged separately from this gate.
+
 ## Local verification flow for reliability changes
 
 Run this sequence before opening PRs that change stream lifecycle behavior:
@@ -261,7 +276,7 @@ For lifecycle/race fixes, ensure E2E coverage includes:
 
 ## Planned quality and security gates
 
-Post-v1.0 phases **R023–R026** (supply chain, CodeQL, Ruff on `rex-agent`, Rex-specific guidelines) are **not** in CI yet. Canonical design, MoSCoW, and acceptance criteria: **[CI_QUALITY_GATES.md](CI_QUALITY_GATES.md)**.
+**R023** (supply chain: `cargo audit`, Dependabot) is **shipped** in `rust-verify` — see [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md). Remaining phases **R024–R026** (CodeQL, Ruff on `rex-agent`, Rex-specific guidelines) are **not** in CI yet.
 
 ## New CI job checklist
 
