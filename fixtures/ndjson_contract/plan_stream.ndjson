@@ -1,0 +1,7 @@
+{"event":"chunk","index":0,"text":"Researching layout… "}
+{"event":"tool","index":1,"name":"fs.list","phase":"running","detail":""}
+{"event":"tool","index":2,"name":"fs.list","phase":"completed","detail":"ok"}
+{"event":"plan","index":3,"phase":"clarify","title":"Scope","detail":"[{\"id\":\"q1\",\"prompt\":\"Target surface?\",\"options\":[\"Extension only\",\"Full stack\"]}]"}
+{"event":"plan","index":4,"phase":"ready","title":"Planning tools slice","detail":"{\"steps\":[{\"id\":\"1\",\"summary\":\"Add hub and ADR\",\"files\":[\"docs/PLANNING_TOOLS.md\"]}],\"risks\":[],\"open_questions\":[]}"}
+{"event":"chunk","index":5,"text":"Plan ready for review."}
+{"event":"done","index":6}
