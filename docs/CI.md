@@ -108,7 +108,7 @@ Set branch protection or ruleset on `main` to require:
 - `ci-checks`
 - `Conventional PR title` (job in [`.github/workflows/pr-title-lint.yml`](../.github/workflows/pr-title-lint.yml))
 
-`ci-checks` is the merge gate for code quality. It reads `rust-verify`, `sidecar-verify`, `extension-verify`, and `guidelines-verify` results. **`guidelines-verify`** always runs documented guideline conformance checks. `rust-verify`, `sidecar-verify`, and `extension-verify` use path-aware skip semantics: when a domain is not relevant, the verify job is skipped and `ci-checks` still passes. When a relevant verify job fails, `ci-checks` fails with `GATE_FAIL`. When `guidelines-verify` fails, `ci-checks` fails with `GUIDELINES_FAIL`.
+`ci-checks` is the merge gate for code quality. It reads `rust-verify`, `sidecar-verify`, `extension-verify`, and `guidelines-verify` results. All four verify jobs use path-aware skip semantics: when a domain is not relevant, the verify job is skipped and `ci-checks` still passes. When a relevant verify job fails, `ci-checks` fails with `GATE_FAIL`. When relevant `guidelines-verify` fails, `ci-checks` fails with `GUIDELINES_FAIL`.
 
 **Conventional PR title** is required because squash-merge titles become commits on `main`, which feed release-plz and release-please (semver + changelog). See [CONTRIBUTING.md](../CONTRIBUTING.md).
 
@@ -127,13 +127,17 @@ CI first evaluates changed paths, then runs only relevant domain checks.
 - `ci_changed`
 - `global_changed`
 - `sidecar_changed`
+- `guidelines_changed`
 - `rust_relevant`
 - `extension_relevant`
 - `sidecar_relevant`
+- `guidelines_relevant`
+
+Canonical path filters live in [`.github/ci-path-filters.yaml`](../.github/ci-path-filters.yaml) and are applied by the [`.github/actions/detect-ci-changes`](../.github/actions/detect-ci-changes/action.yml) composite action. Relevance mapping is in [`scripts/ci/evaluate_ci_relevance.sh`](../scripts/ci/evaluate_ci_relevance.sh).
 
 ### Path relevance defaults
 
-- Rust-relevant:
+- **Rust-relevant** (`rust_changed` **or** `ci_changed` **or** `global_changed`):
   - `crates/**`
   - `sidecars/rex-agent/**`
   - `proto/**`
@@ -142,50 +146,61 @@ CI first evaluates changed paths, then runs only relevant domain checks.
   - `scripts/install-cli.sh`
   - `scripts/ci/run_rust_*.sh`
   - `scripts/ci/run_sidecar_verify.sh`
-  - `scripts/ci/run_stub_sidecar_checks.sh`
-  - `scripts/ci/run_rex_agent_checks.sh`
+  - `scripts/ci/run_*sidecar*.sh`
   - `scripts/ci/builtin_sidecars.txt`
-- Extension-relevant:
+- **Extension-relevant** (`extension_changed` **or** `ci_changed` **or** `global_changed`):
   - `extensions/rex-vscode/**`
   - `scripts/ci/run_extension*.sh`
-- Cross-domain triggers:
+- **Cross-domain triggers** (rust + extension only):
   - `.github/workflows/**`
   - `scripts/ci/**`
   - `Cargo.toml`
   - `Cargo.lock`
-  - `docs/ERROR_HANDLING.md`
-  - `fixtures/guidelines/**`
-  - `fixtures/ndjson_contract/**`
 
-### Guidelines verify (always runs)
+### Guidelines verify (path-aware)
 
-Every pull request runs [`scripts/ci/run_guidelines_verify.sh`](scripts/ci/run_guidelines_verify.sh) in the **guidelines-verify** job. It validates documented rules that are not covered by fmt, clippy, or ESLint — NDJSON **error code catalog** sync, **terminal event** invariant, **plan** stream contract, and **broker policy** code catalog. Failure code: `GUIDELINES_FAIL`. See [ERROR_HANDLING.md](ERROR_HANDLING.md).
+When guideline conformance paths change, **guidelines-verify** runs [`scripts/ci/run_guidelines_verify.sh`](scripts/ci/run_guidelines_verify.sh). It validates documented rules that are not covered by fmt, clippy, or ESLint — NDJSON **error code catalog** sync, **terminal event** invariant, **plan** stream contract, and **broker policy** code catalog. Failure code: `GUIDELINES_FAIL`. See [ERROR_HANDLING.md](ERROR_HANDLING.md).
 
-Local run:
+**Guidelines-relevant** (`guidelines_changed` only):
+
+- `fixtures/guidelines/**`
+- `fixtures/ndjson_contract/**`
+- `docs/ERROR_HANDLING.md`
+- `docs/EXTENSION.md`
+- `extensions/rex-vscode/src/shared/messages.ts`
+- `crates/rex-daemon/src/access_policy.rs`
+- `scripts/ci/guidelines/**`
+- `scripts/ci/run_guidelines_verify.sh`
+- `scripts/ci/test_guidelines_checks.sh`
+
+Local run (any time):
 
 ```bash
 ./scripts/ci/run_guidelines_verify.sh
 ```
 
-### Sidecar-relevant paths
+### Sidecar verify (path-aware)
+
+**Sidecar-relevant** (`sidecar_changed` only — not triggered by `ci_changed` or `global_changed` alone):
 
 - `sidecars/**`
 - `crates/rex-sidecar-stub/**`
-- `crates/rex-daemon/tests/stub_sidecar_smoke.rs`
+- `crates/rex-daemon/src/sidecar_*.rs`
+- `crates/rex-daemon/tests/*sidecar*`
 - `crates/rex-daemon/tests/agent_scaffold_smoke.rs`
+- `crates/rex-daemon/tests/mvp_product_path.rs`
 - `proto/rex/sidecar/**`
-- `scripts/ci/run_sidecar_verify.sh`, `run_*sidecar*.sh`, `builtin_sidecars.txt`
-- Cross-domain: `.github/workflows/**`, `scripts/ci/**`, `Cargo.toml`, `Cargo.lock` (same as other verify jobs)
+- `scripts/ci/run_sidecar_verify.sh`, `run_*sidecar*.sh`, `run_rex_agent_checks.sh`, `builtin_sidecars.txt`
 
 ### Dependency model
 
-- Always: `guidelines-verify`
-- Verify jobs (parallel, path-aware): `rust-verify`, `sidecar-verify`, `extension-verify`
-- Merge gate: `guidelines-verify` + `rust-verify` + `sidecar-verify` + `extension-verify` → `ci-checks`
+- Path detection: `changes`
+- Verify jobs (parallel, path-aware): `rust-verify`, `sidecar-verify`, `extension-verify`, `guidelines-verify`
+- Merge gate: all verify jobs → `ci-checks`
 
 When a domain is non-relevant, its verify job skips. `ci-checks` runs with `if: always()` and passes when skipped verify results are acceptable for non-relevant paths.
 
-Docs-only and README-only pull requests skip both verify jobs. `ci-checks` still runs and passes via [`enforce_ci_gate.sh`](../scripts/ci/enforce_ci_gate.sh).
+Docs-only and README-only pull requests skip all verify jobs. `ci-checks` still runs and passes via [`enforce_ci_gate.sh`](../scripts/ci/enforce_ci_gate.sh).
 
 ## Release workflows
 
