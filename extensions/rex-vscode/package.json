@@ -294,7 +294,7 @@
     "@types/vscode": "^1.90.0",
     "@typescript-eslint/eslint-plugin": "^7.17.0",
     "@typescript-eslint/parser": "^7.17.0",
-    "@vitest/coverage-v8": "^2.0.5",
+    "@vitest/coverage-v8": "^4.1.8",
     "@vscode/vsce": "^2.30.0",
     "esbuild": "^0.23.0",
     "eslint": "^8.57.0",
