@@ -1284,6 +1284,7 @@ dependencies = [
  "lru",
  "reqwest",
  "rex-config",
+ "rex-obs-store",
  "rex-proto",
  "rex-sidecar-stub",
  "serde_json",
