@@ -139,6 +139,12 @@ Broker calls from Python use `grpc.default_authority=localhost` on daemon UDS (i
 
 Full program: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md).
 
+## R031 acceptance — task-aware read pruning (operator, not CI)
+
+1. Set `"read_pruning_enabled": true` under `agent` in merged JSON ([CONFIGURATION.md](CONFIGURATION.md)).
+2. Run **`rex-agent`** in **agent** mode against a workspace file with **>100 lines**.
+3. Confirm tool output in the stream includes a `[pruned read:` prefix and fewer lines than the raw file.
+
 ## Related
 
 - [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
 from langchain_core.messages import HumanMessage
 
 from rex_agent import graph
@@ -89,6 +90,52 @@ def test_prune_read_result_over_100_lines() -> None:
     content = "\n".join(f"line {i}" for i in range(150))
     pruned = prune_read_result(content, "line 42")
     assert len(pruned.splitlines()) < 150
+    assert "[pruned read:" in pruned
+    assert "line 42" in pruned
+
+
+def test_prune_read_result_at_most_100_lines_unchanged() -> None:
+    content = "\n".join(f"line {i}" for i in range(100))
+    assert prune_read_result(content, "line 42") == content
+
+
+def test_prune_read_result_empty_hint_head_tail() -> None:
+    content = "\n".join(f"line {i}" for i in range(150))
+    pruned = prune_read_result(content, "")
+    assert "lines pruned" in pruned
+    assert "line 0" in pruned
+    assert "line 149" in pruned
+
+
+def test_execute_tool_pruning_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = MagicMock()
+    body = "\n".join(f"token line {i}" for i in range(150))
+    client.read_file.return_value = (
+        True,
+        f"<<TOOL_RESULT:fs.read>>\n{body}\n<<END>>",
+    )
+    monkeypatch.setattr("rex_agent.tools.read_pruning_enabled", lambda: True)
+    call = ToolCall(tool=TOOL_READ, args={"path": "big.py"})
+    ok, result, _ = execute_tool(client, call, "agent", goal_hint="token line 42")
+    assert ok
+    assert "[pruned read:" in result
+
+
+def test_execute_tool_skips_pruning_when_disabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = MagicMock()
+    body = "\n".join(f"token line {i}" for i in range(150))
+    client.read_file.return_value = (
+        True,
+        f"<<TOOL_RESULT:fs.read>>\n{body}\n<<END>>",
+    )
+    monkeypatch.setattr("rex_agent.tools.read_pruning_enabled", lambda: False)
+    call = ToolCall(tool=TOOL_READ, args={"path": "big.py"})
+    ok, result, _ = execute_tool(client, call, "agent", goal_hint="token line 42")
+    assert ok
+    assert "[pruned read:" not in result
+    assert "token line 42" in result
 
 
 def test_editor_prompt_excludes_raw_viewer_dumps() -> None:
