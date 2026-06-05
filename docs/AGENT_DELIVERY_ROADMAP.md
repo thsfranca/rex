@@ -206,7 +206,7 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | **R034** | Raw delimited tool results | **Done** — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | **R037** | Plan mode planning tools | Done — [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md) |
 | **R030** | Diff-only writes | **Done** — sidecar read→patch→write |
-| **R031** | Task-aware read pruning | **Could** — payloads >100 lines |
+| **R031** | Task-aware read pruning | **Done** — payloads >100 lines; config `read_pruning_enabled` |
 | **R032** | Token playbook + subagent metrics | **Done** — prefix SHA, dedup, hard cap |
 | **R036** | TRON static schema compression | **Could** — daemon prefix; optional before **R033** |
 | **R033** | Native tools + MCP client | **Could** — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) Phase 2 |

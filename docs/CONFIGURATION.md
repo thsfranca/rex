@@ -42,7 +42,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `context` | `max_prompt_tokens`, `max_context_tokens` | Context pipeline budgets. |
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
-| `agent` | `approvals_enabled`, `max_tool_steps`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gate; sidecar tool loop cap (default **12**); intra-turn compaction trigger as fraction of `broker.max_tool_result_bytes` (default **0.25**); optional goal-hint read pruning for payloads >100 lines (**R031**, default off). |
+| `agent` | `approvals_enabled`, `max_tool_steps`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gate; sidecar tool loop cap (default **12**); intra-turn compaction trigger as fraction of `broker.max_tool_result_bytes` (default **0.25**); goal-hint read pruning for payloads >100 lines (**R031** Done, default off). |
 | `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `read_api`, `ui`, `otlp`, `store` | SQLite store + OTLP **implemented**; read API + bundled Grafana **planned** — [Observability](#observability), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md). |
 
 Minimal example:

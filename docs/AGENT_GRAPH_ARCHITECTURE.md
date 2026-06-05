@@ -111,7 +111,7 @@ Truncation at **line boundaries** when exceeding `max_tool_result_bytes`.
 | Viewer isolation — Editor without raw read dumps | R028 |
 | Unified diff for edits; reject whole-file rewrite >50 lines | R030 |
 | Read dedup + default `max_tool_steps=12` | R032 |
-| Goal-hint pruning when read >100 lines (config-gated) | R031 (Could) |
+| Goal-hint pruning when read >100 lines (config-gated) | R031 Done |
 | TRON-class static schema compression in daemon prefix | R036 (Could) |
 | Ephemeral cache breakpoint at static/volatile seam | Could — [CACHING.md](CACHING.md) |
 
@@ -185,7 +185,7 @@ flowchart TB
 | R034 | Raw delimited tool results | Done |
 | R030 | Diff-only writes | Done |
 | R032 | Token playbook + metrics | Done |
-| R031 | Task-aware read pruning | Could |
+| R031 | Task-aware read pruning | Done |
 | R036 | TRON static schema compression | Could |
 | R033 | Native tools + MCP client | Could |
 

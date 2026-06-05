@@ -46,7 +46,7 @@ flowchart TB
   Compact --> Orch
 ```
 
-**Shipped (**R027–R032**):** Orchestrator / Viewer / Editor routing via `active_subagent`, `RexBrokerChatModel`, `add_messages` + compaction node, diff-only writes, read dedup, metrics — see `src/rex_agent/graph.py` and `src/rex_agent/graph/`.
+**Shipped (**R027–R032**, **R031**):** Orchestrator / Viewer / Editor routing via `active_subagent`, `RexBrokerChatModel`, `add_messages` + compaction node, diff-only writes, read dedup, goal-hint read pruning (`read_pruning_enabled`, default off), metrics — see `src/rex_agent/graph.py` and `src/rex_agent/graph/`.
 
 - **Per turn start:** Treat `RunTurn.prompt` as the authoritative initial model input (includes daemon-injected context). Do not re-read the same files via broker unless the workspace may have changed.
 - **Intra-turn:** Tool outputs live in graph/scratch state; cap size to `max_tool_result_bytes` (aligned with daemon broker truncation per [ADR 0013](../../docs/architecture/decisions/0013-access-policy-broker-completion.md)).
