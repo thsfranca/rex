@@ -225,6 +225,7 @@ Configure allowlisted GitHub logins in `.github/auto-approve.json`. The workflow
 3. Add repository secret **`REX_AUTO_APPROVE_TOKEN`** with that token (Settings → Secrets and variables → Actions).
 4. Add trusted author logins to `.github/auto-approve.json` → `users` (and optionally set `org` + `team`).
 5. If you want merges to require this approval, enable **Require pull request reviews before merging** on `main` (branch protection or ruleset). Without that, auto-approve is informational only.
+6. Verify with a docs-only PR from an allowlisted author; the bot should submit an **APPROVE** review after `ci-checks` and **Conventional PR title** pass.
 
 The bot cannot approve its own PRs. Do not use your personal PAT if you are the PR author.
 
