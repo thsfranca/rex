@@ -68,8 +68,9 @@ brew install protobuf
 | `cargo fmt` | Enforces formatting consistency. | Used in CI. |
 | `cargo clippy` | Enforces lint quality gates. | CI runs with `-D warnings`. |
 | `cargo test` | Validates behavior with automated tests. | Unit tests exist for CLI parsing and daemon behavior. |
+| `cargo-audit` | Scans `Cargo.lock` for RustSec advisories. | CI: [`run_rust_supply_chain.sh`](../scripts/ci/run_rust_supply_chain.sh) inside [`run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh). Install: `cargo install cargo-audit`. |
+| GitHub Dependabot | Scheduled dependency update PRs (cargo, npm, pip). | [`.github/dependabot.yml`](../.github/dependabot.yml) |
 | CI runner with protobuf compiler | Ensures reproducible checks in pull requests. | Workflow installs `protobuf-compiler` on Linux CI. |
-| Supply chain audit tooling (**planned**, **R023**) | CVE and license gates for Rust deps. | `cargo-audit`, optional `cargo-deny`; Dependabot — see [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
 
 ## 4) Plugin/tool ecosystem dependencies (planned, not required yet)
 
@@ -92,6 +93,14 @@ rustc --version
 protoc --version
 cargo fmt --version
 cargo clippy --version
+cargo audit --version
+```
+
+Supply chain audit (maintainers, Rust-relevant changes):
+
+```bash
+cargo audit
+# or: ./scripts/ci/run_rust_supply_chain.sh
 ```
 
 ## Build and run (current MVP)
