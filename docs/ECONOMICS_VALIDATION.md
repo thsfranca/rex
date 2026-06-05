@@ -43,7 +43,7 @@ Portable background: research theme on LLM observability and validation (GenAI s
 |----------|----------|-------------|-------------------|-------------------|
 | **Short ask** | Adapter only; retrieval off or N/A | Adaptive retrieval + cache | LiveCodeBench (subset) | `prompt_tokens`, TTFT, cache |
 | **Code-context ask** | Full prompt without compaction | Extractive compaction + prefix cache | Aider Polyglot | `compression_strategy`, context tokens |
-| **Agent turn** | Sidecar loop without cache | L1 policy + approvals logged | SWE-bench Verified (subset) | `cache_decision`, broker counters |
+| **Agent turn** | Sidecar loop without prefix/vendor cache | Phase 1 bundle: prefix lock + raw results + microcompaction | SWE-bench Lite–style subset (~50 tasks) | `tokens_in_total`, `cached_tokens`, `prefix_hash`, `parse_retries` |
 | **Paid API** | Remote OpenAI-compat | Same + pipeline stages | Per scenario above | Store + OTLP rollups |
 | **Paid API via LiteLLM** | Gateway to Anthropic/OpenAI | Same Rex signals | Per scenario | LiteLLM logs for spend — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
 | **Local OSS** | Ollama / LM Studio | Same; emphasize compute | Per scenario | `load_duration`, store by `config_snapshot_id` |
@@ -113,6 +113,23 @@ Stored in `rex-obs-store` `runs` / `run_tasks` when `observability.enabled: true
 | `benchmark_suite` | e.g. `swe-bench-verified-subset` |
 | `pass_rate` | Aggregate |
 | `metrics_snapshot` | Token/latency summaries |
+
+## Agent-turn A/B protocol (design)
+
+Golden set: ~50 local repo tasks (SWE-bench Lite–style subset). **Control:** current JSON tool results + variable system blurbs. **Experimental:** Phase 1 bundle per [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) (prefix immutability, **R034** delimiters, microcompaction tier).
+
+| Metric | Target (experimental vs control) |
+|--------|----------------------------------|
+| `tokens_in_total` | >40% reduction (Phase 1 bundle) |
+| `cached_tokens` / total input | >85% on steps 2–12 when vendor cache enabled |
+| `parse_retries` | 0.0 post-**R033** |
+| `tool_steps` | No significant increase |
+| `task_success_rate` | Non-inferiority δ = 2.5pp (gates below) |
+| `prefix_hash` (SHA-256) | Identical across steps 1–12 per turn |
+
+**Prefix-hash CI spec (planned):** harness records SHA-256 of static prefix bytes before each `BrokerInference` in a fixture turn; fail build if hash differs between step 1 and step N (N ≤ `max_tool_steps`). Wire fields: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md).
+
+**Cadence:** per-PR smoke uses mock/replay (no live LLM); powered agent-turn A/B on **release** or lever-change gates only — see [Cadence](#cadence).
 
 ## Gaps (explicit)
 

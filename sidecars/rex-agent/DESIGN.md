@@ -2,7 +2,7 @@
 
 **Status:** LangGraph ReAct loop shipped (**R018**). gRPC scaffold (**R017**). Operator defaults (**R019**). Broker policy (**R020–R022**). Interim tool protocol: JSON in model text until native `tools` on `BrokerInference` (**R033**).
 
-**Target graph:** Orchestrator + Viewer + Editor — [AGENT_GRAPH_ARCHITECTURE.md](../../docs/AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](../../docs/architecture/decisions/0022-viewer-editor-subagent-topology.md).
+**Target graph:** Orchestrator + Viewer + Editor — [AGENT_GRAPH_ARCHITECTURE.md](../../docs/AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](../../docs/architecture/decisions/0022-viewer-editor-subagent-topology.md). Wire formats: [ADR 0023](../../docs/architecture/decisions/0023-hybrid-agent-serialization-boundaries.md).
 
 Bootstrap: [README.md](README.md).
 
@@ -52,6 +52,17 @@ flowchart TB
 - **Intra-turn:** Tool outputs live in graph/scratch state; cap size to `max_tool_result_bytes` (aligned with daemon broker truncation per [ADR 0013](../../docs/architecture/decisions/0013-access-policy-broker-completion.md)).
 - **`max_tool_steps`:** From R015 config (default **12**, [CONFIGURATION.md](../../docs/CONFIGURATION.md)); stop with terminal message when exceeded.
 - **`compaction_suffix_fraction`**, **`read_pruning_enabled`:** Sidecar intra-turn controls — see [CONFIGURATION.md](../../docs/CONFIGURATION.md) and [AGENT_GRAPH_ARCHITECTURE.md](../../docs/AGENT_GRAPH_ARCHITECTURE.md).
+
+## Wire format deltas (design — R034, R029+)
+
+| Contract | Owner | Notes |
+|----------|-------|-------|
+| Interim tool/final JSON in model text | Sidecar `RexBrokerChatModel` | Until **R033** native `tools[]` — [ADR 0023](../../docs/architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
+| Raw delimited broker results | Daemon shapes `BrokerReadFile` / `BrokerExecShell` payloads | `<<TOOL_RESULT:tool>>` … `<<END>>`; line-boundary truncation at `max_tool_result_bytes` — **R034** |
+| Microcompaction before inference | Sidecar graph | Stale reads (>2 steps) → stubs; distinct from R029 `RemoveMessage` suffix rule |
+| Multi-line write args | Sidecar | Line-oriented delimiters; extends **R030** diff path |
+
+No proto change in design-only capture; implementation slices document daemon/sidecar touch points per milestone.
 
 ## R033 (Phase 2 — deferred)
 

@@ -145,6 +145,10 @@ Canonical vocabulary for grep, OTLP, store, and dashboards. **Implemented** fiel
 
 | Signal / capability | Meaning |
 |--------|---------|
+| `cached_tokens` | Provider-reported cached input tokens per inference — agent-turn economics — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md#agent-turn-ab-protocol-design) |
+| `prefix_hash` | SHA-256 of static prompt prefix before each sidecar inference step — prefix immutability CI — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [CACHING.md](CACHING.md#prefix-immutability-and-cache-breakpoints-agent-turns) |
+| `parse_retries` | Count of JSON tool-line parse recovery attempts — interim protocol until **R033** — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
+| `tokens_in_total` | Aggregate input tokens per turn or step rollup — validation harness |
 | `gen_ai.client.*` | OTel GenAI semconv — [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) |
 | `rex.*` / `rex.pipeline.*` | Pipeline attribution — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) |
 | Sidecar `rex.sidecar.custom.*` | Via `SidecarObservabilityService` |
