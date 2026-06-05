@@ -13,7 +13,7 @@ AI-assisted changes often introduce contract drift, dependency bumps, and sideca
 
 ## Status
 
-**partial** — **R023**, **R024**, and **R025** landed (supply chain audit in `rust-verify`; advisory CodeQL in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml); Ruff on `rex-agent` in sidecar verify). **R026** remains in the engineering backlog. Optional **`cargo-deny`** (licenses/bans) deferred to a follow-up slice.
+**shipped** — **R023**, **R024**, **R025**, and **R026** landed (supply chain audit in `rust-verify`; advisory CodeQL in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml); Ruff on `rex-agent` in sidecar verify; Rex-specific guideline checks in `guidelines-verify`). Optional **`cargo-deny`** (licenses/bans) deferred to a follow-up slice.
 
 ## Scope
 
@@ -58,7 +58,7 @@ flowchart LR
 | 1 | **R023** | **Should** | `cargo-audit` (+ optional `cargo-deny` licenses/bans); GitHub **Dependabot** for `Cargo.lock`, `package-lock.json`, pip | **Done** — PR fails on RustSec advisories; [`.github/dependabot.yml`](../.github/dependabot.yml); [DEPENDENCIES.md](DEPENDENCIES.md) |
 | 2 | **R024** | **Should** | **CodeQL** workflow (Rust + JS + Python); **advisory** on first land | **Done** — [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml); triage below; default security queries only |
 | 3 | **R025** | **Should** | **Ruff** on [sidecars/rex-agent/](../sidecars/rex-agent/) via [run_rex_agent_checks.sh](../scripts/ci/run_rex_agent_checks.sh) | **Done** — Ruff check in sidecar CI path; dev dep in `pyproject.toml`; `RUFF_FAIL` |
-| 4 | **R026** | **Could** | Extend [scripts/ci/guidelines/](../scripts/ci/guidelines/) + optional **Semgrep** for Rex invariants | At least 1–2 custom checks with tests; Semgrep optional if CodeQL + guidelines suffice |
+| 4 | **R026** | **Could** | Extend [scripts/ci/guidelines/](../scripts/ci/guidelines/) + optional **Semgrep** for Rex invariants | **Done** — terminal/plan NDJSON + broker policy catalog checks; [test_guidelines_checks.sh](../scripts/ci/test_guidelines_checks.sh) |
 
 ### Prioritization (vs peers)
 
@@ -67,7 +67,7 @@ flowchart LR
 | R023 | Should | 1 | Safety, low noise, small blast radius — **Done** |
 | R024 | Should | 2 | Security; separate workflow; public GitHub repo enables CodeQL — **Done** |
 | R025 | Should | 3 | `rex-agent` growing; CI runs pytest only today — **Done** |
-| R026 | Could | 4 | Highest Rex-specific value; needs rule design |
+| R026 | Could | 4 | Highest Rex-specific value; needs rule design — **Done** |
 
 May run **in parallel** with **RC-S2** (extension) or **R016** (Could) when CI capacity allows — different blast radii per [PRIORITIZATION.md](PRIORITIZATION.md).
 
@@ -90,13 +90,9 @@ Implemented and planned checks follow the [CI observability standard](CI.md#ci-o
 | R024 | [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml), [`.github/codeql/codeql-config.yml`](../.github/codeql/codeql-config.yml) |
 | R025 | [sidecars/rex-agent/pyproject.toml](../sidecars/rex-agent/pyproject.toml), [run_rex_agent_checks.sh](../scripts/ci/run_rex_agent_checks.sh), [run_sidecar_verify.sh](../scripts/ci/run_sidecar_verify.sh) |
 
-Remaining touchpoints:
+| R026 | [scripts/ci/guidelines/check_ndjson_terminal.sh](../scripts/ci/guidelines/check_ndjson_terminal.sh), [check_ndjson_plan_contract.sh](../scripts/ci/guidelines/check_ndjson_plan_contract.sh), [check_broker_policy_codes.sh](../scripts/ci/guidelines/check_broker_policy_codes.sh), [fixtures/guidelines/broker_error_codes.yaml](../fixtures/guidelines/broker_error_codes.yaml) |
 
-| Phase | Likely paths |
-|-------|----------------|
-| R026 | [scripts/ci/guidelines/](../scripts/ci/guidelines/), optional `.semgrep/` rules |
-
-Recommended implementation PR order: **R025 → R026**, each updating this hub **Status** and [CI.md](CI.md) when landed. Optional **`cargo-deny`** may land as a small follow-up. Promote CodeQL from advisory to blocking after triage baseline (see below).
+Recommended follow-up: optional **`cargo-deny`** or **Semgrep** rules if CodeQL + guidelines leave gaps. Optional **`cargo-deny`** may land as a small follow-up. Promote CodeQL from advisory to blocking after triage baseline (see below).
 
 ## CodeQL triage (R024)
 

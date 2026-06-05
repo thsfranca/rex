@@ -159,7 +159,7 @@ CI first evaluates changed paths, then runs only relevant domain checks.
 
 ### Guidelines verify (always runs)
 
-Every pull request runs [`scripts/ci/run_guidelines_verify.sh`](scripts/ci/run_guidelines_verify.sh) in the **guidelines-verify** job. It validates documented rules that are not covered by fmt, clippy, or ESLint — starting with NDJSON stream **error code catalog** sync (`fixtures/guidelines/error_codes.yaml` ↔ TypeScript ↔ docs ↔ fixtures). Failure code: `GUIDELINES_FAIL`. See [ERROR_HANDLING.md](ERROR_HANDLING.md).
+Every pull request runs [`scripts/ci/run_guidelines_verify.sh`](scripts/ci/run_guidelines_verify.sh) in the **guidelines-verify** job. It validates documented rules that are not covered by fmt, clippy, or ESLint — NDJSON **error code catalog** sync, **terminal event** invariant, **plan** stream contract, and **broker policy** code catalog. Failure code: `GUIDELINES_FAIL`. See [ERROR_HANDLING.md](ERROR_HANDLING.md).
 
 Local run:
 
@@ -290,7 +290,7 @@ Path exclusions: [`.github/codeql/codeql-config.yml`](../.github/codeql/codeql-c
 
 ## Planned quality and security gates
 
-**R023** (supply chain: `cargo audit`, Dependabot) is **shipped** in `rust-verify`. **R024** (CodeQL) is **shipped** advisory in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml). **R025** (Ruff on `rex-agent`) is **shipped** in sidecar verify — see [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md). Remaining phase **R026** (Rex-specific guidelines) is **not** in CI yet.
+**R023** (supply chain: `cargo audit`, Dependabot) is **shipped** in `rust-verify`. **R024** (CodeQL) is **shipped** advisory in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml). **R025** (Ruff on `rex-agent`) is **shipped** in sidecar verify. **R026** (NDJSON terminal/plan contract + broker policy catalog sync) is **shipped** in `guidelines-verify` — see [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md).
 
 ## New CI job checklist
 

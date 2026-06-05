@@ -55,14 +55,14 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 | Priority | What / why | RC-* | Notes |
 |----------|------------|------|-------|
-| **Should** | CI quality gates (R026 guidelines next) | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | **R023** **Done** — supply chain; **R024** **Done** — advisory CodeQL; **R025** **Done** — Ruff on `rex-agent` |
+| **Should** | CI quality gates (R023–R026 shipped) | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | Optional follow-up: `cargo-deny`, Semgrep |
 | **Should** | Stream/log polish beyond baseline | RC-07 (Met) | Optional hardening only |
 
 ## Next — product agent program
 
 Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar for CI/harness is **`rex-sidecar-stub`**; **`rex-agent`** ships LangGraph ReAct (**R018** Done) on the gRPC scaffold (**R017** Done). **Target graph:** Viewer/Editor subagents — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md).
 
-**Priority rationale:** **R013–R022**, **R017–R019**, **R027–R032**, **R034**, and **R037** are **Done**. **RC-S2** is **Met**. **R023**, **R024**, and **R025** are **Done**. Next **Could** product follow-up: **R016** / **R031** / **R033** / **R036**. Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md). Next Should CI follow-up: **R026** ([CI_QUALITY_GATES.md](CI_QUALITY_GATES.md)).
+**Priority rationale:** **R013–R022**, **R017–R019**, **R027–R032**, **R034**, and **R037** are **Done**. **RC-S2** is **Met**. **R023–R026** are **Done**. Next **Could** product follow-up: **R016** / **R031** / **R033** / **R036**. Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
