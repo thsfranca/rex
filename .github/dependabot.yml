@@ -4,14 +4,46 @@ updates:
     directory: /
     schedule:
       interval: weekly
+      day: monday
     open-pull-requests-limit: 5
+    groups:
+      rust-deps:
+        patterns: ["*"]
+    labels: ["dependencies", "cargo"]
+    commit-message:
+      prefix: chore
+      include: scope
+
   - package-ecosystem: npm
     directory: /extensions/rex-vscode
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: tuesday
+    open-pull-requests-limit: 3
+    groups:
+      vscode-deps:
+        patterns: ["*"]
+    cooldown:
+      default-days: 3
+      semver-major-days: 14
+    labels: ["dependencies", "npm"]
+    commit-message:
+      prefix: chore
+      include: scope
+
   - package-ecosystem: pip
     directory: /sidecars/rex-agent
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: wednesday
+    open-pull-requests-limit: 3
+    groups:
+      agent-deps:
+        patterns: ["*"]
+    cooldown:
+      default-days: 5
+      semver-major-days: 21
+    labels: ["dependencies", "pip"]
+    commit-message:
+      prefix: chore
+      include: scope
