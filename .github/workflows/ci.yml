@@ -125,7 +125,7 @@ jobs:
       - name: Install cargo-audit
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-audit@0.21
+          tool: cargo-audit@0.22
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2

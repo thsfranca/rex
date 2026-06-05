@@ -254,7 +254,7 @@ Local:
 ./scripts/ci/run_rust_supply_chain.sh
 ```
 
-Requires `cargo-audit` on `PATH` (see [DEPENDENCIES.md](DEPENDENCIES.md)). CI installs `cargo-audit@0.21` via `taiki-e/install-action` in the **`rust-verify`** job.
+Requires `cargo-audit` on `PATH` (see [DEPENDENCIES.md](DEPENDENCIES.md)). CI installs `cargo-audit@0.22` via `taiki-e/install-action` in the **`rust-verify`** job.
 
 Dependabot (cargo, npm, pip) is configured in [`.github/dependabot.yml`](../.github/dependabot.yml); version-update PRs are triaged separately from this gate.
 
