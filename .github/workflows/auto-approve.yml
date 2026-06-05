@@ -1,0 +1,178 @@
+name: Auto-approve trusted authors
+
+on:
+  workflow_run:
+    workflows:
+      - ci
+      - PR title lint
+    types:
+      - completed
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  auto-approve:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Evaluate and approve
+        uses: actions/github-script@v7
+        env:
+          AUTO_APPROVE_TOKEN: ${{ secrets.REX_AUTO_APPROVE_TOKEN }}
+          TRIGGER_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WORKFLOW_RUN: ${{ toJson(github.event.workflow_run) }}
+        with:
+          github-token: ${{ secrets.REX_AUTO_APPROVE_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            if (!process.env.AUTO_APPROVE_TOKEN) {
+              core.notice(
+                'REX_AUTO_APPROVE_TOKEN is not configured; skipping auto-approve.',
+              );
+              return;
+            }
+
+            if (process.env.TRIGGER_CONCLUSION !== 'success') {
+              core.info(
+                `Trigger workflow conclusion is ${process.env.TRIGGER_CONCLUSION}; skipping auto-approve.`,
+              );
+              return;
+            }
+
+            const workflowRun = JSON.parse(process.env.WORKFLOW_RUN);
+            const pullRequests = workflowRun.pull_requests ?? [];
+            if (pullRequests.length === 0) {
+              core.info('No pull request associated with workflow run; skipping.');
+              return;
+            }
+
+            const prMeta = pullRequests[0];
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pull_number = prMeta.number;
+
+            const configPath = path.join(process.env.GITHUB_WORKSPACE, '.github/auto-approve.json');
+            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+
+            const { data: pr } = await github.rest.pulls.get({
+              owner,
+              repo,
+              pull_number,
+            });
+
+            if (pr.draft) {
+              core.info('Pull request is a draft; skipping auto-approve.');
+              return;
+            }
+
+            if (pr.head.repo.full_name !== `${owner}/${repo}`) {
+              core.info('Pull request head is not in this repository; skipping auto-approve.');
+              return;
+            }
+
+            const author = pr.user.login;
+            const authorType = pr.user.type;
+
+            if (config.skip_bot_authors && authorType === 'Bot') {
+              core.info(`Author ${author} is a bot; skipping auto-approve.`);
+              return;
+            }
+
+            const allowedAssociations = config.author_associations ?? [];
+            if (
+              allowedAssociations.length > 0 &&
+              !allowedAssociations.includes(pr.author_association)
+            ) {
+              core.info(
+                `Author association ${pr.author_association} is not allowed; skipping auto-approve.`,
+              );
+              return;
+            }
+
+            const skipPrefixes = config.skip_title_prefixes ?? [];
+            const titleLower = pr.title.toLowerCase();
+            if (skipPrefixes.some((prefix) => titleLower.startsWith(prefix.toLowerCase()))) {
+              core.info('Pull request title matches a skip prefix; skipping auto-approve.');
+              return;
+            }
+
+            let eligible = (config.users ?? []).includes(author);
+
+            if (!eligible && config.org && config.team) {
+              try {
+                const { data: membership } =
+                  await github.rest.teams.getMembershipForUserInOrg({
+                    org: config.org,
+                    team_slug: config.team,
+                    username: author,
+                  });
+                eligible = membership.state === 'active';
+              } catch (error) {
+                if (error.status !== 404) {
+                  throw error;
+                }
+              }
+            }
+
+            if (!eligible) {
+              core.info(`Author ${author} is not in the auto-approve allowlist; skipping.`);
+              return;
+            }
+
+            const requiredChecks = config.required_checks ?? [];
+            const { data: checkRuns } = await github.rest.checks.listForRef({
+              owner,
+              repo,
+              ref: pr.head.sha,
+              per_page: 100,
+            });
+
+            for (const checkName of requiredChecks) {
+              const run = checkRuns.check_runs.find((entry) => entry.name === checkName);
+              if (!run || run.status !== 'completed' || run.conclusion !== 'success') {
+                core.info(
+                  `Required check "${checkName}" is not successful yet; skipping auto-approve.`,
+                );
+                return;
+              }
+            }
+
+            const { data: botUser } = await github.rest.users.getAuthenticated();
+            if (botUser.login === author) {
+              core.warning('Bot token belongs to the PR author; cannot self-approve.');
+              return;
+            }
+
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner,
+              repo,
+              pull_number,
+              per_page: 100,
+            });
+
+            const alreadyApproved = reviews.some(
+              (review) =>
+                review.user.login === botUser.login && review.state === 'APPROVED',
+            );
+            if (alreadyApproved) {
+              core.info('Bot has already approved this pull request; skipping.');
+              return;
+            }
+
+            await github.rest.pulls.createReview({
+              owner,
+              repo,
+              pull_number,
+              event: 'APPROVE',
+              body: 'Auto-approved: trusted author policy (see `.github/auto-approve.json`).',
+            });
+
+            core.notice(`Auto-approved pull request #${pull_number} for ${author}.`);
