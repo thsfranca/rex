@@ -1,32 +1,45 @@
-# Observability integrations (BYOT how-to)
+# Observability integrations (bundled Grafana suite)
 
-**Diátaxis role:** how-to — connect Rex OTLP export to **your** collector, storage, and UI.
+**Diátaxis role:** how-to — run the **Rex-owned** local observability suite: storage, read API, bundled Grafana, and default dashboards.
 
-**Status:** **design documented** — JSON keys, metric names, and patterns below describe **planned** behavior. OTLP export, `SidecarObservabilityService`, and `rex obs` helpers are **not shipped** until implementation PRs land. Phase 0 today: [stdout grep in OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md).
+**Status:** **design documented** — bundled Grafana suite and Rex datasource are **planned** in code ([ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md)).
 
-**Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) · **Design hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **Mmap format:** [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md)
+**Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) · [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) · **Design hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
 
 ## Configuration surface
 
 Rex observability is configured only in **merged JSON** ([CONFIGURATION.md](CONFIGURATION.md)). Set optional bootstrap env **`REX_ROOT`** for layout location. Do **not** use `REX_OBS_*` environment variables — they are not part of the product configuration surface.
 
-Your **collector** (OpenTelemetry Collector, Grafana Agent, etc.) may use its own env or yaml; that is operator-owned and outside Rex.
-
 ## Purpose
 
-Rex emits **OTLP metrics** from `rex-daemon` when `observability.enabled` is true. Operators **bring their own tooling (BYOT)** — any OpenTelemetry-compatible collector and any UI (Grafana, VictoriaMetrics, Datadog, observr, etc.). Rex does not ship collectors, TSDBs, or dashboard servers.
+Rex **owns telemetry storage** and serves **OpenTelemetry-shaped** data to **bundled Grafana** through a **Rex datasource plugin**. Operators install **Rex only** — no separate Collector, Prometheus, Loki, or Tempo installs for the product path. One command (**`rex obs up`**, planned) starts the local suite with **default preset dashboards**.
 
-## Prerequisites
+## Prerequisites (product path)
 
-- `rex-daemon` running with economics stdout (phase 0 baseline).
-- An OTLP-capable collector reachable from the daemon host.
-- After implementation: `observability.enabled: true` and `observability.otlp.endpoint` in merged config.
+- Rex installed (includes vendored Grafana kit when implementation lands).
+- `observability.enabled: true` in merged JSON.
+- `rex-daemon` running (started by `rex obs up` or separately).
 
-## JSON configuration (planned)
+## Quick start (planned)
 
-Keys live under `observability` in `$REX_ROOT/config.json` (and optional `.rex/config.json`). Full table: [CONFIGURATION.md — Observability](CONFIGURATION.md#observability-planned).
+```bash
+rex obs up
+```
 
-Example:
+Expected behavior:
+
+1. Start Rex observability read API on loopback (default `127.0.0.1`).
+2. Start vendored **Grafana** with provisioning from `$REX_ROOT/obs/grafana/provisioning/`.
+3. Ensure daemon observability ingest is active.
+4. Open Grafana (default `http://127.0.0.1:3000`) with **Rex Economics** dashboard folder preloaded.
+
+No Docker. No operator-installed TSDBs.
+
+## JSON configuration
+
+Keys live under `observability` in `$REX_ROOT/config.json` (and optional `.rex/config.json`). Full table: [CONFIGURATION.md — Observability](CONFIGURATION.md#observability).
+
+Example (product path):
 
 ```json
 {
@@ -34,9 +47,14 @@ Example:
     "enabled": true,
     "service_name": "rex-daemon",
     "custom_sidecar_metrics": true,
-    "otlp": {
-      "endpoint": "http://127.0.0.1:4317",
-      "protocol": "grpc"
+    "read_api": {
+      "listen": "127.0.0.1:9470"
+    },
+    "ui": {
+      "enabled": true,
+      "grafana": {
+        "port": 3000
+      }
     },
     "store": {
       "engine": "sqlite",
@@ -47,11 +65,49 @@ Example:
 }
 ```
 
+Optional OTLP interop (not required for bundled Grafana):
+
+```json
+"otlp": {
+  "endpoint": "http://127.0.0.1:4317",
+  "protocol": "grpc"
+}
+```
+
 After editing config, run `rex config validate` and restart the daemon.
 
-## Metric catalogs (planned)
+## Rex Grafana OTel datasource (planned)
 
-### OpenTelemetry GenAI (interop)
+Grafana panels use a **Rex datasource plugin** — not Prometheus, Loki, Tempo, or a SQLite file datasource.
+
+| Concern | Contract |
+|---------|----------|
+| **Transport** | HTTP to Rex read API on loopback (`observability.read_api.listen`) |
+| **Auth** | Loopback-only; no tokens in product JSON (local dev) |
+| **Metrics** | OTel-shaped series for `gen_ai.*` and `rex.*` ([metric catalog](#metric-catalog)) |
+| **Traces / logs** | OTel-shaped spans and log records when Phases 6+ land |
+| **Live data** | Datasource or read API SSE for in-flight stream updates |
+| **Provisioning** | `$REX_ROOT/obs/grafana/provisioning/datasources/rex.yml` (planned) |
+
+**Not used:** PromQL, LogQL, TraceQL, OpenTelemetry Collector, Mimir, Loki, Tempo.
+
+## Default dashboards (planned)
+
+Shipped dashboard JSON under `$REX_ROOT/obs/grafana/provisioning/dashboards/` (or Rex distribution templates). Planned folder: **Rex Economics**.
+
+| Dashboard | Panels (intent) |
+|-----------|-----------------|
+| **rex-economics-overview** | Cache decision rate (`rex.cache.decisions`); stream latency (`gen_ai.client.operation.duration`); prompt vs selected tokens |
+| **rex-pipeline** | Retrieval duration; compression ratio; route breakdown |
+| **rex-streams-live** | Active streams; terminal outcomes; realtime rollup |
+
+Dashboard UIDs and JSON land in implementation PRs.
+
+## Metric catalog
+
+Stable instrument names for panels, store, and read API. See [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md).
+
+### OpenTelemetry GenAI
 
 | Instrument | Type | Labels (bounded) | Maps from stdout |
 |------------|------|------------------|------------------|
@@ -83,98 +139,52 @@ After editing config, run `rex config validate` and restart the daemon.
 |--------|--------|
 | `rex.sidecar.custom.*` | `RegisterMetric` + `RecordMetric` on `SidecarObservabilityService` |
 
-## Grafana bridges (Rex does not run Grafana)
-
-| Bridge | Rex provides | Operator provides |
-|--------|--------------|-------------------|
-| **A. OTLP rollups** | Daemon pushes aggregates from `rex-obs-store` | Collector + Grafana/Mimir |
-| **B. Prometheus scrape** | HTTP `/metrics` from rollups (planned) | Prometheus + Grafana |
-| **C. SQLite datasource** | `$REX_ROOT/obs/store.sqlite` when `store.engine=sqlite` | Grafana file datasource |
-| **D. `rex obs query` / export** | JSON/CSV (and Parquet/Arrow **Could**) — required for `store.engine=mmap` | Scripts, custom panels |
-| **E. Mmap store** | `$REX_ROOT/obs/store.rexobs` when `store.engine=mmap` (macOS) | No SQLite plugin — use bridge D or OTLP |
-
-Bridge **C** does not apply to mmap files. Operators on mmap use **A**, **B**, or **D** ([OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md)).
-
-## Integration patterns
-
-Use **config.json** snippets — no committed collector yaml in the Rex repo.
-
-### Grafana + OpenTelemetry Collector
-
-1. Run an [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) with an OTLP receiver and exporter to your Grafana Cloud / Mimir backend.
-2. Enable observability in Rex config and point at the collector:
-
-```json
-"observability": {
-  "enabled": true,
-  "otlp": {
-    "endpoint": "http://127.0.0.1:4317",
-    "protocol": "grpc"
-  }
-}
-```
-
-3. `rex config validate` and restart `rex daemon`.
-4. Build Grafana panels on `rex.cache.decisions`, `gen_ai.client.operation.duration`, and `rex.context.prompt_tokens`.
-
-### VictoriaMetrics (OTLP ingest)
-
-1. Enable OTLP ingestion on VictoriaMetrics per your deployment docs.
-2. Set `observability.otlp.endpoint` to the VM OTLP URL; use `protocol: "http/protobuf"` if required.
-3. Query using `rex_*` and `gen_ai_*` names after export lands.
-
-### observr (local Mac)
-
-1. Start observr with OTLP on a local port.
-2. Set `observability.otlp.endpoint` to observr’s listener; keep `observability.enabled: true`.
-3. Use observr for quick local validation — Rex does not ship a UI.
-
-### Datadog (OTLP intake)
-
-1. Configure Datadog OTLP intake per Datadog docs (headers/API key on **your** collector, not Rex JSON).
-2. Rex daemon exports to the collector; collector forwards to Datadog.
-3. Map `rex.*` metrics to monitors for cache hit rate and latency regressions.
-
-## Example dashboard panels (prose)
-
-- **Latency vs cache:** heatmap of `gen_ai.client.operation.duration` by `cache_decision` label.
-- **Compression savings:** time series of `gen_ai.client.token.usage` (input) vs baseline intent volume when `rex.pipeline.compression.ratio` is present.
-- **Local queue pressure:** gauge from operator-scraped vLLM `num_requests_waiting` when using local inference (not emitted by Rex).
-
 ## Sidecar author flow (planned)
 
 1. Connect gRPC client to **daemon UDS** (`daemon.socket` in config).
 2. Call `RegisterMetric` with name, type, and allowed label keys.
-3. Call `RecordMetric` during agent turns; daemon exports as `rex.sidecar.custom.<name>`.
+3. Call `RecordMetric` during agent turns; daemon persists and serves via read API as `rex.sidecar.custom.<name>`.
 4. Optionally call `GetEconomicsSnapshot` for bounded recent summaries.
 5. Optionally call `ReportResourceStats` for self-reported CPU/memory.
 
 Broker RPCs remain on the sidecar control-plane socket; observability RPCs use **daemon UDS** only — [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md).
 
-## CLI helpers (planned, not shipped)
+## CLI helpers (planned)
 
 | Command | Purpose |
 |---------|---------|
-| `rex obs config` | Print merged `observability` JSON fragment (not shell `export` lines) |
-| `rex obs doctor` | Check collector reachability and export health |
+| `rex obs up` | Start read API + bundled Grafana + default dashboards |
+| `rex obs down` | Stop supervised observability processes |
+| `rex obs config` | Print merged `observability` JSON fragment |
+| `rex obs doctor` | Check read API, Grafana, and daemon ingest health |
 | `rex obs catalog` | List stable `gen_ai.*` and `rex.*` instrument names |
-| `rex obs compare` | Query `rex-obs-store` for model/config snapshot A/B |
+| `rex obs compare` | Query store for model/config snapshot A/B |
 
 ## PII and data handling
 
-- Do **not** export raw prompts, file contents, or user identifiers in metric labels.
+- Do **not** persist raw prompts, file contents, or user identifiers in metric labels or store fields exposed to Grafana.
 - Prefer bounded cardinality labels (`route`, `terminal`, `decision`) over free-text.
 - Logs and traces phases must default to **no prompt bodies** — see [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md).
 
-## Troubleshooting (after implementation)
+## Troubleshooting
 
 | Symptom | Likely cause | Check |
 |---------|--------------|-------|
-| No metrics in backend | `observability.enabled` not `true` | `rex config show`; restart daemon |
-| Collector unreachable | Wrong `observability.otlp.endpoint` | `rex obs doctor` or tcp probe |
+| Empty Grafana panels | Read API not running or datasource URL wrong | `rex obs doctor`; `observability.read_api.listen` |
+| No new data | `observability.enabled` not `true` | `rex config show`; restart daemon |
 | Sidecar metrics missing | API called on wrong socket | Use daemon UDS (`daemon.socket`), not sidecar socket |
-| Stdout shows `obs.export=degraded` | Export backpressure or collector down | Collector logs; stdout grep still works |
-| High cardinality | Custom metric labels unbounded | Fix sidecar `RegisterMetric` label set |
+| Stdout shows `obs.export=degraded` | Optional OTLP interop endpoint down | Not required for bundled Grafana; check `observability.otlp` only if interop enabled |
+
+## Optional interop (Could)
+
+Not the product UI path. Use when replicating telemetry to an operator-managed backend.
+
+| Pattern | Notes |
+|---------|--------|
+| OTLP export | Set `observability.otlp.endpoint`; daemon pushes to **your** collector |
+| External Grafana Cloud / Datadog | Collector or intake on operator side; API keys stay outside Rex JSON |
+
+Former BYOT bridge patterns (Collector + Mimir, Prometheus scrape, SQLite file datasource) are **deprecated** for the Rex product path per [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md).
 
 ## Related
 

@@ -1,7 +1,7 @@
 # ADR 0021: Rex-owned economics store; BYOT visualization
 
 - **Date:** 2026-05-24
-- **Status:** Accepted
+- **Status:** Accepted — **partially superseded by [ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md)** (BYOT visualization and “Rex does not run Grafana”). Rex-owned store and config snapshot dedup remain.
 
 ## Context
 
@@ -35,5 +35,5 @@
 
 ## Related
 
-- [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0025](0025-dual-economics-store-engines.md) (dual engines — **SQLite remains default**; mmap opt-in on macOS)
+- [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0025](0025-dual-economics-store-engines.md) (dual engines — **SQLite remains default**; mmap opt-in on macOS) · [ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md)
 - [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md) · [OBS_STORE_MMAP_FORMAT.md](../../OBS_STORE_MMAP_FORMAT.md) · [ECONOMICS_VALIDATION.md](../../ECONOMICS_VALIDATION.md) · [CONFIGURATION.md](../../CONFIGURATION.md)

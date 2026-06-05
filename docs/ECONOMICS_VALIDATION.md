@@ -143,6 +143,6 @@ Golden set: ~50 local repo tasks (SWE-bench Lite–style subset). **Control:** c
 | Doc | Relationship |
 |-----|----------------|
 | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | Signal catalog, store |
-| [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | Grafana bridges |
+| [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | Bundled Grafana + Rex read API |
 | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Economics harness row |
 | [ROADMAP.md](ROADMAP.md) | Implementation phasing |

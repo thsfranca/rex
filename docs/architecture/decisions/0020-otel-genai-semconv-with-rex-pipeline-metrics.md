@@ -23,11 +23,11 @@ Rex-specific pipeline stages need stable names that do not collide with generic 
 
 ## Consequences
 
-- **Positive:** BYOT dashboards without Rex-specific plugins; pipeline stages remain attributable.
+- **Positive:** OTel semconv enables bundled Grafana (Rex datasource) and optional interop export; pipeline stages remain attributable — [ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md).
 - **Negative:** Export maps stdout → two instrument families.
 - **Follow-up:** Daemon OTel wiring; catalog in [OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md).
 
 ## Related
 
-- [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md)
+- [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md)
 - [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md)
