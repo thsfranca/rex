@@ -17,7 +17,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 |-------|---------|-------------------------|
 | **Sidecar lifecycle** | Daemon supervises **0 or 1** process; health, timeout, restart | RC-03 Met |
 | **`rex.sidecar.v1`** | Control-plane API on UDS; verbs in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | RC-03 Met |
-| **Reference sidecar** | Minimal agent binary (any stack per ADR 0005) | RC-03 Met — **`rex-sidecar-stub`** (harness); **`rex-agent`** planned — [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) |
+| **Reference sidecar** | Minimal agent binary (any stack per ADR 0005) | RC-03 Met — **`rex-sidecar-stub`** harness/CI default; **`rex-agent`** shipped — [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) |
 | **`StreamInference` routing** | Assistant completions via sidecar turn, not direct daemon HTTP | RC-03 Met |
 | **Brokered HTTP** | `BrokerInference` → `http_openai_compat` when sidecar requests inference | RC-04 Met |
 | **Brokered `fs.read`** | Workspace read via broker + centralized access policy | RC-04 Met; RC-05 Met |
@@ -26,7 +26,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 
 ## Brokered HTTP (daemon mechanism)
 
-- Env: **`REX_OPENAI_COMPAT_*`** — [CONFIGURATION.md](CONFIGURATION.md). Keys name the **OpenAI-compat protocol**, not OpenAI-the-vendor — [ADAPTERS.md](ADAPTERS.md#terminology-protocol-vs-vendor).
+- JSON: **`inference.openai_compat`** in `$REX_ROOT/config.json` — [CONFIGURATION.md](CONFIGURATION.md). Keys name the **OpenAI-compat protocol**, not OpenAI-the-vendor — [ADAPTERS.md](ADAPTERS.md#terminology-protocol-vs-vendor). Legacy **`REX_OPENAI_COMPAT_*`** env vars are ignored with warning.
 - **Multi-provider (default API):** LiteLLM gateway — opt-in managed or external URL — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md).
 - **Not** the product agent: the sidecar requests inference; the daemon executes the HTTP adapter.
 - **Legacy:** `REX_INFERENCE_RUNTIME=cursor-cli` subprocess — non-MVP.

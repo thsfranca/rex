@@ -1,6 +1,6 @@
 # Policy engine (design hub)
 
-How **`rex-daemon`** centralizes **policy** (what must hold) separate from **mechanism** (how it is enforced). Covers **shipped** seams today and the **planned** access-policy broker for sidecars.
+How **`rex-daemon`** centralizes **policy** (what must hold) separate from **mechanism** (how it is enforced). Covers **shipped** seams today, including the **access-policy broker** for sidecar tool RPCs (RC-05 Met).
 
 ## Policy vs mechanism
 

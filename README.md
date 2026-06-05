@@ -28,7 +28,7 @@ Canonical **purpose and operating principles** (single source of truth): **[docs
 - **Experimental scope:** APIs, docs, and behavior can change as the study evolves; use this workspace for learning and prototypes, not production SLAs.
 - **Local operator path:** **clone → configure HTTP backend → daemon (sidecar) → REX chat** — [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). Product shape: [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md).
 - **Done / v1.0:** [`docs/V1_0.md`](docs/V1_0.md) (**RC-*** release criteria, **`1.0.0`** tag gate); [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks open gaps; [`docs/PRIORITIZATION.md`](docs/PRIORITIZATION.md) buckets work.
-- **Product agent (planned):** [`docs/AGENT_DELIVERY_ROADMAP.md`](docs/AGENT_DELIVERY_ROADMAP.md) — `rex-agent` (**R017–R019**); daemon prerequisites **R020–R022**; JSON config shipped (**R015**); unified **`rex`** CLI (**R014**); today uses **`rex-sidecar-stub`** harness.
+- **Product agent (partial — shipped):** [`docs/AGENT_DELIVERY_ROADMAP.md`](docs/AGENT_DELIVERY_ROADMAP.md) — **`rex-agent`** (**R017–R019** Done); daemon prerequisites **R020–R022** Done; JSON config (**R015**) and unified **`rex`** CLI (**R014**) shipped. **`rex-sidecar-stub`** remains **`rex config init`** and CI harness default.
 - Engineering focus: **stream reliability** plus **stable NDJSON** across CLI/extension.
 - Product-learning focus: daemon **economics** (routing, compaction, caches, metrics per [docs/CONTEXT_EFFICIENCY.md](docs/CONTEXT_EFFICIENCY.md)); implementation incremental.
 - VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
@@ -65,7 +65,7 @@ REX keeps clients thin and centralizes model/runtime policy in one daemon bounda
 cargo build --workspace
 ```
 
-This compiles `rex-proto`, `rex`, `rex-daemon`, and `rex-cli` (compat shim).
+This compiles the full workspace (`rex-proto`, `rex-config`, `rex`, `rex-daemon`, `rex-cli`, `rex-sidecar-stub`, and related crates).
 
 2) Start the daemon:
 
@@ -171,7 +171,7 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | [`docs/architecture/decisions/`](docs/architecture/decisions/) | ADRs (daemon/agent boundary, adapters, cache policy, routing vs gateway). |
 | [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) | Phase 1 product architecture and scope (done: [`docs/V1_0.md`](docs/V1_0.md) only). |
 | [`docs/V1_0.md`](docs/V1_0.md) | v1.0 release criteria (**RC-***), SemVer `1.0.0` meaning, tagging gate. |
-| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Progress toward v1.0; engineering backlog IDs (**R004**–**R012**). |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Post-v1.0 queue (**R023+**); agent graph **R027–R033**. |
 | [`docs/EXTENSION.md`](docs/EXTENSION.md) | NDJSON consumer contract, extension bootstrap path, component layout (replaces superseded MVP/architecture stubs). |
 | [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md) | Phased roadmap for the VS Code/Cursor extension. |
 | [`docs/RELEASE.md`](docs/RELEASE.md) | Core and extension release automation (Release PRs, tags, binaries, VSIX). |
@@ -186,12 +186,17 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | [`docs/DEVELOPMENT_ASSISTANCE_CAPABILITIES.md`](docs/DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) | Daemon-owned context, turn contract, budget pipeline (ADRs 0011–0017). |
 | [`docs/LONG_TERM_MEMORY.md`](docs/LONG_TERM_MEMORY.md) | Long-term memory design hub (**bets**, optimization-first; ADR 0014). |
 
+See [`docs/README.md`](docs/README.md) for **CONFIGURATION**, **SIDECAR_RUNTIME**, **EXTENSION_LOCAL_E2E**, **AGENT_DELIVERY**, **ERROR_HANDLING**, and **DEVELOPER_EXPERIENCE_GUIDE**.
+
 ## Workspace layout
 
 - `rex-proto`: protobuf/gRPC contract generation (`rex.v1`).
-- `rex`: unified CLI (`daemon`, `status`, `complete`; config/proto/sidecar stubs for R015).
+- `rex-config`: JSON config load/merge (`$REX_ROOT/config.json`).
+- `rex`: unified CLI (`daemon`, `status`, `complete`; config/proto/sidecar helpers).
 - `rex-daemon`: daemon library/runtime (compat shim binary `rex-daemon`).
 - `rex-cli`: CLI client library (compat shim binary `rex-cli`).
+- `rex-sidecar-stub`: harness sidecar for CI and default `rex config init`.
+- `sidecars/rex-agent`: product LangGraph ReAct sidecar.
 - `extensions/rex-vscode`: VS Code/Cursor extension (chat UI, `rex` integration, optional daemon auto-start).
 
 ## Contributing and validation baseline
@@ -203,12 +208,10 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 - Run CI-aligned local checks before PRs:
 
 ```bash
-cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo test --workspace --all-targets --locked
+./scripts/ci/run_rust_verify.sh
 ```
 
-For reliability-specific work, follow the full sequence in [`docs/CI.md`](docs/CI.md).
+Includes `cargo fmt --check`, clippy, **`cargo audit`**, and workspace tests. When touching sidecars, also run the sidecar verify gate in [`docs/CI.md`](docs/CI.md). For reliability-specific work, follow the full sequence there.
 
 Branch protection should require **`ci-checks`** and **`Conventional PR title`**. Do not require `rust-verify` or `extension-verify` (they skip on docs-only PRs).
 

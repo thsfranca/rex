@@ -8,7 +8,7 @@ This guide walks from a clean clone to **REX ready** in the editor: built binari
 - Node.js **20+** and `npm` (for the extension build).
 - **Cursor** or **VS Code** with the shell CLI on `PATH`, or set `REX_EXTENSION_EDITOR` to the full path of the `cursor` or `code` binary when using [scripts/install-extension.sh](../scripts/install-extension.sh).
 
-**Preflight (automated):** From the repo root, run `chmod +x ./scripts/verify_mvp_local.sh && ./scripts/verify_mvp_local.sh`. That command builds the workspace, runs the same Rust gate as CI (`fmt`, `clippy`, tests), and runs the extension gate (`npm ci`, typecheck, lint, build, tests, VSIX package). It does **not** start the daemon. Use it before the manual editor checks in step 6 below.
+**Preflight (automated):** From the repo root, run `chmod +x ./scripts/verify_mvp_local.sh && ./scripts/verify_mvp_local.sh`. That command builds the workspace, runs Rust verify (`fmt`, `clippy`, `cargo audit`, tests), **sidecar verify**, **`mvp_product_path`**, and extension checks ([CI.md](./CI.md)). It does **not** start the daemon. Use it before the manual editor checks in step 6 below.
 
 ## 1) Build the Rust workspace
 
@@ -18,7 +18,7 @@ From the repository root:
 cargo build --workspace
 ```
 
-This builds `rex-proto`, `rex`, `rex-daemon`, and `rex-cli`. For a quicker smoke test you can use `cargo run -p rex -- daemon` / `cargo run -p rex -- status` without installing binaries (see step 5 for editor settings if you stay on `cargo run`).
+This builds the full workspace (`rex-proto`, `rex-config`, `rex`, `rex-daemon`, `rex-cli`, `rex-sidecar-stub`, and related crates). For a quicker smoke test you can use `cargo run -p rex -- daemon` / `cargo run -p rex -- status` without installing binaries (see step 5 for editor settings if you stay on `cargo run`).
 
 ## 2) Put `rex` where the editor can run it
 
@@ -80,7 +80,16 @@ Edit `$REX_ROOT/config.json` or create `.rex/config.json` in your project:
 }
 ```
 
-Build and install binaries so `rex-agent` is on `PATH` when the daemon starts (`cargo build --workspace` and `./scripts/install-cli.sh`).
+Install the product sidecar and proto stubs:
+
+```bash
+pip install -e sidecars/rex-agent
+rex proto install
+cargo build --workspace
+./scripts/install-cli.sh
+```
+
+Ensure `rex-agent` is on `PATH` when the daemon starts.
 
 For automated preflight only (no live LLM), CI uses `inference.runtime: mock` and/or `sidecars.harness: "direct"` — not the operator acceptance path below.
 
@@ -90,7 +99,7 @@ Optional extension overlay: **`rex.productAgentConfig`** defaults to **true** an
 
 **User-managed (default extension behavior)**
 
-In a separate terminal from the repo root (with HTTP env from step 3):
+In a separate terminal from the repo root (with JSON from step 3):
 
 ```bash
 cargo run -p rex -- daemon
@@ -160,7 +169,7 @@ Open **REX: Open Chat**, select **agent** or **plan** mode, send a short prompt,
 
 | Area | CI / unit tests | Manual checklist |
 |------|-----------------|------------------|
-| NDJSON terminal contract | `rex-cli` conformance tests; extension `ndjson_contract_fixture` and `streamClient` tests | — |
+| NDJSON terminal contract | `rex` / NDJSON conformance tests; extension `ndjson_contract_fixture` and `streamClient` tests | — |
 | Cancel → idle | `streamClient.test.ts` | Optional smoke in chat |
 | Daemon probe **ready → unavailable** | `daemonLifecycle.test.ts` (fixture `cli_status_ok_then_fail.sh`) | Stop daemon while extension open |
 | Daemon probe **unavailable → ready** | `daemonLifecycle.test.ts` (fixture `cli_status_fail_then_ok.sh`) | Restart daemon after stop |
@@ -179,7 +188,7 @@ Prerequisites: HTTP server running (example: `ollama serve`), JSON from step 3 o
 - [ ] With **Attach editor context** enabled, daemon log shows `client_hints.active_file=...`; prompt does not duplicate large `File:`/`Selection:` blocks (hints on wire).
 - [ ] **Cancel** mid-stream twice; composer returns to idle.
 - [ ] Brokered **`__rex_read:<workspace-file>`** succeeds under workspace root; **`__rex_read:.env`** is denied.
-- [ ] Stop `rex-daemon`; status bar shows unavailable until restart.
+- [ ] Stop `rex daemon`; status bar shows unavailable until restart.
 
 ## Long-session stress (manual)
 
@@ -188,22 +197,22 @@ Use this checklist after the steps above when hardening chat reliability:
 - [ ] Send **10+ prompts** in one session without reloading the window.
 - [ ] **Cancel** mid-stream at least twice; confirm the composer returns to idle (no stuck “streaming” state).
 - [ ] Switch **ask → plan → agent** between turns and send one prompt per mode.
-- [ ] Stop `rex-daemon` while the extension is open; confirm the status bar shows **unavailable**, then returns to **ready** after restart (also covered by automated probe recovery tests when using fixtures).
+- [ ] Stop `rex daemon` while the extension is open; confirm the status bar shows **unavailable**, then returns to **ready** after restart (also covered by automated probe recovery tests when using fixtures).
 
 ## Terminal works, editor does not
 
-If `rex-cli status` works in **Terminal.app** or an integrated terminal but the status bar shows **REX unavailable**:
+If `rex status` works in **Terminal.app** or an integrated terminal but the status bar shows **REX unavailable**:
 
 1. Open **Settings**, search for `rex.cliPath`.
 2. Set **REX: Cli Path** to the **absolute path** of the binary, for example:
-   - `~/.cargo/bin/rex-cli` after `install-cli.sh`, or
-   - `/path/to/rex/target/debug/rex-cli` for a debug build.
-3. If you use daemon auto-start and spawn fails, set **REX: Daemon Binary Path** to the absolute `rex-daemon` path the same way.
+   - `~/.cargo/bin/rex` after `install-cli.sh`, or
+   - `/path/to/rex/target/debug/rex` for a debug build.
+3. If you use daemon auto-start and spawn fails, set **REX: Daemon Binary Path** to the same **`rex`** binary path (unified CLI).
 
 Then reload the window.
 
 ## Related docs
 
 - [EXTENSION_RELEASE.md](./EXTENSION_RELEASE.md) — install, auto-start, troubleshooting table, releases.
-- [README.md](../README.md) — project quickstart and `rex-cli` / NDJSON checks.
+- [README.md](../README.md) — project quickstart and `rex` / NDJSON checks.
 - [extensions/rex-vscode/README.md](../extensions/rex-vscode/README.md) — extension-specific settings and dev commands.

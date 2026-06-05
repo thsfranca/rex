@@ -1,5 +1,7 @@
 # ADR 0007: Editor extension hybrid transport (`rex-cli` NDJSON primary, optional unary `rex.v1`)
 
+**Implementation note (2026):** the unified **`rex`** binary fulfills the NDJSON subprocess contract described here (`rex complete --format ndjson`); **`rex-cli`** remains a compatibility shim.
+
 - **Date:** 2026-05-05
 - **Status:** Accepted
 

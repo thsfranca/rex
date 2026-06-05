@@ -121,7 +121,6 @@ Layout root: **`REX_ROOT`** (default `~/.rex`). Bootstrap with `rex config init`
       { "name": "stub", "binary": "rex-sidecar-stub", "enabled": false }
     ]
   },
-  "proto": { "gen_root": "~/.rex/proto/gen" },
   "inference": {
     "openai_compat": {
       "base_url": "http://127.0.0.1:11434/v1",
@@ -129,27 +128,26 @@ Layout root: **`REX_ROOT`** (default `~/.rex`). Bootstrap with `rex config init`
     }
   },
   "workspace": { "root": "." },
-  "agent": { "max_tool_steps": 8 }
+  "agent": { "max_tool_steps": 12 }
 }
 ```
 
 ### Proto layout (language-neutral)
 
 ```
-$REX_HOME/
+$REX_ROOT/
   config.json
   proto/
-    src/
-    gen/
-      python/          # {gen_root}/python — all Python sidecars share this path
+    src/               # canonical .proto sources (repo also ships proto/)
+    gen/               # flat generated stubs — path from `rex proto path`
 ```
 
-- **`proto.gen_root`** only in config — not `proto.python_gen_path` per sidecar.
-- **`rex proto install`** materializes stubs + updates config (maintainers run `rex proto generate` when `.proto` changes).
+- Generated stubs live at **`$REX_ROOT/proto/gen`** (flat layout; no per-sidecar `proto.python_gen_path`).
+- **`rex proto install`** materializes stubs when `.proto` changes; use **`rex proto path`** to print the gen directory.
 
 ## Daemon prerequisites (R020–R022)
 
-Ship before **`rex-agent`** dogfood (**R017–R018**). Design: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md).
+Prerequisites for **`rex-agent`** dogfood (**R017–R018** Done). Design: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md).
 
 ### R020 — Broker access policy completion
 
@@ -177,7 +175,7 @@ Ship before **`rex-agent`** dogfood (**R017–R018**). Design: [DEVELOPMENT_ASSI
 | Criterion | Evidence |
 |-----------|----------|
 | Extension sets `workspace.root` when auto-starting daemon | Primary `workspaceFolders[0]` |
-| Config template defaults active sidecar to **`rex-agent`** | `rex config init` / docs example |
+| Extension **`rex.productAgentConfig`** merges **`rex-agent`** + approvals on auto-start | [extensions/rex-vscode/package.json](../extensions/rex-vscode/package.json); `rex config init` defaults **stub** |
 | **C1:** thin `client_hints`; reduce duplicate selection-in-prompt | Document interim double-count until migrated |
 | [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) with **live model** (not stub echo) | `ask`, `plan`, `agent` modes |
 | Optional: refresh [MVP_SPEC.md](MVP_SPEC.md) stub vs product table | When product agent is proven |

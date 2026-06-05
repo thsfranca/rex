@@ -60,7 +60,7 @@ Operators working in a supported editor should experience AI as part of the edit
 flowchart LR
   Webview["Extension webview"]
   Host["Extension host"]
-  CLI["rex-cli NDJSON"]
+  CLI["rex NDJSON"]
   Sidecar["Supervised sidecar"]
   Webview --> Host
   Host --> CLI
@@ -71,7 +71,7 @@ flowchart LR
 |-------|------|
 | Webview | Presentation, composer, sessions UI, tool cards, apply UX |
 | Host | VS Code APIs, context pickers, virtual docs, approvals |
-| `rex-cli` NDJSON | Stream transport, terminal events, `--mode`, `--approval-id` |
+| `rex` NDJSON | Stream transport, terminal events, `--mode`, `--approval-id` |
 | Sidecar / daemon | Reasoning, tool execution, multi-file proposals |
 
 ## Interfaces (intent)

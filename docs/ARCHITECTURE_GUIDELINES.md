@@ -47,7 +47,7 @@ Guidelines doc **does not** invent new runtime flags or APIs—only **documents 
 
 | Context | Boundary | Integrate by |
 |---------|-----------|--------------|
-| **`rex.v1` client plane** | Thin stable API for CLI, editors, scripts over UDS. | Protobuf + [MVP_SPEC.md](MVP_SPEC.md); NDJSON via `rex-cli` per [EXTENSION.md](EXTENSION.md). |
+| **`rex.v1` client plane** | Thin stable API for CLI, editors, scripts over UDS. | Protobuf + [MVP_SPEC.md](MVP_SPEC.md); NDJSON via **`rex complete`** (shim: `rex-cli`) per [EXTENSION.md](EXTENSION.md). |
 | **Sidecar control plane** | Brokered integration for isolated runtimes—**not** a widening of `rex.v1` into a generic tunnel. | Dedicated API per [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md); map types at the boundary. |
 
 Do **not** leak raw **`rex.v1`** messages into sidecar-specific logic without translation; do **not** hide host reachability inside guests without daemon policy.

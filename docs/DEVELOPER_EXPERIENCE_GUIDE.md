@@ -17,6 +17,8 @@ The editor extension keeps **`rex complete` NDJSON** as the **primary** streamin
 | `rex` | Unified CLI: `daemon`, `status`, `complete` (NDJSON transport for editors). |
 | `rex-daemon` | Model/agent **policy trajectory**, adapters, caches, **`StreamInference`** lifecycle, queues. |
 | `rex-proto` | `rex.v1` gRPC contract. |
+| `rex-config` | JSON config load/merge (`$REX_ROOT/config.json`). |
+| `rex-sidecar-stub` / `rex-agent` | Harness and product sidecars ([SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md)). |
 
 Architecture intent:
 
@@ -50,17 +52,24 @@ The Phase 1 product path requires a **supervised sidecar** for assistant modes �
 
 **Default API:** OpenAI-compat toward LiteLLM. **Opt-in managed:** set `inference.gateway.mode: managed` in `$REX_ROOT/config.json` so Rex starts and controls the gateway (not a sidecar). Hub: [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md).
 
-**External gateway (today):** point broker env at your LiteLLM URL; keys in LiteLLM, not Rex.
+**External gateway (today):** point `inference.openai_compat` at your LiteLLM URL in `$REX_ROOT/config.json`; keys in LiteLLM, not Rex.
 
-```bash
-# External LiteLLM (operator-run proxy)
-export REX_OPENAI_COMPAT_BASE_URL="http://127.0.0.1:4000/v1"
-export REX_OPENAI_COMPAT_MODEL="claude-sonnet-4-20250514"
-export REX_INFERENCE_RUNTIME="http-openai-compat"
-export REX_SIDECAR_ENABLED=1
+```json
+{
+  "inference": {
+    "runtime": "http-openai-compat",
+    "openai_compat": {
+      "base_url": "http://127.0.0.1:4000/v1",
+      "model": "claude-sonnet-4-20250514"
+    }
+  },
+  "sidecars": { "active": "stub", "required": true }
+}
 ```
 
-Managed mode (planned implementation): same fields via JSON — see [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
+Legacy `REX_OPENAI_COMPAT_*` / `REX_SIDECAR_ENABLED` env vars are **ignored with warning** — [CONFIGURATION.md](CONFIGURATION.md).
+
+**Managed gateway (`inference.gateway.mode: managed`):** design-only until implemented — same hub as [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
 
 **Observability (planned):** set `observability.enabled: true` and `observability.otlp` in merged JSON under `$REX_ROOT` — [CONFIGURATION.md](CONFIGURATION.md#observability-planned), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md). Only **`REX_ROOT`** is a bootstrap env var for layout.
 
@@ -149,7 +158,7 @@ CI and PR expectations:
 
 **Near roadmap**
 
-- Optional **single** supervised sidecar aligning with **[PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md)** (failure isolation—not the default economics path).
+- Supervised sidecar **implemented** — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) (harness default **`rex-sidecar-stub`**; product **`rex-agent`** shipped).
 
 **Later**
 

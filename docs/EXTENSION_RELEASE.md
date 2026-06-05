@@ -14,8 +14,8 @@ For a single ordered path from **clone** to **REX ready** in the editor (includi
 Prerequisites:
 
 - VS Code `>= 1.90` (or a recent Cursor build with a compatible VS Code engine).
-- `rex-cli` on `PATH` (or set `rex.cliPath`).
-- `rex-daemon` reachable via `/tmp/rex.sock` or available as a binary if you want to enable auto-start.
+- Unified **`rex`** on `PATH` (or set `rex.cliPath`; default **`rex`**).
+- Daemon reachable via `/tmp/rex.sock` or **`rex`** available if you enable auto-start (`rex daemon`).
 
 ### Option 1 — From a VSIX artifact (current path)
 
@@ -56,7 +56,7 @@ Useful flags:
 
 | Check | Expected |
 |---|---|
-| `rex-cli --version` resolves | Works from a terminal outside the editor. |
+| `rex --version` resolves | Works from a terminal outside the editor. |
 | Status bar | Transitions from `starting` to `ready` without intervention. |
 | Output channel `REX` | Records activation events, daemon probe results, and auto-start decisions. |
 | Send a test prompt | Streams markdown into the chat view without flicker. |
@@ -65,12 +65,12 @@ Useful flags:
 
 | Mode | Setting | Behavior |
 |---|---|---|
-| User-managed (default) | `rex.daemonAutoStart: false` | Extension probes only; user starts / stops `rex-daemon` manually. |
-| Extension-managed | `rex.daemonAutoStart: true` | Extension probes first, spawns `rex-daemon` if needed, polls status until ready, tears the child down on deactivate. |
+| User-managed (default) | `rex.daemonAutoStart: false` | Extension probes only; user starts / stops **`rex daemon`** manually. |
+| Extension-managed | `rex.daemonAutoStart: true` | Extension probes first, spawns **`rex daemon`** if needed, polls status until ready, tears the child down on deactivate. |
 
 Notes:
 
-- Auto-start uses `rex.daemonBinaryPath` (default `rex-daemon`) to locate the binary.
+- Auto-start uses `rex.daemonBinaryPath` (default **`rex`**) to locate the binary.
 - The readiness poll is time-bounded (10s by default); failures surface as `REX unavailable` with a reason in the output channel.
 - Only the lifecycle instance that spawned the daemon will try to stop it; a pre-existing daemon is left alone.
 
@@ -78,8 +78,8 @@ Notes:
 
 | Key | Default | Purpose |
 |---|---|---|
-| `rex.cliPath` | `rex-cli` | Executable path or name for `rex-cli`. |
-| `rex.daemonBinaryPath` | `rex-daemon` | Executable path or name for `rex-daemon`. Used only when auto-start is enabled. |
+| `rex.cliPath` | `rex` | Executable path or name for the unified CLI (`status`, `complete`). |
+| `rex.daemonBinaryPath` | `rex` | Executable path or name for **`rex daemon`**. Used only when auto-start is enabled. |
 | `rex.daemonAutoStart` | `false` | Opt-in extension-managed daemon lifecycle. |
 
 ## Troubleshooting
@@ -88,12 +88,12 @@ Open the `REX` output channel (`REX: Open Output Channel`) for details on every 
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| `REX unavailable` at activation | `rex-cli` not on `PATH` (common when VS Code/Cursor is launched from the Dock on macOS). | Set `rex.cliPath` to the absolute path of `rex-cli` (for example from `which rex-cli` in a login shell). |
+| `REX unavailable` at activation | **`rex`** not on `PATH` (common when VS Code/Cursor is launched from the Dock on macOS). | Set `rex.cliPath` to the absolute path of **`rex`** (for example from `which rex` in a login shell). |
 | `REX unavailable: daemon did not become ready within Nms` | Daemon took too long to bind its socket. | Increase daemon warm-up time by starting it manually, or leave auto-start off. |
-| `REX unavailable: rex-daemon exited with code N` | Daemon crashed on startup. | Inspect daemon logs; ensure only one instance runs on `/tmp/rex.sock`. |
+| `REX unavailable: rex daemon exited with code N` | Daemon crashed on startup. | Inspect daemon logs; ensure only one instance runs on `/tmp/rex.sock`. |
 | `Apply to file` opens diff but shows empty proposal | The proposed code block was empty or the target selection was cleared. | Re-run the action with a non-empty selection or accept a full-file replacement. |
 | Chat view is blank / stuck on loading | Webview failed to load the bundled script. | Reload the window; if it persists, capture the webview devtools console and file an issue. |
-| Streaming output flickers or stalls | Underlying `rex-cli complete` stream was interrupted. | Cancel and retry; confirm `rex-daemon` is healthy via `REX: Show Daemon Status`. |
+| Streaming output flickers or stalls | Underlying **`rex complete`** stream was interrupted. | Cancel and retry; confirm the daemon is healthy via `REX: Show Daemon Status`. |
 | `workspace root not configured` on stream or broker | Daemon started without `workspace.root` in merged config (empty/`"."` without harness fallback). | Open a workspace folder with auto-start (writes `.rex/config.json`), or set absolute `workspace.root` in project/global JSON; see [CONFIGURATION.md](CONFIGURATION.md). |
 | Auto-start skipped / no workspace | No folder open in the editor. | Open a single-root (or primary) workspace folder before enabling `rex.daemonAutoStart`. |
 

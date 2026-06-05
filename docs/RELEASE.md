@@ -11,13 +11,13 @@ REX uses **two independent release planes**: the Rust workspace (`v*` tags) and 
 | Release PR bot | [release-plz](https://release-plz.dev/) — workflow [`.github/workflows/release-plz.yml`](../.github/workflows/release-plz.yml), config [`release-plz.toml`](../release-plz.toml) |
 | Tag | `vX.Y.Z` (for example `v0.1.1`) |
 | Binaries | [cargo-dist](https://axodotdev.github.io/cargo-dist/) — workflow [`.github/workflows/release.yml`](../.github/workflows/release.yml) |
-| Artifacts | `rex-cli`, `rex-daemon`, `rex-sidecar-stub` per target triple |
+| Artifacts | **`rex`** (primary), `rex-cli`, `rex-daemon`, `rex-sidecar-stub` per target triple (`rex-cli` / `rex-daemon` are compatibility shims) |
 
 ### Maintainer flow
 
 1. Merge feature PRs to `main` with conventional commit messages (or squash titles that match [CONTRIBUTING.md](../CONTRIBUTING.md)).
 2. Wait for **Release-plz** to open or update a Release PR (`release-core` label). Review version bump and [`CHANGELOG.md`](../CHANGELOG.md).
-3. **Before `1.0.0`:** confirm every Must **RC-*** in [V1_0.md](V1_0.md) is **Met** — do not merge a Release PR that bumps to `1.0.0` until the gate is satisfied.
+3. **Tagging `1.0.0`:** every Must **RC-*** in [V1_0.md](V1_0.md) is **Met**; merge the release-plz Release PR to create the **`v1.0.0`** tag (workspace version is already **`1.0.0`** in tree).
 4. Merge the Release PR. release-plz creates the `v*` tag and a GitHub Release (notes only).
 5. **Core Release** workflow runs on the tag: runs [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), builds archives with cargo-dist, uploads assets to the same GitHub Release.
 
@@ -25,7 +25,7 @@ REX uses **two independent release planes**: the Rust workspace (`v*` tags) and 
 
 ```bash
 cargo install cargo-dist --locked   # once
-./scripts/release/build_core_artifacts.sh v0.1.0
+./scripts/release/build_core_artifacts.sh v1.0.0
 ```
 
 Install from source remains supported: [`scripts/install-cli.sh`](../scripts/install-cli.sh).
@@ -60,7 +60,7 @@ Details: [EXTENSION_RELEASE.md](EXTENSION_RELEASE.md).
 
 ## When not to merge a Release PR
 
-- **RC-*** Must criteria in [V1_0.md](V1_0.md) are not Met but the proposed version is `1.0.0`.
+- Proposed **major** or breaking `rex.v1` / sidecar API change without a versioned migration plan (Must **RC-*** are Met for the current `1.0.0` line).
 - Breaking `rex.v1` or sidecar API change without a versioned migration plan ([DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) §5).
 - Release PR includes unrelated changes (re-run bots after fixing `main`).
 

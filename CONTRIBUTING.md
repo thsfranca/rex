@@ -33,7 +33,7 @@ Use one of:
 - `feat!:` or `fix!:` in the subject, or
 - a footer line: `BREAKING CHANGE: <description>`
 
-Breaking changes require a **major** bump once the workspace is at `1.0.0`. While the workspace is `0.x`, breaking changes still map to minor per SemVer pre-1.0 rules.
+Breaking changes require a **major** bump now that the workspace is at **`1.0.0`** in [Cargo.toml](Cargo.toml). The VS Code extension may remain on an independent version (see [`.release-please-manifest.json`](.release-please-manifest.json), e.g. **`0.1.0`**) until extension release policy aligns.
 
 ### Scopes (optional)
 

@@ -75,7 +75,7 @@ impl RexConfig {
             },
             agent: AgentConfig {
                 approvals_enabled: Some(false),
-                max_tool_steps: 8,
+                max_tool_steps: 12,
             },
         }
     }

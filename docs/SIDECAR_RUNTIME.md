@@ -1,6 +1,6 @@
 # Sidecar runtime (design hub)
 
-Canonical design for Rex **sidecar agents**: a **supervised separate process** on the same Mac as `rex-daemon`, **not** a VM. The **IDE development assistant depends on this process** for agent behavior — see [MVP_SPEC.md](MVP_SPEC.md). **Implementation:** supervisor, `rex.sidecar.v1`, brokered HTTP inference, and `BrokerReadFile` are **implemented** — see [MVP_SPEC.md](MVP_SPEC.md) and [CONFIGURATION.md](CONFIGURATION.md) (`REX_SIDECAR_*`).
+Canonical design for Rex **sidecar agents**: a **supervised separate process** on the same Mac as `rex-daemon`, **not** a VM. The **IDE development assistant depends on this process** for agent behavior — see [MVP_SPEC.md](MVP_SPEC.md). **Implementation:** supervisor, `rex.sidecar.v1`, brokered HTTP inference, and `BrokerReadFile` are **implemented** — configure via JSON (`sidecars` in `$REX_ROOT/config.json`); legacy `REX_SIDECAR_*` env is deprecated — [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Role in the architecture
 
@@ -44,7 +44,7 @@ The daemon validates **compatibility metadata** (OS, arch, min runtime version) 
 
 | Link | Transport |
 |------|-----------|
-| Client ↔ daemon | gRPC over UDS (`REX_DAEMON_SOCKET`, default `/tmp/rex.sock`) |
+| Client ↔ daemon | gRPC over UDS (`daemon.socket` in JSON, default `/tmp/rex.sock`; bootstrap may use `REX_DAEMON_SOCKET`) |
 | Sidecar ↔ daemon (broker) | gRPC over **sidecar control-plane UDS** (for example `/tmp/rex-sidecar.sock`) |
 | Sidecar ↔ daemon (observability, planned) | **`SidecarObservabilityService`** on **daemon UDS** (`REX_DAEMON_SOCKET`) — not the sidecar socket |
 
@@ -128,7 +128,7 @@ Operator setup: [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
 
 ## Sidecar author quickstart (`rex-agent` scaffold — R017)
 
-**`rex-agent`** scaffold is shipped under [sidecars/rex-agent/](../sidecars/rex-agent/). Default supervised sidecar remains **`rex-sidecar-stub`** until **R019**.
+**`rex-agent`** is shipped under [sidecars/rex-agent/](../sidecars/rex-agent/) (**R019** Done). **`rex-sidecar-stub`** remains the harness/CI default and `rex config init` default; product path uses JSON `sidecars.active` or extension **`rex.productAgentConfig`** overlay.
 
 1. **`rex config init`** — create `$REX_ROOT/config.json` (layout root **`REX_ROOT`**, default `~/.rex`).
 2. **`rex proto install`** — materialize Python stubs under `$REX_ROOT/proto/gen` (flat layout; not `gen/python/`).

@@ -4,7 +4,7 @@ This document records the phased delivery of the REX editor extension for both V
 
 ## Current purpose
 
-- Keep one hybrid VS Code and Cursor extension on the **`rex-cli` NDJSON** contract summarized in **[EXTENSION.md](EXTENSION.md)**; optional unary **`rex.v1`** over UDS is allowed per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)** when maintainers choose it.
+- Keep one hybrid VS Code and Cursor extension on the **`rex` NDJSON** contract summarized in **[EXTENSION.md](EXTENSION.md)**; optional unary **`rex.v1`** over UDS is allowed per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)** when maintainers choose it.
 - Deliver **integrated editor+agent UX** per **[EXTENSION_UX.md](EXTENSION_UX.md)** (webview-first; stable CLI boundary).
 - Keep Cursor-specific features optional behind runtime capability detection so the same VSIX installs cleanly in plain VS Code.
 - Keep daemon lifecycle user-managed by default; opt-in auto-start remains behind `rex.daemonAutoStart` (default off).
@@ -27,7 +27,7 @@ This document records the phased delivery of the REX editor extension for both V
 
 - Monorepo at `extensions/rex-vscode/`.
 - Self-contained folder: own `package.json`, `tsconfig.json`, `esbuild` configs, `CHANGELOG.md`, `README.md`, `LICENSE`.
-- No imports into Rust crates; depends only on the `rex-cli` binary contract.
+- No imports into Rust crates; depends only on the `rex` binary contract.
 - Release versioning uses `rex-vscode-vX.Y.Z` git tags so tag history is portable.
 
 ## Delivery snapshot
@@ -40,7 +40,7 @@ Foundation milestones (three internal delivery waves covering scaffold + chat UX
 - **MCP-native tool orchestration inside the extension** until REX ships **brokered** MCP/tool capability via the **sidecar ↔ daemon** story ([ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md), [ARCHITECTURE.md](ARCHITECTURE.md) interoperability, [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix); formal MCP ADR when that implementation is scheduled.
 - Inline ghost-text completions.
 - Workspace @-mentions requiring bespoke indexing servers.
-- **Node `StreamInference` streaming** replacing the NDJSON **`rex-cli`** path (would need a **future ADR**; hybrid unary-only policy is **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**).
+- **Node `StreamInference` streaming** replacing the NDJSON **`rex`** path (would need a **future ADR**; hybrid unary-only policy is **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**).
 - Native VS Code **Chat Participant** as primary surface (webview-first per [EXTENSION_UX.md](EXTENSION_UX.md)).
 
 ## Shipped (foundation + recent slices)
@@ -77,7 +77,7 @@ Canonical design: **[EXTENSION_UX.md](EXTENSION_UX.md)**. One PR slice per row w
 
 ## Success signals
 
-- DX: extension activates with zero configuration when `rex-cli` is on `PATH`.
+- DX: extension activates with zero configuration when `rex` is on `PATH`.
 - DX: cancellation always returns the UI to a clean idle state.
 - Reliability: status bar reflects daemon state within roughly 2 seconds of activation.
 - Portability: the same VSIX runs in plain VS Code and in Cursor.

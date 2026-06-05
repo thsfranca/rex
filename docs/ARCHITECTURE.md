@@ -36,7 +36,7 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 | Characteristic | Intent | How REX verifies (today / planned) |
 |---|---|---|
 | Performance efficiency | Bounded latency; avoid redundant model work. | UDS e2e tests; stream lifecycle logs; cache `hit`/`miss` ([CACHING.md](CACHING.md)). |
-| **Cost / resource efficiency** | Minimize tokens and paid API use; route to appropriate backend. | Optimization matrix [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md); routing **planned** (see [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md)). |
+| **Cost / resource efficiency** | Minimize tokens and paid API use; route to appropriate backend. | Optimization matrix [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md); minimal router **shipped** (`route=` logs); advanced routing still roadmap — [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md). |
 | Reliability | Predictable terminals; recoverable startup races. | `crates/rex-daemon/tests/uds_e2e.rs`; CLI retry tests. |
 | Security | Local trust boundary; bounded subprocess; path to approvals. | STRIDE-oriented notes under [Security viewpoint](#security-viewpoint). |
 | Maintainability | Narrow seams: `InferenceRuntime`, `ContextPipeline`. | Crate layout below; ADRs for boundaries. |
@@ -53,8 +53,8 @@ flowchart LR
   llm[HTTP_LLM_backend]
   dev --> ide
   dev --> ci
-  ide -->|"rex-cli_UDS"| rex
-  ci -->|"rex-cli_UDS"| rex
+  ide -->|"rex_v1_UDS"| rex
+  ci -->|"rex_v1_UDS"| rex
   rex -->|supervise| side
   side -->|rex_sidecar_v1| rex
   rex -->|broker_inference| llm
@@ -63,7 +63,7 @@ flowchart LR
 | Actor | Interaction |
 |---|---|
 | Developer | Uses IDE or terminal; owns approvals for guarded actions (extension modes). |
-| Editor extension | Thin client; **`rex-cli` + NDJSON**; does **not** host the agent ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)). |
+| Editor extension | Thin client; **`rex` + NDJSON**; does **not** host the agent ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)). |
 | CI / automation | **Mock** runtime and/or stub sidecar — harness only. |
 | Agent sidecar | Reasoning loop + tool **requests**; daemon **brokers** inference and host reach. |
 | HTTP LLM backend | OpenAI-compatible API invoked by daemon on sidecar’s behalf ([ADAPTERS.md](ADAPTERS.md)). |
@@ -74,10 +74,14 @@ flowchart LR
 
 | Container | Responsibility | Status |
 |---|---|---|
-| `extensions/rex-vscode` | Chat UX, modes, approvals; **`rex-cli`** for NDJSON streaming; optional unary gRPC per [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md). | `implemented` — see [EXTENSION.md](EXTENSION.md). |
-| `rex-cli` | UDS client; NDJSON façade for editors. | `implemented` |
+| `extensions/rex-vscode` | Chat UX, modes, approvals; **`rex`** NDJSON subprocess; optional unary gRPC per [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md). | `implemented` — see [EXTENSION.md](EXTENSION.md). |
+| `rex` | Unified CLI: `daemon`, `status`, `complete` (NDJSON for editors). | `implemented` |
+| `rex-cli` / `rex-daemon` | Compatibility shims delegating to `rex` libraries. | `implemented` |
+| `rex-config` | JSON config load/merge. | `implemented` |
 | `rex-daemon` | Session authority: stream contract, pipeline, cache, **broker** for sidecar inference/tools. | `implemented` |
-| Agent sidecar | Supervised **process** + `rex.sidecar.v1`; agent implementation pluggable — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). | `implemented` (stub + supervisor); [MVP_SPEC.md](MVP_SPEC.md) |
+| `rex-sidecar-stub` | Harness sidecar (CI / `rex config init` default). | `implemented` |
+| `rex-agent` | Product LangGraph sidecar — [sidecars/rex-agent/](../sidecars/rex-agent/). | `implemented` |
+| Agent sidecar (generic) | Supervised **process** + `rex.sidecar.v1`; pluggable per [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). | `implemented` — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [MVP_SPEC.md](MVP_SPEC.md) |
 
 ## Components inside `rex-daemon` (C4 Level 3)
 
@@ -145,7 +149,7 @@ Ownership of chat transcript, turn assembly (`TurnContext`), workspace binding, 
 | **Repudiation** | Structured logs with `request_id`, `trace_id` **implemented**. |
 | **Information disclosure** | Optional Cursor adapter sends prompt off-machine when enabled — operator choice. |
 | **Denial of service** | Subprocess **timeouts**, bounded CLI retry **implemented**; future rate limits **planned**. |
-| **Elevation** | Access policy + broker **planned** — [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md); `ApprovalGate` for `agent` mode — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md); extension approval UX **implemented**. |
+| **Elevation** | Access policy broker **implemented** (RC-05) — [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md); `ApprovalGate` for `agent` mode — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md); extension approval UX **implemented**. |
 | **Prompt injection** from repo | **planned** hardening: classifiers, allowlists; today: operator awareness. |
 
 ## Interoperability
@@ -170,7 +174,7 @@ Full signal catalog, export contract, and BYOT integrations: [OBSERVABILITY_AND_
 | `cache_decision=hit|miss_stored|bypass|uncacheable_mode` | Daemon | Per-request cache outcome covering bypass and ineligible modes (see [CACHING.md](CACHING.md) Metrics). |
 | `stream.lifecycle`, `stream.terminal`, `elapsed_ms` | Daemon | Latency and failure class. |
 | `approval=allow|deny|checkpoint` | Daemon | Agent-mode gate outcome ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). |
-| **Routing decision id** | **planned** | After router lands. |
+| **`route=`**, **`decision_id=`** | Daemon logs | Minimal routing **implemented** (RC-09). |
 | **Estimated tokens / cost** | **planned** | Adapter metadata + pricing table. |
 
 ## Technology stack
@@ -206,7 +210,7 @@ Full signal catalog, export contract, and BYOT integrations: [OBSERVABILITY_AND_
 
 ## Configuration
 
-Inference and cache policy today: defaults + **`REX_*` env**. Full catalog: [CONFIGURATION.md](CONFIGURATION.md).
+Inference and cache policy today: JSON-first (`$REX_ROOT/config.json`); legacy **`REX_*` env** ignored with warning. Full catalog: [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Reliability rules
 
@@ -218,9 +222,13 @@ Inference and cache policy today: defaults + **`REX_*` env**. Full catalog: [CON
 
 | Area | Role |
 |------|------|
-| `proto/rex/v1/` | `rex.v1` gRPC contract |
+| `proto/rex/v1/`, `proto/rex/sidecar/v1/` | `rex.v1` and sidecar gRPC contracts |
+| `crates/rex/` | Unified CLI binary |
+| `crates/rex-config/` | JSON configuration |
 | `crates/rex-daemon/` | Daemon — components in [Components](#components-inside-rex-daemon-c4-level-3) |
-| `crates/rex-cli/` | NDJSON + UDS client |
+| `crates/rex-cli/` | Client library (shim binary) |
+| `crates/rex-sidecar-stub/` | Harness sidecar |
+| `sidecars/rex-agent/` | Product Python sidecar |
 | `extensions/rex-vscode/` | Editor host |
 | `docs/` | Architecture hubs and ADRs |
 

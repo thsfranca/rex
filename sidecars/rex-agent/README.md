@@ -42,4 +42,5 @@ Supervisor injects `REX_ROOT`, `REX_SIDECAR_SOCKET`, `REX_DAEMON_SOCKET`, and `P
 ## Related
 
 - [DESIGN.md](DESIGN.md) — capability contract
-- [docs/AGENT_DELIVERY_ROADMAP.md](../../docs/AGENT_DELIVERY_ROADMAP.md) — program order (R017–R019)
+- [docs/AGENT_DELIVERY_ROADMAP.md](../../docs/AGENT_DELIVERY_ROADMAP.md) — R017–R019 **Done**
+- [docs/EXTENSION_LOCAL_E2E.md](../../docs/EXTENSION_LOCAL_E2E.md) §8 — live-model operator checklist

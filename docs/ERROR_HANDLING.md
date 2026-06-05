@@ -55,7 +55,7 @@ flowchart LR
 
 **NDJSON (CLI → extension):**
 
-> Sidecar is required for agent mode but is not running. Start `rex-daemon` with `REX_SIDECAR_ENABLED=1` and ensure `rex-sidecar-stub` is on PATH. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md).
+> Sidecar is required for agent mode but is not running. Enable `sidecars` in `$REX_ROOT/config.json` (harness: `rex-sidecar-stub`; product: `rex-agent`) and start `rex daemon`. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md).
 
 **Daemon unavailable (`CliError`):**
 
@@ -99,7 +99,7 @@ flowchart LR
 |------|---------|-------|-------|----------------------------------|
 | `daemon_unavailable` | Daemon not reachable | Yes | both | Daemon is unavailable at {socket}; run `rex daemon` and retry. |
 | `sidecar_unavailable` | Sidecar required but missing or unhealthy | No | both | Sidecar is required but unavailable: {detail}. Enable sidecar supervision and ensure the sidecar binary is on PATH. |
-| `inference_config` | Inference backend not configured | No | both | Inference runtime not configured: {detail}. Set `REX_OPENAI_COMPAT_*` per [CONFIGURATION.md](CONFIGURATION.md). |
+| `inference_config` | Inference backend not configured | No | both | Inference runtime not configured: {detail}. Edit JSON `inference.openai_compat` per [CONFIGURATION.md](CONFIGURATION.md). |
 | `stream_timeout` | No stream activity within window | Yes | both | Timed out waiting for daemon stream chunk after {seconds}s. |
 | `stream_interrupted` | Mid-flight transport failure | Yes | both | Daemon interrupted the stream before completion. |
 | `stream_incomplete` | Stream ended without terminal marker | No | both | Daemon stream ended without completion marker. |
