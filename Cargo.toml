@@ -16,7 +16,7 @@ license = "MIT"
 repository = "https://github.com/thsfranca/rex"
 
 [workspace.dependencies]
-tonic = { version = "0.12", features = ["transport"] }
+tonic = { version = "0.14", features = ["transport"] }
 prost = "0.13"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
