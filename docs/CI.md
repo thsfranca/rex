@@ -205,6 +205,28 @@ Release automation is documented in [RELEASE.md](RELEASE.md). Workflows:
 | `release-please-extension.yml` | Push to `main`, `workflow_dispatch` | Open/update extension Release PR; tag `rex-vscode-v*` on merge |
 | `extension-release.yml` | Push tag `rex-vscode-v*`, `workflow_dispatch` | Build VSIX and optional marketplace publish |
 | `pr-title-lint.yml` | Pull request | Conventional Commits on PR titles |
+| `auto-approve.yml` | After `ci` or `PR title lint` completes | Approve PRs from allowlisted authors when required checks pass |
+
+### Auto-approve (trusted authors)
+
+Optional workflow [`.github/workflows/auto-approve.yml`](../.github/workflows/auto-approve.yml) submits an **APPROVE** review from a dedicated bot account when:
+
+- The author is listed in [`.github/auto-approve.json`](../.github/auto-approve.json) `users`, or is an active member of the configured org `team`;
+- The PR is not a draft, not from a fork, and not authored by a bot (unless you change policy);
+- The PR title does not match a `skip_title_prefixes` entry (release automation PRs by default);
+- Required checks (`ci-checks`, `Conventional PR title`) are **success** on the PR head commit.
+
+Configure allowlisted GitHub logins in `.github/auto-approve.json`. The workflow runs from **`main`** ( `workflow_run` semantics); merge config changes to `main` before expecting auto-approve on open PRs.
+
+**GitHub setup (maintainers):**
+
+1. Create a **machine user** or **GitHub App** bot account (not the PR author). Grant it **Read** access to the repository ( **Write** if you later add auto-merge ).
+2. Create a classic PAT or app installation token with **`repo`** (private) or **`public_repo`** (public) and, if using org team membership, **`read:org`**.
+3. Add repository secret **`REX_AUTO_APPROVE_TOKEN`** with that token (Settings → Secrets and variables → Actions).
+4. Add trusted author logins to `.github/auto-approve.json` → `users` (and optionally set `org` + `team`).
+5. If you want merges to require this approval, enable **Require pull request reviews before merging** on `main` (branch protection or ruleset). Without that, auto-approve is informational only.
+
+The bot cannot approve its own PRs. Do not use your personal PAT if you are the PR author.
 
 ### Release workflow permissions
 

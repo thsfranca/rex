@@ -1,0 +1,12 @@
+  {
+  "users": ["thsfranca"],
+  "org": "",
+  "team": "",
+  "author_associations": ["OWNER", "MEMBER", "COLLABORATOR"],
+  "skip_bot_authors": true,
+  "skip_title_prefixes": [
+    "chore: release",
+    "chore(main): release"
+  ],
+  "required_checks": ["ci-checks", "Conventional PR title"]
+}
