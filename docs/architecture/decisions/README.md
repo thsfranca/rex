@@ -30,6 +30,7 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0022](0022-viewer-editor-subagent-topology.md) | Viewer/Editor subagent topology for product agent | Accepted |
 | [0023](0023-hybrid-agent-serialization-boundaries.md) | Hybrid agent serialization at boundaries (formats per layer) | Accepted |
 | [0024](0024-plan-mode-artifacts-and-plan-save-broker.md) | Plan mode artifacts and plan.save broker | Accepted |
+| [0025](0025-dual-economics-store-engines.md) | Dual economics store engines (SQLite default, mmap opt-in) | Accepted |
 
 ## How to use
 

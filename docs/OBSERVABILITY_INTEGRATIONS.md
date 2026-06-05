@@ -4,7 +4,7 @@
 
 **Status:** **design documented** — JSON keys, metric names, and patterns below describe **planned** behavior. OTLP export, `SidecarObservabilityService`, and `rex obs` helpers are **not shipped** until implementation PRs land. Phase 0 today: [stdout grep in OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md).
 
-**Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · **Design hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
+**Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) · **Design hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **Mmap format:** [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md)
 
 ## Configuration surface
 
@@ -38,7 +38,11 @@ Example:
       "endpoint": "http://127.0.0.1:4317",
       "protocol": "grpc"
     },
-    "store": { "path": "obs/store.sqlite" }
+    "store": {
+      "engine": "sqlite",
+      "path": "obs/store.sqlite",
+      "format_version": 1
+    }
   }
 }
 ```
@@ -85,8 +89,11 @@ After editing config, run `rex config validate` and restart the daemon.
 |--------|--------------|-------------------|
 | **A. OTLP rollups** | Daemon pushes aggregates from `rex-obs-store` | Collector + Grafana/Mimir |
 | **B. Prometheus scrape** | HTTP `/metrics` from rollups (planned) | Prometheus + Grafana |
-| **C. SQLite datasource** | `$REX_ROOT/obs/store.sqlite` | Grafana file datasource |
-| **D. `rex obs query`** | JSON/CSV export (planned) | Scripts, custom panels |
+| **C. SQLite datasource** | `$REX_ROOT/obs/store.sqlite` when `store.engine=sqlite` | Grafana file datasource |
+| **D. `rex obs query` / export** | JSON/CSV (and Parquet/Arrow **Could**) — required for `store.engine=mmap` | Scripts, custom panels |
+| **E. Mmap store** | `$REX_ROOT/obs/store.rexobs` when `store.engine=mmap` (macOS) | No SQLite plugin — use bridge D or OTLP |
+
+Bridge **C** does not apply to mmap files. Operators on mmap use **A**, **B**, or **D** ([OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md)).
 
 ## Integration patterns
 
