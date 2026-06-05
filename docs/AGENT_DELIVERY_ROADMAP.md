@@ -172,7 +172,9 @@ Prerequisites for **`rex-agent`** dogfood (**R017–R018** Done). Design: [DEVEL
 
 **Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, operator checklist in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md#8-r019-acceptance--live-model-operator-not-ci), and extension operator alignment with **`rex-agent`** (JSON setup hints, **`rex.productAgentConfig`** default, NDJSON **`tool`**/**`step`** cards).
 
-**Follow-up:** opt-in automated live Ollama smoke — **R038** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) (plan-mode tool-loop live test is a separate track).
+**Known gap:** live **plan/agent** tool loops against a real model are unreliable until **R038** native broker tool calling ships — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md). CI and stub paths prove harness contracts only; operator checklist §8 exercises modes but does not guarantee native tool routing.
+
+**Follow-up:** opt-in automated live Ollama smoke (`ask` + brokered read/policy) — **R039** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). Plan-mode tool-loop E2E is **R038** (separate track).
 
 | Criterion | Evidence |
 |-----------|----------|
@@ -210,10 +212,25 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | **R030** | Diff-only writes | **Done** — sidecar read→patch→write |
 | **R031** | Task-aware read pruning | **Done** — payloads >100 lines; config `read_pruning_enabled` |
 | **R032** | Token playbook + subagent metrics | **Done** — prefix SHA, dedup, hard cap |
+| **R038** | Native broker tool calling | **Should** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md); direct Ollama + `native_tools: auto` |
 | **R036** | TRON static schema compression | **Could** — daemon prefix; optional before **R033** |
-| **R033** | Native tools + MCP client | **Could** — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) Phase 2 |
+| **R033** | MCP gRPC client | **Could** — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) Phase 2 |
 
-**Program order:** R027 → R028 → R029 → **R034** → R030 → R032 → R031 → R033; **R036** optional before R033.
+**Program order:** R027 → R028 → R029 → **R034** → R030 → R032 → R031 → **R038** → R033; **R036** optional before R033.
+
+## R038 — Native broker tool calling
+
+**Status:** `planned` (**Should**). Hub: [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md).
+
+| Criterion | Intent |
+|-----------|--------|
+| Additive `BrokerInference` wire | `messages[]`, `tools[]`; response `tool_calls[]` + `content` + `protocol` |
+| Daemon `http_openai_compat` | Forward `tools` / `tool_choice`; parse SSE `delta.tool_calls`; Ollama `/api/show` capability cache |
+| Config default | `inference.openai_compat.native_tools: auto`; direct Ollama `base_url` for acceptance |
+| Sidecar | Native path + one-step interim JSON fallback per step |
+| Operator E2E | Plan-mode read loop on live direct Ollama — [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) |
+
+Implementation: three code PR slices after hub merge (proto+daemon, sidecar, E2E script). **R033** rescoped to MCP gRPC client only (**Could**).
 
 ## Out of scope (this program)
 
@@ -225,7 +242,8 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 
 ## Related
 
-- [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — token-efficient graph target (**R027–R036**)
+- [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) — **R038** native broker tool calling
+- [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — token-efficient graph target (**R027–R038**)
 - [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) — hybrid serialization boundaries
 - [MVP_SPEC.md](MVP_SPEC.md) — Phase 1 architecture
 - [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) — sidecar runtime hub

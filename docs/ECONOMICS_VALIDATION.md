@@ -2,7 +2,7 @@
 
 **Diátaxis role:** explanation — how to prove Rex reduces cost without unacceptable quality loss.
 
-**Status:** **design documented** — live-LLM smoke harness (**R038–R041**) and powered statistical gates are **planned**; no automated benchmark runner ships in this repository yet.
+**Status:** **design documented** — live-LLM smoke harness (**R039–R042**) and powered statistical gates are **planned**; no automated benchmark runner ships in this repository yet.
 
 **Related:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) (telemetry) · [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) (lever matrix) · [CONFIGURATION.md](CONFIGURATION.md) (`observability` JSON) · [CI.md](CI.md) (no live LLM on PRs by default)
 
@@ -25,7 +25,7 @@ Portable background: research theme on LLM observability and validation (GenAI s
 
 **Out:**
 
-- **Plan-mode JSON tool-loop live test** — separate track (not **R038–R041**).
+- **Plan-mode JSON tool-loop live test** — separate track (**R038** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md); not **R039–R042**).
 - Powered SWE-bench / release-gate harness — later cadence tier (see [Cadence](#cadence)).
 - Production export of benchmark pass rates as OTel metrics.
 - Proprietary repository content in CI fixtures.
@@ -80,9 +80,9 @@ Portable background: research theme on LLM observability and validation (GenAI s
 
 **Purpose:** Bridge mock CI ([`mvp_product_path`](../crates/rex-daemon/tests/mvp_product_path.rs), RC-10) and manual operator acceptance ([EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §8 / **R019**) with an **opt-in** automated path against a real local model — without requiring live LLM on every PR.
 
-**Status:** `planned` — implementation phased **R038–R041** on [ROADMAP.md](ROADMAP.md).
+**Status:** `planned` — implementation phased **R039–R042** on [ROADMAP.md](ROADMAP.md).
 
-### Scenarios (**R038**)
+### Scenarios (**R039**)
 
 | Scenario | What it proves | Mirrors |
 |----------|----------------|---------|
@@ -106,8 +106,8 @@ Portable background: research theme on LLM observability and validation (GenAI s
 | Harness entry | Future `scripts/verify_ollama_live.sh` or `#[ignore]` integration test |
 | Inference | Direct Ollama `inference.openai_compat.base_url` `http://127.0.0.1:11434/v1` — [CONFIGURATION.md](CONFIGURATION.md) |
 | Sidecar | Product path `rex-agent` (not stub) — [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) |
-| Gateway variant (**R040**) | Same scenarios via managed/external gateway — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
-| Run manifest (**R041**) | Fields in [Run manifest schema](#run-manifest-schema) written per harness run |
+| Gateway variant (**R041**) | Same scenarios via managed/external gateway — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
+| Run manifest (**R042**) | Fields in [Run manifest schema](#run-manifest-schema) written per harness run |
 
 ### Boundaries
 
@@ -119,17 +119,17 @@ Portable background: research theme on LLM observability and validation (GenAI s
 
 | ID | MoSCoW | Outcome |
 |----|--------|---------|
-| **R038** | Should | Direct-Ollama live smoke harness (`ask` + brokered read/policy) |
-| **R039** | Should | Scheduled non-blocking nightly workflow |
-| **R040** | Could | Gateway-path live smoke (same scenarios) |
-| **R041** | Could | Harness writes run manifest to economics store |
+| **R039** | Should | Direct-Ollama live smoke harness (`ask` + brokered read/policy) |
+| **R040** | Should | Scheduled non-blocking nightly workflow |
+| **R041** | Could | Gateway-path live smoke (same scenarios) |
+| **R042** | Could | Harness writes run manifest to economics store |
 
 ## Cadence
 
 | Tier | When | Live LLM | Purpose |
 |------|------|----------|---------|
 | **Per-PR smoke** | Every PR | No (mock / replay) | Daemon latency, export wiring — RC-10 |
-| **Opt-in local + nightly** | Operator or scheduled (**R038**, **R039**) | Yes (pinned model; small scenario set) | Product-path drift detection — not powered equivalence |
+| **Opt-in local + nightly** | Operator or scheduled (**R039**, **R040**) | Yes (pinned model; small scenario set) | Product-path drift detection — not powered equivalence |
 | **Release gate** | Model/lever changes | Yes (powered n) | TOST / non-inferiority — 50–100+ tasks |
 
 ## Local open-source effectiveness (design bets)
@@ -171,7 +171,7 @@ Golden set: ~50 local repo tasks (SWE-bench Lite–style subset). **Control:** c
 |--------|----------------------------------|
 | `tokens_in_total` | >40% reduction (Phase 1 bundle) |
 | `cached_tokens` / total input | >85% on steps 2–12 when vendor cache enabled |
-| `parse_retries` | 0.0 post-**R033** |
+| `parse_retries` | 0.0 post-**R038** native tools — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 | `tool_steps` | No significant increase |
 | `task_success_rate` | Non-inferiority δ = 2.5pp (gates below) |
 | `prefix_hash` (SHA-256) | Identical across steps 1–12 per turn |
@@ -194,7 +194,8 @@ Golden set: ~50 local repo tasks (SWE-bench Lite–style subset). **Control:** c
 | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | Signal catalog, store |
 | [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | Bundled Grafana + Rex read API |
 | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Economics harness row |
-| [ROADMAP.md](ROADMAP.md) | **R038–R041** implementation phasing |
+| [ROADMAP.md](ROADMAP.md) | **R039–R042** live smoke phasing; **R038** native tools — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 | [CI.md](CI.md) | Three-tier validation model; RC-10 |
-| [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) | Manual R019 acceptance; **R038** automated follow-up |
-| [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) | **R040** gateway-path smoke |
+| [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) | Manual R019 acceptance; **R039** automated smoke follow-up |
+| [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) | **R041** gateway-path smoke |
+| [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) | **R038** plan-mode tool-loop E2E |

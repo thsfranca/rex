@@ -22,7 +22,7 @@
 | Turn correlation | `turn_id` / `context_revision` on RunTurn (**R021** Done) | — |
 | Workspace binding | Fail-closed daemon; extension supplies root (**R022**, **R019** Done) | — |
 | Extension defaults | **`rex.productAgentConfig`** default **true** merges **`rex-agent`** + **`agent.approvals_enabled`** on auto-start | Manual JSON still supported |
-| v1.0 **RC-*** | **Met** (stub + product paths) | Live HTTP backend for IDE dogfood — [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) |
+| v1.0 **RC-*** | **Met** (stub + product paths) | Live HTTP backend for IDE dogfood — [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md); reliable plan/agent **tool loop** requires **R038** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 
 ## Architecture
 

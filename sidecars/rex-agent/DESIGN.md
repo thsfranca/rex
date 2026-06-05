@@ -1,6 +1,6 @@
 # rex-agent — design contract
 
-**Status:** LangGraph ReAct loop shipped (**R018**). gRPC scaffold (**R017**). Operator defaults (**R019**). Broker policy (**R020–R022**). Interim tool protocol: JSON in model text until native `tools` on `BrokerInference` (**R033**).
+**Status:** LangGraph ReAct loop shipped (**R018**). gRPC scaffold (**R017**). Operator defaults (**R019**). Broker policy (**R020–R022**). Interim tool protocol: JSON in model text until **R038** native `tools` on `BrokerInference` — [NATIVE_TOOL_CALLING.md](../../docs/NATIVE_TOOL_CALLING.md).
 
 **Target graph:** Orchestrator + Viewer + Editor — [AGENT_GRAPH_ARCHITECTURE.md](../../docs/AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](../../docs/architecture/decisions/0022-viewer-editor-subagent-topology.md). Wire formats: [ADR 0023](../../docs/architecture/decisions/0023-hybrid-agent-serialization-boundaries.md).
 
@@ -57,16 +57,20 @@ flowchart TB
 
 | Contract | Owner | Status |
 |----------|-------|--------|
-| Interim tool/final JSON in model text | Sidecar `RexBrokerChatModel` | Shipped — until **R033** native `tools[]` — [ADR 0023](../../docs/architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
+| Interim tool/final JSON in model text | Sidecar `RexBrokerChatModel` | Shipped — until **R038** native `tools[]`; interim fallback retained — [NATIVE_TOOL_CALLING.md](../../docs/NATIVE_TOOL_CALLING.md), [ADR 0023](../../docs/architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | Raw delimited broker results | Daemon `broker.rs` shapes `BrokerReadFile` / `BrokerExecShell` | **Shipped (R034)** — `<<TOOL_RESULT:tool>>` … `<<END>>`; line-boundary truncation at `broker.max_tool_result_bytes`; sidecar strips for internal read/write paths |
 | Microcompaction before inference | Sidecar graph | Shipped (R029) — stale reads (>2 steps) → stubs |
 | Multi-line write args | Sidecar | Shipped (R030) — unified diff path |
 
-No proto change; delimited payloads reuse existing gRPC string fields (`content`, `stdout`).
+Delimited payloads reuse existing gRPC string fields (`content`, `stdout`). **R038** adds additive proto fields for native `tools[]` / `tool_calls` — hub [NATIVE_TOOL_CALLING.md](../../docs/NATIVE_TOOL_CALLING.md).
 
-## R033 (Phase 2 — deferred)
+## R038 — Native broker tool calling (planned)
 
-Native `BrokerInference` tool schemas and MCP gRPC client remain **out of scope** until proto/daemon work lands ([ADR 0016](../../docs/architecture/decisions/0016-mcp-in-sidecar-envelope.md), milestone **R033**). Interim protocol stays JSON-in-text via `RexBrokerChatModel`; do not extend `rex.proto` in sidecar-only slices.
+Additive `BrokerInference` wire (`messages[]`, `tools[]`, response `tool_calls[]`, `protocol`). Sidecar routes native `tool_calls` in `llm.py`; one-step interim JSON fallback per step when daemon reports `interim_fallback`. Default config: direct Ollama + `native_tools: auto`. Implementation follows hub; proto/daemon land in **R038 PR 1** before sidecar-only slices.
+
+## R033 — MCP gRPC client (Phase 2 — deferred)
+
+MCP gRPC client remains **out of scope** until **R038** ships ([ADR 0016](../../docs/architecture/decisions/0016-mcp-in-sidecar-envelope.md), milestone **R033** rescoped to MCP-only).
 
 ## Mode matrix
 

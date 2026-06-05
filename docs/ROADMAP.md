@@ -62,7 +62,7 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar for CI/harness is **`rex-sidecar-stub`**; **`rex-agent`** ships LangGraph ReAct (**R018** Done) on the gRPC scaffold (**R017** Done). **Target graph:** Viewer/Editor subagents — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md).
 
-**Priority rationale:** **R013–R022**, **R017–R019**, **R027–R032**, **R034**, **R031**, and **R037** are **Done**. **RC-S2** is **Met**. **R023–R026** are **Done**. Next **Could** product follow-up: **R016** / **R033** / **R036**. Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md).
+**Priority rationale:** **R013–R022**, **R017–R019**, **R027–R032**, **R034**, **R031**, and **R037** are **Done**. **RC-S2** is **Met**. **R023–R026** are **Done**. Next **Should** product follow-up: **R038** (native broker tool calling). Next **Could** follow-up: **R016** / **R033** (MCP client) / **R036**. Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
@@ -85,8 +85,9 @@ Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. De
 | 17 | Multi-active broadcast | **R016** | `sidecars.active[]`, broadcast `RunTurn` (**Could** — deferred Phase 1, [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md)) |
 | 18 | Task-aware read pruning | **R031** | Done — goal-hint filter for reads >100 lines — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | 19 | TRON static schema compression | **R036** | Daemon prefix schema compaction (**Could**) — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| 20 | Native tools + MCP client | **R033** | Phase 2; [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) (**Could**) |
-| 21 | Plan mode planning tools | **R037** | Done — [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md) |
+| 20 | MCP gRPC client | **R033** | Phase 2; [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) (**Could**) |
+| 21 | Native broker tool calling | **R038** | OpenAI-compat `tools[]` on `BrokerInference`; direct Ollama default — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) (**Should**) |
+| 22 | Plan mode planning tools | **R037** | Done — [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md) |
 
 ```mermaid
 flowchart TD
@@ -108,7 +109,8 @@ flowchart TD
   r032[R032_Playbook]
   r031[R031_ReadPrune]
   r036[R036_TRON]
-  r033[R033_NativeTools]
+  r038[R038_NativeTools]
+  r033[R033_MCP]
   multi[R016_Multi_active]
   doc --> plat
   plat --> cli
@@ -127,8 +129,9 @@ flowchart TD
   r034 --> r030
   r030 --> r032
   r032 --> r031
-  r036 -.-> r033
-  r032 --> r033
+  r036 -.-> r038
+  r032 --> r038
+  r038 --> r033
   e2e -.-> multi
 ```
 
@@ -156,10 +159,10 @@ Canonical design: **[ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)** (Live L
 
 | Order | ID | Outcome | Priority |
 |-------|-----|---------|----------|
-| 1 | **R038** | Opt-in Ollama live smoke: `ask` NDJSON + brokered read allow/deny; direct `http_openai_compat`; pinned model | **Should** |
-| 2 | **R039** | Scheduled non-blocking nightly workflow; Ollama prerequisite documented | **Should** |
-| 3 | **R040** | Same **R038** scenarios via inference gateway URL | **Could** |
-| 4 | **R041** | Harness writes run manifest (`run_id`, `git_sha`, `model_revision`, `pass_rate`, `parse_retries`, …) | **Could** |
+| 1 | **R039** | Opt-in Ollama live smoke: `ask` NDJSON + brokered read allow/deny; direct `http_openai_compat`; pinned model | **Should** |
+| 2 | **R040** | Scheduled non-blocking nightly workflow; Ollama prerequisite documented | **Should** |
+| 3 | **R041** | Same **R039** scenarios via inference gateway URL | **Could** |
+| 4 | **R042** | Harness writes run manifest (`run_id`, `git_sha`, `model_revision`, `pass_rate`, `parse_retries`, …) | **Could** |
 
 ## Later — only if the core path stays healthy
 
@@ -202,15 +205,16 @@ Canonical design: **[ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)** (Live L
 | **R031** | Task-aware read pruning | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R032** | Token playbook + prefix SHA metrics | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R036** | TRON static schema compression | Could — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| **R033** | Native tools + MCP gRPC client | Could — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
+| **R033** | MCP gRPC client | Could — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
+| **R038** | Native broker tool calling (`tools[]` / `tool_calls` on `BrokerInference`) | **Should** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 | **R023** | Supply chain: `cargo-audit`, Dependabot | **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md); `cargo-deny` deferred |
 | **R024** | Security SAST: CodeQL (primary) | **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md), [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml) |
 | **R025** | `rex-agent` static analysis: Ruff | **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
 | **R026** | Rex-specific guidelines + optional Semgrep | Could — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
-| **R038** | Ollama live smoke harness (direct HTTP; `ask` + brokered read/policy) | **Should** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md); excludes plan tool-loop |
-| **R039** | Nightly live-LLM workflow (informational; non-blocking) | **Should** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
-| **R040** | Gateway-path live smoke (same scenarios as **R038**) | Could — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
-| **R041** | Economics run manifest from harness | Could — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
+| **R039** | Ollama live smoke harness (direct HTTP; `ask` + brokered read/policy) | **Should** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md); excludes plan tool-loop |
+| **R040** | Nightly live-LLM workflow (informational; non-blocking) | **Should** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
+| **R041** | Gateway-path live smoke (same scenarios as **R039**) | Could — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
+| **R042** | Economics run manifest from harness | Could — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
 
 ## Parked in design docs
 
@@ -226,11 +230,11 @@ Canonical design: **[ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)** (Live L
 | **MCP in sidecar** | ADR 0016 accepted; implementation deferred | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 | **Development assistance capabilities** (turn contract, budget pipeline) | Design hub + ADRs 0011–0017 | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | **Token-efficient agent graph** (Viewer/Editor, serialization, compaction) | Design accepted; **R027–R036** | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| **Observability suite + economics validation** | Phase 2 **partial** (sqlite store + core OTLP); follow-up: mmap ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)), sidecar API; live harness **R038–R041** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
+| **Observability suite + economics validation** | Phase 2 **partial** (sqlite store + core OTLP); follow-up: mmap ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)), sidecar API; live harness **R039–R042** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
 | **Apple Silicon mmap economics store** (`store.engine=mmap`, opt-in) | After SQLite `rex-obs-store` write path (Phase 2); before flipping default — **Could**; design documented | [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) |
 | **VM/container sidecar envelope** (server/fleet) | Linux deployment needs stronger isolation | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 
-**CI:** [CI.md](CI.md) — shipped gates (mock / self-contained default; live LLM not required on PRs — **RC-10**). **Planned:** live smoke tier **R038–R039**; [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R026**; **R023–R025** Done).
+**CI:** [CI.md](CI.md) — shipped gates (mock / self-contained default; live LLM not required on PRs — **RC-10**). **Planned:** live smoke tier **R039–R040**; [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R026**; **R023–R025** Done).
 
 ## How to refresh this file
 
