@@ -6,6 +6,7 @@ mod domain;
 mod gateway_supervisor;
 mod http_openai_compat;
 mod l1_cache;
+mod observability;
 mod plugins;
 mod policy;
 mod routing;

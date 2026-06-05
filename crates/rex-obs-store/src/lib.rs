@@ -6,7 +6,7 @@ mod store;
 pub use error::ObsStoreError;
 pub use record::StreamEconomicsRecord;
 pub use schema::SCHEMA_VERSION;
-pub use store::ObsStore;
+pub use store::{ObsStore, SharedObsStore};
 
 #[cfg(test)]
 mod tests {
