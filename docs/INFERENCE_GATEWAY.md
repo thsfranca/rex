@@ -223,7 +223,7 @@ Logs (intent): `gateway.lifecycle=…`, `gateway.health=…`, `gateway.ollama.di
 
 ## Live validation (planned)
 
-Gateway-path smoke reuses **R038** scenarios with `inference.openai_compat.base_url` pointing at the managed or external gateway — **R040** on [ROADMAP.md](ROADMAP.md); hub [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
+Gateway-path smoke reuses **R039** scenarios with `inference.openai_compat.base_url` pointing at the managed or external gateway — **R041** on [ROADMAP.md](ROADMAP.md); hub [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). Native agent tool calling defaults to **direct Ollama** — **R038** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md).
 
 ## Related
 

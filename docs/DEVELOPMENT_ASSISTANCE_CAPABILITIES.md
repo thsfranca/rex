@@ -200,7 +200,8 @@ Hard conflicts (**C***) and resolutions recorded in ADRs.
 | **R031** | Task-aware read pruning | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R032** | Token playbook + prefix SHA metrics | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R036** | TRON static schema compression | [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| **R033** | Native tools + MCP client | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
+| **R038** | Native broker tool calling | [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
+| **R033** | MCP gRPC client | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 
 Canonical order: [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-agent-program).
 

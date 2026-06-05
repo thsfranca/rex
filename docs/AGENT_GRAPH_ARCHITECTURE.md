@@ -24,7 +24,7 @@ Aligns with [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md): sidecar requ
 - Daemon `ContextPipeline` / lexical retrieval ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)).
 - Cross-turn checkpoint DB, LangSmith, Rust agent rewrite ([AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)).
 - Extension UX contract changes (unless open question Q3 resolves).
-- Full MCP client (**R033**, [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md)).
+- Full MCP client (**R033**, [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md)) — follows **R038** native broker tools.
 
 ## Boundaries
 
@@ -43,9 +43,9 @@ Aligns with [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md): sidecar requ
 | **Per-turn fixed** | Once per `RunTurn`: daemon `effective_prompt`, lexical `[context]`, layered assemblies | Moderate on medium repos; amortized over steps |
 | **Per-step quadratic** | Each `BrokerInference`: full `messages_to_prompt()` re-sends static prefix + growing suffix | **Dominant** without vendor prefix cache (~90% input on steps 2–12) |
 | **Tool result bulk** | Each read/exec appended to suffix; JSON wrapping adds overhead | High when reads are large; **R034** + microcompaction reduce |
-| **Parse retries** | Up to 3 synthetic errors on malformed JSON tool lines | Non-trivial until **R033** native tools |
+| **Parse retries** | Up to 3 synthetic errors on malformed JSON tool lines | Non-trivial until **R038** native tools — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 
-**Priority order for engineering levers:** prefix immutability (**R027**/**R032**) → microcompaction tier → raw delimited results (**R034**) → diff-only writes (**R030**) → optional TRON schema (**R036**) → native tools (**R033**). Matrix detail: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md).
+**Priority order for engineering levers:** prefix immutability (**R027**/**R032**) → microcompaction tier → raw delimited results (**R034**) → diff-only writes (**R030**) → optional TRON schema (**R036**) → native broker tools (**R038**) → MCP client (**R033**). Matrix detail: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md).
 
 ```mermaid
 sequenceDiagram
@@ -80,7 +80,7 @@ sequenceDiagram
 - `tool_steps`, `tool_error_count`, `max_steps`
 - `truncation_events` — broker `max_tool_result_bytes` hits
 
-**JSON protocol** (Rex field names, backward compatible until **R033**):
+**JSON protocol** (Rex field names, backward compatible until **R038** native path; interim fallback retained):
 
 - Tool: `{"type":"tool","tool":"fs.read","args":{"path":"..."}}`
 - Final: `{"type":"final","answer":"..."}`
@@ -186,10 +186,11 @@ flowchart TB
 | R030 | Diff-only writes | Done |
 | R032 | Token playbook + metrics | Done |
 | R031 | Task-aware read pruning | Done |
+| R038 | Native broker tool calling | **Should** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 | R036 | TRON static schema compression | Could |
-| R033 | Native tools + MCP client | Could |
+| R033 | MCP gRPC client | Could |
 
-**Program order:** R027 → R028 → R029 → **R034** → R030 → R032 → R031 → R033; **R036** optional before R033.
+**Program order:** R027 → R028 → R029 → **R034** → R030 → R032 → R031 → **R038** → R033; **R036** optional before R033.
 
 ## Cross-links
 
