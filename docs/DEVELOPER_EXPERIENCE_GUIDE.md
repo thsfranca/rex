@@ -135,7 +135,7 @@ Optional before PR (error codes, fixtures, or guidelines scripts):
 ./scripts/ci/run_guidelines_verify.sh
 ```
 
-Planned post-v1.0 gates (CodeQL, Ruff on `rex-agent`) are tracked in [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R024–R026**). Supply chain audit (**R023**) runs in `./scripts/ci/run_rust_verify.sh`.
+Planned post-v1.0 gates (Ruff on `rex-agent`) are tracked in [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R025–R026**). Supply chain audit (**R023**) runs in `./scripts/ci/run_rust_verify.sh`. CodeQL security SAST (**R024**) runs in GitHub Actions only ([`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)); triage via **Security → Code scanning** — no local equivalent required before PR.
 
 ### Documentation conventions
 

@@ -82,6 +82,7 @@ Keep failure codes low-cardinality. Current baseline set:
 - `GUIDELINES_FAIL` (documented guideline conformance — error code catalog sync and sibling checks under `scripts/ci/guidelines/`)
 - `SIDECAR_FAIL` (builtin sidecar verify — `rex-sidecar-stub` / `rex-agent`)
 - `AUDIT_FAIL` (Rust supply chain — `cargo audit` on `Cargo.lock` in `rust-verify`)
+- `SAST_FAIL` (CodeQL security SAST — advisory in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml); blocking when promoted per [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md#codeql-triage-r024))
 
 ### Reliability guardrails
 
@@ -112,7 +113,7 @@ Set branch protection or ruleset on `main` to require:
 
 Do **not** require `rust-verify`, `extension-verify`, `guidelines-verify`, or `changes` — domain verify jobs skip on docs-only PRs; `changes` is path detection only.
 
-Informational jobs (not required): `rust-verify`, `sidecar-verify`, `extension-verify`, `guidelines-verify`, `changes`.
+Informational jobs (not required): `rust-verify`, `sidecar-verify`, `extension-verify`, `guidelines-verify`, `changes`, CodeQL (`Analyze (rust)`, `Analyze (javascript)`, `Analyze (python)` in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)).
 
 ## Path-aware execution model
 
@@ -274,9 +275,21 @@ For lifecycle/race fixes, ensure E2E coverage includes:
 - deterministic startup race recovery path (unavailable -> ready);
 - stream interruption/terminal behavior path.
 
+## CodeQL security SAST (`codeql.yml`)
+
+**R024** ships an **advisory** CodeQL workflow separate from `ci-checks`. Triggers: `pull_request`, push to `main`, weekly schedule.
+
+| Job | When | Build trace |
+|-----|------|-------------|
+| `Analyze (rust)` | Rust-relevant paths | `cargo build --workspace --locked` (protoc + mold, same as `rust-verify`) |
+| `Analyze (javascript)` | Extension-relevant paths | `npm ci` + `npm run build` in `extensions/rex-vscode/` |
+| `Analyze (python)` | Sidecar-relevant paths | `pip install -e sidecars/rex-agent/[dev]` |
+
+Path exclusions: [`.github/codeql/codeql-config.yml`](../.github/codeql/codeql-config.yml). Triage and promotion to blocking: [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md#codeql-triage-r024). Failure code when blocking: `SAST_FAIL`.
+
 ## Planned quality and security gates
 
-**R023** (supply chain: `cargo audit`, Dependabot) is **shipped** in `rust-verify` — see [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md). Remaining phases **R024–R026** (CodeQL, Ruff on `rex-agent`, Rex-specific guidelines) are **not** in CI yet.
+**R023** (supply chain: `cargo audit`, Dependabot) is **shipped** in `rust-verify`. **R024** (CodeQL) is **shipped** advisory in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml) — see [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md). Remaining phases **R025–R026** (Ruff on `rex-agent`, Rex-specific guidelines) are **not** in CI yet.
 
 ## New CI job checklist
 
