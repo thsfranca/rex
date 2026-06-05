@@ -46,6 +46,9 @@ mod l1_cache;
 #[path = "../src/observability.rs"]
 mod observability;
 #[allow(dead_code)]
+#[path = "../src/otlp_metrics.rs"]
+mod otlp_metrics;
+#[allow(dead_code)]
 #[path = "../src/plugins.rs"]
 mod plugins;
 #[allow(dead_code)]

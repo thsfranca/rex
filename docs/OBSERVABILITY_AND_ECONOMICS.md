@@ -20,19 +20,19 @@ Rex observability is controlled only by merged JSON: **`observability.enabled`**
 
 ## Status
 
-**design documented** — ADR **0026** accepted; store ingest, read API, bundled Grafana, and `rex obs up` are **planned** in code. ADRs 0010, 0020, 0021, 0025, 0026.
+**partial** — Phase 2 shipped: SQLite `rex-obs-store`, daemon terminal append, bounded OTLP when `observability.otlp.endpoint` is set. ADR **0026** read API, bundled Grafana, and `rex obs up` remain **planned**. ADRs 0010, 0020, 0021, 0025, 0026.
 
 ## Scope
 
 **In:**
 
-- **Signal catalog** (implemented + planned) shared by stdout, store, read API, and Grafana dashboards.
-- **`rex-obs-store`** under `$REX_ROOT` as **system of record** when observability enabled — **SQLite default**, **mmap opt-in** (macOS) — **planned** — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). Grafana does **not** read store files directly.
+- **Signal catalog** (implemented + planned) shared by stdout, OTLP, store, read API, and Grafana dashboards.
+- **Daemon OTLP export** when `observability.enabled: true` and `observability.otlp.endpoint` is set — **implemented** (core `rex.*` + `gen_ai.client.operation.duration` instruments); store-only + `obs.export=degraded` when endpoint omitted.
+- **`rex-obs-store`** under `$REX_ROOT` when observability enabled — **SQLite implemented**; **mmap opt-in** (macOS) — **planned** (Phase 2b) — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). Grafana does **not** read store files directly.
 - **Rex observability read API** (loopback HTTP; live subscribe + historical query) — **planned** ([ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md)).
 - **Bundled Grafana** + **Rex OTel datasource plugin** + **default dashboard JSON** — **planned**.
 - **`rex obs up`** — start read API, Grafana, provisioning; open UI — **planned** — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
 - **`SidecarObservabilityService`** on **daemon UDS** (`daemon.socket` in config) — **planned**.
-- **Optional OTLP interop export** when `observability.otlp.endpoint` is set — **planned** (not the bundled Grafana UI path).
 
 **Out:**
 
@@ -253,7 +253,7 @@ rg 'stream.metrics' /path/to/daemon.log
 |-------|-------------|--------|
 | **0** | Stdout + grep; observability off in JSON | **implemented** |
 | **1** | Design hubs, ADRs, validation program | **design documented** |
-| **2** | Store write path + OTel semconv ingest (**sqlite** engine); optional OTLP interop | planned |
+| **2** | Store write path + bounded OTLP export (**sqlite** engine) | **partial** (sqlite + core OTLP shipped; sidecar signals pending) |
 | **2b** | **mmap** store engine (macOS opt-in) | planned |
 | **3** | Rex observability read API (loopback) | planned |
 | **4** | Bundled Grafana kit + Rex OTel datasource + default dashboards | planned |

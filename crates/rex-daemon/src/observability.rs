@@ -6,6 +6,7 @@ use rex_config::{
 };
 use rex_obs_store::{SharedObsStore, StreamEconomicsRecord};
 
+use crate::otlp_metrics::OtlpMetrics;
 use crate::plugins::PipelineMetrics;
 
 #[derive(Clone)]
@@ -62,6 +63,7 @@ impl StreamEconomicsDraft {
 pub struct ObservabilityRuntime {
     store: SharedObsStore,
     snapshot_id: String,
+    metrics: Option<Arc<OtlpMetrics>>,
 }
 
 impl ObservabilityRuntime {
@@ -76,7 +78,12 @@ impl ObservabilityRuntime {
         let snapshot_id = economics_snapshot_id(&loaded.effective);
         let payload = economics_snapshot_json(&loaded.effective).to_string();
         store.upsert_config_snapshot(&snapshot_id, &payload)?;
-        Ok(Some(Self { store, snapshot_id }))
+        let metrics = OtlpMetrics::from_config(&loaded.effective.observability).map(Arc::new);
+        Ok(Some(Self {
+            store,
+            snapshot_id,
+            metrics,
+        }))
     }
 
     pub fn snapshot_id(&self) -> &str {
@@ -91,10 +98,14 @@ impl ObservabilityRuntime {
         chunks_sent: u64,
     ) {
         let store = self.store.clone();
+        let metrics = self.metrics.clone();
         let record = draft.into_record(terminal, elapsed_ms, chunks_sent);
         tokio::task::spawn_blocking(move || {
             if let Err(err) = store.append_stream(&record) {
                 eprintln!("obs.store=degraded reason=append_failed error={err}");
+            }
+            if let Some(otlp) = metrics.as_ref() {
+                otlp.record_stream(&record);
             }
         });
     }
