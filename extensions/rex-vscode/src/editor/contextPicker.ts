@@ -45,7 +45,7 @@ async function pickWorkspaceFile(): Promise<ReadonlyArray<ContextAttachment>> {
     return [];
   }
   const uri = uris[0];
-  let text = "";
+  let text: string;
   try {
     const doc = await vscode.workspace.openTextDocument(uri);
     text = doc.getText();

@@ -3,7 +3,11 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "jsx": "react-jsx",
     "outDir": "out-webview",
     "rootDir": ".",
@@ -20,6 +24,14 @@
     "sourceMap": true,
     "types": []
   },
-  "include": ["webview/**/*.ts", "webview/**/*.tsx", "src/shared/**/*.ts"],
-  "exclude": ["node_modules", "dist", "out"]
+  "include": [
+    "webview/**/*.ts",
+    "webview/**/*.tsx",
+    "src/shared/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "out"
+  ]
 }

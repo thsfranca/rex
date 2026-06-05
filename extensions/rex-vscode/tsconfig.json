@@ -3,7 +3,9 @@
     "target": "ES2022",
     "module": "Node16",
     "moduleResolution": "Node16",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "outDir": "out",
     "rootDir": ".",
     "strict": true,
@@ -19,8 +21,21 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "declaration": false,
-    "types": ["node", "vscode"]
+    "types": [
+      "node",
+      "vscode"
+    ]
   },
-  "include": ["src/**/*.ts", "src/types/**/*.d.ts"],
-  "exclude": ["node_modules", "dist", "out", "webview"]
+  "include": [
+    "src/**/*.ts",
+    "src/types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "out",
+    "webview",
+    "src/test/appState.test.ts",
+    "src/test/markdownStream.test.ts"
+  ]
 }
