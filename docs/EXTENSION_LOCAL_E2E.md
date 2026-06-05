@@ -178,7 +178,7 @@ Open **REX: Open Chat**, select **agent** or **plan** mode, send a short prompt,
 
 ## 8) R019 acceptance — live model (operator; not CI)
 
-After `./scripts/verify_mvp_local.sh` passes, validate the **product path** with **`rex-agent`** and **live** OpenAI-compatible HTTP (Ollama, LiteLLM, etc.). CI uses mock/stub harness config; this checklist is the integration acceptance gate for **R019**.
+After `./scripts/verify_mvp_local.sh` passes, validate the **product path** with **`rex-agent`** and **live** OpenAI-compatible HTTP (Ollama, LiteLLM, etc.). CI uses mock/stub harness config; this checklist is the integration acceptance gate for **R019**. Automated live smoke (subset of these checks) is planned as **R038** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
 
 Prerequisites: HTTP server running (example: `ollama serve`), JSON from step 3 on the **same** daemon process, workspace folder open in the editor with `rex.daemonAutoStart: true` (or manual `rex daemon` started from that project directory).
 

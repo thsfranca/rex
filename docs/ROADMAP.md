@@ -150,6 +150,17 @@ flowchart TD
 | **Should** | Extension integrated UX (**E-UX01…E-UX11**) | [EXTENSION_UX.md](EXTENSION_UX.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | Webview-first; one PR per row where feasible |
 | **Won't (now)** | Direct daemon HTTP/mock without sidecar | [MVP_SPEC.md](MVP_SPEC.md) | CI/harness path only; not product default |
 
+## Next — live LLM validation
+
+Canonical design: **[ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)** (Live LLM validation program). Bridges mock CI (**RC-10**) and manual **R019** acceptance without live LLM on required PR checks. **Plan-mode JSON tool-loop live test** is out of scope here (separate track).
+
+| Order | ID | Outcome | Priority |
+|-------|-----|---------|----------|
+| 1 | **R038** | Opt-in Ollama live smoke: `ask` NDJSON + brokered read allow/deny; direct `http_openai_compat`; pinned model | **Should** |
+| 2 | **R039** | Scheduled non-blocking nightly workflow; Ollama prerequisite documented | **Should** |
+| 3 | **R040** | Same **R038** scenarios via inference gateway URL | **Could** |
+| 4 | **R041** | Harness writes run manifest (`run_id`, `git_sha`, `model_revision`, `pass_rate`, `parse_retries`, …) | **Could** |
+
 ## Later — only if the core path stays healthy
 
 | Priority | What | Source(s) | Notes |
@@ -196,6 +207,10 @@ flowchart TD
 | **R024** | Security SAST: CodeQL (primary) | **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md), [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml) |
 | **R025** | `rex-agent` static analysis: Ruff | **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
 | **R026** | Rex-specific guidelines + optional Semgrep | Could — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
+| **R038** | Ollama live smoke harness (direct HTTP; `ask` + brokered read/policy) | **Should** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md); excludes plan tool-loop |
+| **R039** | Nightly live-LLM workflow (informational; non-blocking) | **Should** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
+| **R040** | Gateway-path live smoke (same scenarios as **R038**) | Could — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
+| **R041** | Economics run manifest from harness | Could — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
 
 ## Parked in design docs
 
@@ -211,11 +226,11 @@ flowchart TD
 | **MCP in sidecar** | ADR 0016 accepted; implementation deferred | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 | **Development assistance capabilities** (turn contract, budget pipeline) | Design hub + ADRs 0011–0017 | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | **Token-efficient agent graph** (Viewer/Editor, serialization, compaction) | Design accepted; **R027–R036** | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| **Observability suite + economics validation** | Phase 2 **partial** (sqlite store + core OTLP); follow-up: read API + bundled Grafana ([ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md)), mmap ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)), sidecar API, harness | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
+| **Observability suite + economics validation** | Phase 2 **partial** (sqlite store + core OTLP); follow-up: mmap ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)), sidecar API; live harness **R038–R041** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
 | **Apple Silicon mmap economics store** (`store.engine=mmap`, opt-in) | After SQLite `rex-obs-store` write path (Phase 2); before flipping default — **Could**; design documented | [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) |
 | **VM/container sidecar envelope** (server/fleet) | Linux deployment needs stronger isolation | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 
-**CI:** [CI.md](CI.md) — shipped gates (mock / self-contained default; live LLM not required on PRs). **Planned:** [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R026**; **R023–R025** Done).
+**CI:** [CI.md](CI.md) — shipped gates (mock / self-contained default; live LLM not required on PRs — **RC-10**). **Planned:** live smoke tier **R038–R039**; [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R026**; **R023–R025** Done).
 
 ## How to refresh this file
 

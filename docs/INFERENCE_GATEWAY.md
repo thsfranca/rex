@@ -221,6 +221,10 @@ Logs (intent): `gateway.lifecycle=…`, `gateway.health=…`, `gateway.ollama.di
 | Direct Ollama only | `disabled` | `http-openai-compat` |
 | CI / tests | `disabled` | `mock` |
 
+## Live validation (planned)
+
+Gateway-path smoke reuses **R038** scenarios with `inference.openai_compat.base_url` pointing at the managed or external gateway — **R040** on [ROADMAP.md](ROADMAP.md); hub [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
+
 ## Related
 
 - [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md)
