@@ -29,6 +29,7 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0021](0021-rex-owned-economics-store-byot-visualization.md) | Rex-owned economics store; BYOT visualization | Accepted |
 | [0022](0022-viewer-editor-subagent-topology.md) | Viewer/Editor subagent topology for product agent | Accepted |
 | [0023](0023-hybrid-agent-serialization-boundaries.md) | Hybrid agent serialization at boundaries (formats per layer) | Accepted |
+| [0024](0024-plan-mode-artifacts-and-plan-save-broker.md) | Plan mode artifacts and plan.save broker | Accepted |
 
 ## How to use
 

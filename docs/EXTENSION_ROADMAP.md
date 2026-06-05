@@ -69,6 +69,7 @@ Canonical design: **[EXTENSION_UX.md](EXTENSION_UX.md)**. One PR slice per row w
 | **E-UX09** | P3 | Tool / step cards from structured host events | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX09 | Done |
 | **E-UX10** | P3 | Inline edit on selection (virtual-doc apply path) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX10 | Done |
 | **E-UX11** | P3 | Multi-file diff review batch | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX11 | Done |
+| **E-PLAN01** | Should | Plan review card, Save, Build handoff | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Planned — **R037** |
 
 ## What remains (non-UX)
 

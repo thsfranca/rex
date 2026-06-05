@@ -204,6 +204,7 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | **R028** | Viewer/Editor subagents | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R029** | Intra-turn state compaction | **Done** — `RemoveMessage`, 25% suffix rule; microcompaction tier |
 | **R034** | Raw delimited tool results | **Done** — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
+| **R037** | Plan mode planning tools | Planned — [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md) |
 | **R030** | Diff-only writes | **Done** — sidecar read→patch→write |
 | **R031** | Task-aware read pruning | **Could** — payloads >100 lines |
 | **R032** | Token playbook + subagent metrics | **Done** — prefix SHA, dedup, hard cap |

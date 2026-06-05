@@ -54,6 +54,7 @@ Before adding or materially editing a doc under `docs/`:
 | [CONFIGURATION.md](CONFIGURATION.md) | JSON config schema + deprecated `REX_*` catalog |
 | [EXTENSION.md](EXTENSION.md) | Extension NDJSON contract + component layout |
 | [ERROR_HANDLING.md](ERROR_HANDLING.md) | Error codes, human-readable messages, CI guidelines gate |
+| [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Plan mode tools, stream contract, broker plan.save |
 | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | Extension phasing |
 | [EXTENSION_UX.md](EXTENSION_UX.md) | Extension integrated UX design hub |
 | [RELEASE.md](RELEASE.md) | Core + extension release automation |
@@ -91,6 +92,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Token-efficient agent graph (design accepted) | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md), [ROADMAP.md](ROADMAP.md) R027–R036 |
 | CI quality and security gates (**R023** Done) | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md), [ROADMAP.md](ROADMAP.md) R024–R026 |
 | Development assistance capabilities (daemon-owned context, turn contract) | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md), [ADRs 0011–0017](architecture/decisions/README.md) |
+| Plan mode planning tools | [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md) |
 
 ## Scripts (related)
 
