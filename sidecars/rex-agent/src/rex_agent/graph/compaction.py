@@ -28,7 +28,11 @@ def _summarize_tool_messages(messages: list[BaseMessage]) -> str:
             lines = content.strip().splitlines()
             if lines:
                 snippets.append(lines[0][:120])
-    return "Viewer findings: " + "; ".join(snippets[:8]) if snippets else "No tool results to summarize."
+    return (
+        "Viewer findings: " + "; ".join(snippets[:8])
+        if snippets
+        else "No tool results to summarize."
+    )
 
 
 def compact_state(state: AgentState) -> dict:
@@ -44,7 +48,8 @@ def compact_state(state: AgentState) -> dict:
     removals = [
         RemoveMessage(id=msg.id)
         for msg in messages
-        if getattr(msg, "id", None) and "[tool " in (msg.content if isinstance(msg.content, str) else "")
+        if getattr(msg, "id", None)
+        and "[tool " in (msg.content if isinstance(msg.content, str) else "")
     ]
     updates: dict = {"viewer_summary": summary}
     if removals:

@@ -135,7 +135,12 @@ Optional before PR (error codes, fixtures, or guidelines scripts):
 ./scripts/ci/run_guidelines_verify.sh
 ```
 
-Planned post-v1.0 gates (Ruff on `rex-agent`) are tracked in [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R025–R026**). Supply chain audit (**R023**) runs in `./scripts/ci/run_rust_verify.sh`. CodeQL security SAST (**R024**) runs in GitHub Actions only ([`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)); triage via **Security → Code scanning** — no local equivalent required before PR.
+Post-v1.0 gates: supply chain audit (**R023**) runs in `./scripts/ci/run_rust_verify.sh`; CodeQL (**R024**) runs in GitHub Actions only ([`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)); Ruff on `rex-agent` (**R025**) runs in `./scripts/ci/run_sidecar_verify.sh`. Remaining **R026** is tracked in [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md). Optional local Ruff before PR:
+
+```bash
+python3 -m pip install "ruff>=0.8"
+python3 -m ruff check sidecars/rex-agent/src sidecars/rex-agent/tests
+```
 
 ### Documentation conventions
 

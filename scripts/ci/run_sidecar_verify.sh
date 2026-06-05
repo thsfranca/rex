@@ -42,7 +42,7 @@ elif ! command -v python3 >/dev/null 2>&1; then
 fi
 
 if [ "${result}" = "success" ]; then
-  if ! "${PYTHON}" -m pip install -q grpcio-tools grpcio protobuf "langgraph>=0.2.0" "langchain-core>=0.3.0" pytest 2>&1 | tee "ci-observability/sidecar-pip.log"; then
+  if ! "${PYTHON}" -m pip install -q grpcio-tools grpcio protobuf "langgraph>=0.2.0" "langchain-core>=0.3.0" pytest "ruff>=0.8" 2>&1 | tee "ci-observability/sidecar-pip.log"; then
     mark_failure "Setup" "ENV_SETUP_FAIL" "pip install failed; see ci-observability/sidecar-pip.log."
   fi
 fi

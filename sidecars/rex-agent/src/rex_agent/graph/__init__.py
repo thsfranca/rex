@@ -10,7 +10,6 @@ from langgraph.graph import END, StateGraph
 
 from rex_agent.broker import BrokerClient
 from rex_agent.broker_chat_model import stream_visible_text
-from rex_agent.stream_events import StepStreamEvent, StreamEvent, TextStreamEvent, ToolStreamEvent
 from rex_agent.config import max_tool_steps
 from rex_agent.graph.compaction import compact_state
 from rex_agent.graph.nodes.llm import llm_node
@@ -22,6 +21,7 @@ from rex_agent.graph.nodes.orchestrator import (
 )
 from rex_agent.graph.nodes.tools import tools_node
 from rex_agent.graph.state import AgentState
+from rex_agent.stream_events import StreamEvent, TextStreamEvent
 from rex_agent.tools import ReadCache, tools_for_mode
 
 _inference_fn: Any | None = None
@@ -52,15 +52,21 @@ def _call_inference(prompt: str, mode: str, model: str) -> tuple[bool, str]:
 
 
 def _orchestrator_node(state: AgentState) -> dict:
-    return llm_node({**state, "active_subagent": "orchestrator"}, inference_fn=_call_inference)
+    return llm_node(
+        {**state, "active_subagent": "orchestrator"}, inference_fn=_call_inference
+    )
 
 
 def _viewer_node(state: AgentState) -> dict:
-    return llm_node({**state, "active_subagent": "viewer"}, inference_fn=_call_inference)
+    return llm_node(
+        {**state, "active_subagent": "viewer"}, inference_fn=_call_inference
+    )
 
 
 def _editor_node(state: AgentState) -> dict:
-    return llm_node({**state, "active_subagent": "editor"}, inference_fn=_call_inference)
+    return llm_node(
+        {**state, "active_subagent": "editor"}, inference_fn=_call_inference
+    )
 
 
 def _tools_wrapper(state: AgentState) -> dict:
@@ -99,7 +105,12 @@ def _compile_react_graph() -> Any:
     graph.add_conditional_edges(
         "compact",
         route_after_tools,
-        {"orchestrator": "orchestrator", "viewer": "viewer", "editor": "editor", "end": END},
+        {
+            "orchestrator": "orchestrator",
+            "viewer": "viewer",
+            "editor": "editor",
+            "end": END,
+        },
     )
     return graph.compile()
 

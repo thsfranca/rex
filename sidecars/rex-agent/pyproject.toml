@@ -19,7 +19,15 @@ dependencies = [
 dev = [
   "pytest>=8.0",
   "grpcio-tools>=1.60",
+  "ruff>=0.8",
 ]
+
+[tool.ruff]
+src = ["src", "tests"]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
 
 [project.scripts]
 rex-agent = "rex_agent.__main__:main"

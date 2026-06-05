@@ -80,7 +80,8 @@ Keep failure codes low-cardinality. Current baseline set:
 - `BUILD_FAIL` (extension esbuild bundle)
 - `PACKAGE_FAIL` (extension VSIX packaging)
 - `GUIDELINES_FAIL` (documented guideline conformance — error code catalog sync and sibling checks under `scripts/ci/guidelines/`)
-- `SIDECAR_FAIL` (builtin sidecar verify — `rex-sidecar-stub` / `rex-agent`)
+- `SIDECAR_FAIL` (builtin sidecar verify — `rex-sidecar-stub` / `rex-agent`; inner `RUFF_FAIL` from rex-agent ruff check)
+- `RUFF_FAIL` (rex-agent Ruff static analysis in sidecar verify)
 - `AUDIT_FAIL` (Rust supply chain — `cargo audit` on `Cargo.lock` in `rust-verify`)
 - `SAST_FAIL` (CodeQL security SAST — advisory in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml); blocking when promoted per [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md#codeql-triage-r024))
 
@@ -241,7 +242,7 @@ That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh
 | Setup | `run_sidecar_verify.sh` | pip deps, `rex proto install` |
 | BuildAndChecks | `run_sidecar_verify.sh` | `cargo build -p rex-sidecar-stub -p rex` |
 | TestExecution | [`run_stub_sidecar_checks.sh`](../scripts/ci/run_stub_sidecar_checks.sh) | `cargo test -p rex-sidecar-stub`; UDS [`stub_sidecar_smoke`](../crates/rex-daemon/tests/stub_sidecar_smoke.rs) |
-| TestExecution | [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) | `pytest`; UDS [`agent_scaffold_smoke`](../crates/rex-daemon/tests/agent_scaffold_smoke.rs) |
+| TestExecution | [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) | `ruff check`; `pytest`; UDS [`agent_scaffold_smoke`](../crates/rex-daemon/tests/agent_scaffold_smoke.rs) |
 
 Local: `./scripts/ci/run_sidecar_verify.sh`. Failure code: `SIDECAR_FAIL`. Requires Python 3.10+ (`python3.11` / `python3.10` preferred).
 
@@ -289,7 +290,7 @@ Path exclusions: [`.github/codeql/codeql-config.yml`](../.github/codeql/codeql-c
 
 ## Planned quality and security gates
 
-**R023** (supply chain: `cargo audit`, Dependabot) is **shipped** in `rust-verify`. **R024** (CodeQL) is **shipped** advisory in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml) — see [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md). Remaining phases **R025–R026** (Ruff on `rex-agent`, Rex-specific guidelines) are **not** in CI yet.
+**R023** (supply chain: `cargo audit`, Dependabot) is **shipped** in `rust-verify`. **R024** (CodeQL) is **shipped** advisory in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml). **R025** (Ruff on `rex-agent`) is **shipped** in sidecar verify — see [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md). Remaining phase **R026** (Rex-specific guidelines) is **not** in CI yet.
 
 ## New CI job checklist
 

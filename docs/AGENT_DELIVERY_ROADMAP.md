@@ -68,7 +68,7 @@ flowchart TB
 | Tools | Broker RPCs: `fs.read`, `fs.list`, `fs.write`, `exec.shell` (mode-gated) |
 | Modes | `ask` (no tools), `plan` (read/list), `agent` (read/list/write/exec) |
 | Harness | **`rex-sidecar-stub`** stays for CI; switch via config or `REX_SIDECAR_*` |
-| Python lint (**planned**) | **R025** — Ruff on `rex-agent` in CI — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
+| Python lint | **R025** — Ruff on `rex-agent` in CI — **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
 
 ### One `RunTurn` flow (target)
 

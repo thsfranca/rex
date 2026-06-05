@@ -9,7 +9,11 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 
-from rex_agent.tools import ParsedModelOutput, parse_model_output, system_prompt_for_tools
+from rex_agent.tools import (
+    ParsedModelOutput,
+    parse_model_output,
+    system_prompt_for_tools,
+)
 
 MAX_PARSE_RETRIES = 3
 _TOOL_JSON_PREFIX = '{"type":"tool"'
@@ -30,7 +34,9 @@ def messages_to_prompt(
     elif subagent == "editor":
         tool_mode = "agent"
 
-    parts: list[str] = [f"[system]\n{system_prompt_for_tools(tool_mode, subagent=subagent)}"]
+    parts: list[str] = [
+        f"[system]\n{system_prompt_for_tools(tool_mode, subagent=subagent)}"
+    ]
     if viewer_summary and subagent == "editor":
         parts.append(f"[system]\nExploration summary:\n{viewer_summary}")
 
@@ -155,7 +161,9 @@ class RexBrokerChatModel(BaseChatModel):
         )
         ok, text = self._call_inference(prompt)
         if not ok:
-            yield ChatGenerationChunk(message=AIMessage(content=text or "Inference failed."))
+            yield ChatGenerationChunk(
+                message=AIMessage(content=text or "Inference failed.")
+            )
             return
         _, parsed = parse_to_ai_message(text, self.mode)
         visible = parsed.answer if parsed.kind == "final" else ""
@@ -169,5 +177,7 @@ class RexBrokerChatModel(BaseChatModel):
         run_manager: Any = None,
         **kwargs: Any,
     ) -> AsyncIterator[ChatGenerationChunk]:
-        for chunk in self._stream(messages, stop=stop, run_manager=run_manager, **kwargs):
+        for chunk in self._stream(
+            messages, stop=stop, run_manager=run_manager, **kwargs
+        ):
             yield chunk
