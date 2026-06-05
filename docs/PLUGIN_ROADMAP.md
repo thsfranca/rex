@@ -66,7 +66,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 | 2 — HTTP OpenAI-compat | Broker backend for sidecar — **implemented** |
 | 3 — L1 cache | **`ask`** only — [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | 4 — Proto / CLI knobs | **`model`** / **`mode`** on wire |
-| 4b — Inference Gateway design (docs) | Default API + opt-in managed LiteLLM — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md) |
+| 4b — Inference Gateway | **Done** — managed LiteLLM supervisor + `rex gateway` — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md) |
 | 5+ | L2 semantic cache | **Could** — [ROADMAP.md](ROADMAP.md) Later, [CACHING.md](CACHING.md) |
 | 5+ | Difficulty-based routing cascade | **Could** — [ROADMAP.md](ROADMAP.md) Next, [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
 | 5+ | `auto` mode, sidecar-only routing | Backlog — see [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) Later optional tracks |

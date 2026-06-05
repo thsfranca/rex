@@ -1,7 +1,7 @@
 # ADR 0019: Inference Gateway — opt-in LiteLLM, daemon-controlled
 
 - **Date:** 2026-05-24
-- **Status:** Accepted (design)
+- **Status:** Accepted (implemented)
 - **Supersedes (partial):** [0018](0018-gateway-first-multi-provider-inference.md) — default API and built-in gateway capability wording only
 
 ## Context

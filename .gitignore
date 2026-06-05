@@ -10,6 +10,9 @@ TEMP_*
 .pr-*.md
 node_modules
 
+# Inference gateway operator secrets (local REX_ROOT layout)
+gateway/.env
+
 # Rust (workspace build output)
 /target
 

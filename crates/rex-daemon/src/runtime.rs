@@ -14,6 +14,7 @@ use tonic::transport::Server;
 use crate::adapters::{runtime_from_config, RuntimeKind};
 use crate::approvals::approval_gate_from_config;
 use crate::domain::DAEMON_VERSION;
+use crate::gateway_supervisor::{gateway_supervisor_from_config, GatewaySupervisorError};
 use crate::policy::PolicyEngine;
 use crate::service::RexDaemonService;
 use crate::settings;
@@ -34,6 +35,8 @@ pub enum DaemonRuntimeError {
     Transport(#[from] tonic::transport::Error),
     #[error("sidecar supervisor: {0}")]
     Sidecar(#[from] SupervisorError),
+    #[error("inference gateway supervisor: {0}")]
+    Gateway(#[from] GatewaySupervisorError),
 }
 
 pub async fn run_daemon() -> Result<(), DaemonRuntimeError> {
@@ -44,6 +47,15 @@ pub async fn run_daemon() -> Result<(), DaemonRuntimeError> {
 
 pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntimeError> {
     ensure_settings_loaded()?;
+    let gateway = gateway_supervisor_from_config();
+    if gateway.config().enabled {
+        if let Err(err) = gateway.ensure_running().await {
+            if gateway.config().required {
+                return Err(DaemonRuntimeError::Gateway(err));
+            }
+            eprintln!("rex-daemon gateway optional start failed: {err}");
+        }
+    }
     remove_stale_socket(socket_path)?;
     let listener =
         UnixListener::bind(socket_path).map_err(|source| DaemonRuntimeError::SocketBind {
@@ -88,6 +100,8 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
         .add_service(RexServiceServer::new(service))
         .serve_with_incoming_shutdown(incoming, shutdown_signal())
         .await?;
+    sidecar.stop().await;
+    gateway.stop().await;
     remove_stale_socket(socket_path)?;
     println!(
         "rex-daemon event=shutdown socket={} reason=signal",
@@ -101,8 +115,9 @@ fn ensure_settings_loaded() -> Result<(), ConfigError> {
     if settings::is_initialized() {
         return Ok(());
     }
-    let loaded = Arc::new(rex_config::load()?);
-    settings::init(loaded);
+    let mut loaded = rex_config::load()?;
+    loaded.apply_effective_openai_compat_base_url();
+    settings::init(Arc::new(loaded));
     Ok(())
 }
 

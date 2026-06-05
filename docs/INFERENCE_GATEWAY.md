@@ -1,6 +1,6 @@
 # Inference Gateway
 
-**Status:** `accepted` — [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md). Implementation: planned ([ROADMAP.md](ROADMAP.md)).
+**Status:** **implemented** — [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md). Daemon supervisor + `rex gateway init|doctor` + `$REX_ROOT/gateway/` templates.
 
 Canonical design for Rex’s **opt-in, daemon-controlled** LiteLLM (OpenAI-compat) server. Related: [ADAPTERS.md](ADAPTERS.md), [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) (protocol adapter), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) (agent sidecar — separate feature).
 
@@ -182,7 +182,7 @@ Add Anthropic/OpenAI entries in the same `model_list` driven by `$REX_ROOT/gatew
 
 ### Minimum LiteLLM version
 
-Pin a minimum proxy version at implementation time that supports `check_provider_endpoint` and `ollama/*` expansion on `/v1/models` — verify against upstream release notes.
+Use a LiteLLM proxy release that supports `check_provider_endpoint` and `ollama/*` expansion on `/v1/models` (verify with `litellm --version` after `pip install 'litellm[proxy]'`).
 
 ## Packaging (design bet)
 

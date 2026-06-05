@@ -1,4 +1,6 @@
 mod error;
+mod gateway;
+mod gateway_layout;
 mod layout;
 mod merge;
 mod model;
@@ -7,14 +9,25 @@ mod sidecar_binary;
 mod workspace;
 
 pub use error::ConfigError;
+pub use gateway::{
+    default_gateway_config_path, effective_gateway_port, gateway_allow_url_override,
+    gateway_required, is_managed_gateway, managed_gateway_base_url, normalize_gateway_mode,
+    resolve_effective_openai_compat_base_url, resolve_gateway_config_path, validate_gateway,
+    DEFAULT_GATEWAY_COMMAND, DEFAULT_GATEWAY_PORT, DEFAULT_GATEWAY_STARTUP_TIMEOUT_SECS,
+    GATEWAY_MODE_DISABLED, GATEWAY_MODE_EXTERNAL, GATEWAY_MODE_MANAGED,
+};
+pub use gateway_layout::{ensure_gateway_layout, GatewayLayoutResult};
 pub use layout::{ensure_global_layout, EnsureResult};
 pub use merge::LoadedConfig;
 pub use model::{
     AgentConfig, BrokerConfig, CacheConfig, ContextConfig, CursorCliConfig, DaemonConfig,
-    InferenceConfig, OpenAiCompatConfig, RexConfig, SidecarEntry, SidecarsConfig, WorkspaceConfig,
-    DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
+    GatewayConfig, GatewayOllamaConfig, InferenceConfig, OpenAiCompatConfig, RexConfig,
+    SidecarEntry, SidecarsConfig, WorkspaceConfig, DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
 };
-pub use paths::{global_config_path, proto_gen_path, proto_src_path, rex_root, REX_ROOT_ENV};
+pub use paths::{
+    gateway_dir, gateway_env_path, global_config_path, proto_gen_path, proto_src_path, rex_root,
+    REX_ROOT_ENV,
+};
 pub use sidecar_binary::sidecar_binary_resolvable;
 pub use workspace::WorkspaceRootError;
 
@@ -173,6 +186,57 @@ mod tests {
                 "http://127.0.0.1:9/v1"
             );
             env::set_current_dir(tmp.path()).unwrap();
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn managed_gateway_allows_empty_base_url_in_validate() {
+        let tmp = tempfile::tempdir().unwrap();
+        with_rex_root(tmp.path(), || {
+            env::set_current_dir(tmp.path()).unwrap();
+            ensure_global_layout().unwrap();
+            fs::write(
+                global_config_path(),
+                r#"{
+  "version": 1,
+  "inference": {
+    "runtime": "http-openai-compat",
+    "gateway": { "mode": "managed", "port": 4000 },
+    "openai_compat": { "model": "gpt-4o-mini" }
+  }
+}"#,
+            )
+            .unwrap();
+            let loaded = load_merged().expect("load");
+            assert_eq!(
+                loaded.effective_openai_compat_base_url(),
+                "http://127.0.0.1:4000/v1"
+            );
+        });
+    }
+
+    #[test]
+    #[serial]
+    fn disabled_http_runtime_requires_base_url() {
+        let tmp = tempfile::tempdir().unwrap();
+        with_rex_root(tmp.path(), || {
+            env::set_current_dir(tmp.path()).unwrap();
+            ensure_global_layout().unwrap();
+            fs::write(
+                global_config_path(),
+                r#"{
+  "version": 1,
+  "inference": {
+    "runtime": "http-openai-compat",
+    "gateway": { "mode": "disabled" },
+    "openai_compat": { "model": "gpt-4o-mini" }
+  }
+}"#,
+            )
+            .unwrap();
+            let err = load_merged().expect_err("missing base_url");
+            assert!(err.to_string().contains("base_url"));
         });
     }
 }

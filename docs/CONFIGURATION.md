@@ -181,7 +181,7 @@ CI and unit tests set `REX_ROOT` to a temp dir and write `config.json` with `inf
 
 ## Inference Gateway (design)
 
-**Status:** `accepted` (design) — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md). Implementation planned.
+**Status:** **implemented** — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md). Bootstrap with `rex gateway init`; validate with `rex gateway doctor`.
 
 ### Purpose
 

@@ -63,6 +63,35 @@ pub async fn spawn_loopback_openai_compat_sse_fixture_with_body(body: &str) -> S
     addr
 }
 
+const MODELS_JSON: &str = "{\"object\":\"list\",\"data\":[{\"id\":\"ollama/llama3\"}]}";
+
+/// Minimal HTTP responder for gateway `GET /v1/models` health checks.
+pub async fn spawn_loopback_gateway_models_fixture() -> SocketAddr {
+    let listener = TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind gateway fixture");
+    let addr = listener.local_addr().expect("fixture addr");
+    let body = MODELS_JSON.to_string();
+    tokio::spawn(async move {
+        loop {
+            let Ok((mut stream, _)) = listener.accept().await else {
+                break;
+            };
+            let body = body.clone();
+            tokio::spawn(async move {
+                let mut buf = [0u8; 512];
+                let _ = stream.read(&mut buf).await;
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = stream.write_all(response.as_bytes()).await;
+            });
+        }
+    });
+    addr
+}
+
 /// Serves SSE where response content echoes the request `"model"` field.
 pub async fn spawn_loopback_openai_compat_sse_fixture_echo_model() -> SocketAddr {
     let listener = TcpListener::bind("127.0.0.1:0")

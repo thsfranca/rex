@@ -51,6 +51,7 @@ impl RexConfig {
                     model: "gpt-4o-mini".to_string(),
                     timeout_secs: 120,
                 },
+                gateway: GatewayConfig::default(),
                 cursor_cli: CursorCliConfig {
                     path: "cursor-agent".to_string(),
                     command: None,
@@ -96,15 +97,22 @@ impl RexConfig {
                 )));
             }
         }
+        crate::gateway::validate_gateway(&self.inference.gateway)
+            .map_err(ConfigError::Validation)?;
         if matches!(
             runtime.as_str(),
             "http-openai-compat" | "openai-compat" | "http"
-        ) && self.inference.openai_compat.base_url.trim().is_empty()
-        {
-            return Err(ConfigError::Validation(
-                "inference.openai_compat.base_url is required when runtime is http-openai-compat"
-                    .to_string(),
-            ));
+        ) {
+            let effective_url = crate::gateway::resolve_effective_openai_compat_base_url(
+                &self.inference,
+                &crate::paths::rex_root(),
+            );
+            if effective_url.trim().is_empty() {
+                return Err(ConfigError::Validation(
+                    "inference.openai_compat.base_url is required when runtime is http-openai-compat (or set inference.gateway.mode to managed)"
+                        .to_string(),
+                ));
+            }
         }
         if self.sidecars.active.trim().is_empty() {
             return Err(ConfigError::Validation(
@@ -150,7 +158,75 @@ pub struct InferenceConfig {
     #[serde(default)]
     pub openai_compat: OpenAiCompatConfig,
     #[serde(default)]
+    pub gateway: GatewayConfig,
+    #[serde(default)]
     pub cursor_cli: CursorCliConfig,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct GatewayConfig {
+    #[serde(default = "default_gateway_mode")]
+    pub mode: String,
+    #[serde(default)]
+    pub port: u16,
+    #[serde(default)]
+    pub config_path: String,
+    #[serde(default = "default_gateway_command")]
+    pub command: String,
+    #[serde(default)]
+    pub startup_timeout_secs: u64,
+    #[serde(default)]
+    pub required: Option<bool>,
+    #[serde(default)]
+    pub allow_url_override: Option<bool>,
+    #[serde(default)]
+    pub ollama: GatewayOllamaConfig,
+}
+
+fn default_gateway_mode() -> String {
+    "disabled".to_string()
+}
+
+fn default_gateway_command() -> String {
+    crate::gateway::DEFAULT_GATEWAY_COMMAND.to_string()
+}
+
+impl Default for GatewayConfig {
+    fn default() -> Self {
+        Self {
+            mode: default_gateway_mode(),
+            port: crate::gateway::DEFAULT_GATEWAY_PORT,
+            config_path: String::new(),
+            command: default_gateway_command(),
+            startup_timeout_secs: crate::gateway::DEFAULT_GATEWAY_STARTUP_TIMEOUT_SECS,
+            required: None,
+            allow_url_override: None,
+            ollama: GatewayOllamaConfig::default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct GatewayOllamaConfig {
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub api_base: String,
+    #[serde(default)]
+    pub discovery: Option<bool>,
+    #[serde(default)]
+    pub discovery_on_ready: Option<bool>,
+}
+
+impl Default for GatewayOllamaConfig {
+    fn default() -> Self {
+        Self {
+            enabled: None,
+            api_base: "http://127.0.0.1:11434".to_string(),
+            discovery: None,
+            discovery_on_ready: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]

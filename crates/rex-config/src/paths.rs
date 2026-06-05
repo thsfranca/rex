@@ -27,3 +27,11 @@ pub fn proto_src_path() -> PathBuf {
 pub fn proto_gen_path() -> PathBuf {
     rex_root().join("proto").join("gen")
 }
+
+pub fn gateway_dir() -> PathBuf {
+    rex_root().join("gateway")
+}
+
+pub fn gateway_env_path() -> PathBuf {
+    gateway_dir().join(".env")
+}

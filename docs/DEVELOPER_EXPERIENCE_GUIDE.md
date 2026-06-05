@@ -69,7 +69,7 @@ The Phase 1 product path requires a **supervised sidecar** for assistant modes �
 
 Legacy `REX_OPENAI_COMPAT_*` / `REX_SIDECAR_ENABLED` env vars are **ignored with warning** — [CONFIGURATION.md](CONFIGURATION.md).
 
-**Managed gateway (`inference.gateway.mode: managed`):** design-only until implemented — same hub as [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
+**Managed gateway (`inference.gateway.mode: managed`):** `rex gateway init`, set keys in `$REX_ROOT/gateway/.env`, `rex gateway doctor`, then `rex daemon` — [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
 
 **Observability (planned):** set `observability.enabled: true` and `observability.otlp` in merged JSON under `$REX_ROOT` — [CONFIGURATION.md](CONFIGURATION.md#observability-planned), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md). Only **`REX_ROOT`** is a bootstrap env var for layout.
 

@@ -3,6 +3,7 @@ mod adapters;
 mod approvals;
 mod broker;
 mod domain;
+mod gateway_supervisor;
 mod http_openai_compat;
 mod l1_cache;
 mod plugins;
