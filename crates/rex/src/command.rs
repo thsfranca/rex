@@ -6,6 +6,7 @@ pub enum TopLevelCommand {
     Config(Vec<String>),
     Proto(Vec<String>),
     Sidecar(Vec<String>),
+    Gateway(Vec<String>),
 }
 
 pub fn parse_top_level(mut args: impl Iterator<Item = String>) -> Result<TopLevelCommand, String> {
@@ -25,6 +26,7 @@ pub fn parse_top_level(mut args: impl Iterator<Item = String>) -> Result<TopLeve
         Some("config") => Ok(TopLevelCommand::Config(args.collect())),
         Some("proto") => Ok(TopLevelCommand::Proto(args.collect())),
         Some("sidecar") => Ok(TopLevelCommand::Sidecar(args.collect())),
+        Some("gateway") => Ok(TopLevelCommand::Gateway(args.collect())),
         Some(other) => Err(format!("Unknown command: {other}")),
     }
 }
@@ -39,6 +41,7 @@ Usage:
   rex config <init|show|path|validate>
   rex proto <install|path|doctor>
   rex sidecar <list|init|doctor>
+  rex gateway <init|doctor>
 
 Run the local daemon, query status, or stream a completion via the daemon UDS API."
     );

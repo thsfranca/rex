@@ -1,5 +1,6 @@
 mod command;
 mod config_cmd;
+mod gateway_cmd;
 mod proto_cmd;
 mod sidecar_cmd;
 
@@ -29,6 +30,7 @@ pub async fn run(args: impl Iterator<Item = String>) -> ExitCode {
         Ok(TopLevelCommand::Config(rest)) => config_cmd::run_config(rest.into_iter()),
         Ok(TopLevelCommand::Proto(rest)) => proto_cmd::run_proto(rest.into_iter()),
         Ok(TopLevelCommand::Sidecar(rest)) => sidecar_cmd::run_sidecar(rest.into_iter()),
+        Ok(TopLevelCommand::Gateway(rest)) => gateway_cmd::run_gateway(rest.into_iter()),
         Err(message) => {
             eprintln!("{message}");
             print_usage();

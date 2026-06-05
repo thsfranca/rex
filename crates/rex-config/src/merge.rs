@@ -69,6 +69,22 @@ impl LoadedConfig {
             bytes as usize
         }
     }
+
+    /// OpenAI-compat base URL after gateway injection rules.
+    pub fn effective_openai_compat_base_url(&self) -> String {
+        crate::gateway::resolve_effective_openai_compat_base_url(
+            &self.effective.inference,
+            &self.rex_root,
+        )
+    }
+
+    /// Patch `effective.inference.openai_compat.base_url` for daemon HTTP adapter consumption.
+    pub fn apply_effective_openai_compat_base_url(&mut self) {
+        let url = self.effective_openai_compat_base_url();
+        if !url.is_empty() {
+            self.effective.inference.openai_compat.base_url = url;
+        }
+    }
 }
 
 pub fn merge_config(base: &mut RexConfig, overlay: RexConfig) {
@@ -133,6 +149,50 @@ fn merge_inference(
     }
     if overlay.cursor_cli.timeout_secs != 0 {
         base.cursor_cli.timeout_secs = overlay.cursor_cli.timeout_secs;
+    }
+    merge_gateway(&mut base.gateway, overlay.gateway);
+}
+
+fn merge_gateway(base: &mut crate::model::GatewayConfig, overlay: crate::model::GatewayConfig) {
+    if !overlay.mode.is_empty() {
+        base.mode = overlay.mode;
+    }
+    if overlay.port != 0 {
+        base.port = overlay.port;
+    }
+    if !overlay.config_path.is_empty() {
+        base.config_path = overlay.config_path;
+    }
+    if !overlay.command.is_empty() {
+        base.command = overlay.command;
+    }
+    if overlay.startup_timeout_secs != 0 {
+        base.startup_timeout_secs = overlay.startup_timeout_secs;
+    }
+    if overlay.required.is_some() {
+        base.required = overlay.required;
+    }
+    if overlay.allow_url_override.is_some() {
+        base.allow_url_override = overlay.allow_url_override;
+    }
+    merge_gateway_ollama(&mut base.ollama, overlay.ollama);
+}
+
+fn merge_gateway_ollama(
+    base: &mut crate::model::GatewayOllamaConfig,
+    overlay: crate::model::GatewayOllamaConfig,
+) {
+    if overlay.enabled.is_some() {
+        base.enabled = overlay.enabled;
+    }
+    if !overlay.api_base.is_empty() {
+        base.api_base = overlay.api_base;
+    }
+    if overlay.discovery.is_some() {
+        base.discovery = overlay.discovery;
+    }
+    if overlay.discovery_on_ready.is_some() {
+        base.discovery_on_ready = overlay.discovery_on_ready;
     }
 }
 

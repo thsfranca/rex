@@ -39,6 +39,9 @@ mod broker;
 #[path = "../src/domain.rs"]
 mod domain;
 #[allow(dead_code)]
+#[path = "../src/gateway_supervisor.rs"]
+mod gateway_supervisor;
+#[allow(dead_code)]
 #[path = "../src/http_openai_compat.rs"]
 mod http_openai_compat;
 #[path = "../src/l1_cache.rs"]

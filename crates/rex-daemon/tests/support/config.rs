@@ -132,3 +132,19 @@ pub fn sidecar_required_missing_binary_config(
 pub fn rex_root_path(guard: &RexRootGuard) -> PathBuf {
     guard._dir.path().to_path_buf()
 }
+
+pub fn managed_gateway_config(port: u16, gateway_stub_command: &str) -> RexConfig {
+    let mut cfg = RexConfig::defaults();
+    cfg.inference.runtime = "http-openai-compat".to_string();
+    cfg.inference.gateway.mode = "managed".to_string();
+    cfg.inference.gateway.port = port;
+    cfg.inference.gateway.command = gateway_stub_command.to_string();
+    cfg.inference.gateway.startup_timeout_secs = 5;
+    cfg.inference.gateway.required = Some(true);
+    cfg.sidecars.harness = Some("direct".to_string());
+    cfg.sidecars.required = Some(false);
+    if let Some(entry) = cfg.sidecars.list.first_mut() {
+        entry.enabled = false;
+    }
+    cfg
+}
