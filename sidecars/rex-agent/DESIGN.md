@@ -53,16 +53,16 @@ flowchart TB
 - **`max_tool_steps`:** From R015 config (default **12**, [CONFIGURATION.md](../../docs/CONFIGURATION.md)); stop with terminal message when exceeded.
 - **`compaction_suffix_fraction`**, **`read_pruning_enabled`:** Sidecar intra-turn controls — see [CONFIGURATION.md](../../docs/CONFIGURATION.md) and [AGENT_GRAPH_ARCHITECTURE.md](../../docs/AGENT_GRAPH_ARCHITECTURE.md).
 
-## Wire format deltas (design — R034, R029+)
+## Wire format (broker payloads)
 
-| Contract | Owner | Notes |
-|----------|-------|-------|
-| Interim tool/final JSON in model text | Sidecar `RexBrokerChatModel` | Until **R033** native `tools[]` — [ADR 0023](../../docs/architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| Raw delimited broker results | Daemon shapes `BrokerReadFile` / `BrokerExecShell` payloads | `<<TOOL_RESULT:tool>>` … `<<END>>`; line-boundary truncation at `max_tool_result_bytes` — **R034** |
-| Microcompaction before inference | Sidecar graph | Stale reads (>2 steps) → stubs; distinct from R029 `RemoveMessage` suffix rule |
-| Multi-line write args | Sidecar | Line-oriented delimiters; extends **R030** diff path |
+| Contract | Owner | Status |
+|----------|-------|--------|
+| Interim tool/final JSON in model text | Sidecar `RexBrokerChatModel` | Shipped — until **R033** native `tools[]` — [ADR 0023](../../docs/architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
+| Raw delimited broker results | Daemon `broker.rs` shapes `BrokerReadFile` / `BrokerExecShell` | **Shipped (R034)** — `<<TOOL_RESULT:tool>>` … `<<END>>`; line-boundary truncation at `broker.max_tool_result_bytes`; sidecar strips for internal read/write paths |
+| Microcompaction before inference | Sidecar graph | Shipped (R029) — stale reads (>2 steps) → stubs |
+| Multi-line write args | Sidecar | Shipped (R030) — unified diff path |
 
-No proto change in design-only capture; implementation slices document daemon/sidecar touch points per milestone.
+No proto change; delimited payloads reuse existing gRPC string fields (`content`, `stdout`).
 
 ## R033 (Phase 2 — deferred)
 

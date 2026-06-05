@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from rex_agent.broker import BrokerClient
+from rex_agent.broker import BrokerClient, strip_tool_result_delimiters
 from rex_agent.config import max_tool_result_bytes, read_pruning_enabled
 from rex_agent.diff import apply_unified_diff, editor_write_prompt_suffix, reject_whole_file_write
 
@@ -188,12 +188,19 @@ def execute_tool(
             if cached is not None:
                 return True, f"[cached read of {path}]\n{cached}", False
         ok, result = client.read_file(path, mode)
-        if ok and read_pruning_enabled() and goal_hint:
-            result = prune_read_result(result, goal_hint)
-        if ok and read_cache is not None:
-            read_cache.put(path, result)
-        if ok and len(result.encode("utf-8")) >= max_tool_result_bytes():
-            truncated = True
+        if ok:
+            raw_body = strip_tool_result_delimiters(result)
+            pruned = raw_body
+            if read_pruning_enabled() and goal_hint:
+                pruned = prune_read_result(raw_body, goal_hint)
+            if read_cache is not None:
+                read_cache.put(path, pruned)
+            if len(raw_body.encode("utf-8")) >= max_tool_result_bytes():
+                truncated = True
+            if " [rex: tool output truncated]" in raw_body:
+                truncated = True
+            if pruned != raw_body:
+                result = format_delimited_tool_result_for_prompt(TOOL_READ, pruned)
         return ok, result, truncated
 
     if tool == TOOL_LIST:
@@ -211,6 +218,8 @@ def execute_tool(
             ok_read, existing = client.read_file(path, mode)
             if not ok_read:
                 existing = ""
+            else:
+                existing = strip_tool_result_delimiters(existing)
             ok_patch, patched = apply_unified_diff(existing, str(diff_text))
             if not ok_patch:
                 return False, patched, False
@@ -222,6 +231,8 @@ def execute_tool(
         ok_read, existing = client.read_file(path, mode)
         if not ok_read:
             existing = ""
+        else:
+            existing = strip_tool_result_delimiters(existing)
         reject = reject_whole_file_write(path, content_str, existing)
         if reject:
             return False, reject, False
@@ -236,6 +247,11 @@ def execute_tool(
         return ok, result, False
 
     return False, f"Unknown tool: {tool}", False
+
+
+def format_delimited_tool_result_for_prompt(tool: str, body: str) -> str:
+    """Re-wrap stripped body for LLM scratch when sidecar re-processed content (cache/prune)."""
+    return f"<<TOOL_RESULT:{tool}>>\n{body}\n<<END>>"
 
 
 def format_tool_status(call: ToolCall, ok: bool, result: str) -> str:
