@@ -172,6 +172,8 @@ Prerequisites for **`rex-agent`** dogfood (**R017–R018** Done). Design: [DEVEL
 
 **Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, operator checklist in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md#8-r019-acceptance--live-model-operator-not-ci), and extension operator alignment with **`rex-agent`** (JSON setup hints, **`rex.productAgentConfig`** default, NDJSON **`tool`**/**`step`** cards).
 
+**Follow-up:** opt-in automated live Ollama smoke — **R038** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) (plan-mode tool-loop live test is a separate track).
+
 | Criterion | Evidence |
 |-----------|----------|
 | Extension sets `workspace.root` when auto-starting daemon | Primary `workspaceFolders[0]` |

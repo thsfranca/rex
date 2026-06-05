@@ -233,7 +233,7 @@ chmod +x ./scripts/verify_mvp_local.sh
 
 That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), then [`scripts/ci/run_sidecar_verify.sh`](../scripts/ci/run_sidecar_verify.sh), then [`scripts/ci/run_extension_checks.sh`](../scripts/ci/run_extension_checks.sh), then `cargo test -p rex-daemon mvp_product_path`. It does **not** start `rex-daemon` for manual editor steps or **live LLM** dogfood ([MVP_SPEC.md](MVP_SPEC.md)).
 
-**Two tiers:** PR CI uses **`mock`** / harness paths in `uds_e2e` and a **loopback OpenAI-compat HTTP fixture** in `mvp_product_path` (real `http_openai_compat`, no cloud API). Operator dogfood requires **live** JSON `inference.openai_compat` (Ollama, LM Studio, etc.).
+**Three tiers:** (1) **Per-PR** — **`mock`** / harness paths in `uds_e2e` and a **loopback OpenAI-compat HTTP fixture** in `mvp_product_path` (real `http_openai_compat`, no cloud API) — **RC-10**. (2) **Planned opt-in + nightly** — live Ollama smoke (**R038**, **R039**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). (3) **Operator dogfood** — manual live JSON `inference.openai_compat` (Ollama, LM Studio, etc.) — [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md).
 
 **Builtin sidecars:** [`run_sidecar_verify.sh`](../scripts/ci/run_sidecar_verify.sh) runs in the **`sidecar-verify`** job (path-aware) and in **`Release / sidecar-verify`** on pull requests. Tag pushes run `run_rust_verify.sh` then `run_sidecar_verify.sh` in the Release `plan` job. A sidecar failure fails **`sidecar-verify`** (or the Release sidecar job) and, when sidecar paths are relevant, **`ci-checks`** (`GATE_FAIL`). Manifest: [`builtin_sidecars.txt`](../scripts/ci/builtin_sidecars.txt).
 
