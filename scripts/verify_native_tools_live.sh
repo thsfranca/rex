@@ -1,32 +1,27 @@
 #!/usr/bin/env bash
-# Opt-in operator E2E: R038 native broker tool calling on direct Ollama.
+# Operator E2E: R038 native broker tool calling on direct Ollama.
 #
-# Gate: REX_LIVE_LLM=1 (skipped with exit 0 when unset — not run in PR CI; RC-10).
-# Requires: Ollama at http://127.0.0.1:11434/v1, tool-capable model (default qwen2.5-coder:7b).
-# Asserts: plan-mode read loop (protocol=1, no protocol=3 on plan turn), agent read + .env deny.
+# Invoke only when Ollama is running with a tool-capable model. Not wired to PR CI (RC-10).
+# Defaults: http://127.0.0.1:11434/v1, model qwen2.5-coder:7b (direct Ollama product path).
 #
 # Daemon logs protocol as numeric enum (proto/rex/v1/rex.proto InferenceProtocol):
 #   1 = INFERENCE_PROTOCOL_NATIVE, 3 = INFERENCE_PROTOCOL_INTERIM_FALLBACK
 set -euo pipefail
 
-if [[ "${REX_LIVE_LLM:-}" != "1" ]]; then
-  echo "Skipping live LLM native-tools E2E (set REX_LIVE_LLM=1 to run)."
-  exit 0
-fi
-
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-MARKER="rex-native-e2e-marker"
-OLLAMA_HOST="${OLLAMA_HOST:-127.0.0.1:11434}"
-OLLAMA_BASE="http://${OLLAMA_HOST}/v1"
-OLLAMA_MODEL="${OLLAMA_MODEL:-qwen2.5-coder:7b}"
 FIXTURE_DIR="${ROOT_DIR}/fixtures/native_tools_e2e"
 TARGET_DIR="${CARGO_TARGET_DIR:-${ROOT_DIR}/target}"
 REX_BIN="${TARGET_DIR}/debug/rex"
 AGENT_LAUNCHER="${ROOT_DIR}/sidecars/rex-agent/rex-agent"
-READINESS_TIMEOUT_SECS="${READINESS_TIMEOUT_SECS:-90}"
-TURN_TIMEOUT_SECS="${TURN_TIMEOUT_SECS:-120}"
+
+MARKER="rex-native-e2e-marker"
+OLLAMA_BASE="http://127.0.0.1:11434/v1"
+OLLAMA_HOST="127.0.0.1:11434"
+OLLAMA_MODEL="qwen2.5-coder:7b"
+READINESS_TIMEOUT_SECS=90
+TURN_TIMEOUT_SECS=120
 
 DAEMON_PID=""
 REX_ROOT=""
@@ -96,7 +91,7 @@ run_complete_ndjson() {
   local prompt="$2"
   local out_file="$3"
   local timeout_secs="${4:-${TURN_TIMEOUT_SECS}}"
-  if ! REX_ROOT="${REX_ROOT}" PATH="${PATH}" "${PYTHON}" - "${timeout_secs}" "${REX_BIN}" "${mode}" "${prompt}" "${out_file}" <<'PY'
+  if ! "${PYTHON}" - "${timeout_secs}" "${REX_BIN}" "${mode}" "${prompt}" "${out_file}" "${REX_ROOT}" <<'PY'
 import os
 import subprocess
 import sys
@@ -106,7 +101,9 @@ rex_bin = sys.argv[2]
 mode = sys.argv[3]
 prompt = sys.argv[4]
 out_path = sys.argv[5]
+rex_root = sys.argv[6]
 env = os.environ.copy()
+env["REX_ROOT"] = rex_root
 try:
     completed = subprocess.run(
         [rex_bin, "complete", "--format", "ndjson", "--mode", mode, "--", prompt],
@@ -132,7 +129,7 @@ PY
 wait_for_daemon_ready() {
   local deadline=$((SECONDS + READINESS_TIMEOUT_SECS))
   while (( SECONDS < deadline )); do
-    if REX_ROOT="${REX_ROOT}" "${REX_BIN}" status >/dev/null 2>&1; then
+    if env REX_ROOT="${REX_ROOT}" "${REX_BIN}" status >/dev/null 2>&1; then
       return 0
     fi
     if ! kill -0 "${DAEMON_PID}" 2>/dev/null; then
@@ -194,7 +191,7 @@ fi
 if [[ -x "${AGENT_LAUNCHER}" ]]; then
   export PATH="${ROOT_DIR}/sidecars/rex-agent:${PATH}"
 elif ! command -v rex-agent >/dev/null 2>&1; then
-  fail "rex-agent not found; pip install -e sidecars/rex-agent or set PATH"
+  fail "rex-agent not found; pip install -e sidecars/rex-agent"
 fi
 
 REX_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/rex-native-tools-e2e-root.XXXXXX")"
@@ -202,14 +199,13 @@ WORKSPACE="$(mktemp -d "${TMPDIR:-/tmp}/rex-native-tools-e2e-ws.XXXXXX")"
 DAEMON_SOCKET="${WORKSPACE}/rex-daemon.sock"
 SIDECAR_SOCKET="${WORKSPACE}/rex-sidecar.sock"
 DAEMON_LOG="${WORKSPACE}/daemon.log"
-export REX_ROOT
 
-info "Preparing workspace fixture under ${WORKSPACE}"
+info "Preparing workspace fixture under ${WORKSPACE}/workspace"
 mkdir -p "${WORKSPACE}/workspace"
 cp "${FIXTURE_DIR}/workspace/native_fixture.txt" "${WORKSPACE}/workspace/native_fixture.txt"
 printf 'secret=%s\n' "do-not-leak" >"${WORKSPACE}/workspace/.env"
 
-info "Writing ${REX_ROOT}/config.json"
+info "Writing isolated ${REX_ROOT}/config.json for harness run"
 python3 - "${REX_ROOT}/config.json" "${WORKSPACE}/workspace" "${DAEMON_SOCKET}" "${SIDECAR_SOCKET}" "${OLLAMA_BASE}" "${OLLAMA_MODEL}" <<'PY'
 import json
 import sys
@@ -244,14 +240,13 @@ with open(out_path, "w", encoding="utf-8") as fh:
     fh.write("\n")
 PY
 
-info "Installing proto stubs into REX_ROOT"
-export REX_PROTO_SRC="${ROOT_DIR}/proto"
-if ! REX_ROOT="${REX_ROOT}" REX_PROTO_SRC="${REX_PROTO_SRC}" "${REX_BIN}" proto install; then
-  fail "rex proto install failed"
+info "Installing proto stubs into isolated Rex layout"
+if ! env REX_ROOT="${REX_ROOT}" "${REX_BIN}" proto install; then
+  fail "rex proto install failed (run from repo root so proto/ is discoverable)"
 fi
 
 info "Starting rex daemon (log: ${DAEMON_LOG})"
-REX_ROOT="${REX_ROOT}" "${REX_BIN}" daemon >>"${DAEMON_LOG}" 2>&1 &
+env REX_ROOT="${REX_ROOT}" "${REX_BIN}" daemon >>"${DAEMON_LOG}" 2>&1 &
 DAEMON_PID=$!
 
 info "Waiting for daemon + sidecar ready (timeout ${READINESS_TIMEOUT_SECS}s)"

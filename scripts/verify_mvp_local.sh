@@ -28,8 +28,7 @@ cat <<'EOF'
 
 ==> MVP local preflight passed.
 
-Next (opt-in, live LLM): REX_LIVE_LLM=1 ./scripts/verify_native_tools_live.sh
-(requires Ollama + tool-capable model; see docs/NATIVE_TOOL_CALLING.md).
+Next (live LLM, after Ollama is up): ./scripts/verify_native_tools_live.sh
 
 Then: configure JSON per docs/EXTENSION_LOCAL_E2E.md section 3, run rex daemon,
 and follow the E2E doc for editor dogfood (status bar, REX: Open Chat, agent mode,

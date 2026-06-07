@@ -187,10 +187,10 @@ After MVP preflight and with Ollama serving a **tool-capable** model (default `q
 ```bash
 pip install -e sidecars/rex-agent
 rex proto install
-REX_LIVE_LLM=1 ./scripts/verify_native_tools_live.sh
+./scripts/verify_native_tools_live.sh
 ```
 
-**Gate:** `REX_LIVE_LLM=1` (script exits 0 with a skip message when unset — not run in PR CI; **RC-10**).
+Requires Ollama at `http://127.0.0.1:11434/v1` with a tool-capable model (default in script: `qwen2.5-coder:7b`). Not run in PR CI (**RC-10**).
 
 **What it automates vs §8 checklist below:**
 
@@ -201,7 +201,7 @@ REX_LIVE_LLM=1 ./scripts/verify_native_tools_live.sh
 | Extension UI, cancel, client hints, multi-turn | No | Yes |
 | ask mode live turn | No (**R039**) | Yes |
 
-Fixture workspace: [`fixtures/native_tools_e2e/`](../fixtures/native_tools_e2e/). Override model: `OLLAMA_MODEL=...`.
+Fixture workspace: [`fixtures/native_tools_e2e/workspace/`](../fixtures/native_tools_e2e/workspace/).
 
 Prerequisites for §8 and §8a: HTTP server running (example: `ollama serve`), JSON from step 3 on the **same** daemon process with **direct Ollama** `inference.openai_compat.base_url` `http://127.0.0.1:11434/v1` (gateway opt-in only for multi-provider), workspace folder open in the editor with `rex.daemonAutoStart: true` (or manual `rex daemon` started from that project directory).
 
