@@ -55,6 +55,20 @@ Rejected alternatives considered:
 - **Negative:** Daemon gains OTel SDK complexity; sidecar authors must use daemon UDS for observability RPCs (distinct from sidecar broker socket).
 - **Risks / follow-up:** PII must stay out of exported logs/traces by default; trace correlation between daemon and sidecar needs explicit propagation design in a later phase. Implementation PRs (proto, handlers, OTel wiring) follow this ADR. Local economics persistence is accepted in [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) — complementary to OTLP, not a rejected pattern.
 
+## Implementation status (2026-06)
+
+Canonical hub: [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md).
+
+| Item | Status |
+|------|--------|
+| SQLite `rex-obs-store` + OTLP export | **Shipped** |
+| Rex observability read API (historical query) | **Shipped** — [OBS_READ_API.md](../../OBS_READ_API.md) |
+| Grafana Rex OTel datasource plugin + `rex obs up` | **Shipped** — [OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md) |
+| `rex obs` CLI (`serve`, `up`, `down`, `doctor`, `catalog`) | **Shipped** |
+| CHCE mmap engine | **Planned** — [CHCE_ROADMAP.md](../../CHCE_ROADMAP.md), [ADR 0027](0027-chce-columnar-mmap-engine.md) |
+| SSE live tail (read API) | **Planned** — Phase 6 |
+| `SidecarObservabilityService` on daemon UDS | **Planned** |
+
 ## Related
 
 - [ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md) · [ADR 0008](0008-dedicated-sidecar-control-plane-api.md)

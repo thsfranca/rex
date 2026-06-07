@@ -212,7 +212,7 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | **R030** | Diff-only writes | **Done** — sidecar read→patch→write |
 | **R031** | Task-aware read pruning | **Done** — payloads >100 lines; config `read_pruning_enabled` |
 | **R032** | Token playbook + subagent metrics | **Done** — prefix SHA, dedup, hard cap |
-| **R038** | Native broker tool calling | **Should** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md); direct Ollama + `native_tools: auto` |
+| **R038** | Native broker tool calling | **partial** — PR1 done (daemon); PR2 sidecar — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 | **R036** | TRON static schema compression | **Could** — daemon prefix; optional before **R033** |
 | **R033** | MCP gRPC client | **Could** — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) Phase 2 |
 
@@ -220,17 +220,15 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 
 ## R038 — Native broker tool calling
 
-**Status:** `planned` (**Should**). Hub: [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md).
+**Status:** `partial` (**Should**). Hub: [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md). **PR 1** (proto + daemon + config) **Done**; **PR 2** sidecar routing + **PR 3** operator E2E remain.
 
-| Criterion | Intent |
-|-----------|--------|
-| Additive `BrokerInference` wire | `messages[]`, `tools[]`; response `tool_calls[]` + `content` + `protocol` |
-| Daemon `http_openai_compat` | Forward `tools` / `tool_choice`; parse SSE `delta.tool_calls`; Ollama `/api/show` capability cache |
-| Config default | `inference.openai_compat.native_tools: auto`; direct Ollama `base_url` for acceptance |
-| Sidecar | Native path + one-step interim JSON fallback per step |
-| Operator E2E | Plan-mode read loop on live direct Ollama — [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) |
+| Slice | Status |
+|-------|--------|
+| PR 1 — proto + daemon HTTP + `native_tools` | **Done** |
+| PR 2 — sidecar native path + JSON fallback | Next |
+| PR 3 — operator E2E script | Planned |
 
-Implementation: three code PR slices after hub merge (proto+daemon, sidecar, E2E script). **R033** rescoped to MCP gRPC client only (**Could**).
+**R033** rescoped to MCP gRPC client only (**Could**).
 
 ## Out of scope (this program)
 
@@ -238,7 +236,6 @@ Implementation: three code PR slices after hub merge (proto+daemon, sidecar, E2E
 - Cross-turn checkpoint DB (Postgres/SQLite checkpointer)
 - LangSmith Deployment / K8s as Rex substitute
 - Rust rewrite of product agent
-- Bumping v1.0 **RC-*** until agent is proven (R019)
 
 ## Related
 

@@ -45,6 +45,14 @@ Pressures forcing this decision:
   - Defining what counts as a "checkpoint" beyond simple allow/deny will drive further design (tool / write-step gating). Today `Checkpoint { reason }` is **reserved** and proceeds without blocking the stream until phase-2 semantics land.
   - `REX_AGENT_APPROVALS` is cataloged in [`docs/CONFIGURATION.md`](../../CONFIGURATION.md).
 
+## Implementation status (2026-06)
+
+- **Activation:** `agent.approvals_enabled` in JSON config (`approval_gate_from_config` at daemon boot). Default off → `AlwaysAllow`.
+- **Clients:** Extension and `rex complete` pass `--approval-id` when enforcement is on — [V1_0.md](../../V1_0.md) RC-06.
+- **Stable deny string:** Retains `REX_AGENT_APPROVALS=1` label in `ENFORCEMENT_DENY_REASON` for client/test compatibility; env var is **not read**.
+- **Access policy broker:** Mode × capability matrix complete per **R020** — [POLICY_ENGINE.md](../../POLICY_ENGINE.md), [ADR 0013](0013-access-policy-broker-completion.md).
+- **Reserved:** `Checkpoint` decision variant for future tool-step gating.
+
 ## Related
 
 - [ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md) — daemon owns orchestration and economics.

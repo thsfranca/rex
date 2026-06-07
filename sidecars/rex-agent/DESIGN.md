@@ -64,9 +64,9 @@ flowchart TB
 
 Delimited payloads reuse existing gRPC string fields (`content`, `stdout`). **R038** adds additive proto fields for native `tools[]` / `tool_calls` — hub [NATIVE_TOOL_CALLING.md](../../docs/NATIVE_TOOL_CALLING.md).
 
-## R038 — Native broker tool calling (planned)
+## R038 — Native broker tool calling (partial)
 
-Additive `BrokerInference` wire (`messages[]`, `tools[]`, response `tool_calls[]`, `protocol`). Sidecar routes native `tool_calls` in `llm.py`; one-step interim JSON fallback per step when daemon reports `interim_fallback`. Default config: direct Ollama + `native_tools: auto`. Implementation follows hub; proto/daemon land in **R038 PR 1** before sidecar-only slices.
+**PR 1 Done** (daemon): additive `BrokerInference` wire, `http_openai_compat` forwarding, Ollama `/api/show` probe. **PR 2** (sidecar): route native `tool_calls` in `llm.py`; one-step interim JSON fallback per step when daemon reports `interim_fallback`. Default config: direct Ollama + `native_tools: auto`. Hub: [NATIVE_TOOL_CALLING.md](../../docs/NATIVE_TOOL_CALLING.md).
 
 ## R033 — MCP gRPC client (Phase 2 — deferred)
 

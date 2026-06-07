@@ -105,7 +105,7 @@ Truncation at **line boundaries** when exceeding `max_tool_result_bytes`.
 | **Prefix SHA-256 stable** across steps 1–12 within a turn (`[system]` + `daemon_context` unchanged) | R027, R032 |
 | Static prefix before volatile tool results (cache-friendly) | R027 |
 | Dynamic tool disclosure: ask=none, plan=read/list, agent=all | R027, R032 |
-| **Microcompaction:** replace `fs.read` transcripts older than **2** steps with stubs; keep `viewer_summary` | R029+ (Should) |
+| **Microcompaction:** replace `fs.read` transcripts older than **2** steps with stubs; keep `viewer_summary` | R029 Done |
 | 25% suffix compaction trigger vs broker result budget (`RemoveMessage`) | R029 |
 | **Raw delimited tool results** from daemon; no JSON wrap of file/shell stdout | R034 |
 | Viewer isolation — Editor without raw read dumps | R028 |

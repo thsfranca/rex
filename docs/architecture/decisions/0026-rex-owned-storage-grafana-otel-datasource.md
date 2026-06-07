@@ -43,6 +43,22 @@ Partial Phase 2 code may still export OTLP when `observability.otlp.endpoint` is
 - **Negative:** Rex owns Grafana kit versioning, AGPL distribution considerations, datasource plugin maintenance, and read API schema evolution.
 - **Risks / follow-up:** Implementation PRs for read API, plugin, `rex obs up`, and provisioning; narrow shipped OTLP export to optional interop; realtime path beyond terminal-only store append.
 
+## Implementation status (2026-06)
+
+Canonical hub: [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md).
+
+| Item | Status |
+|------|--------|
+| Rex-owned SQLite store + read API | **Shipped** |
+| Rex Grafana OTel datasource plugin | **Shipped** — `integrations/grafana-rex-otel/` |
+| `rex obs up` + provisioning templates | **Shipped** — operator supplies Grafana binary from PATH or vendor dir |
+| Default preset dashboards | **Shipped** — `templates/obs/` |
+| CHCE mmap engine (`engine=mmap`) | **Planned** — [CHCE_ROADMAP.md](../../CHCE_ROADMAP.md) |
+| SSE live subscribe | **Planned** — Phase 6 |
+| `SidecarObservabilityService` | **Planned** |
+
+Decision bullets above record acceptance-time intent; this section tracks shipped vs planned code.
+
 ## Related
 
 - [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](0025-dual-economics-store-engines.md)
