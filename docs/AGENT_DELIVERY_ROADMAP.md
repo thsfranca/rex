@@ -172,7 +172,7 @@ Prerequisites for **`rex-agent`** dogfood (**R017–R018** Done). Design: [DEVEL
 
 **Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, operator checklist in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md#8-r019-acceptance--live-model-operator-not-ci), and extension operator alignment with **`rex-agent`** (JSON setup hints, **`rex.productAgentConfig`** default, NDJSON **`tool`**/**`step`** cards).
 
-**Known gap:** operator proof of plan-mode native tool loop on direct Ollama — **R038 PR 3** (automated script + [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) update). Sidecar native routing shipped in **R038 PR 2** ([#276](https://github.com/thsfranca/rex/pull/276)); CI/stub paths still use interim JSON.
+**Known gap:** none — plan-mode native tool loop on direct Ollama is covered by **`REX_LIVE_LLM=1 ./scripts/verify_native_tools_live.sh`** ([NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md), [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §8a). CI/stub paths still use interim JSON.
 
 **Follow-up:** opt-in automated live Ollama smoke (`ask` + brokered read/policy) — **R039** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). Plan-mode tool-loop E2E is **R038** (separate track).
 
@@ -212,7 +212,7 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | **R030** | Diff-only writes | **Done** — sidecar read→patch→write |
 | **R031** | Task-aware read pruning | **Done** — payloads >100 lines; config `read_pruning_enabled` |
 | **R032** | Token playbook + subagent metrics | **Done** — prefix SHA, dedup, hard cap |
-| **R038** | Native broker tool calling | **partial** — PR1–PR2 done; PR3 operator E2E — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
+| **R038** | Native broker tool calling | **Done** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 | **R036** | TRON static schema compression | **Could** — daemon prefix; optional before **R033** |
 | **R033** | MCP gRPC client | **Could** — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) Phase 2 |
 
@@ -220,13 +220,13 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 
 ## R038 — Native broker tool calling
 
-**Status:** `partial` (**Should**). Hub: [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md). **PR 1–2** **Done**; **PR 3** operator E2E remains.
+**Status:** **Done** (**Should**). Hub: [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md).
 
 | Slice | Status |
 |-------|--------|
 | PR 1 — proto + daemon HTTP + `native_tools` | **Done** |
 | PR 2 — sidecar native path + JSON fallback | **Done** |
-| PR 3 — operator E2E script | **Next** |
+| PR 3 — operator E2E script | **Done** — `REX_LIVE_LLM=1 ./scripts/verify_native_tools_live.sh` |
 
 **R033** rescoped to MCP gRPC client only (**Could**).
 

@@ -62,11 +62,11 @@ All Must **RC-*** rows in [V1_0.md](V1_0.md) are **Met**. Follow-up work is **Sh
 
 Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. Default supervised sidecar for CI/harness is **`rex-sidecar-stub`**; **`rex-agent`** ships LangGraph ReAct (**R018** Done) on the gRPC scaffold (**R017** Done). **Target graph:** Viewer/Editor subagents — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md).
 
-**Priority rationale:** **R013–R022**, **R017–R019**, **R027–R032**, **R034**, **R031**, and **R037** are **Done**. **RC-S2** is **Met**. **R023–R026** are **Done**. Next **Should** product follow-up: **R038** (native broker tool calling). Next **Could** follow-up: **R016** / **R033** (MCP client) / **R036**. Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md).
+**Priority rationale:** **R013–R022**, **R017–R019**, **R027–R032**, **R034**, **R031**, **R037**, and **R038** are **Done**. **RC-S2** is **Met**. **R023–R026** are **Done**. Next **Should** product follow-up: **R039** (live Ollama economics smoke). Next **Could** follow-up: **R016** / **R033** (MCP client) / **R036**. Serialization design: [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md).
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
-| 1 | Doc truth (stub vs product) | — | **`rex-agent`** shipped; **`rex-sidecar-stub`** = harness/CI default; **R038** partial (PR1–PR2 done); JSON config primary ([CONFIGURATION.md](CONFIGURATION.md)) |
+| 1 | Doc truth (stub vs product) | — | **`rex-agent`** shipped; **`rex-sidecar-stub`** = harness/CI default; **R038** **Done**; JSON config primary ([CONFIGURATION.md](CONFIGURATION.md)) |
 | 2 | Platform enablers | **R013** | Done — `BrokerListDir`, `RunTurn.model`, stream passthrough |
 | 3 | Unified `rex` CLI | **R014** | Done — single `rex` binary; subcommands |
 | 4 | Config + proto SDK | **R015** | Done — JSON config, `rex proto install`, `proto.gen_root` |
@@ -86,7 +86,7 @@ Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. De
 | 18 | Task-aware read pruning | **R031** | Done — goal-hint filter for reads >100 lines — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | 19 | TRON static schema compression | **R036** | Daemon prefix schema compaction (**Could**) — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | 20 | MCP gRPC client | **R033** | Phase 2; [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) (**Could**) |
-| 21 | Native broker tool calling | **R038** | OpenAI-compat `tools[]` on `BrokerInference`; direct Ollama default — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) (**Should**) |
+| 21 | Native broker tool calling | **R038** | **Done** — OpenAI-compat `tools[]` on `BrokerInference`; direct Ollama default — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 | 22 | Plan mode planning tools | **R037** | Done — [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md) |
 
 ```mermaid
@@ -225,7 +225,7 @@ Canonical program: **[CHCE_ROADMAP.md](CHCE_ROADMAP.md)**. **Observability** del
 | **R032** | Token playbook + prefix SHA metrics | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R036** | TRON static schema compression | Could — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | **R033** | MCP gRPC client | Could — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
-| **R038** | Native broker tool calling (`tools[]` / `tool_calls` on `BrokerInference`) | **Should** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
+| **R038** | Native broker tool calling (`tools[]` / `tool_calls` on `BrokerInference`) | **Done** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 | **R023** | Supply chain: `cargo-audit`, Dependabot | **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md); `cargo-deny` deferred |
 | **R024** | Security SAST: CodeQL (primary) | **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md), [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml) |
 | **R025** | `rex-agent` static analysis: Ruff | **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |

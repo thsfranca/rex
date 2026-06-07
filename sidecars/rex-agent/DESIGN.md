@@ -1,6 +1,6 @@
 # rex-agent — design contract
 
-**Status:** LangGraph ReAct loop shipped (**R018**). gRPC scaffold (**R017**). Operator defaults (**R019**). Broker policy (**R020–R022**). Interim tool protocol: JSON in model text until **R038** native `tools` on `BrokerInference` — [NATIVE_TOOL_CALLING.md](../../docs/NATIVE_TOOL_CALLING.md).
+**Status:** LangGraph ReAct loop shipped (**R018**). gRPC scaffold (**R017**). Operator defaults (**R019**). Broker policy (**R020–R022**). Native `tools[]` on `BrokerInference` (**R038** **Done**) — [NATIVE_TOOL_CALLING.md](../../docs/NATIVE_TOOL_CALLING.md).
 
 **Target graph:** Orchestrator + Viewer + Editor — [AGENT_GRAPH_ARCHITECTURE.md](../../docs/AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](../../docs/architecture/decisions/0022-viewer-editor-subagent-topology.md). Wire formats: [ADR 0023](../../docs/architecture/decisions/0023-hybrid-agent-serialization-boundaries.md).
 
@@ -64,9 +64,9 @@ flowchart TB
 
 Delimited payloads reuse existing gRPC string fields (`content`, `stdout`). **R038** adds additive proto fields for native `tools[]` / `tool_calls` — hub [NATIVE_TOOL_CALLING.md](../../docs/NATIVE_TOOL_CALLING.md).
 
-## R038 — Native broker tool calling (partial)
+## R038 — Native broker tool calling (Done)
 
-**PR 1 Done** (daemon): additive `BrokerInference` wire, `http_openai_compat` forwarding, Ollama `/api/show` probe. **PR 2 Done** (sidecar): route native `tool_calls` in `llm.py`; one-step interim JSON fallback per step when daemon reports `interim_fallback`. **PR 3** (planned): operator E2E script on direct Ollama. Default config: direct Ollama + `native_tools: auto`. Hub: [NATIVE_TOOL_CALLING.md](../../docs/NATIVE_TOOL_CALLING.md).
+**PR 1 Done** (daemon): additive `BrokerInference` wire, `http_openai_compat` forwarding, Ollama `/api/show` probe. **PR 2 Done** (sidecar): route native `tool_calls` in `llm.py`; one-step interim JSON fallback per step when daemon reports `interim_fallback`. **PR 3 Done** (operator): [`verify_native_tools_live.sh`](../../scripts/verify_native_tools_live.sh) (`REX_LIVE_LLM=1`) on direct Ollama. Default config: direct Ollama + `native_tools: auto`. Hub: [NATIVE_TOOL_CALLING.md](../../docs/NATIVE_TOOL_CALLING.md).
 
 ## R033 — MCP gRPC client (Phase 2 — deferred)
 

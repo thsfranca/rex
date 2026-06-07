@@ -178,9 +178,32 @@ Open **REX: Open Chat**, select **agent** or **plan** mode, send a short prompt,
 
 ## 8) R019 acceptance — live model (operator; not CI)
 
-After `./scripts/verify_mvp_local.sh` passes, validate the **product path** with **`rex-agent`** and **live** OpenAI-compatible HTTP (Ollama, LiteLLM, etc.). CI uses mock/stub harness config; this checklist is the integration acceptance gate for **R019**. Reliable **plan/agent** tool loops on a live model require **R038** native broker tool calling — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md). Automated live smoke (`ask` + brokered read/policy subset) is planned as **R039** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
+After `./scripts/verify_mvp_local.sh` passes, validate the **product path** with **`rex-agent`** and **live** OpenAI-compatible HTTP (Ollama, LiteLLM, etc.). CI uses mock/stub harness config; this checklist is the integration acceptance gate for **R019**. Reliable **plan/agent** tool loops on a live model use **R038** native broker tool calling — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md). Automated live smoke (`ask` + brokered read/policy subset) is planned as **R039** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
 
-Prerequisites: HTTP server running (example: `ollama serve`), JSON from step 3 on the **same** daemon process with **direct Ollama** `inference.openai_compat.base_url` `http://127.0.0.1:11434/v1` (gateway opt-in only for multi-provider), workspace folder open in the editor with `rex.daemonAutoStart: true` (or manual `rex daemon` started from that project directory).
+### 8a) Automated native tool loop (R038; opt-in)
+
+After MVP preflight and with Ollama serving a **tool-capable** model (default `qwen2.5-coder:7b`):
+
+```bash
+pip install -e sidecars/rex-agent
+rex proto install
+REX_LIVE_LLM=1 ./scripts/verify_native_tools_live.sh
+```
+
+**Gate:** `REX_LIVE_LLM=1` (script exits 0 with a skip message when unset — not run in PR CI; **RC-10**).
+
+**What it automates vs §8 checklist below:**
+
+| Check | `verify_native_tools_live.sh` | Manual §8 |
+|-------|------------------------------|-----------|
+| Plan-mode read via native `tools[]` / `tool_calls` | Yes — fixture marker in NDJSON chunks; daemon log `protocol=1` (native), no `protocol=3` on plan turn | Optional |
+| Agent allowed read + `.env` deny | Yes | Optional (`__rex_read:` prompts) |
+| Extension UI, cancel, client hints, multi-turn | No | Yes |
+| ask mode live turn | No (**R039**) | Yes |
+
+Fixture workspace: [`fixtures/native_tools_e2e/`](../fixtures/native_tools_e2e/). Override model: `OLLAMA_MODEL=...`.
+
+Prerequisites for §8 and §8a: HTTP server running (example: `ollama serve`), JSON from step 3 on the **same** daemon process with **direct Ollama** `inference.openai_compat.base_url` `http://127.0.0.1:11434/v1` (gateway opt-in only for multi-provider), workspace folder open in the editor with `rex.daemonAutoStart: true` (or manual `rex daemon` started from that project directory).
 
 - [ ] Daemon listen log includes `workspace.root=<absolute path>` (not `workspace.error=not_configured`).
 - [ ] Extension output shows project `.rex/config.json` merge when auto-start runs; multi-root logs `workspace.warning=multi_root` when applicable.
