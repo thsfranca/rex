@@ -30,7 +30,7 @@ Before adding or materially editing a doc under `docs/`:
 | [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) | How to contribute and gate quality |
 | [PRIORITIZATION.md](PRIORITIZATION.md) | MoSCoW + quick R-ICE |
 | [V1_0.md](V1_0.md) | v1.0 release criteria (SMART), SemVer meaning, tagging gate |
-| [ROADMAP.md](ROADMAP.md) | Post-v1.0 **Should** / **Could** queue, **RC-S*** closure, engineering backlog IDs |
+| [ROADMAP.md](ROADMAP.md) | v1.0 closure queue (**RC-S3–RC-S5** Must), **Could** follow-ups, engineering backlog IDs |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | SAD + C4-style views + links to ADRs |
 | [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) | Architecture policies, ownership, documentation layering |
 | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Deferred VM/container transport catalog |

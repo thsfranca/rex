@@ -1,6 +1,6 @@
 # CHCE observability store — delivery program
 
-**Status:** **planned** — design accepted ([ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)); no mmap implementation in `rex-obs-store` yet. **Done** tracking: **RC-S4** (Program A) and related **RC-S5** in [V1_0.md](V1_0.md).
+**Status:** **planned** — design accepted ([ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)); no mmap implementation in `rex-obs-store` yet. **Done** tracking: Must **RC-S4** (Program A) and **RC-S5** in [V1_0.md](V1_0.md) — both block the **`1.0.0` git tag**.
 
 **Parent hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **Format reference:** [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) · **Main queue:** [ROADMAP.md](ROADMAP.md) **R043–R054**
 
@@ -14,8 +14,8 @@ CHCE is an **observability** feature: daemon economics telemetry persistence and
 
 | Lane | Rank | Notes |
 |------|------|-------|
-| Global | **2** (after **R039**) | **Parallel OK** with **R039** — disjoint path (`rex-obs-store` vs CLI smoke) |
-| MoSCoW | **Should** Program A (**R043–R049**); **Should** Program B (**R050–R051**, **RC-S5**); **Could** Program C (**R052–R054**) |
+| Global | **1** | **Must** — v1.0 blocked until Program A + **RC-S5** close |
+| MoSCoW | **Must** Program A (**R043–R049**, **RC-S4**); **Must** Program B (**R050–R051**, **RC-S5**); **Could** Program C (**R052–R054**) |
 | R-ICE | **75** (**R043**); **~65** avg Program A | High learning value; medium ease (multi-PR) |
 | Next slice | **R043** — `StorePort` + engine dispatch | Closes start of **RC-S4** |
 
@@ -103,20 +103,20 @@ One PR per row where feasible; merge-wait between slices. Canonical queue: [ROAD
 
 | Order | ID | Theme | Outcome | Priority |
 |-------|-----|-------|---------|----------|
-| 1 | **R043** | `StorePort` + engine dispatch | Trait over sqlite + mmap; `engine=mmap` on macOS selects CHCE; non-macOS → `store.engine_unsupported` | **Should** |
-| 2 | **R044** | Hot-path ingest | Bounded `mpsc` + `LiveRingBuffer`; append returns &lt;1 ms; unit tests | **Should** |
-| 3 | **R045** | Global dictionary | `DictionaryManager` + `store.dict`; categoricals → u16 ordinals | **Should** |
-| 4 | **R046** | Page seal pipeline | `AppendCoordinator` + `ColumnarCodec` v1 + `MmapPaginator`; 16 KB pages, `F_BARRIERFSYNC`, CRC32, zone footers | **Should** |
-| 5 | **R047** | Write API parity | `append_config` + `append_stream` on CHCE; daemon wired when `engine=mmap` | **Should** |
-| 6 | **R048** | Historical read parity | `scan_streams_by_time` / `ObsQuery` same filter shape as SQLite; read API unchanged | **Should** |
-| 7 | **R049** | Verification harness | Fixture parity (sqlite vs mmap aggregates); recovery fuzz; `rex obs doctor` mmap checks | **Should** |
+| 1 | **R043** | `StorePort` + engine dispatch | Trait over sqlite + mmap; `engine=mmap` on macOS selects CHCE; non-macOS → `store.engine_unsupported` | **Must** |
+| 2 | **R044** | Hot-path ingest | Bounded `mpsc` + `LiveRingBuffer`; append returns &lt;1 ms; unit tests | **Must** |
+| 3 | **R045** | Global dictionary | `DictionaryManager` + `store.dict`; categoricals → u16 ordinals | **Must** |
+| 4 | **R046** | Page seal pipeline | `AppendCoordinator` + `ColumnarCodec` v1 + `MmapPaginator`; 16 KB pages, `F_BARRIERFSYNC`, CRC32, zone footers | **Must** |
+| 5 | **R047** | Write API parity | `append_config` + `append_stream` on CHCE; daemon wired when `engine=mmap` | **Must** |
+| 6 | **R048** | Historical read parity | `scan_streams_by_time` / `ObsQuery` same filter shape as SQLite; read API unchanged | **Must** |
+| 7 | **R049** | Verification harness | Fixture parity (sqlite vs mmap aggregates); recovery fuzz; `rex obs doctor` mmap checks | **Must** |
 
 ### Program B — Phase 6 (live + traces)
 
 | Order | ID | Theme | Outcome | Priority |
 |-------|-----|-------|---------|----------|
-| 8 | **R050** | SSE live tail | `tail_telemetry` + read API `GET /v1/metrics/stream` cursor merge — [OBS_READ_API.md](OBS_READ_API.md) | **Should** — **RC-S5** |
-| 9 | **R051** | Sparse trace index + spans | `trace_id` / `turn_id` sidecar; `append_span` schema | **Should** — **RC-S5** |
+| 8 | **R050** | SSE live tail | `tail_telemetry` + read API `GET /v1/metrics/stream` cursor merge — [OBS_READ_API.md](OBS_READ_API.md) | **Must** — **RC-S5** |
+| 9 | **R051** | Sparse trace index + spans | `trace_id` / `turn_id` sidecar; `append_span` schema | **Must** — **RC-S5** |
 
 ### Program C — Phase 7 (optimization + promotion)
 

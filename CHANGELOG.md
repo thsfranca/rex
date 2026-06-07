@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [1.0.0] - (awaiting tag)
 
-Workspace version **`1.0.0`** in tree; **`v1.0.0` git tag** lands when a maintainer merges the release-plz Release PR ([RELEASE.md](docs/RELEASE.md)).
+Workspace version **`1.0.0`** preparatory in tree; **`v1.0.0` git tag** lands when a maintainer merges the release-plz Release PR **after** all Must **RC-*** rows are **Met** (**RC-01–RC-10** and **RC-S3–RC-S5**) — [RELEASE.md](docs/RELEASE.md), [V1_0.md](docs/V1_0.md).
 
 ### Added
 
@@ -20,7 +20,7 @@ Workspace version **`1.0.0`** in tree; **`v1.0.0` git tag** lands when a maintai
 
 ### Changed
 
-- All Must **RC-01…RC-10** Met per [V1_0.md](docs/V1_0.md).
+- Streaming/agent Must **RC-01…RC-10** Met per [V1_0.md](docs/V1_0.md); observability Must **RC-S3–RC-S5** remain open (v1.0 tag blocked).
 
 ## [0.1.0] - 2026-05-21
 

@@ -1,8 +1,8 @@
 # Roadmap
 
-**Purpose:** track **post-v1.0** **Should** / **Could** work and closure of **Should** release criteria (**RC-S***) in **[V1_0.md](V1_0.md)**. Must **RC-*** remain canonical in that hub. [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) states intent; [MVP_SPEC.md](MVP_SPEC.md) is Phase 1 **architecture and scope** (no separate completion status). [PRIORITIZATION.md](PRIORITIZATION.md) describes MoSCoW bucketing and light R-ICE scoring.
+**Purpose:** track **v1.0 closure** and **Could** follow-ups mapped to **[V1_0.md](V1_0.md)** release criteria. Must **RC-*** remain canonical in that hub. [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) states intent; [MVP_SPEC.md](MVP_SPEC.md) is Phase 1 **architecture and scope** (no separate completion status). [PRIORITIZATION.md](PRIORITIZATION.md) describes MoSCoW bucketing and light R-ICE scoring.
 
-**Version:** workspace **`1.0.0`** — all Must **RC-*** in [V1_0.md](V1_0.md) are **Met**.
+**Version:** workspace **`1.0.0`** preparatory in [Cargo.toml](../Cargo.toml); **v1.0 not Met** — observability Must **RC-S3–RC-S5** open ([V1_0.md](V1_0.md)).
 
 ## Release criteria status
 
@@ -20,6 +20,9 @@ Canonical definitions and evidence: **[V1_0.md](V1_0.md)**. Update status there 
 | RC-08 | Met |
 | RC-09 | Met |
 | RC-10 | Met |
+| RC-S3 | Partial | Observability baseline — [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) |
+| RC-S4 | Not met | CHCE mmap Program A (**R043–R049**) — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| RC-S5 | Not met | Sidecar observability API + SSE live tail (**R050–R051**) |
 
 ### Should criteria (not blocking `1.0.0`)
 
@@ -27,9 +30,6 @@ Canonical definitions and evidence: **[V1_0.md](V1_0.md)**. Update status there 
 |----|--------|-------|
 | RC-S1 | Met | Extension `rex.modelId` → `--model` — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | RC-S2 | Met | Long-session extension stress — cancel returns UI to idle |
-| RC-S3 | Partial | Observability baseline — sqlite store, read API, `rex obs up`, Grafana plugin — [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) |
-| RC-S4 | Not met | CHCE mmap Program A (**R043–R049**) — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
-| RC-S5 | Not met | Sidecar observability API + SSE live tail (**R050–R051**) |
 | RC-S6 | Not met | Opt-in live LLM economics smoke (**R039–R040**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
 
 ## Theme order (dependency mental model)
@@ -44,7 +44,7 @@ flowchart LR
   agent[R013_R038_agent_Done]
   obs[Observability_RC-S3_S6]
   chce[CHCE_RC-S4_R043_R049]
-  v1[v1_0_Must_RC_Met]
+  v1[v1_0_RC_S3_S5_Met]
   core --> side
   side --> broker
   broker --> ext
@@ -58,11 +58,11 @@ flowchart LR
   agent --> v1
 ```
 
-**Current focus:** Must **RC-*** closed. **Next** work closes **Should RC-S3–RC-S6** — see [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+**Current focus:** Close observability Must **RC-S3–RC-S5** for v1.0 tag — see [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
 
 ## Now — stable baseline
 
-All Must **RC-*** in [V1_0.md](V1_0.md) are **Met**. **RC-S1–RC-S2** (extension) are **Met**. Product agent **Should** program **R013–R038** is **Done**. No **Must** rows open.
+Streaming/agent Must **RC-01–RC-10** are **Met**. Observability Must **RC-S3–RC-S5** are **open** (v1.0 **not Met**). **RC-S1–RC-S2** (extension Should) are **Met**. Product agent program **R013–R038** is **Done**.
 
 | Priority | What | Notes |
 |----------|------|-------|
@@ -75,18 +75,18 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 
 | Rank | ID / theme | MoSCoW | RC-* | Source(s) | Status |
 |------|------------|--------|------|-----------|--------|
-| 1 | **R039** — opt-in Ollama live smoke (`ask` + brokered read/policy) | **Should** | RC-S6 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Open |
-| 2 | **R043** — CHCE `StorePort` + engine dispatch | **Should** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open — **parallel with R039** |
-| 3 | **RC-S3** — observability baseline gaps (Phase 2 OTLP, read API rollups) | **Should** | RC-S3 | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | **Partial** |
-| 4 | **R040** — nightly live-smoke workflow (non-blocking) | **Should** | RC-S6 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [CI.md](CI.md) | Open — **after R039** |
-| 5 | **R044** — CHCE hot-path `LiveRingBuffer` | **Should** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open — **after R043** |
-| 6 | **R045** — CHCE global dictionary | **Should** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
-| 7 | **R046** — CHCE page seal pipeline | **Should** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
-| 8 | **R047** — CHCE write API parity | **Should** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
-| 9 | **R048** — CHCE historical read parity | **Should** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
-| 10 | **R049** — CHCE verification harness | **Should** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
-| 11 | **R050** — SSE live tail (read API) | **Should** | RC-S5 | [OBS_READ_API.md](OBS_READ_API.md), [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open — **after R049** |
-| 12 | **R051** — sparse trace index + spans | **Should** | RC-S5 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
+| 1 | **R043** — CHCE `StorePort` + engine dispatch | **Must** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
+| 2 | **RC-S3** — observability baseline gaps (Phase 2 OTLP, read API rollups) | **Must** | RC-S3 | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | **Partial** |
+| 3 | **R044** — CHCE hot-path `LiveRingBuffer` | **Must** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open — **after R043** |
+| 4 | **R045** — CHCE global dictionary | **Must** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
+| 5 | **R046** — CHCE page seal pipeline | **Must** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
+| 6 | **R047** — CHCE write API parity | **Must** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
+| 7 | **R048** — CHCE historical read parity | **Must** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
+| 8 | **R049** — CHCE verification harness | **Must** | RC-S4 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
+| 9 | **R050** — SSE live tail (read API) | **Must** | RC-S5 | [OBS_READ_API.md](OBS_READ_API.md), [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open — **after R049** |
+| 10 | **R051** — sparse trace index + spans | **Must** | RC-S5 | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | Open |
+| 11 | **R039** — opt-in Ollama live smoke (`ask` + brokered read/policy) | **Should** | RC-S6 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Open |
+| 12 | **R040** — nightly live-smoke workflow (non-blocking) | **Should** | RC-S6 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [CI.md](CI.md) | Open — **after R039** |
 | 13 | **R042** — economics run manifest from harness | **Could** | — | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Open — **after R039** |
 | 14 | **R041** — gateway-path live smoke | **Could** | — | [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) | Open |
 | 15 | **R026** — Rex guidelines + optional Semgrep | **Could** | — | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | Open |
@@ -189,7 +189,7 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 | **MCP in sidecar** | ADR 0016 accepted; implementation deferred | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 | **Development assistance capabilities** (turn contract, budget pipeline) | Design hub + ADRs 0011–0017 | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | **Token-efficient agent graph** (Viewer/Editor, serialization, compaction) | Design accepted; **R027–R036** | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| **Observability suite + economics validation** | **Active** — **RC-S3** Partial; **R039** + **R043** next — [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [CHCE_ROADMAP.md](CHCE_ROADMAP.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
+| **Observability suite + economics validation** | **Active** — v1.0 blocked on **RC-S3–RC-S5**; **R043** next — [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [CHCE_ROADMAP.md](CHCE_ROADMAP.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
 | ~~**CHCE mmap economics store**~~ | **Active program** — see **Next — CHCE mmap observability store** and [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) |
 | **VM/container sidecar envelope** (server/fleet) | Linux deployment needs stronger isolation | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 
@@ -204,7 +204,7 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 
 ### Prioritization audit (2026-06-07)
 
-Full reprioritization against [PRIORITIZATION.md](PRIORITIZATION.md): MoSCoW labels, R-ICE scores for **Should** ties, **RC-S3–RC-S6** alignment, hub links, economics-matrix coherence. **Next slice:** **R039** (live smoke) and **R043** (CHCE `StorePort`) in parallel. Prior audit: 2026-05-23.
+Full reprioritization against [PRIORITIZATION.md](PRIORITIZATION.md): MoSCoW labels, R-ICE scores for **Should** ties, **RC-S3–RC-S6** alignment, hub links, economics-matrix coherence. **Next slice:** **R043** (CHCE `StorePort`). **v1.0 tag** blocked on **RC-S3–RC-S5** Must rows. Prior audit: 2026-05-23.
 
 ## Related
 
