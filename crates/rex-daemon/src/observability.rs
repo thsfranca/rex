@@ -6,7 +6,7 @@ use rex_config::{
 };
 use rex_obs_store::{SharedObsStore, StreamEconomicsRecord};
 
-use crate::otlp_metrics::OtlpMetrics;
+use crate::otlp_metrics::{OtlpMetrics, TerminalOtlpContext};
 use crate::plugins::PipelineMetrics;
 
 #[derive(Clone)]
@@ -22,6 +22,8 @@ pub struct StreamEconomicsDraft {
     pub mode: String,
     pub model: String,
     pub metrics: PipelineMetrics,
+    /// Agent approval gate outcome when mode is agent (`allow`, `deny`, `checkpoint`).
+    pub approval_outcome: Option<String>,
 }
 
 impl StreamEconomicsDraft {
@@ -97,6 +99,7 @@ impl ObservabilityRuntime {
         terminal: &str,
         elapsed_ms: u64,
         chunks_sent: u64,
+        otlp_ctx: TerminalOtlpContext,
     ) {
         let store = self.store.clone();
         let metrics = self.metrics.clone();
@@ -106,7 +109,7 @@ impl ObservabilityRuntime {
                 eprintln!("obs.store=degraded reason=append_failed error={err}");
             }
             if let Some(otlp) = metrics.as_ref() {
-                otlp.record_stream(&record);
+                otlp.record_stream(&record, &otlp_ctx);
             }
         });
     }

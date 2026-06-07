@@ -31,6 +31,7 @@ use crate::broker_inference::run_broker_inference;
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::observability::{observability_from_settings, StreamEconomicsDraft};
+use crate::otlp_metrics::TerminalOtlpContext;
 use crate::plugins::{
     BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
 };
@@ -432,6 +433,7 @@ impl RexService for RexDaemonService {
             cache_bypass,
         };
         let decision = self.policy.decide(&policy_request);
+        let mut approval_outcome_label: Option<String> = None;
         if normalize_mode(&mode) == "agent" {
             let approval_id = inner.approval_id.trim();
             let approval_ctx = ApprovalContext {
@@ -445,6 +447,7 @@ impl RexService for RexDaemonService {
             };
             let approval_outcome = self.approval_gate.check(&approval_ctx).await;
             let approval_label = format_approval_decision(&approval_outcome);
+            approval_outcome_label = Some(approval_label.to_string());
             match &approval_outcome {
                 ApprovalDecision::Allow => {
                     println!(
@@ -567,10 +570,12 @@ impl RexService for RexDaemonService {
             mode: log_mode.to_string(),
             model: log_model.to_string(),
             metrics: pipeline_result.metrics.clone(),
+            approval_outcome: approval_outcome_label.clone(),
         });
         let output = stream! {
             let mut chunk_count: u64 = 0;
             let mut done_seen = false;
+            let mut ttft_ms: Option<u64> = None;
             if use_sidecar_live {
                 sidecar
                     .ensure_running()
@@ -596,6 +601,7 @@ impl RexService for RexDaemonService {
                         Ok(chunk) => {
                             chunk_count += 1;
                             if chunk_count == 1 {
+                                ttft_ms = Some(request_started.elapsed().as_millis() as u64);
                                 println!(
                                     "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.event=first_chunk index={} done={}",
                                     chunk.index,
@@ -618,11 +624,13 @@ impl RexService for RexDaemonService {
                             if let (Some(obs), Some(draft)) =
                                 (observability.as_ref(), economics_draft.clone())
                             {
+                                let ctx = terminal_otlp_ctx(ttft_ms, &draft, Some("grpc_error"));
                                 obs.record_terminal_async(
                                     draft,
                                     "grpc_error",
                                     elapsed_ms,
                                     chunk_count,
+                                    ctx,
                                 );
                             }
                             yield Err(err);
@@ -636,6 +644,7 @@ impl RexService for RexDaemonService {
                         Ok(chunk) => {
                             chunk_count += 1;
                             if chunk_count == 1 {
+                                ttft_ms = Some(request_started.elapsed().as_millis() as u64);
                                 println!(
                                     "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.event=first_chunk index={} done={}",
                                     chunk.index,
@@ -662,11 +671,13 @@ impl RexService for RexDaemonService {
                             if let (Some(obs), Some(draft)) =
                                 (observability.as_ref(), economics_draft.clone())
                             {
+                                let ctx = terminal_otlp_ctx(ttft_ms, &draft, Some("grpc_error"));
                                 obs.record_terminal_async(
                                     draft,
                                     "grpc_error",
                                     elapsed_ms,
                                     chunk_count,
+                                    ctx,
                                 );
                             }
                             yield Err(err);
@@ -684,7 +695,8 @@ impl RexService for RexDaemonService {
                 if let (Some(obs), Some(draft)) =
                     (observability.as_ref(), economics_draft.clone())
                 {
-                    obs.record_terminal_async(draft, "done", elapsed_ms, chunk_count);
+                    let ctx = terminal_otlp_ctx(ttft_ms, &draft, None);
+                    obs.record_terminal_async(draft, "done", elapsed_ms, chunk_count, ctx);
                 }
             } else {
                 println!(
@@ -694,7 +706,14 @@ impl RexService for RexDaemonService {
                 if let (Some(obs), Some(draft)) =
                     (observability.as_ref(), economics_draft.clone())
                 {
-                    obs.record_terminal_async(draft, "missing_done", elapsed_ms, chunk_count);
+                    let ctx = terminal_otlp_ctx(ttft_ms, &draft, Some("missing_done"));
+                    obs.record_terminal_async(
+                        draft,
+                        "missing_done",
+                        elapsed_ms,
+                        chunk_count,
+                        ctx,
+                    );
                 }
                 yield Err(Status::internal(
                     "incomplete inference stream: missing final done chunk",
@@ -797,6 +816,20 @@ fn format_behavior_decision(decision: &BehaviorDecision) -> &'static str {
     match decision {
         BehaviorDecision::Allow => "allow",
         BehaviorDecision::Suppress { .. } => "suppress",
+    }
+}
+
+fn terminal_otlp_ctx(
+    ttft_ms: Option<u64>,
+    draft: &StreamEconomicsDraft,
+    error_type: Option<&str>,
+) -> TerminalOtlpContext {
+    TerminalOtlpContext {
+        ttft_ms,
+        approval_outcome: draft.approval_outcome.clone(),
+        error_type: error_type.map(str::to_string),
+        broker_inference_outcome: None,
+        load_duration_ms: None,
     }
 }
 
