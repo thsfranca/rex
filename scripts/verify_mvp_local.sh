@@ -28,7 +28,10 @@ cat <<'EOF'
 
 ==> MVP local preflight passed.
 
-Next: start Ollama (or another OpenAI-compat server), configure JSON per
-docs/EXTENSION_LOCAL_E2E.md section 3, run rex daemon, then follow the E2E doc for editor dogfood
-(status bar, REX: Open Chat, agent mode, cancel, __rex_read:).
+Next (opt-in, live LLM): REX_LIVE_LLM=1 ./scripts/verify_native_tools_live.sh
+(requires Ollama + tool-capable model; see docs/NATIVE_TOOL_CALLING.md).
+
+Then: configure JSON per docs/EXTENSION_LOCAL_E2E.md section 3, run rex daemon,
+and follow the E2E doc for editor dogfood (status bar, REX: Open Chat, agent mode,
+cancel, brokered fs.read).
 EOF

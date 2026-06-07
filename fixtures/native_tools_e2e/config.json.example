@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "daemon": {
+    "socket": "/tmp/rex-native-tools-e2e-daemon.sock"
+  },
+  "sidecars": {
+    "active": "agent",
+    "required": true,
+    "list": [
+      {
+        "name": "agent",
+        "binary": "rex-agent",
+        "enabled": true,
+        "socket": "/tmp/rex-native-tools-e2e-sidecar.sock"
+      }
+    ]
+  },
+  "inference": {
+    "runtime": "http-openai-compat",
+    "openai_compat": {
+      "base_url": "http://127.0.0.1:11434/v1",
+      "model": "qwen2.5-coder:7b"
+    }
+  },
+  "workspace": {
+    "root": "/absolute/path/set-at-runtime-by-verify_native_tools_live.sh"
+  }
+}

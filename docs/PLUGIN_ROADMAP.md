@@ -31,7 +31,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 - **Not** the product agent: the sidecar requests inference; the daemon executes the HTTP adapter.
 - **Legacy:** `REX_INFERENCE_RUNTIME=cursor-cli` subprocess — non-MVP.
 - CI: **`mock`** or stub sidecar — [CI.md](CI.md).
-- **Planned:** native broker tool calling (**R038**) — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md); live broker validation against Ollama (**R039–R041**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
+- **Done:** native broker tool calling (**R038**) — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md); live broker validation against Ollama (**R039–R041**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
 
 ## Daemon-first principle
 
