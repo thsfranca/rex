@@ -20,7 +20,7 @@ Rex observability is controlled only by merged JSON: **`observability.enabled`**
 
 ## Status
 
-**partial** — Phase 2–5 shipped: SQLite `rex-obs-store`, read API, Grafana plugin skeleton, `rex obs` CLI. **CHCE mmap engine** (Phase 2b) and **SSE live tail** (Phase 6) are **design documented** — [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). Sidecar observability API remains **planned**. **Done** tracking: Should **RC-S3–RC-S6** in [V1_0.md](V1_0.md); delivery slices **R039–R042**, **R043–R054** in [ROADMAP.md](ROADMAP.md). **Global rank (2026-06-07):** **R039** (1), **R043** (2, parallel), **R040** (4) — [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+**partial** — Phase 2–5 shipped: SQLite `rex-obs-store`, read API, Grafana plugin skeleton, `rex obs` CLI. **CHCE mmap engine** (Phase 2b) and **SSE live tail** (Phase 6) are **design documented** — [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). Sidecar observability API remains **planned**. **v1.0 not Met** — Must **RC-S3–RC-S5** block the **`1.0.0` git tag** ([V1_0.md](V1_0.md)). **Next slice:** **R043** — [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
 
 ## Scope
 

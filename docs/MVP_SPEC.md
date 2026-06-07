@@ -53,9 +53,11 @@ flowchart LR
 
 Hub detail: [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
-## After v1.0 (Must **RC-*** Met)
+## v1.0 closure (observability Must rows)
 
-Continue **observability suite** closure (**RC-S3–RC-S6**): **CHCE mmap** write/read parity (**R043–R049**), Phase 6 sidecar observability + SSE live tail, and opt-in live validation (**R039–R042**). Converge **routing, compaction, caches, metering, and richer tool/MCP loops** in **`rex-daemon`** and the sidecar envelope ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). Durable memory and multi-plugin fleets stay on the roadmap ([LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ROADMAP.md](ROADMAP.md) **Next/Later**).
+**v1.0 not Met** until **RC-S3–RC-S5** close in [V1_0.md](V1_0.md): observability baseline (**RC-S3**), **CHCE mmap** Program A (**R043–R049**, **RC-S4**), and Phase 6 sidecar API + SSE (**R050–R051**, **RC-S5**). Opt-in live validation (**R039–R042**, **RC-S6** Should) follows without blocking the tag.
+
+After v1.0, converge **routing, compaction, caches, metering, and richer tool/MCP loops** in **`rex-daemon`** and the sidecar envelope ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). Durable memory and multi-plugin fleets stay on the roadmap ([LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ROADMAP.md](ROADMAP.md) **Later**).
 
 ## In scope (Phase 1 shape)
 

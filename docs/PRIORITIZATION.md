@@ -74,18 +74,18 @@ Use these as short confidence cues when ranking optimization proposals:
 
 ## Current focus queue (audit 2026-06-07)
 
-**Context:** All Must **RC-01–RC-10** are **Met** ([V1_0.md](V1_0.md)). Open **Should** work centers on **observability suite** closure (**RC-S3–RC-S6**) and agent **Could** follow-ups. Product agent **Should** program (**R013–R038**) is **Done**.
+**Context:** Streaming/agent Must **RC-01–RC-10** are **Met** ([V1_0.md](V1_0.md)). **v1.0 not Met** — observability Must **RC-S3** (**Partial**), **RC-S4** (**Not met**), **RC-S5** (**Not met**) block the **`1.0.0` git tag**. Product agent program (**R013–R038**) is **Done**.
 
 **Ordering method:** MoSCoW bucket first; **R-ICE** (Impact × Confidence × Ease, 1–5) for **Should** ties; [tie-breakers](#tie-breakers-rex-specific) for blast radius and CI cost.
 
 | Rank | ID / theme | MoSCoW | R-ICE | RC-* | Blast | Rationale |
 |------|------------|--------|-------|------|-------|-----------|
-| 1 | **R039** — opt-in Ollama live smoke | **Should** | **100** (5×5×4) | RC-S6 | CLI + daemon | Small opt-in script; bridges mock CI and operator dogfood; preserves **RC-10** |
-| 2 | **R043** — CHCE `StorePort` + engine dispatch | **Should** | **75** (5×5×3) | RC-S4 | `rex-obs-store` | Rex-owned DB foundation; design accepted; **parallel OK** with R039 |
-| 3 | **RC-S3** — observability baseline gaps (Phase 2 OTLP completeness, read API rollups) | **Should** | **48** (4×4×3) | RC-S3 | daemon + obs | Closes **Partial** baseline before Phase 6; hub [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) |
-| 4 | **R040** — nightly live-smoke workflow (non-blocking) | **Should** | **60** (3×5×4) | RC-S6 | CI only | **After R039**; informational tier per [CI.md](CI.md) |
-| 5–10 | **R044–R049** — CHCE Program A (sequential) | **Should** | **~65** avg | RC-S4 | store | Blocked on **R043**; one PR per slice — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
-| 11–12 | **R050–R051** — SSE live tail + trace index | **Should** | **40** (4×4×2.5) | RC-S5 | read API + proto | **After R049**; Phase 6 — [OBS_READ_API.md](OBS_READ_API.md) |
+| 1 | **R043** — CHCE `StorePort` + engine dispatch | **Must** | **75** (5×5×3) | RC-S4 | `rex-obs-store` | Rex-owned DB foundation; design accepted; starts Program A |
+| 2 | **RC-S3** — observability baseline gaps (Phase 2 OTLP completeness, read API rollups) | **Must** | **48** (4×4×3) | RC-S3 | daemon + obs | Closes **Partial** baseline; hub [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) |
+| 3–8 | **R044–R049** — CHCE Program A (sequential) | **Must** | **~65** avg | RC-S4 | store | Blocked on **R043**; one PR per slice — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| 9–10 | **R050–R051** — SSE live tail + trace index | **Must** | **40** (4×4×2.5) | RC-S5 | read API + proto | **After R049**; Phase 6 — [OBS_READ_API.md](OBS_READ_API.md) |
+| 11 | **R039** — opt-in Ollama live smoke | **Should** | **100** (5×5×4) | RC-S6 | CLI + daemon | Opt-in validation; preserves **RC-10** |
+| 12 | **R040** — nightly live-smoke workflow (non-blocking) | **Should** | **60** (3×5×4) | RC-S6 | CI only | **After R039**; informational tier per [CI.md](CI.md) |
 | 13 | **R042** — economics run manifest from harness | **Could** | **35** | — | harness + store | **After R039**; feeds validation store |
 | 14 | **R041** — gateway-path live smoke | **Could** | **30** | — | harness | Same scenarios as R039 via gateway URL |
 | 15 | **R026** — optional Semgrep / Rex guidelines | **Could** | **25** | — | CI | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
@@ -93,7 +93,7 @@ Use these as short confidence cues when ranking optimization proposals:
 | 17 | **R033** — MCP gRPC client | **Could** | **25** | — | sidecar + proto | Large scope; ADR 0016 Phase 2 |
 | 18 | **R016** — multi-active sidecar broadcast | **Could** | **20** | — | daemon + proto | Deferred until single-active path proven |
 
-**Parallel lanes:** **R039** (product-path validation) and **R043** (store engine) — disjoint paths. **RC-S3** gaps may land in daemon OTLP slices without blocking CHCE.
+**Parallel lanes:** **RC-S3** OTLP/rollup slices may land alongside **R043** when paths are disjoint (`rex-daemon` vs `rex-obs-store`).
 
 **Deferred (Later / Won't now):** L2 semantic cache, Apple MLX, Anthropic adapter, LTM, agent knowledge, Wasm plugins, VM default envelope — see [ROADMAP.md](ROADMAP.md) **Later** and **Parked**.
 
