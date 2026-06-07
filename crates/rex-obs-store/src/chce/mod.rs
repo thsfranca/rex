@@ -17,7 +17,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::error::ObsStoreError;
 use crate::port::StorePort;
 use crate::query::{ObsQuery, QueriedStream, StreamQueryFilter};
-use crate::record::StreamEconomicsRecord;
+use crate::record::{SidecarMetricDef, SpanRecord, StreamEconomicsRecord};
 
 use dict::DictionaryManager;
 use page::{ColumnarCodec, MmapPaginator, SealedPage};
@@ -30,6 +30,8 @@ pub struct ChceEngine {
     paginator: Arc<Mutex<MmapPaginator>>,
     dict: Arc<Mutex<DictionaryManager>>,
     configs: Arc<Mutex<ConfigStore>>,
+    sidecar_metrics: Arc<Mutex<Vec<SidecarMetricDef>>>,
+    spans: Arc<Mutex<Vec<SpanRecord>>>,
     writer: Option<WriterHandle>,
 }
 
@@ -96,6 +98,8 @@ impl ChceEngine {
             paginator,
             dict,
             configs,
+            sidecar_metrics: Arc::new(Mutex::new(Vec::new())),
+            spans: Arc::new(Mutex::new(Vec::new())),
             writer: Some(WriterHandle { shutdown, join }),
         })
     }
@@ -180,6 +184,25 @@ impl StorePort for ChceEngine {
     fn stream_count(&self) -> Result<u64, ObsStoreError> {
         let paginator = self.paginator.lock().map_err(lock_err)?;
         paginator.total_record_count()
+    }
+
+    fn append_span(&self, span: &SpanRecord) -> Result<(), ObsStoreError> {
+        self.spans.lock().map_err(lock_err)?.push(span.clone());
+        Ok(())
+    }
+
+    fn register_sidecar_metric(&self, def: &SidecarMetricDef) -> Result<(), ObsStoreError> {
+        let mut metrics = self.sidecar_metrics.lock().map_err(lock_err)?;
+        if let Some(existing) = metrics.iter_mut().find(|m| m.name == def.name) {
+            *existing = def.clone();
+        } else {
+            metrics.push(def.clone());
+        }
+        Ok(())
+    }
+
+    fn list_sidecar_metrics(&self) -> Result<Vec<SidecarMetricDef>, ObsStoreError> {
+        Ok(self.sidecar_metrics.lock().map_err(lock_err)?.clone())
     }
 }
 

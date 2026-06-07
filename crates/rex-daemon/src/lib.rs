@@ -18,6 +18,7 @@ mod service;
 mod settings;
 mod sidecar_client;
 mod sidecar_config;
+mod sidecar_observability;
 mod supervisor;
 mod turn_correlation;
 

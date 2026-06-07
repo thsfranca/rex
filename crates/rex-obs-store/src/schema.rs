@@ -48,4 +48,25 @@ CREATE TABLE IF NOT EXISTS run_tasks (
     task_id TEXT NOT NULL,
     outcome TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS sidecar_metric_defs (
+    name TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    unit TEXT NOT NULL,
+    description TEXT NOT NULL,
+    label_keys_json TEXT NOT NULL,
+    created_at_ms INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS spans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    trace_id TEXT NOT NULL,
+    turn_id TEXT NOT NULL DEFAULT '',
+    span_name TEXT NOT NULL,
+    parent_span_id TEXT,
+    start_ms INTEGER NOT NULL,
+    end_ms INTEGER,
+    attributes_json TEXT NOT NULL DEFAULT '{}',
+    created_at_ms INTEGER NOT NULL
+);
 "#;

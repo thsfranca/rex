@@ -5,7 +5,8 @@ use crate::dispatch::{open_store, StoreEngine};
 use crate::error::ObsStoreError;
 use crate::port::StorePort;
 use crate::query::ObsQuery;
-use crate::record::StreamEconomicsRecord;
+use crate::record::{SidecarMetricDef, SpanRecord, StreamEconomicsRecord};
+use crate::tail::{queried_from_record, TelemetryTail};
 
 /// Thread-safe handle for non-blocking appends from async daemon code.
 #[derive(Clone)]
@@ -24,6 +25,10 @@ impl SharedObsStore {
         Self {
             inner: Arc::new(Mutex::new(engine)),
         }
+    }
+
+    pub fn tail(&self) -> Result<Arc<TelemetryTail>, ObsStoreError> {
+        self.with_store(|store| Ok(Arc::clone(store.tail())))
     }
 
     fn with_store<T>(
@@ -62,5 +67,32 @@ impl SharedObsStore {
         filter: &crate::query::StreamQueryFilter,
     ) -> Result<Vec<crate::query::QueriedStream>, ObsStoreError> {
         self.with_store(|store| store.query_streams(filter))
+    }
+
+    pub fn append_span(&self, span: &SpanRecord) -> Result<(), ObsStoreError> {
+        self.with_store(|store| store.append_span(span))
+    }
+
+    pub fn register_sidecar_metric(&self, def: &SidecarMetricDef) -> Result<(), ObsStoreError> {
+        self.with_store(|store| store.register_sidecar_metric(def))
+    }
+
+    pub fn list_sidecar_metrics(&self) -> Result<Vec<SidecarMetricDef>, ObsStoreError> {
+        self.with_store(|store| store.list_sidecar_metrics())
+    }
+
+    pub fn publish_stream_tail(
+        &self,
+        record: &StreamEconomicsRecord,
+        created_at_ms: i64,
+        service_name: &str,
+    ) -> Result<(), ObsStoreError> {
+        self.with_store(|store| {
+            store.tail().publish_stream(
+                &queried_from_record(record.clone(), created_at_ms),
+                service_name,
+            );
+            Ok(())
+        })
     }
 }

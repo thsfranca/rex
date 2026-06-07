@@ -1,10 +1,12 @@
 fn main() {
     println!("cargo:rerun-if-changed=../../proto/rex/v1/rex.proto");
     println!("cargo:rerun-if-changed=../../proto/rex/sidecar/v1/sidecar.proto");
+    println!("cargo:rerun-if-changed=../../proto/rex/observability/v1/observability.proto");
 
     let protos = [
         "../../proto/rex/v1/rex.proto",
         "../../proto/rex/sidecar/v1/sidecar.proto",
+        "../../proto/rex/observability/v1/observability.proto",
     ];
     let includes = ["../../proto"];
 

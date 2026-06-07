@@ -93,6 +93,10 @@ impl ObservabilityRuntime {
         &self.snapshot_id
     }
 
+    pub fn store(&self) -> &SharedObsStore {
+        &self.store
+    }
+
     pub fn record_terminal_async(
         &self,
         draft: StreamEconomicsDraft,

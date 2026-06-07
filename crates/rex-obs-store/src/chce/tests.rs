@@ -170,7 +170,7 @@ fn mmap_open_via_dispatch_writes_and_reads() {
     let dir = tempdir().unwrap();
     let engine = open_store(ENGINE_MMAP, dir.path().join("obs/store.rexobs")).unwrap();
     load_fixture_into(&engine, "snap");
-    if let crate::dispatch::StoreEngine::Chce(chce) = engine {
+    if let crate::dispatch::StoreEngine::Chce { engine: chce, .. } = engine {
         chce.drain_for_test().unwrap();
         assert_eq!(chce.stream_count().unwrap(), 2);
     } else {

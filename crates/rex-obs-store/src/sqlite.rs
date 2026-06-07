@@ -5,7 +5,7 @@ use rusqlite::{params, Connection};
 
 use crate::error::ObsStoreError;
 use crate::port::StorePort;
-use crate::record::StreamEconomicsRecord;
+use crate::record::{SidecarMetricDef, SpanRecord, StreamEconomicsRecord};
 use crate::schema::{CREATE_TABLES_V1, SCHEMA_VERSION};
 
 /// SQLite-backed economics store (default engine).
@@ -51,29 +51,12 @@ impl SqliteEngine {
                 })?;
         Ok(count as u64)
     }
-}
 
-impl StorePort for SqliteEngine {
-    fn path(&self) -> &Path {
-        &self.path
-    }
-
-    fn upsert_config_snapshot(
+    pub fn append_stream_at(
         &self,
-        snapshot_id: &str,
-        payload_json: &str,
+        record: &StreamEconomicsRecord,
+        created_at_ms: i64,
     ) -> Result<(), ObsStoreError> {
-        let now = now_ms();
-        self.conn.execute(
-            "INSERT INTO config_snapshots (id, payload_json, created_at_ms)
-             VALUES (?1, ?2, ?3)
-             ON CONFLICT(id) DO UPDATE SET payload_json = excluded.payload_json",
-            (snapshot_id, payload_json, now),
-        )?;
-        Ok(())
-    }
-
-    fn append_stream(&self, record: &StreamEconomicsRecord) -> Result<(), ObsStoreError> {
         let exists: i64 = self.conn.query_row(
             "SELECT COUNT(1) FROM config_snapshots WHERE id = ?1",
             [&record.snapshot_id],
@@ -83,7 +66,6 @@ impl StorePort for SqliteEngine {
             return Err(ObsStoreError::UnknownSnapshot(record.snapshot_id.clone()));
         }
 
-        let now = now_ms();
         self.conn.execute(
             "INSERT INTO streams (
                 snapshot_id, request_id, trace_id, turn_id, terminal, route, cache_decision,
@@ -119,10 +101,35 @@ impl StorePort for SqliteEngine {
                 record.cached_tokens.map(|v| v as i64),
                 record.prefix_hash,
                 record.parse_retries.map(|v| v as i64),
-                now,
+                created_at_ms,
             ],
         )?;
         Ok(())
+    }
+}
+
+impl StorePort for SqliteEngine {
+    fn path(&self) -> &Path {
+        &self.path
+    }
+
+    fn upsert_config_snapshot(
+        &self,
+        snapshot_id: &str,
+        payload_json: &str,
+    ) -> Result<(), ObsStoreError> {
+        let now = now_ms();
+        self.conn.execute(
+            "INSERT INTO config_snapshots (id, payload_json, created_at_ms)
+             VALUES (?1, ?2, ?3)
+             ON CONFLICT(id) DO UPDATE SET payload_json = excluded.payload_json",
+            (snapshot_id, payload_json, now),
+        )?;
+        Ok(())
+    }
+
+    fn append_stream(&self, record: &StreamEconomicsRecord) -> Result<(), ObsStoreError> {
+        self.append_stream_at(record, now_ms())
     }
 
     fn stream_count(&self) -> Result<u64, ObsStoreError> {
@@ -130,6 +137,68 @@ impl StorePort for SqliteEngine {
             .conn
             .query_row("SELECT COUNT(1) FROM streams", [], |row| row.get(0))?;
         Ok(count as u64)
+    }
+
+    fn append_span(&self, span: &SpanRecord) -> Result<(), ObsStoreError> {
+        let now = now_ms();
+        self.conn.execute(
+            "INSERT INTO spans (
+                trace_id, turn_id, span_name, parent_span_id, start_ms, end_ms,
+                attributes_json, created_at_ms
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                span.trace_id,
+                span.turn_id,
+                span.span_name,
+                span.parent_span_id,
+                span.start_ms,
+                span.end_ms,
+                span.attributes_json,
+                now,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn register_sidecar_metric(&self, def: &SidecarMetricDef) -> Result<(), ObsStoreError> {
+        let label_keys_json = serde_json::to_string(&def.label_keys)?;
+        let now = now_ms();
+        self.conn.execute(
+            "INSERT INTO sidecar_metric_defs (name, kind, unit, description, label_keys_json, created_at_ms)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+             ON CONFLICT(name) DO UPDATE SET
+                kind = excluded.kind,
+                unit = excluded.unit,
+                description = excluded.description,
+                label_keys_json = excluded.label_keys_json",
+            params![
+                def.name,
+                def.kind,
+                def.unit,
+                def.description,
+                label_keys_json,
+                now,
+            ],
+        )?;
+        Ok(())
+    }
+
+    fn list_sidecar_metrics(&self) -> Result<Vec<SidecarMetricDef>, ObsStoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT name, kind, unit, description, label_keys_json FROM sidecar_metric_defs ORDER BY name",
+        )?;
+        let rows = stmt.query_map([], |row| {
+            let label_keys_json: String = row.get(4)?;
+            Ok(SidecarMetricDef {
+                name: row.get(0)?,
+                kind: row.get(1)?,
+                unit: row.get(2)?,
+                description: row.get(3)?,
+                label_keys: serde_json::from_str(&label_keys_json).unwrap_or_default(),
+            })
+        })?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(ObsStoreError::from)
     }
 }
 

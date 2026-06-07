@@ -1537,6 +1537,8 @@ dependencies = [
 name = "rex-obs-api"
 version = "1.0.0"
 dependencies = [
+ "async-stream",
+ "futures",
  "http-body-util",
  "hyper",
  "hyper-util",
@@ -1547,19 +1549,23 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
+ "tokio-stream",
 ]
 
 [[package]]
 name = "rex-obs-store"
 version = "1.0.0"
 dependencies = [
+ "async-stream",
  "crc32fast",
+ "futures",
  "memmap2",
  "rusqlite",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 2.0.18",
+ "tokio",
 ]
 
 [[package]]
