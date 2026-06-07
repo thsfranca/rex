@@ -36,6 +36,9 @@ mod approvals;
 #[path = "../src/broker.rs"]
 mod broker;
 #[allow(dead_code)]
+#[path = "../src/broker_inference.rs"]
+mod broker_inference;
+#[allow(dead_code)]
 #[path = "../src/domain.rs"]
 mod domain;
 #[allow(dead_code)]
@@ -48,6 +51,8 @@ mod http_openai_compat;
 mod l1_cache;
 #[path = "../src/observability.rs"]
 mod observability;
+#[path = "../src/ollama_capability.rs"]
+mod ollama_capability;
 #[path = "../src/otlp_metrics.rs"]
 mod otlp_metrics;
 #[allow(dead_code)]

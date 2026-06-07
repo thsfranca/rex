@@ -106,16 +106,46 @@ message BrokerExecShellResponse {
   string error = 4;
 }
 
+enum InferenceProtocol {
+  INFERENCE_PROTOCOL_UNSPECIFIED = 0;
+  INFERENCE_PROTOCOL_NATIVE = 1;
+  INFERENCE_PROTOCOL_INTERIM = 2;
+  INFERENCE_PROTOCOL_INTERIM_FALLBACK = 3;
+}
+
+message ChatMessage {
+  string role = 1;
+  string content = 2;
+}
+
+message ToolSpec {
+  string name = 1;
+  string description = 2;
+  // OpenAI function parameters object as JSON text.
+  string parameters_json = 3;
+}
+
+message ToolCall {
+  string id = 1;
+  string name = 2;
+  string arguments_json = 3;
+}
+
 message BrokerInferenceRequest {
   string prompt = 1;
   string mode = 2;
   string model = 3;
+  repeated ChatMessage messages = 4;
+  repeated ToolSpec tools = 5;
 }
 
 message BrokerInferenceResponse {
   bool ok = 1;
   string text = 2;
   string error = 3;
+  string content = 4;
+  repeated ToolCall tool_calls = 5;
+  InferenceProtocol protocol = 6;
 }
 
 message StreamInferenceResponse {

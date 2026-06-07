@@ -188,7 +188,7 @@ Example HTTP backend (Ollama) in `$REX_ROOT/config.json`:
 }
 ```
 
-**`inference.openai_compat.native_tools`** (**R038**, planned): tri-state `auto` \| `true` \| `false`; schema default **`auto`** (omit field → `auto`). Controls whether daemon forwards OpenAI `tools[]` on `BrokerInference` vs interim JSON-in-text. **`auto`** probes Ollama `/api/show` for `tools` capability; direct Ollama is the reference path for agent tool calling — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md). `mock` / `cursor-cli` runtimes always use interim regardless of config.
+**`inference.openai_compat.native_tools`** (**R038**): tri-state `auto` \| `true` \| `false`; schema default **`auto`** (omit field → `auto`). Controls whether daemon forwards OpenAI `tools[]` on `BrokerInference` vs interim JSON-in-text. **`auto`** probes Ollama `/api/show` for `tools` capability; direct Ollama is the reference path for agent tool calling — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md). `mock` / `cursor-cli` runtimes always use interim regardless of config.
 
 CI and unit tests set `REX_ROOT` to a temp dir and write `config.json` with `inference.runtime: "mock"` and `sidecars.harness: "direct"` — see [CI.md](CI.md).
 

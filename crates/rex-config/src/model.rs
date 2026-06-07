@@ -52,6 +52,7 @@ impl RexConfig {
                     api_key: None,
                     model: "gpt-4o-mini".to_string(),
                     timeout_secs: 120,
+                    native_tools: None,
                 },
                 gateway: GatewayConfig::default(),
                 cursor_cli: CursorCliConfig {
@@ -233,6 +234,50 @@ impl Default for GatewayOllamaConfig {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum NativeToolsMode {
+    #[default]
+    Auto,
+    True,
+    False,
+}
+
+impl NativeToolsMode {
+    pub fn from_config_str(raw: &str) -> Result<Self, String> {
+        match raw.trim().to_ascii_lowercase().as_str() {
+            "" | "auto" => Ok(Self::Auto),
+            "true" => Ok(Self::True),
+            "false" => Ok(Self::False),
+            other => Err(format!(
+                "invalid inference.openai_compat.native_tools: {other} (expected auto, true, or false)"
+            )),
+        }
+    }
+}
+
+impl serde::Serialize for NativeToolsMode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(match self {
+            Self::Auto => "auto",
+            Self::True => "true",
+            Self::False => "false",
+        })
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for NativeToolsMode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let raw = String::deserialize(deserializer)?;
+        Self::from_config_str(&raw).map_err(serde::de::Error::custom)
+    }
+}
+
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct OpenAiCompatConfig {
     #[serde(default)]
@@ -243,6 +288,14 @@ pub struct OpenAiCompatConfig {
     pub model: String,
     #[serde(default)]
     pub timeout_secs: u64,
+    #[serde(default)]
+    pub native_tools: Option<NativeToolsMode>,
+}
+
+impl OpenAiCompatConfig {
+    pub fn effective_native_tools(&self) -> NativeToolsMode {
+        self.native_tools.unwrap_or(NativeToolsMode::Auto)
+    }
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
@@ -424,4 +477,28 @@ impl Default for StoreConfig {
 
 fn default_store_engine() -> String {
     crate::observability::DEFAULT_STORE_ENGINE_SQLITE.to_string()
+}
+
+#[cfg(test)]
+mod native_tools_tests {
+    use super::*;
+    use crate::merge;
+
+    #[test]
+    fn native_tools_defaults_to_auto_when_omitted() {
+        let cfg: OpenAiCompatConfig = serde_json::from_str("{}").expect("parse");
+        assert_eq!(cfg.effective_native_tools(), NativeToolsMode::Auto);
+    }
+
+    #[test]
+    fn native_tools_merge_overlay_false() {
+        let mut base = RexConfig::defaults();
+        let mut overlay = RexConfig::defaults();
+        overlay.inference.openai_compat.native_tools = Some(NativeToolsMode::False);
+        merge::merge_config(&mut base, overlay);
+        assert_eq!(
+            base.inference.openai_compat.effective_native_tools(),
+            NativeToolsMode::False
+        );
+    }
 }
