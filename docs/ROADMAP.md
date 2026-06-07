@@ -66,7 +66,7 @@ Canonical design: **[AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)**. De
 
 | Order | Theme | ID | Outcome |
 |-------|-------|-----|---------|
-| 1 | Doc truth (stub vs product) | — | Hubs state planned agent; stub = harness; JSON config primary ([CONFIGURATION.md](CONFIGURATION.md)) |
+| 1 | Doc truth (stub vs product) | — | **`rex-agent`** shipped; **`rex-sidecar-stub`** = harness/CI default; **R038** partial (PR1 done); JSON config primary ([CONFIGURATION.md](CONFIGURATION.md)) |
 | 2 | Platform enablers | **R013** | Done — `BrokerListDir`, `RunTurn.model`, stream passthrough |
 | 3 | Unified `rex` CLI | **R014** | Done — single `rex` binary; subcommands |
 | 4 | Config + proto SDK | **R015** | Done — JSON config, `rex proto install`, `proto.gen_root` |

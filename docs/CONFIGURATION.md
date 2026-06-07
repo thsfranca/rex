@@ -25,7 +25,7 @@ This document is the **canonical** policy for how REX settings work: merged **JS
 
 **Layout root:** `$REX_ROOT` defaults to `~/.rex` when unset. Run `rex config init` to create the layout and template `config.json`.
 
-**Legacy environment variables:** Daemon startup ignores former `REX_INFERENCE_RUNTIME`, `REX_OPENAI_COMPAT_*`, `REX_SIDECAR_*`, `REX_DAEMON_SOCKET`, and `REX_WORKSPACE_ROOT` when present and prints a warning — use JSON instead. **`REX_ROOT`** remains the bootstrap override for layout location (tests, extension auto-start).
+**Legacy environment variables:** Daemon startup ignores former `REX_INFERENCE_RUNTIME`, `REX_OPENAI_COMPAT_*`, `REX_SIDECAR_*`, `REX_DAEMON_SOCKET`, and `REX_WORKSPACE_ROOT` when present and prints a warning — use JSON instead. **`REX_AGENT_APPROVALS`** is **not read** (migration reference only; canonical key is `agent.approvals_enabled` in JSON — [V1_0.md](V1_0.md) RC-06). **`REX_ROOT`** remains the bootstrap override for layout location (tests, extension auto-start).
 
 **Secret values:** Prefer environment or OS keychain for API keys in JSON (`inference.openai_compat.api_key`). Do not commit secrets to the repository.
 
@@ -130,7 +130,7 @@ The tables below document **former** env-based tuning. **Do not use** for new se
 | `REX_MAX_PROMPT_TOKENS` | `512` | Context pipeline max prompt tokens (char heuristic ÷4). |
 | `REX_MAX_CONTEXT_TOKENS` | `192` | Context pipeline max injected context tokens. |
 | `REX_BROKER_SHELL_ALLOWLIST` | `echo,printf,true` | Comma-separated programs `exec.shell` broker may run (workspace cwd). |
-| `REX_AGENT_APPROVALS` | off | `1` or `true` enforces daemon `ApprovalGate` for `agent` mode ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)). Pass `approval_id` on `StreamInference` (via `rex complete --approval-id`) after extension approval. |
+| `REX_AGENT_APPROVALS` | — | **Deprecated / not read.** Use `agent.approvals_enabled` in JSON instead ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md), [V1_0.md](V1_0.md) RC-06). When enabled, pass `approval_id` on `StreamInference` (via `rex complete --approval-id`) after extension approval. |
 
 ### Sidecar supervision and harness
 

@@ -25,7 +25,7 @@ flowchart TB
     Svc[StreamInference_service]
     PE[PolicyEngine_cache]
     AG[ApprovalGate]
-    AP[AccessPolicy_broker_planned]
+    AP[AccessPolicy_broker]
     Ex[Executors_adapters_broker]
   end
   subgraph sidecar [optional_sidecar]
@@ -46,8 +46,8 @@ flowchart TB
 | Seam | Module | Policy outcome |
 |------|--------|----------------|
 | **Cache / mode** | `policy.rs` — `PolicyEngine`, `decide`, `CacheDecision` | `ask` L1 lookup; `agent` uncacheable; bypass flags — [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md), [CACHING.md](CACHING.md). |
-| **Agent approvals** | `approvals.rs` — `ApprovalGate` | Opt-in `REX_AGENT_APPROVALS`; default `AlwaysAllow`; `Checkpoint` returns failed-precondition (blocks stream) — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md). |
-| **Access policy (broker)** | `access_policy.rs` — `evaluate_fs_read` | Centralized deny before `fs.read` host execution — **RC-05** / **R012** |
+| **Agent approvals** | `approvals.rs` — `ApprovalGate` | Opt-in `agent.approvals_enabled` in JSON; default off → `AlwaysAllow`; denies `agent` without `approval_id` when enabled — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md), [V1_0.md](V1_0.md) RC-06. |
+| **Access policy (broker)** | `access_policy.rs` | Mode × capability matrix; protected paths on `fs.read` / `fs.list` / `fs.write` / `exec.shell`; `max_tool_result_bytes` — **RC-05** / **R012** / **R020** |
 
 **Ordering rule (shipped):** pipeline resolution → **cache decision** → runtime invocation. Tests lock this ordering.
 
@@ -68,7 +68,7 @@ Single conceptual path per request (sidecar and in-daemon adapters converge on d
 
 Sidecar **intent** (model tier, tool RPC) is not sufficient for cache keys or spend attribution — **daemon-resolved execution** wins per [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
-## Access policy broker (design accepted)
+## Access policy broker (implemented)
 
 | Responsibility | Owner |
 |----------------|--------|
