@@ -1,6 +1,6 @@
 # CHCE observability store — delivery program
 
-**Status:** **planned** — design accepted ([ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)); no mmap implementation in `rex-obs-store` yet. **Done** tracking: Must **RC-S4** (Program A) and **RC-S5** in [V1_0.md](V1_0.md) — both block the **`1.0.0` git tag**.
+**Status:** **in progress** — **R043** `StorePort` + engine dispatch **shipped**; CHCE write/read parity (**R044–R049**) and **RC-S5** remain open. **Done** tracking: Must **RC-S4** (Program A) and **RC-S5** in [V1_0.md](V1_0.md) — both block the **`1.0.0` git tag**.
 
 **Parent hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **Format reference:** [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) · **Main queue:** [ROADMAP.md](ROADMAP.md) **R043–R054**
 
@@ -24,9 +24,9 @@ CHCE is an **observability** feature: daemon economics telemetry persistence and
 | Layer | Status |
 |-------|--------|
 | SQLite `rex-obs-store` + read API + Grafana plugin | **shipped** (observability Phases 2–5 partial) |
-| `observability.store.engine=mmap` | **fail-closed** until Phase 2b — [CONFIGURATION.md](CONFIGURATION.md) |
+| `observability.store.engine=mmap` | **dispatch shipped** (**R043**); write/read stub until **R047–R048** — [CONFIGURATION.md](CONFIGURATION.md) |
 | CHCE on-disk + API design | **design documented** (2026-06-07) |
-| `crates/rex-obs-store` mmap code | **none** |
+| `crates/rex-obs-store` mmap code | **R043** — `StorePort` + `ChceEngine` stub; hot path **R044+** |
 
 ## Target architecture
 

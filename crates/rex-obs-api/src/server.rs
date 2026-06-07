@@ -9,7 +9,8 @@ use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
 use rex_obs_store::{
-    instrument_catalog, project_metrics, MetricsQueryRequest, ObsQuery, ObsStore, StreamQueryFilter,
+    instrument_catalog, project_metrics, MetricsQueryRequest, ObsQuery, StoreEngine,
+    StreamQueryFilter,
 };
 use tokio::net::TcpListener;
 
@@ -17,11 +18,11 @@ use crate::error::ReadApiError;
 
 pub struct ReadApiState {
     pub service_name: String,
-    store: Mutex<ObsStore>,
+    store: Mutex<StoreEngine>,
 }
 
 impl ReadApiState {
-    pub fn new(service_name: String, store: ObsStore) -> Self {
+    pub fn new(service_name: String, store: StoreEngine) -> Self {
         Self {
             service_name,
             store: Mutex::new(store),
@@ -151,7 +152,7 @@ fn error_response(status: StatusCode, message: &str) -> Response<Full<Bytes>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rex_obs_store::StreamEconomicsRecord;
+    use rex_obs_store::{StorePort, StreamEconomicsRecord};
 
     fn sample(snapshot_id: &str) -> StreamEconomicsRecord {
         StreamEconomicsRecord {
@@ -184,7 +185,7 @@ mod tests {
     #[test]
     fn metrics_query_projects_counter() {
         let dir = tempfile::tempdir().unwrap();
-        let store = ObsStore::open(dir.path().join("store.sqlite")).unwrap();
+        let store = rex_obs_store::open_store("sqlite", dir.path().join("store.sqlite")).unwrap();
         store
             .upsert_config_snapshot("snap", r#"{"inference":{"runtime":"mock"}}"#)
             .unwrap();

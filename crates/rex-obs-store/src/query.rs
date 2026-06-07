@@ -116,6 +116,7 @@ fn row_to_queried_stream(row: &Row<'_>) -> Result<QueriedStream, rusqlite::Error
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::port::StorePort;
     use crate::ObsStore;
 
     fn sample(snapshot_id: &str, request_id: u64, terminal: &str) -> StreamEconomicsRecord {

@@ -88,7 +88,7 @@ Minimal example:
 
 ## Observability
 
-**Status:** **partial** — SQLite store, read API, `rex obs up`, and core OTLP export **implemented**. **CHCE mmap** engine (`engine=mmap`) fail-closed until Phase 2b implementation — design in [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md). SSE live tail planned Phase 6.
+**Status:** **partial** — SQLite store, read API, `rex obs up`, and core OTLP export **implemented**. **CHCE mmap** (`engine=mmap`): **R043** engine dispatch shipped — macOS selects CHCE stub; non-macOS returns `store.engine_unsupported`; write/read parity lands in **R047–R048** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). SSE live tail planned Phase 6.
 
 When `observability.enabled` is `true` in merged JSON, the daemon enables **`rex-obs-store`** (`$REX_ROOT/<store.path>`) and attempts **OTLP export** when an endpoint is configured (otherwise store-only + `obs.export=degraded` stdout). Bundled Grafana reads via the **Rex observability read API** ([OBS_READ_API.md](OBS_READ_API.md)). When `false` or omitted, phase 0 **stdout grep** only.
 
