@@ -1,0 +1,80 @@
+name: nightly-ollama-smoke
+
+# Informational tier (RC-S6 / R040): live Ollama smoke is opt-in and non-blocking.
+# Default PR CI (ci.yml) does not require a live LLM — RC-10 preserved.
+
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-ollama-smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ollama-live-smoke:
+    name: Ollama live smoke (informational)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      REX_OLLAMA_LIVE: "1"
+      RUSTFLAGS: -C link-arg=-fuse-ld=mold
+      CARGO_TERM_PROGRESS_WHEN: never
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install system build dependencies
+        run: |
+          set -euo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends protobuf-compiler mold curl
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install Ollama
+        run: curl -fsSL https://ollama.com/install.sh | sh
+
+      - name: Start Ollama and pull smoke model
+        run: |
+          set -euo pipefail
+          ollama serve >/tmp/ollama-serve.log 2>&1 &
+          echo "${!}" > /tmp/ollama.pid
+          for _ in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:11434/api/tags >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:11434/api/tags >/dev/null \
+            || { echo "Ollama did not become ready"; cat /tmp/ollama-serve.log; exit 1; }
+          ollama pull llama3.2
+
+      - name: Run R039 live smoke
+        id: smoke
+        continue-on-error: true
+        run: ./scripts/verify_ollama_live.sh
+
+      - name: Write Job Summary
+        if: always()
+        run: |
+          {
+            echo "### Ollama live smoke (R039 / R040)"
+            echo ""
+            echo "- result: ${{ steps.smoke.outcome }}"
+            echo "- mode: informational (continue-on-error; not a required PR check)"
+            echo "- script: \`scripts/verify_ollama_live.sh\`"
+            echo "- doc: docs/ECONOMICS_VALIDATION.md"
+            echo "- run_id: ${GITHUB_RUN_ID}"
+          } >> "$GITHUB_STEP_SUMMARY"
