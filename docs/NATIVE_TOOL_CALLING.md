@@ -2,7 +2,7 @@
 
 **Diátaxis role:** explanation — how Rex routes agent tool loops through provider-native `tools[]` / `tool_calls` on `BrokerInference`.
 
-**Status:** `partial` — **R038 PR 1** shipped (proto + daemon + config); sidecar routing in **R038 PR 2**.
+**Status:** `partial` — **R038 PR 1–2** shipped (daemon + sidecar); **R038 PR 3** operator E2E remains.
 
 **Related:** [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) (generative format target) · [ADAPTERS.md](ADAPTERS.md) · [CONFIGURATION.md](CONFIGURATION.md) · [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) · [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md)
 
@@ -171,7 +171,7 @@ Pointer: [PRIORITIZATION.md](PRIORITIZATION.md).
 | Slice | Scope | Acceptance |
 |-------|-------|------------|
 | **R038 PR 1** | Proto + daemon HTTP + `/api/show` cache + `native_tools` tri-state | **Done** — `./scripts/ci/run_rust_verify.sh` |
-| **R038 PR 2** | Sidecar native path + JSON fallback | `./scripts/ci/run_rex_agent_checks.sh` |
+| **R038 PR 2** | Sidecar native path + JSON fallback | **Done** — `./scripts/ci/run_rex_agent_checks.sh` |
 | **R038 PR 3** | Operator E2E script + EXTENSION_LOCAL_E2E update | Plan-mode read loop on direct Ollama |
 
 ## Cross-links
