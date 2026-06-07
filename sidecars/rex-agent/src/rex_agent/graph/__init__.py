@@ -8,7 +8,7 @@ from typing import Any
 
 from langgraph.graph import END, StateGraph
 
-from rex_agent.broker import BrokerClient
+from rex_agent.broker import BrokerClient, InferenceResult, legacy_inference_result
 from rex_agent.broker_chat_model import stream_visible_text
 from rex_agent.config import max_tool_steps
 from rex_agent.graph.compaction import compact_state
@@ -45,10 +45,32 @@ def _client() -> BrokerClient:
     return client
 
 
-def _call_inference(prompt: str, mode: str, model: str) -> tuple[bool, str]:
+def _call_inference(
+    prompt: str,
+    mode: str,
+    model: str,
+    *,
+    messages: list | None = None,
+    tools: list | None = None,
+) -> InferenceResult:
     if _inference_fn is not None:
-        return _inference_fn(prompt, mode, model)
-    return _client().inference(prompt, mode, model)
+        try:
+            ret = _inference_fn(
+                prompt,
+                mode,
+                model,
+                messages=messages,
+                tools=tools,
+            )
+        except TypeError:
+            ret = _inference_fn(prompt, mode, model)
+        if isinstance(ret, InferenceResult):
+            return ret
+        ok, text = ret
+        return legacy_inference_result(ok, text)
+    return _client().inference(
+        prompt, mode, model, messages=messages, tools=tools
+    )
 
 
 def _orchestrator_node(state: AgentState) -> dict:

@@ -8,10 +8,12 @@ from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 
+from rex_agent.broker import InferenceResult, is_interim_fallback
 from rex_agent.broker_chat_model import (
     MAX_PARSE_RETRIES,
+    messages_to_chat_messages,
     messages_to_prompt,
-    parse_to_ai_message,
+    route_inference_result,
     stream_visible_text,
 )
 from rex_agent.graph.nodes.orchestrator import classify_subagent_for_tool
@@ -19,7 +21,7 @@ from rex_agent.graph.state import AgentState
 from rex_agent.graph.stream_queue import append_plan, append_step
 from rex_agent.metrics import log_subagent_event
 from rex_agent.stream_events import cap_detail
-from rex_agent.tools import ToolCall, parse_model_output, tools_for_mode
+from rex_agent.tools import ToolCall, tool_specs_for_subagent, tools_for_mode
 
 
 def _messages_for_subagent(state: AgentState) -> list[BaseMessage]:
@@ -32,6 +34,61 @@ def _messages_for_subagent(state: AgentState) -> list[BaseMessage]:
         if "[tool fs.read" not in (msg.content if isinstance(msg.content, str) else "")
         and "[tool fs.list" not in (msg.content if isinstance(msg.content, str) else "")
     ]
+
+
+def _route_tool_call(
+    call: ToolCall,
+    *,
+    raw_text: str,
+    state: AgentState,
+) -> dict:
+    active = classify_subagent_for_tool(call.tool)
+    events = append_step(
+        list(state.get("stream_events") or []),
+        phase="running",
+        summary=f"Routing to {active} for {call.tool}",
+    )
+    return {
+        "messages": [AIMessage(content=raw_text, id=str(uuid.uuid4()))],
+        "pending_tool": call,
+        "active_subagent": active,
+        "stream_events": events,
+    }
+
+
+def _invoke_broker_inference(
+    inference_fn: Any,
+    *,
+    prompt: str,
+    mode: str,
+    model: str,
+    chat_messages: list[Any],
+    tool_specs: list[Any],
+) -> InferenceResult:
+    if tool_specs:
+        result = inference_fn(
+            prompt,
+            mode,
+            model,
+            messages=chat_messages,
+            tools=tool_specs,
+        )
+        if is_interim_fallback(result):
+            return inference_fn(
+                prompt,
+                mode,
+                model,
+                messages=chat_messages,
+                tools=[],
+            )
+        return result
+    return inference_fn(
+        prompt,
+        mode,
+        model,
+        messages=chat_messages,
+        tools=None,
+    )
 
 
 def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
@@ -47,6 +104,14 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
         subagent=subagent,
         viewer_summary=state.get("viewer_summary", ""),
     )
+    chat_messages = messages_to_chat_messages(
+        messages,
+        state["mode"],
+        state.get("daemon_context", ""),
+        subagent=subagent,
+        viewer_summary=state.get("viewer_summary", ""),
+    )
+    tool_specs = tool_specs_for_subagent(subagent, state["mode"])
 
     log_subagent_event(
         subagent=subagent,
@@ -55,37 +120,38 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
         turn_id=state.get("turn_id", ""),
     )
 
-    ok, raw_text = inference_fn(prompt, state["mode"], state.get("model", ""))
-    if not ok:
+    result = _invoke_broker_inference(
+        inference_fn,
+        prompt=prompt,
+        mode=state["mode"],
+        model=state.get("model", ""),
+        chat_messages=chat_messages,
+        tool_specs=tool_specs,
+    )
+    if not result.ok:
         message = (
             "Inference failed. Check that the daemon is running and "
             "HTTP inference is configured."
         )
+        if result.error.strip():
+            message = f"{message} ({result.error.strip()})"
         return {
             "done": True,
             "final_answer": message,
             "stream_parts": state["stream_parts"] + [message],
         }
 
-    ai, _ = parse_to_ai_message(raw_text, state["mode"])
+    raw_text = result.effective_text()
+    ai, parsed = route_inference_result(result, state["mode"])
 
     if ai.tool_calls:
         tc = ai.tool_calls[0]
         call = ToolCall(tool=str(tc.get("name", "")), args=dict(tc.get("args") or {}))
-        active = classify_subagent_for_tool(call.tool)
-        events = append_step(
-            list(state.get("stream_events") or []),
-            phase="running",
-            summary=f"Routing to {active} for {call.tool}",
-        )
-        return {
-            "messages": [AIMessage(content=raw_text, id=str(uuid.uuid4()))],
-            "pending_tool": call,
-            "active_subagent": active,
-            "stream_events": events,
-        }
+        return _route_tool_call(call, raw_text=raw_text, state=state)
 
-    parsed = parse_model_output(raw_text, state["mode"])
+    if parsed is None:
+        return {}
+
     if parsed.kind == "clarify" and parsed.clarify_questions:
         detail = cap_detail(json.dumps(parsed.clarify_questions))
         events = append_plan(
@@ -141,17 +207,8 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
         return updates
 
     if parsed.kind == "tool" and parsed.tool_call is not None:
-        active = classify_subagent_for_tool(parsed.tool_call.tool)
-        events = append_step(
-            list(state.get("stream_events") or []),
-            phase="running",
-            summary=f"Routing to {active} for {parsed.tool_call.tool}",
+        return _route_tool_call(
+            parsed.tool_call, raw_text=raw_text, state=state
         )
-        return {
-            "messages": [AIMessage(content=raw_text, id=str(uuid.uuid4()))],
-            "pending_tool": parsed.tool_call,
-            "active_subagent": active,
-            "stream_events": events,
-        }
 
     return {}

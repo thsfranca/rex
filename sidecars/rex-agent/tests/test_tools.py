@@ -6,6 +6,7 @@ from rex_agent.tools import (
     TOOL_READ,
     normalize_plan_save_path,
     parse_model_output,
+    tool_specs_for_subagent,
     tools_for_mode,
 )
 
@@ -56,3 +57,32 @@ def test_plan_mode_rejects_write_tool() -> None:
     raw = '{"type":"tool","tool":"fs.write","args":{"path":"a.txt","content":"x"}}'
     parsed = parse_model_output(raw, "plan")
     assert parsed.kind == "error"
+
+
+def test_tool_specs_for_subagent_plan_orchestrator() -> None:
+    try:
+        from rex.v1 import rex_pb2  # noqa: F401
+    except ImportError:
+        return
+
+    specs = tool_specs_for_subagent("orchestrator", "plan")
+    names = {spec.name for spec in specs}
+    assert TOOL_READ in names
+    assert TOOL_LIST in names
+    assert TOOL_PLAN_SAVE in names
+    for spec in specs:
+        assert spec.parameters_json.startswith("{")
+
+
+def test_tool_specs_for_subagent_viewer_masks_write() -> None:
+    try:
+        from rex.v1 import rex_pb2  # noqa: F401
+    except ImportError:
+        return
+
+    specs = tool_specs_for_subagent("viewer", "agent")
+    names = {spec.name for spec in specs}
+    assert TOOL_READ in names
+    assert TOOL_LIST in names
+    assert "fs.write" not in names
+    assert "exec.shell" not in names
