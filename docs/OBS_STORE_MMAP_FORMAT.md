@@ -1,222 +1,378 @@
-# Apple Silicon mmap economics store — on-disk format (reference)
+# CHCE — columnar-mmap observability store (reference)
 
-**Diátaxis role:** reference — physical layout and format decision for `observability.store.engine: "mmap"`.
+**Diátaxis role:** reference — physical layout and engine design for `observability.store.engine: "mmap"`.
 
-**Status:** **design documented** — not implemented in `rex-obs-store` yet.
+**Status:** **design documented** — CHCE architecture per deep research (2026-06-07); not implemented in `rex-obs-store` yet.
 
-**Hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **ADR:** [0025](architecture/decisions/0025-dual-economics-store-engines.md) · **SQLite default:** [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md)
+**Hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **ADRs:** [0025](architecture/decisions/0025-dual-economics-store-engines.md), [0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) · **SQLite default:** [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md)
 
 ## Purpose
 
-Define the **mmap opt-in** on-disk format for local economics persistence on **macOS Apple Silicon**, including why this format was chosen over alternatives, how it maps to the shared logical schema, and what is deferred to a **v2** compression track.
+Define the **Custom Hybrid Columnar-mmap Engine (CHCE)** — the mmap opt-in system of record for local economics persistence on **macOS Apple Silicon**. Covers architecture, on-disk layout, compression tiers, programmatic API, durability, and promotion gates.
 
 ## Scope
 
-**In:** format decision matrix, mmap v1 container + record encoding, durability, compression tiers, logical record types, signal mapping, comparison vs SQLite, promotion gates, CI boundaries.
+**In:** CHCE subsystems, columnar 16 KB pages, file artifacts, schema parity with SQLite, read/write/live API catalog, recovery, format evolution, benchmarks, CI boundaries.
 
-**Out:** Rust implementation, zstd dictionary training automation, block defragmentation/compaction, making mmap the default engine.
+**Out:** Rust implementation, v2 ALP/Gorilla codecs, Parquet export automation, making mmap the default engine.
 
-## Format decision
+## Requirements traceability
 
-Three independent layers drive “binary store” proposals; Rex scores **whole approaches**, not “binary = one answer.”
+| ID | Requirement | This doc section | Status |
+|----|-------------|------------------|--------|
+| R-01 | Rex-owned engine; not SQLite/TSDB as system of record | Purpose, ADR 0027 | Design met |
+| R-02 | OTel `gen_ai.*` + `rex.*` persistence | OTel mapping | Design met |
+| R-03 | No prompt/file body storage | Invariants | Design met |
+| R-04 | Hot-path non-blocking append | Threading, write API | Design met |
+| R-05 | Programmatic API only | API catalog | Design met |
+| R-06 | Grafana historical via OTLP JSON | Read path | Design met |
+| R-07 | Grafana real-time visualization | Live tail (Phase 6) | Design met |
+| R-08 | Minimize disk usage | Byte budget, compression | Design met |
+| R-09 | Config snapshot dedup + FK | Logical model | Design met |
+| R-10 | Harness `runs` / `run_tasks` | Logical model | Design met |
+| R-11 | Future traces/spans | Deferred Phase 6 | Planned |
+| R-12 | Apple Silicon 16 KB pages | Container layout | Design met |
+| R-13 | Crash recovery + `format_version` | Durability | Design met |
+| R-14 | Linux CI testability | CI and platform | Design met |
+| R-15 | Retention + Parquet export | Deferred Phase 7 | Planned |
 
-| # | Candidate | Ingest (hot path) | Rollup read | Disk (1M streams, design target) | Migrations | macOS durability | Engineering cost | Verdict |
-|---|-----------|-------------------|-------------|-----------------------------------|------------|------------------|------------------|---------|
-| 1 | **SQLite** (`store.engine=sqlite`, default) | ~2 ms class | SQL decode + B-tree | ~15–20 MB | **Low** (`ALTER TABLE`) | WAL + fsync | **Low** | **Default engine** — Phase 2 |
-| 2 | Tuned SQLite only (no second engine) | ~1–2 ms | Same | ~12–18 MB | Low | Same | Low | **Reject** — forfeits mmap zero-copy rollup goals |
-| 3 | **mmap v1 — musli-zerocopy + zstd** (chosen for mmap) | &lt;0.1 ms class (append to mapped RAM) | Incremental validate queried slices | ~4–8 MB (no Gorilla v1) | **High** (`format_version` + struct layouts) | Append + CRC + `F_FULLFSYNC` | **Medium–high** | **Chosen for `engine=mmap`** |
-| 4 | mmap + full custom binary (Gorilla + bit dictionaries) | &lt;0.05 ms class | Zero-copy + dense streams | ~2–4 MB | Very high | Same as (3) | **Very high** | **v2 optimization** — only if (3) benchmarks fail targets |
-| 5 | Embedded mmap KV (redb / LMDB) | ~0.1–0.5 ms | KV fetch + value decode | ~8–15 MB | Medium (KV schema) | Engine-native | Medium | **Reject for v1** — B-tree overhead; less control over Apple page alignment |
-| 6 | Append NDJSON | ~0.5 ms+ parse | Full scan / parse | Large | Low | Line-delimited + fsync | Low | **Reject** — export/debug only |
-| 7 | Parquet / Arrow IPC primary file | Batch-oriented | Excellent for analytics | Varies | Medium | File replace | Medium | **Reject** — hot path is per-`stream.terminal` append; use for **`rex obs export`** |
+## Architecture
 
-**Chosen mmap v1:** **(3)** append-only memory-mapped file, **16 KB** page alignment, typed records via **musli-zerocopy**, **zstd** for `config_snapshots` (trained dictionary) and optional per-page payload compression, **CRC32** block envelopes, **no Gorilla** in v1.
-
-**Rationale:** Delivers mmap + incremental validation without owning a bit-packed time-series codec on day one. **(4)** remains documented below as **v2** if measured disk or ingest gaps vs SQLite exceed promotion thresholds.
-
-## File identity
-
-| Field | Value |
-|-------|--------|
-| Default path (under `$REX_ROOT`) | `obs/store.rexobs` |
-| Magic (bytes 0–3) | `REXO` (0x52 0x45 0x58 0x4F) |
-| `format_version` (u16 LE, bytes 4–5) | `1` for mmap v1 |
-| `endianness` | **Little-endian** for all multi-byte integers |
-| Config mirror | `observability.store.format_version` in merged JSON must match file header for writes |
-
-## Container layout (mmap v1)
+CHCE is an embedded Rust library in `crates/rex-obs-store` with no standalone daemon.
 
 ```mermaid
 flowchart TB
-  subgraph file [store.rexobs]
-    hdr[FileHeader 64B aligned]
-    pages[Page0..N each 16KB]
-    tail[CommitTail 8B aligned]
+  subgraph consumers [Consumers]
+    daemon[rex-daemon]
+    readApi[rex-obs-api]
+    cli[rex CLI]
+    harness[ValidationHarness]
   end
-  hdr --> pages
-  pages --> tail
+
+  subgraph port [StorePortTrait]
+    write[append_*]
+    read[scan_* / rollup_*]
+    live[tail_telemetry]
+  end
+
+  subgraph engine [CHCE subsystems]
+    ring[LiveRingBuffer]
+    coord[AppendCoordinator]
+    codec[ColumnarCodec]
+    dict[DictionaryManager]
+    mmap[MmapPaginator]
+  end
+
+  subgraph disk [On-disk artifacts]
+    main[store.rexobs]
+    dictFile[store.dict]
+    wal[store.wal]
+  end
+
+  daemon --> write
+  readApi --> read
+  readApi --> live
+  cli --> read
+  harness --> write
+
+  write --> ring
+  coord --> ring
+  coord --> codec
+  codec --> dict
+  codec --> mmap
+  mmap --> main
+  dict --> dictFile
+  ring --> wal
 ```
 
-### File header (64 bytes, 16 KB aligned first page)
+### Subsystem responsibilities
 
-| Offset | Field | Type | Notes |
-|--------|-------|------|-------|
-| 0 | `magic` | [u8; 4] | `REXO` |
-| 4 | `format_version` | u16 LE | Must match config |
-| 6 | `header_size` | u16 LE | `64` |
-| 8 | `page_size` | u32 LE | `16384` |
-| 12 | `created_at_unix_ms` | u64 LE | File creation |
-| 20 | `dict_path_offset` | u64 LE | Optional external zstd dict path hash/id — **v1 may embed dict in sidecar file** `obs/store.dict` |
-| 28 | `reserved` | [u8; 36] | Zero |
+| Subsystem | Responsibility | Inputs | Outputs |
+|-----------|----------------|--------|---------|
+| **LiveRingBuffer** | Absorb hot-path writes; source of truth for recent telemetry | `StreamEconomicsRecord` | In-memory column slices for API reads |
+| **AppendCoordinator** | Drain ring when ~15 KB accumulated; transpose rows → columns | Row records | Columnar arrays |
+| **ColumnarCodec** | Apply per-column compression (v1: dict, TSZ, bit-pack) | Column vectors | Compressed payloads |
+| **DictionaryManager** | Global categorical string → u16 ordinals | Strings | `store.dict` mappings |
+| **MmapPaginator** | 16 KB page mapping, headers, CRC32, `F_BARRIERFSYNC` | Compressed batches | Sealed pages in `store.rexobs` |
 
-### Pages (16 KB each)
-
-Each page is **exactly 16384 bytes**. The OS maps them on Apple Silicon **16 KB** boundaries to reduce TLB friction on unified memory.
-
-| Page region | Purpose |
-|-------------|---------|
-| `page_header` | `page_index` (u32), `record_count` (u16), `flags` (u16), `payload_crc32` (u32) |
-| `dict_slot` | Optional inline categorical dictionary for strings used in this page (`route`, `cache_decision`, `terminal`, …) |
-| `records` | Concatenated musli-encoded records; padded to 128-byte boundaries **within the page** for sequential rollup scans |
-| `padding` | Zero fill to 16 KB |
-
-**128-byte padding rule:** Each record’s stored size is rounded up to the next **128-byte** boundary when the record type is marked `rollup_hot` in the schema table (stream economics rows). Cold records (harness metadata) may use 16-byte alignment only.
-
-### Blocks and commit tail
-
-Within a page, one or more **blocks** may be stored:
-
-| Block field | Type | Notes |
-|-------------|------|-------|
-| `block_len` | u32 LE | Payload length excluding this header |
-| `block_type` | u16 LE | `1`=records, `2`=snapshot blob |
-| `payload` | [u8; block_len] | musli bytes or zstd-compressed blob |
-| `crc32` | u32 LE | IEEE CRC32 over `block_type` + `payload` |
-
-**Commit tail** (file end, 8-byte aligned):
-
-| Field | Type | Notes |
-|-------|------|-------|
-| `committed_byte_len` | u64 LE | Total valid file length; monotonic |
-
-**Write order (durability):** append blocks into the mmap region → `msync(MS_SYNC)` on touched pages → update `committed_byte_len` → **`F_FULLFSYNC`** on the file descriptor (macOS). Readers use `committed_byte_len` as the snapshot boundary; they never read beyond it.
-
-**Recovery:** On daemon start, if `committed_byte_len` &gt; file size or CRC checks fail on the last block, **scan backward** page-by-page for the last valid `payload_crc32` / block CRC, set `committed_byte_len` to that offset, **truncate** the file. Surface `store.recovery_failed` if truncation cannot find a valid boundary (see [ERROR_HANDLING.md](ERROR_HANDLING.md)).
-
-## Record encoding (mmap v1)
-
-Records are **musli-zerocopy** layouts (field names at design level; Rust types live in `rex-obs-store` when implemented).
-
-### Shared types
-
-| Type | Fields (design) | Notes |
-|------|-----------------|-------|
-| `SnapshotId` | 32-byte content hash | Same id as SQLite `config_snapshots.id` |
-| `CategoricalRef` | `dict_id: u8`, `ordinal: u8` | Points at page inline dict |
-| `TimestampMs` | u64 LE | Wall clock ms at `stream.terminal` |
-
-### Logical records (parity with SQLite)
-
-| Record | Key fields | SQLite table |
-|--------|------------|--------------|
-| `ConfigSnapshotRecord` | `id: SnapshotId`, `zstd_payload`, `raw_len` | `config_snapshots` |
-| `StreamEconomicsRecord` | `snapshot_id`, `request_id`, `trace_id`, `terminal` (CategoricalRef), `route`, `cache_decision`, `elapsed_ms`, token fields, pipeline fields | `streams` |
-| `RunRecord` | `run_id`, `scenario`, `started_at`, `config_snapshot_id`, … | `runs` |
-| `RunTaskRecord` | `run_id`, `task_id`, `outcome`, metrics, … | `run_tasks` |
-
-### Signal mapping (stdout → store)
-
-Columns persisted on `StreamEconomicsRecord` (from [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)):
-
-| Stdout / signal | Stored field |
-|-----------------|--------------|
-| `stream.request_id` | `request_id` |
-| `trace_id` | `trace_id` |
-| `stream.terminal` | `terminal` (categorical) |
-| `elapsed_ms` | `elapsed_ms` |
-| `route=` | `route` (categorical) |
-| `cache_decision=` | `cache_decision` (categorical) |
-| `stream.metrics` token fields | `prompt_tokens`, `context_tokens`, … |
-| `config_snapshot_id` | `snapshot_id` FK |
-| Planned: `cached_tokens`, `prefix_hash`, `parse_retries` | same names when OTLP phase lands |
-
-## Compression tiers
-
-### v1 (required / optional)
-
-| Data | v1 approach |
-|------|-------------|
-| `config_snapshots` | **Zstd with trained dictionary** (~100 KB dict from sample configs); dictionary file `obs/store.dict` or embedded reload hook; built offline via `zdict` / `from_samples` — daemon reload on startup |
-| Per-page record batch | **Optional zstd** on `block_type=1` payload when page is sealed |
-| Time-ordered integers inside records | Plain musli integers in v1 |
-
-### v2 (optimization track — not v1)
-
-| Data | v2 approach |
-|------|-------------|
-| Timestamps, token counters per stream | **Gorilla / delta-of-delta** bit packing (~1.37 B/metric design goal) |
-| Categorical strings | **4/8-bit** ordinals only (strip inline dict duplication across pages) |
-
-Promote v2 only when benchmarks on **1M synthetic streams** show v1 disk or ingest misses documented targets vs SQLite by more than the maintenance budget allows.
-
-## Read path
-
-- Map file read-only with `memmap2`.
-- Read `committed_byte_len` (atomic load, acquire).
-- For `rex obs rollup` / in-process dashboards: **incremental musli validation** on touched pages only — do **not** validate the full file at open (contrast with full-archive `rkyv` validation cost).
-- Export: optional **Parquet/Arrow/JSON** via `rex obs export` — not the primary mmap container.
-
-## Concurrency
+### Threading
 
 | Role | Model |
 |------|--------|
-| Writer | Single daemon thread via `mpsc`; only writer extends `committed_byte_len` |
-| Readers | Lock-free; read `committed_byte_len` before parsing pages |
-| Ordering | Writer publishes tail length with release semantics after `F_FULLFSYNC` |
+| **Writers (producers)** | Daemon inference loop sends to bounded `mpsc` channel; returns in &lt;1 ms |
+| **Writer (consumer)** | Single background thread seals pages and updates `committed_byte_len` (Release) |
+| **Readers** | Lock-free; load `committed_byte_len` (Acquire) before parsing |
+| **Live tail** | `tokio::sync::broadcast` from `LiveRingBuffer` to read API SSE (Phase 6) |
 
-## Comparison (engines)
+## Logical data model
 
-| Attribute | mmap v1 (this spec) | Tuned SQLite (default) | Full custom binary (v2 track) |
-|-----------|----------------------|-------------------------|-------------------------------|
-| Ingest latency | &lt;0.1 ms class append | ~2 ms class | &lt;0.05 ms class |
-| Rollup query | Incremental musli slice | SQL + row decode | Zero-copy dense |
-| Disk (1M streams) | ~4–8 MB target | ~15–20 MB | ~2–4 MB |
-| Migrations | `format_version` + layouts | `ALTER TABLE` | Multi-layout + codecs |
-| Grafana UI path | Rex read API + datasource | Rex read API + datasource | Rex read API + datasource |
-| CI | macOS tests | Linux + macOS | macOS + fuzz |
+Programmatic structs only — no SQL DDL. Shared logical schema with SQLite ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)).
 
-## Promotion gates (default `engine` flip sqlite → mmap)
+### ConfigSnapshotRecord
 
-All must pass before changing the JSON default:
+| Field | Type | Notes |
+|-------|------|-------|
+| `snapshot_id` | `[u8; 32]` | SHA-256 of canonical economics JSON — PK |
+| `payload` | Zstd-compressed bytes | Dictionary-trained on sample configs |
+| `created_at_ms` | u64 | First-seen timestamp |
 
-1. **Harness parity** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) scenarios produce equivalent aggregates on sqlite vs mmap within defined tolerance.
-2. **Recovery** — fuzz tests: kill daemon mid-append; recovery truncates to last CRC without data loss on prior commits.
-3. **macOS soak** — local dogfood with `engine=mmap` for N sessions without `store.recovery_failed`.
-4. **Benchmarks** — 1M synthetic `streams`: mmap v1 meets disk target OR v2 is implemented and validated.
-5. **Linux CI** — remains **sqlite-only**; no requirement to run mmap on `ubuntu-latest`.
+### StreamEconomicsRecord
 
-## Operational
+Persisted at `stream.terminal`. **`trace_id` and `turn_id` stored in sparse secondary index**, not in dense metric columns ([ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)).
 
-| Topic | Policy |
+### Schema parity matrix
+
+Maps [`StreamEconomicsRecord`](../crates/rex-obs-store/src/record.rs) fields to CHCE column groups.
+
+| Field | Column group | Encoding (v1) | Encoding (v2) |
+|-------|--------------|---------------|---------------|
+| `snapshot_id` | FK column | 32-byte hash or dict ref | RLE when static per session |
+| `request_id` | Integer | Bit-packed u64 | FastLanes |
+| `trace_id` | **Sparse index** | UUID sidecar | Same |
+| `turn_id` | **Sparse index** | String hash sidecar | Same |
+| `terminal` | Categorical | u16 dict ordinal | RLE on ordinal column |
+| `route` | Categorical | u16 dict ordinal | RLE |
+| `cache_decision` | Categorical (nullable) | u16; `0` = null | RLE |
+| `decision_id` | Categorical | u16 dict ordinal | RLE |
+| `inference_runtime` | Categorical | u16 dict ordinal | RLE |
+| `mode` | Categorical | u16 dict ordinal | RLE |
+| `model` | Categorical | u16 dict ordinal | RLE |
+| `elapsed_ms` | Integer metric | Plain u64 in v1 | ALP (v2) |
+| `chunks_sent` | Integer | Bit-packed u64 | FastLanes |
+| `prompt_tokens` | Integer | Bit-packed u64 | FastLanes |
+| `context_tokens` | Integer | Bit-packed u64 | FastLanes |
+| `context_candidates` | Integer | Bit-packed u64 | FastLanes |
+| `context_selected` | Integer | Bit-packed u64 | FastLanes |
+| `context_truncated` | Boolean | 1-bit column | Bit-pack |
+| `retrieval` | Categorical | u16 dict ordinal | RLE |
+| `compression_strategy` | Categorical | u16 dict ordinal | RLE |
+| `cached_tokens` | Integer (optional) | Nullable bit-pack | FastLanes |
+| `prefix_hash` | Sparse / optional | Hash sidecar when set | Same |
+| `parse_retries` | Integer (optional) | Nullable bit-pack | FastLanes |
+| `created_at_ms` | Timestamp | TSZ delta-of-delta | Gorilla/TSZ v2 |
+
+### Other logical records
+
+| Record | SQLite table | Notes |
+|--------|--------------|-------|
+| `RunRecord` | `runs` | Harness metadata — cold columnar layout |
+| `RunTaskRecord` | `run_tasks` | Per-task outcomes |
+
+### Invariants
+
+- **Write-once** — no row UPDATE/DELETE; retention truncates by time/file only.
+- **FK ordering** — `ConfigSnapshotRecord` sealed before any `StreamEconomicsRecord` referencing its `snapshot_id`.
+- **Privacy** — no prompt bodies, completion text, or file paths in store structs.
+
+### OTel instrument mapping
+
+| OTel instrument | Source fields | Grafana use |
+|-----------------|---------------|-------------|
+| `rex.stream.requests` | Count of stream records | Sum by terminal, route, model |
+| `gen_ai.client.operation.duration` | `elapsed_ms` | Histogram / average latency |
+| `rex.context.prompt_tokens` | `prompt_tokens` | Rate / sum over bins |
+| `rex.cache.decisions` | `cache_decision` | Discrete counts |
+
+## Programmatic API catalog
+
+No SQL or PromQL. Strongly typed trait on `rex-obs-store`.
+
+### Write operations
+
+| Method | Record(s) | Hot path? |
+|--------|-----------|-----------|
+| `append_config` | `ConfigSnapshotRecord` | Yes — bloom dedup O(1) |
+| `append_stream` | `StreamEconomicsRecord` | Yes — `mpsc` dispatch &lt;1 ms |
+| `append_run` | `RunRecord` | No — harness batch |
+| `append_run_task` | `RunTaskRecord` | No — harness batch |
+| `append_span` | Trace span tree | Phase 6 — planned |
+
+### Read operations
+
+| Method | Complexity target | Consumer |
+|--------|-------------------|----------|
+| `scan_streams_by_time(from, to, filter)` | O(log P + K) via zone maps | `rex-obs-api` |
+| `rollup_metrics_by_label(labels, window)` | O(C) column projection | `rex obs rollup` (planned) |
+| `fetch_config_by_id(hash)` | O(1) hash index | `rex obs doctor` |
+
+Aligns with existing [`ObsQuery::query_streams`](crates/rex-obs-store/src/query.rs) for SQLite; mmap implements the same logical filter shape.
+
+### Live operations (Phase 6)
+
+| Method | Mechanism |
+|--------|-----------|
+| `tail_telemetry(cursor)` | Async stream from broadcast channel; merge with historical per [OBS_READ_API.md](OBS_READ_API.md) |
+
+## Index and access paths
+
+**Primary sort:** `created_at_ms` — append-only physical order.
+
+| Structure | Purpose |
+|-----------|---------|
+| **Zone maps** | 64 B `ZONE_FOOTER` per page: `min_ts`, `max_ts`, record count, bloom of `snapshot_id` |
+| **Dictionary filters** | Resolve label string → ordinal; SIMD scan ordinal column |
+| **Sparse trace index** | `trace_id` / `turn_id` → page offset for debug correlation |
+| **Config hash index** | In-memory `snapshot_id` → file offset |
+
+Rollups are **read-time projection** over column vectors — no continuous pre-aggregation at v1 volumes.
+
+## On-disk layout
+
+### File inventory
+
+| File | Purpose | Rotation |
+|------|---------|----------|
+| `obs/store.rexobs` | Active mmap telemetry | Roll at **256 MB** → `store_{unix_ms}.rexobs` |
+| `obs/store.dict` | Global categorical dictionary | Rarely rotated (~10 MB cap) |
+| `obs/store.wal` | Ring buffer spill for in-flight records | 16 MB overwrite ring |
+
+Default paths under `$REX_ROOT`; override via `observability.store.path` when `engine=mmap`.
+
+### File identity
+
+| Field | Value |
 |-------|--------|
-| `F_FULLFSYNC` | On every `stream.terminal` store commit (configurable batching is **Could** later) |
-| Max file size | Hook via `observability.store.retention` (planned in hub Phase 5) — truncate/archive TBD |
-| Defragmentation | **Deferred** — append-only may grow; compaction is follow-up design |
+| Magic (bytes 0–3) | `REXO` (0x52 0x45 0x58 0x4F) |
+| `format_version` (u16 LE) | `1` for CHCE v1 |
+| `page_size` | `16384` (16 KB — Apple Silicon VM pages) |
+| Endianness | Little-endian |
+
+### 16 KB block layout
+
+Each sealed page is exactly **16384 bytes**.
+
+| Offset | Size | Field | Notes |
+|--------|------|-------|-------|
+| 0x0000 | 4 | `MAGIC` | `REXO` |
+| 0x0004 | 2 | `FORMAT_VER` | u16 LE |
+| 0x0006 | 2 | `PAGE_SIZE` | `16384` |
+| 0x0008 | 8 | `BLOCK_SEQ` | Monotonic block ID |
+| 0x0010 | 4 | `CRC32_PAYLOAD` | IEEE CRC32 over compressed columns |
+| 0x0014 | 44 | Padding | Align header to 64 B |
+| 0x0040 | &lt;16300 | `DATA_PAYLOAD` | Columnar compressed batches |
+| 0x3FC0 | 64 | `ZONE_FOOTER` | min_ts, max_ts, counts, bloom |
+
+```mermaid
+block-beta
+  columns 1
+  FileHeader["Global header magic version"]
+  space
+  block Pages:1
+    columns 4
+    P1 P2 P3 PN
+  end
+  space
+  block PageZoom:1
+    columns 5
+    PHead ColT ColF["Floats v2 ALP"] ColI PFoot
+  end
+  P1 --> PageZoom
+```
+
+### Commit tail
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `committed_byte_len` | u64 LE | Valid file length; monotonic |
+
+**Write order:** append sealed 16 KB page → `msync` touched pages → update `committed_byte_len` (Release) → **`F_BARRIERFSYNC`** on fd ([ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)).
+
+**Recovery:** Map file; read backward from EOF; validate `CRC32_PAYLOAD`; on torn page, set `committed_byte_len` to last valid block start; `ftruncate`. Surface `store.recovery_failed` if no valid boundary ([ERROR_HANDLING.md](ERROR_HANDLING.md)).
+
+## Compression strategy
+
+### v1 (Phase 2b ship)
+
+| Data | Codec |
+|------|-------|
+| `config_snapshots` | Zstd with trained dictionary (`store.dict`) |
+| Categorical columns | Global u16 dictionary |
+| `created_at_ms` | TSZ delta-of-delta |
+| Integer token fields | Bit-packed baseline |
+| `elapsed_ms` | **Uncompressed** u64 (v1 speed) |
+| Per-page payload | Optional Zstd on full column batch when sealing |
+
+### v2 (Phase 7 optimization)
+
+| Data | Codec |
+|------|-------|
+| `elapsed_ms` | ALP (`vortex-alp`) |
+| Timestamps | Gorilla/TSZ refinement |
+| Integer columns | FastLanes bit-packing |
+
+### Byte budget (design target)
+
+| Scale | Target |
+|-------|--------|
+| 100K streams | ~1.35 MB |
+| 1M streams | &lt;8 MB stretch goal |
+
+Requires trace_id externalized, dictionary ordinals, columnar codecs, and RLE on static categoricals.
+
+## Benchmarks and acceptance criteria
+
+| Benchmark | Target | Method |
+|-----------|--------|--------|
+| 1M synthetic append | &lt;100 ms wall | Drain mpsc queue |
+| Hot `append_stream` | &lt;1 ms | Apple Silicon daemon path |
+| Crash recovery | 0 logical corruption | `kill -9` mid-write; clean boot |
+| Disk measurement | &lt;8 MB / 1M streams | `du` on `store.rexobs` |
+| Linux ELF alignment | 16384 | `check_elf_alignment.sh` with `-Wl,-z,max-page-size=16384` |
+
+Register harness parity with SQLite in [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
+
+## Format evolution
+
+| Version | Changes | Reader behavior |
+|---------|---------|-----------------|
+| v1 | Dict + TSZ + Zstd snapshots; floats plain | Native parse |
+| v2 | ALP float columns | Branch on `FORMAT_VER`; lazy promotion on read |
+
+Incompatible `format_version` → `store.format_version_unsupported`.
+
+## Comparison vs SQLite default
+
+| Attribute | CHCE (this spec) | SQLite interim |
+|-----------|------------------|----------------|
+| Ingest latency | &lt;1 ms class | ~2 ms class |
+| Disk (1M streams) | &lt;8 MB target | ~15–20 MB |
+| Rollup read | Column projection + zone skip | SQL + row decode |
+| Migrations | `format_version` + layouts | `ALTER TABLE` |
+| Grafana path | Rex read API | Rex read API |
+
+## Promotion gates (sqlite → mmap default)
+
+All must pass before JSON default changes ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)):
+
+1. Harness parity — aggregates within tolerance vs SQLite
+2. Recovery fuzz — kill mid-append; truncate without prior commit loss
+3. macOS soak — dogfood without `store.recovery_failed`
+4. Benchmarks — disk target met or v2 codecs shipped
+5. Linux CI — remains sqlite-default; optional mmap alignment job on macOS
 
 ## CI and platform
 
 | Environment | `store.engine` |
 |-------------|----------------|
-| Linux CI (`ubuntu-latest`) | **`sqlite` only** |
-| macOS dev / optional CI job | `sqlite` or **`mmap`** |
-| Non-macOS + `mmap` | Fail closed: `store.engine_unsupported` |
+| Linux CI | **`sqlite` only** |
+| macOS dev | `sqlite` or **`mmap`** |
+| Non-macOS + `mmap` | `store.engine_unsupported` |
+
+## Implementation phases (design map)
+
+| CHCE phase | Hub phase | Scope |
+|------------|-----------|-------|
+| MVP engine | **2b** | Ring buffer, columnar v1, historical read |
+| Live + traces | **6** | SSE tail, span schema |
+| Compression v2 | **7** | ALP, retention, Parquet export |
 
 ## Cross-links
 
 | Doc | Relationship |
 |-----|----------------|
 | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | Parent hub |
-| [CONFIGURATION.md](CONFIGURATION.md) | `observability.store.*` keys |
-| [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | Bundled Grafana suite |
-| [ERROR_HANDLING.md](ERROR_HANDLING.md) | Planned store error codes |
+| [OBS_READ_API.md](OBS_READ_API.md) | Read API + SSE contract |
+| [CONFIGURATION.md](CONFIGURATION.md) | `observability.store.*` |
+| [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Benchmarks + harness |
+| [ERROR_HANDLING.md](ERROR_HANDLING.md) | Store error codes |
 | [ROADMAP.md](ROADMAP.md) | Implementation queue |

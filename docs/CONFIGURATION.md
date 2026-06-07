@@ -88,9 +88,9 @@ Minimal example:
 
 ## Observability
 
-**Status:** **partial** — daemon reads merged JSON; SQLite store append on `stream.terminal` and bounded OTLP export when `observability.otlp.endpoint` is set (**implemented**). ADR 0026 read API, bundled Grafana, and `rex obs up` remain **planned**. **mmap** engine rejected until Phase 2b. Hubs: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). ADRs: [0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [0025](architecture/decisions/0025-dual-economics-store-engines.md), [0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md).
+**Status:** **partial** — SQLite store, read API, `rex obs up`, and core OTLP export **implemented**. **CHCE mmap** engine (`engine=mmap`) fail-closed until Phase 2b implementation — design in [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md). SSE live tail planned Phase 6.
 
-When `observability.enabled` is `true` in merged JSON, the daemon enables **`rex-obs-store`** (`$REX_ROOT/<store.path>`) and attempts **OTLP export** when an endpoint is configured (otherwise store-only + `obs.export=degraded` stdout). Bundled Grafana will read via the **Rex observability read API** when that path ships (planned). When `false` or omitted, phase 0 **stdout grep** only.
+When `observability.enabled` is `true` in merged JSON, the daemon enables **`rex-obs-store`** (`$REX_ROOT/<store.path>`) and attempts **OTLP export** when an endpoint is configured (otherwise store-only + `obs.export=degraded` stdout). Bundled Grafana reads via the **Rex observability read API** ([OBS_READ_API.md](OBS_READ_API.md)). When `false` or omitted, phase 0 **stdout grep** only.
 
 | Key | Default | Purpose |
 |-----|---------|---------|
@@ -102,9 +102,9 @@ When `observability.enabled` is `true` in merged JSON, the daemon enables **`rex
 | `observability.ui.grafana.port` | `3000` | Local Grafana HTTP port |
 | `observability.otlp.endpoint` | (none) | Optional interop: OTLP URL when replication enabled |
 | `observability.otlp.protocol` | `grpc` | `grpc` or `http/protobuf` (interop only) |
-| `observability.store.engine` | `sqlite` | `sqlite` (default) or `mmap` (macOS opt-in) — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) |
-| `observability.store.path` | `obs/store.sqlite` when `engine=sqlite`; `obs/store.rexobs` when `engine=mmap` | Path relative to `$REX_ROOT`; should match engine |
-| `observability.store.format_version` | `1` | Mmap file header version; ignored for sqlite until needed |
+| `observability.store.engine` | `sqlite` | `sqlite` (default) or `mmap` (CHCE, macOS opt-in) — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) |
+| `observability.store.path` | `obs/store.sqlite` when `engine=sqlite`; `obs/store.rexobs` when `engine=mmap` | Path relative to `$REX_ROOT`; CHCE also uses `obs/store.dict` |
+| `observability.store.format_version` | `1` | CHCE block header version; ignored for sqlite |
 
 Keys marked **planned** are documented for the bundled Grafana suite; the daemon may ignore them until implementation PRs land.
 

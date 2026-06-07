@@ -180,6 +180,21 @@ Golden set: ~50 local repo tasks (SWE-bench Lite–style subset). **Control:** c
 
 **Cadence:** per-PR smoke uses mock/replay (no live LLM); powered agent-turn A/B on **release** or lever-change gates only — see [Cadence](#cadence).
 
+## CHCE store benchmarks (mmap engine promotion)
+
+When `observability.store.engine=mmap` (CHCE) ships, these gates apply before default-engine promotion ([OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)):
+
+| Benchmark | Target | Verification |
+|-----------|--------|--------------|
+| 1M synthetic `append_stream` | &lt;100 ms queue drain | Harness / criterion bench |
+| Hot-path `append_stream` | &lt;1 ms on Apple Silicon | Daemon micro-bench |
+| Crash recovery | No panic; truncate torn page | `kill -9` mid-write fixture |
+| Disk footprint | &lt;8 MB after 1M streams | `du` on `store.rexobs` |
+| Engine parity | Aggregates within tolerance vs SQLite | Same scenario on both engines |
+| Linux CI alignment | ELF page size 16384 when mmap crate builds | `check_elf_alignment.sh` |
+
+Harness should use a shared **store trait** and parity-check sqlite vs CHCE on macOS — design intent in [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md).
+
 ## Gaps (explicit)
 
 - Human preference and maintainability not captured by benchmarks.

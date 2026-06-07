@@ -4,7 +4,7 @@
 
 **Status:** **partial** — read API + `rex obs` + Rex OTel datasource plugin shipped; Grafana binary from PATH or `$REX_ROOT/obs/vendor/grafana/bin/` ([ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md)).
 
-**Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) · [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) · **Design hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
+**Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) · [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) · [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) · **Design hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
 
 ## Configuration surface
 
@@ -12,7 +12,7 @@ Rex observability is configured only in **merged JSON** ([CONFIGURATION.md](CONF
 
 ## Purpose
 
-Rex **owns telemetry storage** and serves **OpenTelemetry-shaped** data to **bundled Grafana** through a **Rex datasource plugin**. Operators install **Rex only** — no separate Collector, Prometheus, Loki, or Tempo installs for the product path. One command (**`rex obs up`**, planned) starts the local suite with **default preset dashboards**.
+Rex **owns telemetry storage** and serves **OpenTelemetry-shaped** data to **bundled Grafana** through a **Rex datasource plugin**. Operators install **Rex only** — no separate Collector, Prometheus, Loki, or Tempo installs for the product path. One command (**`rex obs up`**) starts the local suite with **default preset dashboards**.
 
 ## Prerequisites (product path)
 
@@ -86,7 +86,7 @@ Grafana panels use a **Rex datasource plugin** — not Prometheus, Loki, Tempo, 
 | **Auth** | Loopback-only; no tokens in product JSON (local dev) |
 | **Metrics** | OTel-shaped series for `gen_ai.*` and `rex.*` ([metric catalog](#metric-catalog)) |
 | **Traces / logs** | OTel-shaped spans and log records when Phases 6+ land |
-| **Live data** | Datasource or read API SSE for in-flight stream updates |
+| **Live data** | `GET /v1/metrics/stream` SSE with `cursor_commit_ms` merge — **planned** Phase 6 ([OBS_READ_API.md](OBS_READ_API.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)); plugin `"streaming": true` when shipped |
 | **Provisioning** | `$REX_ROOT/obs/grafana/provisioning/datasources/rex.yml` (planned) |
 
 **Not used:** PromQL, LogQL, TraceQL, OpenTelemetry Collector, Mimir, Loki, Tempo.

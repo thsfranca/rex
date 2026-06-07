@@ -7,7 +7,7 @@
 
 [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) establishes a Rex-owned **SQLite** economics store at `$REX_ROOT` when `observability.enabled: true`. Apple Silicon deployments benefit from **memory-mapped**, append-oriented layouts aligned to **16 KB** pages and unified memory, but a single SQLite path does not capture that design space.
 
-A research pass proposed a dense custom binary codec (Gorilla, bit dictionaries). Format evaluation ([OBS_STORE_MMAP_FORMAT.md](../../OBS_STORE_MMAP_FORMAT.md) §Format decision) shows **lighter mmap v1** (musli-zerocopy + zstd) is the right starting point; full custom binary is a **v2** optimization track.
+Deep research (2026-06-07) evaluated embedded SQL, cloud TSDBs, and columnar layouts. [ADR 0027](0027-chce-columnar-mmap-engine.md) adopts **CHCE** (columnar-mmap engine) for the mmap path; physical layout is in [OBS_STORE_MMAP_FORMAT.md](../../OBS_STORE_MMAP_FORMAT.md).
 
 CI runs on **Linux** ([CI.md](../../CI.md)); the mmap engine must not be required on `ubuntu-latest`.
 
@@ -34,16 +34,16 @@ CI runs on **Linux** ([CI.md](../../CI.md)); the mmap engine must not be require
 | Do | Do not |
 |----|--------|
 | Ship SQLite Phase 2 write path first | Require mmap on Linux CI |
-| Document mmap layout in OBS_STORE_MMAP_FORMAT | Assume Gorilla bit-packing in mmap v1 |
+| Document CHCE layout in OBS_STORE_MMAP_FORMAT + ADR 0027 | Assume ALP/Gorilla in mmap v1 ship |
 | Version mmap files with `format_version` | Store prompts in economics files |
 
 ## Consequences
 
 - **Positive:** Phase 2 can ship portable SQLite; Apple Silicon operators can opt into mmap without forking the logical schema; promotion path is explicit.
 - **Negative:** Two engines to test and maintain; mmap migrations are layout-based, not SQL `ALTER TABLE`.
-- **Related:** On-disk format detail lives in the format spec hub, not this ADR.
+- **Related:** Dual-engine policy lives here; CHCE on-disk detail in [OBS_STORE_MMAP_FORMAT.md](../../OBS_STORE_MMAP_FORMAT.md) and [ADR 0027](0027-chce-columnar-mmap-engine.md).
 
 ## Related
 
-- [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md)
+- [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md) · [ADR 0027](0027-chce-columnar-mmap-engine.md)
 - [OBS_STORE_MMAP_FORMAT.md](../../OBS_STORE_MMAP_FORMAT.md) · [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md) · [CONFIGURATION.md](../../CONFIGURATION.md)
