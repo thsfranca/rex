@@ -102,7 +102,7 @@ Portable background: research theme on LLM observability and validation (GenAI s
 
 | Surface | Contract |
 |---------|----------|
-| Opt-in gate | `REX_LIVE_LLM=1` (local or nightly; not default PR CI) |
+| Opt-in gate | Operator invokes script manually; not default PR CI (see `./scripts/verify_native_tools_live.sh`) |
 | Harness entry | Future `scripts/verify_ollama_live.sh` or `#[ignore]` integration test |
 | Inference | Direct Ollama `inference.openai_compat.base_url` `http://127.0.0.1:11434/v1` — [CONFIGURATION.md](CONFIGURATION.md) |
 | Sidecar | Product path `rex-agent` (not stub) — [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) |

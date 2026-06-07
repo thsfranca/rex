@@ -155,7 +155,7 @@ After [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) prerequisites (direct Oll
 2. **Agent mode:** at least one brokered read under workspace root; denied read on protected path still fails closed.
 3. Config uses default `native_tools: auto` (or omitted); `base_url` is direct Ollama, not gateway.
 
-Automated script: [`scripts/verify_native_tools_live.sh`](../scripts/verify_native_tools_live.sh) (`REX_LIVE_LLM=1`; opt-in, not PR CI). Economics live smoke (**R039–R042**) covers `ask` NDJSON + brokered read/policy only — not plan-mode tool loop.
+Automated script: [`scripts/verify_native_tools_live.sh`](../scripts/verify_native_tools_live.sh) (operator-only live Ollama; not PR CI). Economics live smoke (**R039–R042**) covers `ask` NDJSON + brokered read/policy only — not plan-mode tool loop.
 
 ## Prioritization
 
@@ -172,7 +172,7 @@ Pointer: [PRIORITIZATION.md](PRIORITIZATION.md).
 |-------|-------|------------|
 | **R038 PR 1** | Proto + daemon HTTP + `/api/show` cache + `native_tools` tri-state | **Done** — `./scripts/ci/run_rust_verify.sh` |
 | **R038 PR 2** | Sidecar native path + JSON fallback | **Done** — `./scripts/ci/run_rex_agent_checks.sh` |
-| **R038 PR 3** | Operator E2E script + EXTENSION_LOCAL_E2E update | **Done** — `REX_LIVE_LLM=1 ./scripts/verify_native_tools_live.sh` |
+| **R038 PR 3** | Operator E2E script + EXTENSION_LOCAL_E2E update | **Done** — `./scripts/verify_native_tools_live.sh` |
 
 ## Cross-links
 
