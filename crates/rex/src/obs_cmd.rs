@@ -222,8 +222,8 @@ fn materialize_obs_layout() -> std::io::Result<()> {
     let grafana_home = obs_grafana_home();
     copy_dir_all(Path::new(TEMPLATE_ROOT).join("grafana"), &grafana_home)?;
 
-    let plugin_src = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../integrations/grafana-rex-otel/dist");
+    let plugin_src =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations/grafana-rex-otel/dist");
     let plugin_dst = grafana_home.join("plugins/rex-otel-datasource");
     if plugin_src.is_dir() {
         copy_dir_all(&plugin_src, &plugin_dst)?;
