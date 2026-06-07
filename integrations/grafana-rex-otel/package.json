@@ -4,7 +4,7 @@
   "private": true,
   "description": "Rex OpenTelemetry read API datasource for Grafana",
   "scripts": {
-    "build": "echo 'Grafana plugin build deferred to operator toolchain'",
+    "build": "mkdir -p dist && cp src/plugin.json src/datasource.ts src/module.ts dist/",
     "test": "node --test test/parse.test.js"
   }
 }
