@@ -1,12 +1,20 @@
-use crate::chce::page::{MmapPaginator, SealedPage, MAGIC, PAGE_SIZE};
-use crate::chce::ChceEngine;
 use crate::dispatch::{open_store, ENGINE_MMAP, ENGINE_SQLITE};
-use crate::port::StorePort;
-use crate::query::{ObsQuery, StreamQueryFilter};
-use crate::record::StreamEconomicsRecord;
-use crate::sqlite::SqliteEngine;
 use tempfile::tempdir;
 
+#[cfg(target_os = "macos")]
+use crate::chce::page::{MmapPaginator, SealedPage, MAGIC, PAGE_SIZE};
+#[cfg(target_os = "macos")]
+use crate::chce::ChceEngine;
+#[cfg(target_os = "macos")]
+use crate::port::StorePort;
+#[cfg(target_os = "macos")]
+use crate::query::{ObsQuery, StreamQueryFilter};
+#[cfg(target_os = "macos")]
+use crate::record::StreamEconomicsRecord;
+#[cfg(target_os = "macos")]
+use crate::sqlite::SqliteEngine;
+
+#[cfg(target_os = "macos")]
 fn fixture_records(snapshot_id: &str) -> Vec<StreamEconomicsRecord> {
     vec![
         StreamEconomicsRecord {
@@ -62,6 +70,7 @@ fn fixture_records(snapshot_id: &str) -> Vec<StreamEconomicsRecord> {
     ]
 }
 
+#[cfg(target_os = "macos")]
 fn load_fixture_into(store: &dyn StorePort, snapshot_id: &str) {
     store
         .upsert_config_snapshot(snapshot_id, r#"{"inference":{"runtime":"mock"}}"#)
