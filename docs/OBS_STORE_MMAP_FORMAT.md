@@ -360,6 +360,8 @@ All must pass before JSON default changes ([ADR 0025](architecture/decisions/002
 
 ## Implementation phases (design map)
 
+Delivery order and acceptance: **[CHCE_ROADMAP.md](CHCE_ROADMAP.md)** (**R043–R054**).
+
 | CHCE phase | Hub phase | Scope |
 |------------|-----------|-------|
 | MVP engine | **2b** | Ring buffer, columnar v1, historical read |
@@ -376,3 +378,4 @@ All must pass before JSON default changes ([ADR 0025](architecture/decisions/002
 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Benchmarks + harness |
 | [ERROR_HANDLING.md](ERROR_HANDLING.md) | Store error codes |
 | [ROADMAP.md](ROADMAP.md) | Implementation queue |
+| [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | CHCE delivery program (**R043–R054**) |

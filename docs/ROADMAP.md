@@ -139,7 +139,7 @@ flowchart TD
 
 | Priority | What / why | Source(s) | Notes |
 |----------|------------|-----------|--------|
-| **Should** | Observability Phase 2 — sqlite store + OTLP | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | **partial** — store + core OTLP shipped; mmap + sidecar API Phase 2b/6 |
+| **Should** | Observability Phase 2 — sqlite store + OTLP | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | **partial** — store + core OTLP shipped; CHCE mmap **R043–R054** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md); sidecar API Phase 6 |
 | **Should** | Rex observability read API (loopback) | [OBS_READ_API.md](OBS_READ_API.md) | **Done** — [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) |
 | **Should** | Rex Grafana OTel datasource plugin | [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | **Done** — `integrations/grafana-rex-otel/` |
 | **Should** | `rex obs up` + Grafana + default dashboards | [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | **Done** — Grafana from PATH or vendor dir; templates under `templates/obs/` |
@@ -163,6 +163,25 @@ Canonical design: **[ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)** (Live L
 | 2 | **R040** | Scheduled non-blocking nightly workflow; Ollama prerequisite documented | **Should** |
 | 3 | **R041** | Same **R039** scenarios via inference gateway URL | **Could** |
 | 4 | **R042** | Harness writes run manifest (`run_id`, `git_sha`, `model_revision`, `pass_rate`, `parse_retries`, …) | **Could** |
+
+## Next — CHCE mmap observability store
+
+Canonical program: **[CHCE_ROADMAP.md](CHCE_ROADMAP.md)**. **Observability** delivery only — `rex-obs-store` mmap engine when `observability.store.engine: "mmap"` (macOS opt-in). Not sidecar agent, LTM, or agent knowledge. SQLite default unchanged; Linux CI stays sqlite-only.
+
+| Order | ID | Outcome | Priority |
+|-------|-----|---------|----------|
+| 1 | **R043** | `StorePort` + engine dispatch; macOS mmap / non-macOS fail-closed | **Should** |
+| 2 | **R044** | Hot-path `LiveRingBuffer` + bounded `mpsc` | **Should** |
+| 3 | **R045** | Global dictionary (`store.dict`) | **Should** |
+| 4 | **R046** | Page seal: columnar v1 + 16 KB mmap pages | **Should** |
+| 5 | **R047** | Write API parity (`append_config`, `append_stream`) | **Should** |
+| 6 | **R048** | Historical read parity (`ObsQuery`) | **Should** |
+| 7 | **R049** | Verification harness + recovery fuzz | **Should** |
+| 8 | **R050** | SSE live tail (read API) | **Could** |
+| 9 | **R051** | Sparse trace index + spans | **Could** |
+| 10 | **R052** | v2 codecs when benchmarks miss targets | **Could** |
+| 11 | **R053** | Retention + Parquet export | **Could** |
+| 12 | **R054** | Default engine promotion (promotion gates) | **Could** |
 
 ## Later — only if the core path stays healthy
 
@@ -215,6 +234,18 @@ Canonical design: **[ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)** (Live L
 | **R040** | Nightly live-LLM workflow (informational; non-blocking) | **Should** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
 | **R041** | Gateway-path live smoke (same scenarios as **R039**) | Could — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
 | **R042** | Economics run manifest from harness | Could — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
+| **R043** | CHCE `StorePort` + engine dispatch | **Should** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **R044** | CHCE hot-path `LiveRingBuffer` | **Should** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **R045** | CHCE global dictionary | **Should** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **R046** | CHCE page seal pipeline | **Should** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **R047** | CHCE write API parity | **Should** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **R048** | CHCE historical read parity | **Should** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **R049** | CHCE verification harness | **Should** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **R050** | CHCE SSE live tail | Could — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **R051** | CHCE sparse trace index + spans | Could — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **R052** | CHCE v2 codecs + benchmarks | Could — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **R053** | CHCE retention + Parquet export | Could — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **R054** | CHCE default engine promotion | Could — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
 
 ## Parked in design docs
 
@@ -230,8 +261,8 @@ Canonical design: **[ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)** (Live L
 | **MCP in sidecar** | ADR 0016 accepted; implementation deferred | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 | **Development assistance capabilities** (turn contract, budget pipeline) | Design hub + ADRs 0011–0017 | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) |
 | **Token-efficient agent graph** (Viewer/Editor, serialization, compaction) | Design accepted; **R027–R036** | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| **Observability suite + economics validation** | Phase 2 **partial** (sqlite store + core OTLP); follow-up: mmap ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)), sidecar API; live harness **R039–R042** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
-| **CHCE mmap economics store** (`store.engine=mmap`, opt-in) | After SQLite write path; before default flip — **Could**; **design documented** (2026-06-07) | [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md), [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) |
+| **Observability suite + economics validation** | Phase 2 **partial** (sqlite store + core OTLP); CHCE mmap **R043–R054** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md); sidecar API Phase 6; live harness **R039–R042** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) |
+| ~~**CHCE mmap economics store**~~ | **Active program** — see **Next — CHCE mmap observability store** and [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) |
 | **VM/container sidecar envelope** (server/fleet) | Linux deployment needs stronger isolation | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) |
 
 **CI:** [CI.md](CI.md) — shipped gates (mock / self-contained default; live LLM not required on PRs — **RC-10**). **Planned:** live smoke tier **R039–R040**; [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) (**R026**; **R023–R025** Done).
@@ -239,7 +270,7 @@ Canonical design: **[ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)** (Live L
 ## How to refresh this file
 
 1. Update **[V1_0.md](V1_0.md)** **RC-*** status when a gap closes; mirror the compact table above.
-2. Skim [MVP_SPEC.md](MVP_SPEC.md) when **scope** changes; [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) for feature phasing.
+2. Skim [MVP_SPEC.md](MVP_SPEC.md) when **scope** changes; [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md), [CHCE_ROADMAP.md](CHCE_ROADMAP.md) for feature phasing.
 3. **New product or feature ideas:** follow [DOCUMENTATION.md — Roadmap and new features](DOCUMENTATION.md#roadmap-and-new-features) (hub first, then row with **Source(s)** link).
 4. Re-check [PRIORITIZATION.md](PRIORITIZATION.md) when moving rows.
 

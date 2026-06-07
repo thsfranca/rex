@@ -2,7 +2,7 @@
 
 Rex is a **small study project** (see [README.md](../README.md)): a hands-on look at local AI infrastructure (daemon, gRPC over UDS, thin clients, streaming contracts). This document gives a **lightweight** way to **order** work and to **park** deferred items, using clear buckets and a short score.
 
-Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view toward **[V1_0.md](V1_0.md)**. Deeper lists live in [MVP_SPEC.md](MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), and [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md). The **`REX_*` catalog** is in [CONFIGURATION.md](CONFIGURATION.md).
+Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view toward **[V1_0.md](V1_0.md)**. Deeper lists live in [MVP_SPEC.md](MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md), and [CHCE_ROADMAP.md](CHCE_ROADMAP.md) (observability mmap store). The **`REX_*` catalog** is in [CONFIGURATION.md](CONFIGURATION.md).
 
 ## When to use this
 

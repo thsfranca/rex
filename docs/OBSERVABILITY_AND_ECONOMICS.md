@@ -274,7 +274,7 @@ rg 'stream.metrics' /path/to/daemon.log
 | **0** | Stdout + grep; observability off in JSON | **implemented** |
 | **1** | Design hubs, ADRs, validation program | **design documented** |
 | **2** | Store write path + bounded OTLP export (**sqlite** engine) | **partial** (sqlite + core OTLP shipped; sidecar signals pending) |
-| **2b** | **CHCE mmap** store engine (macOS opt-in) | **design documented** — [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) |
+| **2b** | **CHCE mmap** store engine (macOS opt-in) | **design documented** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) |
 | **3** | Rex observability read API (loopback) | **implemented** — [OBS_READ_API.md](OBS_READ_API.md) |
 | **4** | Bundled Grafana kit + Rex OTel datasource + default dashboards | **partial** — plugin + provisioning templates; vendor binary operator-provided |
 | **5** | **`rex obs up`** (one command local suite) | **implemented** — `rex obs serve|up|down|doctor|catalog` |
@@ -310,5 +310,6 @@ rg 'stream.metrics' /path/to/daemon.log
 | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | Sidecar flow |
 | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Lever matrix |
 | [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) | Mmap on-disk format + format decision |
+| [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | CHCE delivery program (**R043–R054**) |
 | [ROADMAP.md](ROADMAP.md) | Implementation queue |
 | [CI.md](CI.md) | No live LLM on PRs |
