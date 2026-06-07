@@ -80,7 +80,7 @@ Portable background: research theme on LLM observability and validation (GenAI s
 
 **Purpose:** Bridge mock CI ([`mvp_product_path`](../crates/rex-daemon/tests/mvp_product_path.rs), RC-10) and manual operator acceptance ([EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §8 / **R019**) with an **opt-in** automated path against a real local model — without requiring live LLM on every PR.
 
-**Status:** `planned` — implementation phased **R039–R042** on [ROADMAP.md](ROADMAP.md).
+**Status:** `planned` — implementation phased **R039–R042** on [ROADMAP.md](ROADMAP.md). **Global rank (2026-06-07):** **R039** = **1**, **R040** = **4** (after R039), **R042** = **13**, **R041** = **14** — [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
 
 ### Scenarios (**R039**)
 
