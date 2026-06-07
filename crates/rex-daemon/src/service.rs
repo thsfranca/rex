@@ -55,7 +55,7 @@ pub struct RexDaemonService {
     policy: PolicyEngine,
     approval_gate: Arc<dyn ApprovalGate>,
     sidecar: SharedSupervisor,
-    observability: Option<Arc<crate::observability::ObservabilityRuntime>>,
+    pub(crate) observability: Option<Arc<crate::observability::ObservabilityRuntime>>,
 }
 
 const STREAM_CHUNK_DELAY_MS: u64 = 35;

@@ -71,6 +71,8 @@ mod sidecar_client;
 #[allow(dead_code)]
 #[path = "../src/sidecar_config.rs"]
 mod sidecar_config;
+#[path = "../src/sidecar_observability.rs"]
+mod sidecar_observability;
 #[allow(dead_code)]
 #[path = "../src/supervisor.rs"]
 mod supervisor;

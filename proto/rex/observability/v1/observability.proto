@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package rex.observability.v1;
+
+// Sidecar observability ingest on daemon UDS (distinct from sidecar control-plane socket).
+service SidecarObservabilityService {
+  rpc RegisterMetric(RegisterMetricRequest) returns (RegisterMetricResponse);
+  rpc RecordMetric(RecordMetricRequest) returns (RecordMetricResponse);
+  rpc GetEconomicsSnapshot(GetEconomicsSnapshotRequest) returns (GetEconomicsSnapshotResponse);
+  rpc ReportResourceStats(ReportResourceStatsRequest) returns (ReportResourceStatsResponse);
+  rpc AppendSpan(AppendSpanRequest) returns (AppendSpanResponse);
+}
+
+message RegisterMetricRequest {
+  string name = 1;
+  string kind = 2;
+  string unit = 3;
+  string description = 4;
+  repeated string label_keys = 5;
+}
+
+message RegisterMetricResponse {
+  bool ok = 1;
+  string instrument_name = 2;
+  string error = 3;
+}
+
+message RecordMetricRequest {
+  string name = 1;
+  double value = 2;
+  map<string, string> labels = 3;
+  int64 timestamp_ms = 4;
+}
+
+message RecordMetricResponse {
+  bool ok = 1;
+  string error = 2;
+}
+
+message GetEconomicsSnapshotRequest {
+  uint32 limit = 1;
+}
+
+message GetEconomicsSnapshotResponse {
+  repeated EconomicsSummary streams = 1;
+}
+
+message EconomicsSummary {
+  uint64 request_id = 1;
+  string trace_id = 2;
+  string terminal = 3;
+  int64 created_at_ms = 4;
+  string route = 5;
+}
+
+message ReportResourceStatsRequest {
+  double cpu_percent = 1;
+  uint64 memory_bytes = 2;
+}
+
+message ReportResourceStatsResponse {
+  bool ok = 1;
+}
+
+message AppendSpanRequest {
+  string trace_id = 1;
+  string turn_id = 2;
+  string span_name = 3;
+  string parent_span_id = 4;
+  int64 start_ms = 5;
+  int64 end_ms = 6;
+  map<string, string> attributes = 7;
+}
+
+message AppendSpanResponse {
+  bool ok = 1;
+  string error = 2;
+}

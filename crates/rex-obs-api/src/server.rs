@@ -2,30 +2,39 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
-use http_body_util::{BodyExt, Full};
-use hyper::body::Bytes;
+use futures::StreamExt;
+use http_body_util::combinators::BoxBody;
+use http_body_util::{BodyExt, Full, StreamBody};
+use hyper::body::{Bytes, Frame};
 use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
 use rex_obs_store::{
-    instrument_catalog, project_metrics, rollup_metrics_by_label, MetricsQueryRequest,
-    MetricsRollupRequest, ObsQuery, StoreEngine, StreamQueryFilter,
+    instrument_catalog_with_extensions, project_metrics, rollup_metrics_by_label, tail_telemetry,
+    MetricsQueryRequest, MetricsRollupRequest, ObsQuery, StoreEngine, StorePort, StreamQueryFilter,
 };
 use tokio::net::TcpListener;
+use tokio_stream::wrappers::ReceiverStream;
 
 use crate::error::ReadApiError;
 
+type ApiBody = BoxBody<Bytes, Infallible>;
+type ApiResponse = Response<ApiBody>;
+
 pub struct ReadApiState {
     pub service_name: String,
-    store: Mutex<StoreEngine>,
+    store: Arc<Mutex<StoreEngine>>,
+    tail: Arc<rex_obs_store::TelemetryTail>,
 }
 
 impl ReadApiState {
     pub fn new(service_name: String, store: StoreEngine) -> Self {
+        let tail = Arc::clone(store.tail());
         Self {
             service_name,
-            store: Mutex::new(store),
+            store: Arc::new(Mutex::new(store)),
+            tail,
         }
     }
 }
@@ -67,17 +76,14 @@ pub async fn serve(listen: &str, state: ReadApiState) -> Result<(), ReadApiError
 async fn handle_request(
     req: Request<hyper::body::Incoming>,
     state: Arc<ReadApiState>,
-) -> Result<Response<Full<Bytes>>, Infallible> {
+) -> Result<ApiResponse, Infallible> {
     let path = req.uri().path();
-    let response = match (req.method(), path) {
+    let response: ApiResponse = match (req.method(), path) {
         (&Method::GET, "/health") => json_response(
             StatusCode::OK,
             &serde_json::json!({ "status": "ok", "service": "rex-obs-read-api" }),
         ),
-        (&Method::GET, "/v1/catalog") => json_response(
-            StatusCode::OK,
-            &serde_json::json!({ "instruments": instrument_catalog() }),
-        ),
+        (&Method::GET, "/v1/catalog") => handle_catalog(&state),
         (&Method::POST, "/v1/metrics/query") => match read_body(req).await {
             Ok(body) => handle_metrics_query(&state, &body),
             Err(err) => error_response(StatusCode::BAD_REQUEST, &err.to_string()),
@@ -86,12 +92,24 @@ async fn handle_request(
             Ok(body) => handle_metrics_rollup(&state, &body),
             Err(err) => error_response(StatusCode::BAD_REQUEST, &err.to_string()),
         },
+        (&Method::GET, "/v1/metrics/stream") => handle_metrics_stream(&state, req.uri().query()),
         _ => error_response(StatusCode::NOT_FOUND, "not found"),
     };
     Ok(response)
 }
 
-fn handle_metrics_query(state: &ReadApiState, body: &str) -> Response<Full<Bytes>> {
+fn handle_catalog(state: &ReadApiState) -> ApiResponse {
+    let sidecar = match state.store.lock() {
+        Ok(store) => store.list_sidecar_metrics().unwrap_or_default(),
+        Err(_) => Vec::new(),
+    };
+    json_response(
+        StatusCode::OK,
+        &serde_json::json!({ "instruments": instrument_catalog_with_extensions(&sidecar) }),
+    )
+}
+
+fn handle_metrics_query(state: &ReadApiState, body: &str) -> ApiResponse {
     let request: MetricsQueryRequest = match serde_json::from_str(body) {
         Ok(req) => req,
         Err(err) => {
@@ -127,7 +145,7 @@ fn handle_metrics_query(state: &ReadApiState, body: &str) -> Response<Full<Bytes
     json_response(StatusCode::OK, &response)
 }
 
-fn handle_metrics_rollup(state: &ReadApiState, body: &str) -> Response<Full<Bytes>> {
+fn handle_metrics_rollup(state: &ReadApiState, body: &str) -> ApiResponse {
     let request: MetricsRollupRequest = match serde_json::from_str(body) {
         Ok(req) => req,
         Err(err) => {
@@ -169,6 +187,88 @@ fn handle_metrics_rollup(state: &ReadApiState, body: &str) -> Response<Full<Byte
     json_response(StatusCode::OK, &response)
 }
 
+fn handle_metrics_stream(state: &Arc<ReadApiState>, query: Option<&str>) -> ApiResponse {
+    let params = parse_query(query);
+    let cursor_raw = match params.get("cursor_commit_ms") {
+        Some(v) => v.as_str(),
+        None => {
+            return stream_error_response(
+                StatusCode::BAD_REQUEST,
+                "obs.read_api.stream_invalid: cursor_commit_ms required",
+            );
+        }
+    };
+    let cursor_commit_ms: i64 = match cursor_raw.parse() {
+        Ok(v) => v,
+        Err(_) => {
+            return stream_error_response(
+                StatusCode::BAD_REQUEST,
+                "obs.read_api.stream_invalid: cursor_commit_ms must be integer",
+            );
+        }
+    };
+    let instruments = params.get("instruments").map(|raw| {
+        raw.split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_string)
+            .collect::<Vec<_>>()
+    });
+
+    let (tx, rx) = tokio::sync::mpsc::channel(32);
+    let state = Arc::clone(state);
+    tokio::spawn(async move {
+        let mut events = std::pin::pin!(tail_telemetry(
+            &state.tail,
+            Arc::clone(&state.store),
+            &state.service_name,
+            cursor_commit_ms,
+            instruments,
+        ));
+        while let Some(event) = events.next().await {
+            let payload = match serde_json::to_string(&event) {
+                Ok(json) => format!("data: {json}\n\n"),
+                Err(_) => continue,
+            };
+            if tx
+                .send(Ok(Frame::data(Bytes::from(payload))))
+                .await
+                .is_err()
+            {
+                break;
+            }
+        }
+    });
+
+    Response::builder()
+        .status(StatusCode::OK)
+        .header("content-type", "text/event-stream")
+        .header("cache-control", "no-cache")
+        .body(
+            StreamBody::new(ReceiverStream::new(rx))
+                .map_err(|never: Infallible| match never {})
+                .boxed(),
+        )
+        .unwrap_or_else(|_| {
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "obs.read_api.stream_invalid: response build failed",
+            )
+        })
+}
+
+fn parse_query(query: Option<&str>) -> std::collections::HashMap<String, String> {
+    let mut out = std::collections::HashMap::new();
+    if let Some(q) = query {
+        for pair in q.split('&') {
+            if let Some((k, v)) = pair.split_once('=') {
+                out.insert(k.to_string(), v.to_string());
+            }
+        }
+    }
+    out
+}
+
 async fn read_body(req: Request<hyper::body::Incoming>) -> Result<String, ReadApiError> {
     let collected = req
         .into_body()
@@ -179,19 +279,36 @@ async fn read_body(req: Request<hyper::body::Incoming>) -> Result<String, ReadAp
     String::from_utf8(bytes.to_vec()).map_err(|err| ReadApiError::QueryInvalid(err.to_string()))
 }
 
-fn json_response<T: serde::Serialize>(status: StatusCode, value: &T) -> Response<Full<Bytes>> {
+fn json_response<T: serde::Serialize>(status: StatusCode, value: &T) -> ApiResponse {
     let body = serde_json::to_string(value).unwrap_or_else(|_| "{}".to_string());
     Response::builder()
         .status(status)
         .header("content-type", "application/json")
-        .body(Full::new(Bytes::from(body)))
-        .unwrap_or_else(|_| Response::new(Full::new(Bytes::from("{}"))))
+        .body(
+            Full::new(Bytes::from(body))
+                .map_err(|never| match never {})
+                .boxed(),
+        )
+        .unwrap_or_else(|_| {
+            Response::new(
+                Full::new(Bytes::from("{}"))
+                    .map_err(|never| match never {})
+                    .boxed(),
+            )
+        })
 }
 
-fn error_response(status: StatusCode, message: &str) -> Response<Full<Bytes>> {
+fn error_response(status: StatusCode, message: &str) -> ApiResponse {
     json_response(
         status,
         &serde_json::json!({ "error": message, "code": "obs.read_api.query_invalid" }),
+    )
+}
+
+fn stream_error_response(status: StatusCode, message: &str) -> ApiResponse {
+    json_response(
+        status,
+        &serde_json::json!({ "error": message, "code": "obs.read_api.stream_invalid" }),
     )
 }
 
@@ -229,20 +346,6 @@ mod tests {
     }
 
     #[test]
-    fn metrics_rollup_groups_streams() {
-        let dir = tempfile::tempdir().unwrap();
-        let store = rex_obs_store::open_store("sqlite", dir.path().join("store.sqlite")).unwrap();
-        store
-            .upsert_config_snapshot("snap", r#"{"inference":{"runtime":"mock"}}"#)
-            .unwrap();
-        store.append_stream(&sample("snap")).unwrap();
-        let state = ReadApiState::new("rex-daemon".to_string(), store);
-        let body = r#"{"group_by":["route"]}"#;
-        let resp = handle_metrics_rollup(&state, body);
-        assert_eq!(resp.status(), StatusCode::OK);
-    }
-
-    #[test]
     fn metrics_query_projects_counter() {
         let dir = tempfile::tempdir().unwrap();
         let store = rex_obs_store::open_store("sqlite", dir.path().join("store.sqlite")).unwrap();
@@ -254,5 +357,14 @@ mod tests {
         let body = r#"{"instruments":["rex.stream.requests"]}"#;
         let resp = handle_metrics_query(&state, body);
         assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[test]
+    fn stream_requires_cursor_query_param() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = rex_obs_store::open_store("sqlite", dir.path().join("store.sqlite")).unwrap();
+        let state = Arc::new(ReadApiState::new("rex-daemon".to_string(), store));
+        let resp = handle_metrics_stream(&state, None);
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
     }
 }

@@ -9,22 +9,24 @@ mod rollup;
 mod schema;
 mod sqlite;
 mod store;
+mod tail;
 
 pub use dispatch::{normalize_store_engine, open_store, StoreEngine, ENGINE_MMAP, ENGINE_SQLITE};
 pub use error::ObsStoreError;
 pub use otel::{
-    instrument_catalog, project_metrics, InstrumentCatalogEntry, MetricsQueryRequest,
-    MetricsQueryResponse,
+    instrument_catalog, instrument_catalog_with_extensions, project_metrics,
+    InstrumentCatalogEntry, MetricsQueryRequest, MetricsQueryResponse,
 };
 pub use port::StorePort;
 pub use query::{ObsQuery, QueriedStream, StreamQueryFilter};
-pub use record::StreamEconomicsRecord;
+pub use record::{SidecarMetricDef, SpanRecord, StreamEconomicsRecord};
 pub use rollup::{
     rollup_metrics_by_label, MetricsRollupRequest, MetricsRollupResponse, RollupBucket,
 };
 pub use schema::SCHEMA_VERSION;
 pub use sqlite::{ObsStore, SqliteEngine};
 pub use store::SharedObsStore;
+pub use tail::{tail_telemetry, TailTelemetryEvent, TelemetryTail};
 
 #[cfg(test)]
 mod tests {

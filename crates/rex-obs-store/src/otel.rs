@@ -14,6 +14,20 @@ pub struct InstrumentCatalogEntry {
 }
 
 pub fn instrument_catalog() -> Vec<InstrumentCatalogEntry> {
+    instrument_catalog_with_extensions(&[])
+}
+
+pub fn instrument_catalog_with_extensions(
+    sidecar: &[crate::record::SidecarMetricDef],
+) -> Vec<InstrumentCatalogEntry> {
+    let mut catalog = base_instrument_catalog();
+    for def in sidecar {
+        catalog.push(sidecar_metric_entry(def));
+    }
+    catalog
+}
+
+fn base_instrument_catalog() -> Vec<InstrumentCatalogEntry> {
     vec![
         entry(
             "rex.stream.requests",
@@ -484,6 +498,67 @@ fn attr(key: &str, value: &str) -> OtelAttribute {
 
 fn ms_to_nano(ms: i64) -> String {
     (ms.saturating_mul(1_000_000)).to_string()
+}
+
+fn sidecar_metric_entry(def: &crate::record::SidecarMetricDef) -> InstrumentCatalogEntry {
+    InstrumentCatalogEntry {
+        name: format!("rex.sidecar.custom.{}", def.name),
+        kind: def.kind.clone(),
+        unit: def.unit.clone(),
+        description: def.description.clone(),
+        label_keys: def.label_keys.clone(),
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct TailPointFilter {
+    pub instruments: Option<Vec<String>>,
+}
+
+/// Project one stream row into tail SSE events (one per matching instrument).
+pub fn project_stream_tail_point(
+    stream: &QueriedStream,
+    service_name: &str,
+    filter: &TailPointFilter,
+) -> Vec<crate::tail::TailTelemetryEvent> {
+    let request = MetricsQueryRequest {
+        start_ms: None,
+        end_ms: None,
+        instruments: filter.instruments.clone().unwrap_or_default(),
+        labels: Default::default(),
+    };
+    let resp = project_metrics(service_name, std::slice::from_ref(stream), &request);
+    let mut events = Vec::new();
+    for scope in &resp.resource_metrics {
+        for scope_metric in &scope.scope_metrics {
+            for metric in &scope_metric.metrics {
+                if let Some(filter_list) = filter.instruments.as_ref() {
+                    if !filter_list.is_empty() && !filter_list.contains(&metric.name) {
+                        continue;
+                    }
+                }
+                if let Some(sum) = &metric.sum {
+                    for point in &sum.data_points {
+                        events.push(crate::tail::TailTelemetryEvent {
+                            timestamp_ms: stream.created_at_ms,
+                            instrument: metric.name.clone(),
+                            data_point: serde_json::to_value(point).unwrap_or_default(),
+                        });
+                    }
+                }
+                if let Some(hist) = &metric.histogram {
+                    for point in &hist.data_points {
+                        events.push(crate::tail::TailTelemetryEvent {
+                            timestamp_ms: stream.created_at_ms,
+                            instrument: metric.name.clone(),
+                            data_point: serde_json::to_value(point).unwrap_or_default(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+    events
 }
 
 #[cfg(test)]

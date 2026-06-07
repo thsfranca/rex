@@ -27,3 +27,25 @@ pub struct StreamEconomicsRecord {
     pub prefix_hash: Option<String>,
     pub parse_retries: Option<u64>,
 }
+
+/// Trace span row persisted via sidecar observability API.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SpanRecord {
+    pub trace_id: String,
+    pub turn_id: String,
+    pub span_name: String,
+    pub parent_span_id: Option<String>,
+    pub start_ms: i64,
+    pub end_ms: Option<i64>,
+    pub attributes_json: String,
+}
+
+/// Sidecar-registered custom metric definition.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SidecarMetricDef {
+    pub name: String,
+    pub kind: String,
+    pub unit: String,
+    pub description: String,
+    pub label_keys: Vec<String>,
+}
