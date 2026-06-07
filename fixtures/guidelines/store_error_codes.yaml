@@ -4,5 +4,7 @@ version: 1
 codes:
   - code: store.engine_unsupported
     layer: obs_store
-  - code: store.chce_not_ready
+  - code: store.recovery_failed
+    layer: obs_store
+  - code: store.format_version_unsupported
     layer: obs_store

@@ -1,7 +1,8 @@
 use thiserror::Error;
 
 const MACHINE_CODE_ENGINE_UNSUPPORTED: &str = "store.engine_unsupported";
-const MACHINE_CODE_CHCE_NOT_READY: &str = "store.chce_not_ready";
+const MACHINE_CODE_RECOVERY_FAILED: &str = "store.recovery_failed";
+const MACHINE_CODE_FORMAT_VERSION_UNSUPPORTED: &str = "store.format_version_unsupported";
 
 #[derive(Debug, Error)]
 pub enum ObsStoreError {
@@ -15,8 +16,10 @@ pub enum ObsStoreError {
     UnknownSnapshot(String),
     #[error("store.engine_unsupported: engine={engine}")]
     EngineUnsupported { engine: String },
-    #[error("store.chce_not_ready: CHCE write/read not implemented (R047–R048)")]
-    ChceNotReady,
+    #[error("store.recovery_failed: could not find valid CHCE page boundary")]
+    RecoveryFailed,
+    #[error("store.format_version_unsupported: version={version}")]
+    FormatVersionUnsupported { version: u16 },
 }
 
 impl ObsStoreError {
@@ -24,7 +27,8 @@ impl ObsStoreError {
     pub fn machine_code(&self) -> Option<&'static str> {
         match self {
             Self::EngineUnsupported { .. } => Some(MACHINE_CODE_ENGINE_UNSUPPORTED),
-            Self::ChceNotReady => Some(MACHINE_CODE_CHCE_NOT_READY),
+            Self::RecoveryFailed => Some(MACHINE_CODE_RECOVERY_FAILED),
+            Self::FormatVersionUnsupported { .. } => Some(MACHINE_CODE_FORMAT_VERSION_UNSUPPORTED),
             _ => None,
         }
     }

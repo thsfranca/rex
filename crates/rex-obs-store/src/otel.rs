@@ -145,6 +145,9 @@ pub struct MetricsQueryRequest {
 pub struct MetricsQueryResponse {
     #[serde(rename = "resourceMetrics")]
     pub resource_metrics: Vec<ResourceMetrics>,
+    /// Latest sealed stream timestamp for SSE cursor merge (Phase 6).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cursor_commit_ms: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -257,6 +260,8 @@ pub fn project_metrics(
         }
     }
 
+    let cursor_commit_ms = streams.iter().map(|s| s.created_at_ms).max();
+
     MetricsQueryResponse {
         resource_metrics: vec![ResourceMetrics {
             resource: OtelResource {
@@ -269,6 +274,7 @@ pub fn project_metrics(
                 metrics,
             }],
         }],
+        cursor_commit_ms,
     }
 }
 
