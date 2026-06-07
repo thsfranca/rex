@@ -9,6 +9,11 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.outputs import ChatGeneration, ChatGenerationChunk, ChatResult
 
+from rex_agent.broker import (
+    InferenceResult,
+    is_interim_fallback,
+    legacy_inference_result,
+)
 from rex_agent.tools import (
     ParsedModelOutput,
     parse_model_output,
@@ -71,6 +76,54 @@ def _message_content(msg: BaseMessage) -> str:
     return str(content).strip()
 
 
+def messages_to_chat_messages(
+    messages: list[BaseMessage],
+    mode: str,
+    daemon_context: str,
+    *,
+    subagent: str = "orchestrator",
+    viewer_summary: str = "",
+) -> list[Any]:
+    """Structured chat history for native BrokerInference (R038)."""
+    try:
+        from rex.v1 import rex_pb2
+    except ImportError as exc:  # pragma: no cover
+        raise ImportError(
+            "rex.v1 protobuf stubs not found. Run `rex proto install`."
+        ) from exc
+
+    tool_mode = mode
+    if subagent == "viewer":
+        tool_mode = "plan"
+    elif subagent == "editor":
+        tool_mode = "agent"
+
+    chat: list[Any] = [
+        rex_pb2.ChatMessage(
+            role="system",
+            content=system_prompt_for_tools(tool_mode, subagent=subagent),
+        )
+    ]
+    if viewer_summary and subagent == "editor":
+        chat.append(
+            rex_pb2.ChatMessage(
+                role="system",
+                content=f"Exploration summary:\n{viewer_summary}",
+            )
+        )
+    if daemon_context.strip():
+        chat.append(
+            rex_pb2.ChatMessage(role="user", content=daemon_context.strip())
+        )
+    for msg in messages:
+        content = _message_content(msg)
+        if content:
+            chat.append(
+                rex_pb2.ChatMessage(role=_message_role(msg), content=content)
+            )
+    return chat
+
+
 def parse_to_ai_message(text: str, mode: str) -> tuple[AIMessage, ParsedModelOutput]:
     parsed = parse_model_output(text, mode)
     if parsed.kind == "tool" and parsed.tool_call is not None:
@@ -80,6 +133,25 @@ def parse_to_ai_message(text: str, mode: str) -> tuple[AIMessage, ParsedModelOut
     if parsed.kind == "final":
         return AIMessage(content=parsed.answer), parsed
     return AIMessage(content=text), parsed
+
+
+def route_inference_result(
+    result: InferenceResult, mode: str
+) -> tuple[AIMessage, ParsedModelOutput | None]:
+    """Apply NATIVE_TOOL_CALLING response routing table."""
+    if result.tool_calls:
+        lc_tool_calls = [
+            {
+                "name": call.tool,
+                "args": call.args,
+                "id": f"call_{call.tool}",
+            }
+            for call in result.tool_calls
+        ]
+        return AIMessage(content="", tool_calls=lc_tool_calls), None
+
+    ai, parsed = parse_to_ai_message(result.effective_text(), mode)
+    return ai, parsed
 
 
 def _is_tool_json(text: str) -> bool:
@@ -119,9 +191,28 @@ class RexBrokerChatModel(BaseChatModel):
     def _llm_type(self) -> str:
         return "rex-broker"
 
-    def _call_inference(self, prompt: str) -> tuple[bool, str]:
+    def _call_inference(
+        self,
+        prompt: str,
+        *,
+        messages: list[Any] | None = None,
+        tools: list[Any] | None = None,
+    ) -> InferenceResult:
         if self.inference_fn is not None:
-            return self.inference_fn(prompt, self.mode, self.model_name)
+            try:
+                ret = self.inference_fn(
+                    prompt,
+                    self.mode,
+                    self.model_name,
+                    messages=messages,
+                    tools=tools,
+                )
+            except TypeError:
+                ret = self.inference_fn(prompt, self.mode, self.model_name)
+            if isinstance(ret, InferenceResult):
+                return ret
+            ok, text = ret
+            return legacy_inference_result(ok, text)
         raise RuntimeError("inference_fn not configured on RexBrokerChatModel")
 
     def _generate(
@@ -138,11 +229,35 @@ class RexBrokerChatModel(BaseChatModel):
             subagent=self.subagent,
             viewer_summary=self.viewer_summary,
         )
-        ok, text = self._call_inference(prompt)
-        if not ok:
-            ai = AIMessage(content=text or "Inference failed.")
+        chat_messages = messages_to_chat_messages(
+            messages,
+            self.mode,
+            self.daemon_context,
+            subagent=self.subagent,
+            viewer_summary=self.viewer_summary,
+        )
+        tool_specs: list[Any] = []
+        try:
+            from rex_agent.tools import tool_specs_for_subagent
+
+            tool_specs = tool_specs_for_subagent(self.subagent, self.mode)
+        except ImportError:
+            pass
+        result = self._call_inference(
+            prompt,
+            messages=chat_messages,
+            tools=tool_specs or None,
+        )
+        if tool_specs and is_interim_fallback(result):
+            result = self._call_inference(
+                prompt,
+                messages=chat_messages,
+                tools=[],
+            )
+        if not result.ok:
+            ai = AIMessage(content=result.error or "Inference failed.")
             return ChatResult(generations=[ChatGeneration(message=ai)])
-        ai, _ = parse_to_ai_message(text, self.mode)
+        ai, _ = route_inference_result(result, self.mode)
         return ChatResult(generations=[ChatGeneration(message=ai)])
 
     def _stream(
@@ -159,14 +274,38 @@ class RexBrokerChatModel(BaseChatModel):
             subagent=self.subagent,
             viewer_summary=self.viewer_summary,
         )
-        ok, text = self._call_inference(prompt)
-        if not ok:
+        chat_messages = messages_to_chat_messages(
+            messages,
+            self.mode,
+            self.daemon_context,
+            subagent=self.subagent,
+            viewer_summary=self.viewer_summary,
+        )
+        tool_specs: list[Any] = []
+        try:
+            from rex_agent.tools import tool_specs_for_subagent
+
+            tool_specs = tool_specs_for_subagent(self.subagent, self.mode)
+        except ImportError:
+            pass
+        result = self._call_inference(
+            prompt,
+            messages=chat_messages,
+            tools=tool_specs or None,
+        )
+        if tool_specs and is_interim_fallback(result):
+            result = self._call_inference(
+                prompt,
+                messages=chat_messages,
+                tools=[],
+            )
+        if not result.ok:
             yield ChatGenerationChunk(
-                message=AIMessage(content=text or "Inference failed.")
+                message=AIMessage(content=result.error or "Inference failed.")
             )
             return
-        _, parsed = parse_to_ai_message(text, self.mode)
-        visible = parsed.answer if parsed.kind == "final" else ""
+        _, parsed = route_inference_result(result, self.mode)
+        visible = parsed.answer if parsed and parsed.kind == "final" else ""
         for segment in stream_visible_text(visible):
             yield ChatGenerationChunk(message=AIMessage(content=segment))
 

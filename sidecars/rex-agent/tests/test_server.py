@@ -80,19 +80,11 @@ sys.modules["rex.sidecar.v1"] = _pkg
 sys.modules["rex.sidecar.v1.sidecar_pb2"] = _sidecar_pb2
 sys.modules["rex.sidecar.v1.sidecar_pb2_grpc"] = _sidecar_pb2_grpc
 
-_rex_v1 = types.ModuleType("rex.v1")
-_rex_v1.rex_pb2 = types.ModuleType("rex.v1.rex_pb2")
-_rex_v1.rex_pb2_grpc = types.ModuleType("rex.v1.rex_pb2_grpc")
-sys.modules["rex.v1"] = _rex_v1
-sys.modules["rex.v1.rex_pb2"] = _rex_v1.rex_pb2
-sys.modules["rex.v1.rex_pb2_grpc"] = _rex_v1.rex_pb2_grpc
-
 _grpc = types.ModuleType("grpc")
 _grpc.RpcError = Exception
 sys.modules.setdefault("grpc", _grpc)
 
-for mod in ("rex_agent.broker", "rex_agent.server"):
-    sys.modules.pop(mod, None)
+sys.modules.pop("rex_agent.server", None)
 
 from rex_agent.server import AgentServicer  # noqa: E402
 from rex_agent.stream_events import TextStreamEvent  # noqa: E402

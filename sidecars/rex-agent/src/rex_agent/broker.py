@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
 import re
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 import grpc
 
@@ -26,6 +27,76 @@ _TOOL_RESULT_PATTERN = re.compile(
     r"^<<TOOL_RESULT:(?P<tool>[^>]+)>>\n(?P<body>.*)\n<<END>>\s*$",
     re.DOTALL,
 )
+
+
+@dataclass
+class BrokerToolCall:
+    tool: str
+    args: dict[str, Any]
+
+
+@dataclass
+class InferenceResult:
+    ok: bool
+    content: str = ""
+    text: str = ""
+    tool_calls: list[BrokerToolCall] = field(default_factory=list)
+    protocol: int = rex_pb2.INFERENCE_PROTOCOL_UNSPECIFIED
+    error: str = ""
+
+    def effective_text(self) -> str:
+        return self.content or self.text
+
+
+def legacy_inference_result(ok: bool, text: str) -> InferenceResult:
+    """Wrap test mocks and prompt-only callers as interim InferenceResult."""
+    if ok:
+        return InferenceResult(
+            ok=True,
+            content=text,
+            text=text,
+            protocol=rex_pb2.INFERENCE_PROTOCOL_INTERIM,
+        )
+    return InferenceResult(
+        ok=False,
+        error=text or "broker inference failed",
+        protocol=rex_pb2.INFERENCE_PROTOCOL_INTERIM,
+    )
+
+
+def is_interim_fallback(result: InferenceResult) -> bool:
+    return not result.ok and (
+        result.protocol == rex_pb2.INFERENCE_PROTOCOL_INTERIM_FALLBACK
+        or "native_tools_unsupported" in result.error
+    )
+
+
+def _parse_tool_calls(
+    response: rex_pb2.BrokerInferenceResponse,
+) -> list[BrokerToolCall]:
+    calls: list[BrokerToolCall] = []
+    for tc in response.tool_calls:
+        args: dict[str, Any]
+        try:
+            parsed = json.loads(tc.arguments_json) if tc.arguments_json else {}
+        except json.JSONDecodeError:
+            parsed = {}
+        args = parsed if isinstance(parsed, dict) else {}
+        calls.append(BrokerToolCall(tool=tc.name, args=args))
+    return calls
+
+
+def _parse_inference_response(
+    response: rex_pb2.BrokerInferenceResponse,
+) -> InferenceResult:
+    return InferenceResult(
+        ok=response.ok,
+        content=response.content or "",
+        text=response.text or "",
+        tool_calls=_parse_tool_calls(response),
+        protocol=response.protocol,
+        error=response.error or "",
+    )
 
 
 def _daemon_channel(socket_path: str) -> grpc.Channel:
@@ -72,13 +143,25 @@ class BrokerClient:
     def __exit__(self, *args: object) -> None:
         self.close()
 
-    def inference(self, prompt: str, mode: str, model: str) -> tuple[bool, str]:
+    def inference(
+        self,
+        prompt: str,
+        mode: str,
+        model: str,
+        *,
+        messages: list[Any] | None = None,
+        tools: list[Any] | None = None,
+    ) -> InferenceResult:
         self._mode = mode or "ask"
         request = rex_pb2.BrokerInferenceRequest(
             prompt=prompt,
             mode=self._mode,
             model=model or "",
         )
+        if messages:
+            request.messages.extend(messages)
+        if tools:
+            request.tools.extend(tools)
         try:
             response = self._stub.BrokerInference(
                 request,
@@ -86,10 +169,8 @@ class BrokerClient:
                 metadata=_metadata(self._turn_id),
             )
         except grpc.RpcError as err:
-            return False, str(err)
-        if response.ok:
-            return True, response.text
-        return False, response.error or "broker inference failed"
+            return legacy_inference_result(False, str(err))
+        return _parse_inference_response(response)
 
     def read_file(self, path: str, mode: str | None = None) -> tuple[bool, str]:
         request = rex_pb2.BrokerReadFileRequest(
@@ -198,10 +279,15 @@ def broker_inference(
     mode: str,
     model: str,
     turn_id: str | None = None,
-) -> tuple[bool, str]:
+    *,
+    messages: list[Any] | None = None,
+    tools: list[Any] | None = None,
+) -> InferenceResult:
     """Call BrokerInference on the daemon (one-shot; opens a channel per call)."""
     with BrokerClient(turn_id=turn_id) as client:
-        return client.inference(prompt, mode, model)
+        return client.inference(
+            prompt, mode, model, messages=messages, tools=tools
+        )
 
 
 def strip_tool_result_delimiters(text: str) -> str:

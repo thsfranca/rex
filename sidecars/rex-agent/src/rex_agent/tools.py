@@ -39,6 +39,65 @@ TOOLS_BY_MODE: dict[str, frozenset[str]] = {
 VIEWER_TOOLS = frozenset({TOOL_READ, TOOL_LIST})
 EDITOR_TOOLS = frozenset({TOOL_READ, TOOL_WRITE, TOOL_EXEC})
 
+TOOL_DESCRIPTIONS: dict[str, str] = {
+    TOOL_READ: "Read a file relative to the workspace root",
+    TOOL_LIST: "List directory entries relative to the workspace root",
+    TOOL_WRITE: "Write or patch a file (content or unified diff)",
+    TOOL_EXEC: "Run an allowlisted shell command in the workspace",
+    TOOL_PLAN_SAVE: "Save a markdown plan under .rex/plans/",
+}
+
+TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
+    TOOL_READ: {
+        "type": "object",
+        "properties": {
+            "path": {"type": "string", "description": "Relative file path"},
+        },
+        "required": ["path"],
+    },
+    TOOL_LIST: {
+        "type": "object",
+        "properties": {
+            "path": {
+                "type": "string",
+                "description": "Relative directory path (empty for workspace root)",
+            },
+        },
+    },
+    TOOL_WRITE: {
+        "type": "object",
+        "properties": {
+            "path": {"type": "string", "description": "Relative file path"},
+            "content": {"type": "string", "description": "Full file content"},
+            "diff": {"type": "string", "description": "Unified diff to apply"},
+        },
+        "required": ["path"],
+    },
+    TOOL_EXEC: {
+        "type": "object",
+        "properties": {
+            "command": {"type": "string", "description": "Shell command to run"},
+        },
+        "required": ["command"],
+    },
+    TOOL_PLAN_SAVE: {
+        "type": "object",
+        "properties": {
+            "path": {
+                "type": "string",
+                "description": "Plan filename (saved under .rex/plans/)",
+            },
+            "content": {"type": "string", "description": "Markdown plan body"},
+        },
+        "required": ["path", "content"],
+    },
+}
+
+try:
+    from rex.v1 import rex_pb2
+except ImportError:  # pragma: no cover
+    rex_pb2 = None  # type: ignore[assignment]
+
 
 @dataclass(frozen=True)
 class ToolCall:
@@ -79,6 +138,28 @@ def tools_for_subagent(subagent: str, mode: str) -> frozenset[str]:
     if subagent == "editor":
         return allowed & EDITOR_TOOLS
     return allowed
+
+
+def tool_specs_for_subagent(subagent: str, mode: str) -> list[Any]:
+    """OpenAI-shaped ToolSpec protos for native broker tool calling (R038)."""
+    if rex_pb2 is None:
+        raise ImportError(
+            "rex.v1 protobuf stubs not found. Run `rex proto install`."
+        )
+    allowed = tools_for_subagent(subagent, mode)
+    specs: list[Any] = []
+    for name in sorted(allowed):
+        schema = TOOL_SCHEMAS.get(name)
+        if schema is None:
+            continue
+        specs.append(
+            rex_pb2.ToolSpec(
+                name=name,
+                description=TOOL_DESCRIPTIONS.get(name, name),
+                parameters_json=json.dumps(schema),
+            )
+        )
+    return specs
 
 
 def system_prompt_for_tools(mode: str, *, subagent: str = "orchestrator") -> str:

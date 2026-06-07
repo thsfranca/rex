@@ -8,6 +8,9 @@ import grpc
 
 from rex_agent.broker import (
     BrokerClient,
+    InferenceResult,
+    is_interim_fallback,
+    legacy_inference_result,
     strip_tool_result_delimiters,
     truncate_tool_result,
 )
@@ -50,15 +53,18 @@ def test_broker_inference_sends_turn_metadata() -> None:
     response = MagicMock()
     response.ok = True
     response.text = "answer"
+    response.content = "answer"
     response.error = ""
+    response.tool_calls = []
+    response.protocol = 2
     stub.BrokerInference.return_value = response
 
     with patch("rex_agent.broker._daemon_channel", return_value=MagicMock()):
         with BrokerClient(turn_id="turn-1") as client:
             client._stub = stub
-            ok, text = client.inference("hi", "ask", "model-x")
-    assert ok is True
-    assert text == "answer"
+            result = client.inference("hi", "ask", "model-x")
+    assert result.ok is True
+    assert result.effective_text() == "answer"
     _request, kwargs = stub.BrokerInference.call_args
     assert kwargs["metadata"] == (("x-rex-turn-id", "turn-1"),)
 
@@ -130,6 +136,85 @@ def test_grpc_error_surfaces_as_failure() -> None:
     with patch("rex_agent.broker._daemon_channel", return_value=MagicMock()):
         with BrokerClient() as client:
             client._stub = stub
-            ok, msg = client.inference("x", "ask", "")
-    assert ok is False
-    assert msg
+            result = client.inference("x", "ask", "")
+    assert result.ok is False
+    assert result.error
+
+
+def test_broker_inference_sends_messages_and_tools() -> None:
+    from rex_agent.broker import rex_pb2
+
+    stub = MagicMock()
+    response = MagicMock()
+    response.ok = True
+    response.text = ""
+    response.content = ""
+    response.error = ""
+    response.tool_calls = []
+    response.protocol = 1
+    stub.BrokerInference.return_value = response
+
+    messages = [rex_pb2.ChatMessage(role="user", content="hello")]
+    tools = [
+        rex_pb2.ToolSpec(
+            name="fs.read",
+            description="read",
+            parameters_json='{"type":"object"}',
+        )
+    ]
+
+    with patch("rex_agent.broker._daemon_channel", return_value=MagicMock()):
+        with BrokerClient() as client:
+            client._stub = stub
+            client.inference(
+                "prompt",
+                "plan",
+                "m",
+                messages=messages,
+                tools=tools,
+            )
+
+    request = stub.BrokerInference.call_args[0][0]
+    assert len(request.messages) == 1
+    assert request.messages[0].content == "hello"
+    assert len(request.tools) == 1
+    assert request.tools[0].name == "fs.read"
+
+
+def test_broker_inference_maps_native_tool_calls() -> None:
+    stub = MagicMock()
+
+    class _ToolCall:
+        name = "fs.read"
+        arguments_json = '{"path":"README.md"}'
+
+    response = MagicMock()
+    response.ok = True
+    response.text = ""
+    response.content = ""
+    response.error = ""
+    response.tool_calls = [_ToolCall()]
+    response.protocol = 1
+    stub.BrokerInference.return_value = response
+
+    with patch("rex_agent.broker._daemon_channel", return_value=MagicMock()):
+        with BrokerClient() as client:
+            client._stub = stub
+            result = client.inference("x", "plan", "")
+
+    assert result.ok is True
+    assert len(result.tool_calls) == 1
+    assert result.tool_calls[0].tool == "fs.read"
+    assert result.tool_calls[0].args == {"path": "README.md"}
+
+
+def test_is_interim_fallback() -> None:
+    from rex_agent.broker import rex_pb2
+
+    fallback = InferenceResult(
+        ok=False,
+        error="native_tools_unsupported: model lacks tools",
+        protocol=rex_pb2.INFERENCE_PROTOCOL_INTERIM_FALLBACK,
+    )
+    assert is_interim_fallback(fallback) is True
+    assert is_interim_fallback(legacy_inference_result(False, "other")) is False
