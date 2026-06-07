@@ -4,4 +4,4 @@ providers:
     folder: Rex Economics
     type: file
     options:
-      path: /var/lib/grafana/dashboards
+      path: provisioning/dashboards

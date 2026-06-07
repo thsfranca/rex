@@ -111,10 +111,14 @@ fn run_up() -> ExitCode {
             .as_ref()
             .map(|l| l.effective.observability.ui.grafana.port)
             .unwrap_or(3000);
-        let provisioning = obs_grafana_home().join("provisioning");
+        let grafana_home = obs_grafana_home();
+        let provisioning = grafana_home.join("provisioning");
+        let plugins = grafana_home.join("plugins");
         let child = Command::new(&grafana)
             .arg("server")
+            .current_dir(&grafana_home)
             .env("GF_PATHS_PROVISIONING", &provisioning)
+            .env("GF_PATHS_PLUGINS", &plugins)
             .env("GF_SERVER_HTTP_PORT", port.to_string())
             .stdout(Stdio::null())
             .stderr(Stdio::null())
@@ -217,6 +221,14 @@ fn run_catalog() -> ExitCode {
 fn materialize_obs_layout() -> std::io::Result<()> {
     let grafana_home = obs_grafana_home();
     copy_dir_all(Path::new(TEMPLATE_ROOT).join("grafana"), &grafana_home)?;
+
+    let plugin_src =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations/grafana-rex-otel/dist");
+    let plugin_dst = grafana_home.join("plugins/rex-otel-datasource");
+    if plugin_src.is_dir() {
+        copy_dir_all(&plugin_src, &plugin_dst)?;
+    }
+
     Ok(())
 }
 

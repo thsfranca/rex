@@ -1,0 +1,36 @@
+{
+  "uid": "rex-streams-live",
+  "title": "rex-streams-live",
+  "tags": ["rex", "streams"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Stream requests",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "rex-otel-datasource", "uid": "rex-otel" },
+          "refId": "A",
+          "instrument": "rex.stream.requests"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Stream duration (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "datasource": { "type": "rex-otel-datasource", "uid": "rex-otel" },
+          "refId": "A",
+          "instrument": "rex.stream.duration_ms"
+        }
+      ]
+    }
+  ]
+}
