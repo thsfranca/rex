@@ -208,7 +208,7 @@ Rust struct in `crates/rex-daemon/src/adapters.rs`; passed into `ContextPipeline
 
 | Capability (partial / planned) | Meaning |
 |---|---|
-| `native_tool_calling` | **Partial (R038 PR 1 Done):** daemon forwards OpenAI `tools[]` / `tool_choice`, parses SSE `delta.tool_calls`, Ollama `/api/show` probe; sidecar routing in PR 2 — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md). Default broker profile for agent tools: **direct Ollama** (`http://127.0.0.1:11434/v1`); gateway opt-in. |
+| `native_tool_calling` | **Partial (R038 PR 1–2 Done):** daemon forwards OpenAI `tools[]` / `tool_choice`, parses SSE `delta.tool_calls`, Ollama `/api/show` probe; sidecar routes native `tool_calls` with interim fallback — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md). Operator E2E proof: **R038 PR 3**. Default broker profile for agent tools: **direct Ollama** (`http://127.0.0.1:11434/v1`); gateway opt-in. |
 | `cacheable_modes` | Subset permitted for L1 (**`ask`** only today). |
 | `max_prompt_tokens` / `max_context_tokens` | Optional per-adapter clamps beyond pipeline defaults. |
 | `default_timeout` | Adapter-specific watchdog. |
