@@ -9,8 +9,8 @@ use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
 use rex_obs_store::{
-    instrument_catalog, project_metrics, MetricsQueryRequest, ObsQuery, StoreEngine,
-    StreamQueryFilter,
+    instrument_catalog, project_metrics, rollup_metrics_by_label, MetricsQueryRequest,
+    MetricsRollupRequest, ObsQuery, StoreEngine, StreamQueryFilter,
 };
 use tokio::net::TcpListener;
 
@@ -82,6 +82,10 @@ async fn handle_request(
             Ok(body) => handle_metrics_query(&state, &body),
             Err(err) => error_response(StatusCode::BAD_REQUEST, &err.to_string()),
         },
+        (&Method::POST, "/v1/metrics/rollup") => match read_body(req).await {
+            Ok(body) => handle_metrics_rollup(&state, &body),
+            Err(err) => error_response(StatusCode::BAD_REQUEST, &err.to_string()),
+        },
         _ => error_response(StatusCode::NOT_FOUND, "not found"),
     };
     Ok(response)
@@ -120,6 +124,48 @@ fn handle_metrics_query(state: &ReadApiState, body: &str) -> Response<Full<Bytes
         }
     };
     let response = project_metrics(&state.service_name, &streams, &request);
+    json_response(StatusCode::OK, &response)
+}
+
+fn handle_metrics_rollup(state: &ReadApiState, body: &str) -> Response<Full<Bytes>> {
+    let request: MetricsRollupRequest = match serde_json::from_str(body) {
+        Ok(req) => req,
+        Err(err) => {
+            return error_response(
+                StatusCode::BAD_REQUEST,
+                &format!("obs.read_api.query_invalid: {err}"),
+            );
+        }
+    };
+    if request.group_by.is_empty() {
+        return error_response(
+            StatusCode::BAD_REQUEST,
+            "obs.read_api.query_invalid: group_by required",
+        );
+    }
+    let filter = StreamQueryFilter {
+        start_ms: request.start_ms,
+        end_ms: request.end_ms,
+        terminal: None,
+        route: None,
+        mode: None,
+        cache_decision: None,
+    };
+    let streams = match state.store.lock() {
+        Ok(store) => match store.query_streams(&filter) {
+            Ok(rows) => rows,
+            Err(err) => {
+                return error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &format!("store query failed: {err}"),
+                );
+            }
+        },
+        Err(_) => {
+            return error_response(StatusCode::INTERNAL_SERVER_ERROR, "store lock poisoned");
+        }
+    };
+    let response = rollup_metrics_by_label(&streams, &request);
     json_response(StatusCode::OK, &response)
 }
 
@@ -180,6 +226,20 @@ mod tests {
             prefix_hash: None,
             parse_retries: None,
         }
+    }
+
+    #[test]
+    fn metrics_rollup_groups_streams() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = rex_obs_store::open_store("sqlite", dir.path().join("store.sqlite")).unwrap();
+        store
+            .upsert_config_snapshot("snap", r#"{"inference":{"runtime":"mock"}}"#)
+            .unwrap();
+        store.append_stream(&sample("snap")).unwrap();
+        let state = ReadApiState::new("rex-daemon".to_string(), store);
+        let body = r#"{"group_by":["route"]}"#;
+        let resp = handle_metrics_rollup(&state, body);
+        assert_eq!(resp.status(), StatusCode::OK);
     }
 
     #[test]

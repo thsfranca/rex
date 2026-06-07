@@ -5,6 +5,7 @@ mod otel;
 mod port;
 mod query;
 mod record;
+mod rollup;
 mod schema;
 mod sqlite;
 mod store;
@@ -18,6 +19,9 @@ pub use otel::{
 pub use port::StorePort;
 pub use query::{ObsQuery, QueriedStream, StreamQueryFilter};
 pub use record::StreamEconomicsRecord;
+pub use rollup::{
+    rollup_metrics_by_label, MetricsRollupRequest, MetricsRollupResponse, RollupBucket,
+};
 pub use schema::SCHEMA_VERSION;
 pub use sqlite::{ObsStore, SqliteEngine};
 pub use store::SharedObsStore;
