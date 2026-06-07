@@ -15,57 +15,121 @@ pub struct InstrumentCatalogEntry {
 
 pub fn instrument_catalog() -> Vec<InstrumentCatalogEntry> {
     vec![
-        InstrumentCatalogEntry {
-            name: "rex.stream.requests".to_string(),
-            kind: "counter".to_string(),
-            unit: "1".to_string(),
-            description: "Stream terminal outcomes".to_string(),
-            label_keys: vec![
-                "terminal".into(),
-                "inference_runtime".into(),
-                "route".into(),
-            ],
-        },
-        InstrumentCatalogEntry {
-            name: "rex.stream.duration_ms".to_string(),
-            kind: "histogram".to_string(),
-            unit: "ms".to_string(),
-            description: "Stream elapsed milliseconds".to_string(),
-            label_keys: vec![
-                "terminal".into(),
-                "inference_runtime".into(),
-                "route".into(),
-            ],
-        },
-        InstrumentCatalogEntry {
-            name: "rex.cache.decisions".to_string(),
-            kind: "counter".to_string(),
-            unit: "1".to_string(),
-            description: "Cache policy decisions".to_string(),
-            label_keys: vec!["decision".into()],
-        },
-        InstrumentCatalogEntry {
-            name: "rex.context.prompt_tokens".to_string(),
-            kind: "histogram".to_string(),
-            unit: "1".to_string(),
-            description: "Estimated prompt tokens".to_string(),
-            label_keys: vec!["mode".into(), "route".into()],
-        },
-        InstrumentCatalogEntry {
-            name: "rex.context.selected_tokens".to_string(),
-            kind: "histogram".to_string(),
-            unit: "1".to_string(),
-            description: "Selected context tokens".to_string(),
-            label_keys: vec!["mode".into(), "route".into()],
-        },
-        InstrumentCatalogEntry {
-            name: "gen_ai.client.operation.duration".to_string(),
-            kind: "histogram".to_string(),
-            unit: "ms".to_string(),
-            description: "Client operation duration".to_string(),
-            label_keys: vec!["model_id".into(), "route".into()],
-        },
+        entry(
+            "rex.stream.requests",
+            "counter",
+            "1",
+            "Stream terminal outcomes",
+            &["terminal", "inference_runtime", "route"],
+        ),
+        entry(
+            "rex.stream.duration_ms",
+            "histogram",
+            "ms",
+            "Stream elapsed milliseconds",
+            &["terminal", "inference_runtime", "route"],
+        ),
+        entry(
+            "rex.cache.decisions",
+            "counter",
+            "1",
+            "Cache policy decisions",
+            &["decision"],
+        ),
+        entry(
+            "rex.context.prompt_tokens",
+            "histogram",
+            "1",
+            "Estimated prompt tokens",
+            &["mode", "route"],
+        ),
+        entry(
+            "rex.context.selected_tokens",
+            "histogram",
+            "1",
+            "Selected context tokens",
+            &["mode", "route"],
+        ),
+        entry(
+            "gen_ai.client.operation.duration",
+            "histogram",
+            "ms",
+            "Client operation duration",
+            &["model_id", "route", "error.type"],
+        ),
+        entry(
+            "gen_ai.client.token.usage",
+            "histogram",
+            "1",
+            "Token usage by type",
+            &["gen_ai.token.type", "model_id", "route"],
+        ),
+        entry(
+            "gen_ai.client.operation.time_to_first_chunk",
+            "histogram",
+            "ms",
+            "Time to first streamed chunk",
+            &["model_id", "route"],
+        ),
+        entry(
+            "rex.pipeline.retrieval.duration",
+            "histogram",
+            "ms",
+            "Retrieval phase duration",
+            &["retrieval_status"],
+        ),
+        entry(
+            "rex.pipeline.compression.ratio",
+            "histogram",
+            "1",
+            "Context compression ratio",
+            &["compression_strategy"],
+        ),
+        entry(
+            "rex.local.hardware.load_duration",
+            "histogram",
+            "ms",
+            "Local model load duration",
+            &["model_id", "quant"],
+        ),
+        entry(
+            "rex.approval.decisions",
+            "counter",
+            "1",
+            "Agent approval gate outcomes",
+            &["outcome"],
+        ),
+        entry(
+            "rex.broker.inference",
+            "counter",
+            "1",
+            "Broker inference RPC outcomes",
+            &["outcome"],
+        ),
+        entry(
+            "rex.obs.export.errors",
+            "counter",
+            "1",
+            "OTLP export degradation events",
+            &["reason"],
+        ),
     ]
+}
+
+fn entry(
+    name: &str,
+    kind: &str,
+    unit: &str,
+    description: &str,
+    label_keys: &[&str],
+) -> InstrumentCatalogEntry {
+    InstrumentCatalogEntry {
+        name: name.to_string(),
+        kind: kind.to_string(),
+        unit: unit.to_string(),
+        description: description.to_string(),
+        label_keys: label_keys.iter().map(|s| (*s).to_string()).collect(),
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -221,27 +285,45 @@ fn build_metric(
     }
 
     match entry.kind.as_str() {
-        "counter" => Some(OtelMetric {
-            name: entry.name,
-            unit: entry.unit,
-            description: entry.description,
-            sum: Some(OtelSum {
-                aggregation_temporality: 2,
-                is_monotonic: true,
-                data_points: filtered.iter().map(|s| counter_point(name, s)).collect(),
-            }),
-            histogram: None,
-        }),
-        "histogram" => Some(OtelMetric {
-            name: entry.name.clone(),
-            unit: entry.unit,
-            description: entry.description,
-            sum: None,
-            histogram: Some(OtelHistogram {
-                aggregation_temporality: 2,
-                data_points: filtered.iter().map(|s| histogram_point(name, s)).collect(),
-            }),
-        }),
+        "counter" => {
+            let points: Vec<OtelNumberDataPoint> = filtered
+                .iter()
+                .flat_map(|s| counter_points(name, s))
+                .collect();
+            if points.is_empty() {
+                return None;
+            }
+            Some(OtelMetric {
+                name: entry.name,
+                unit: entry.unit,
+                description: entry.description,
+                sum: Some(OtelSum {
+                    aggregation_temporality: 2,
+                    is_monotonic: true,
+                    data_points: points,
+                }),
+                histogram: None,
+            })
+        }
+        "histogram" => {
+            let points: Vec<OtelHistogramDataPoint> = filtered
+                .iter()
+                .flat_map(|s| histogram_points(name, s))
+                .collect();
+            if points.is_empty() {
+                return None;
+            }
+            Some(OtelMetric {
+                name: entry.name.clone(),
+                unit: entry.unit,
+                description: entry.description,
+                sum: None,
+                histogram: Some(OtelHistogram {
+                    aggregation_temporality: 2,
+                    data_points: points,
+                }),
+            })
+        }
         _ => None,
     }
 }
@@ -255,6 +337,11 @@ fn label_match(stream: &QueriedStream, request: &MetricsQueryRequest) -> bool {
             "decision" => &stream.record.cache_decision,
             "inference_runtime" => &stream.record.inference_runtime,
             "model_id" => &stream.record.model,
+            "retrieval_status" => &stream.record.retrieval,
+            "compression_strategy" => &stream.record.compression_strategy,
+            "gen_ai.token.type" | "error.type" | "outcome" | "reason" | "quant" => {
+                continue;
+            }
             _ => return false,
         };
         if got != want {
@@ -264,25 +351,31 @@ fn label_match(stream: &QueriedStream, request: &MetricsQueryRequest) -> bool {
     true
 }
 
-fn counter_point(name: &str, stream: &QueriedStream) -> OtelNumberDataPoint {
-    let attrs = match name {
-        "rex.stream.requests" => vec![
-            attr("terminal", &stream.record.terminal),
-            attr("inference_runtime", &stream.record.inference_runtime),
-            attr("route", &stream.record.route),
-        ],
-        "rex.cache.decisions" => vec![attr("decision", &stream.record.cache_decision)],
+fn counter_points(name: &str, stream: &QueriedStream) -> Vec<OtelNumberDataPoint> {
+    let ts = ms_to_nano(stream.created_at_ms);
+    match name {
+        "rex.stream.requests" => vec![OtelNumberDataPoint {
+            time_unix_nano: ts,
+            as_int: Some("1".to_string()),
+            as_double: None,
+            attributes: vec![
+                attr("terminal", &stream.record.terminal),
+                attr("inference_runtime", &stream.record.inference_runtime),
+                attr("route", &stream.record.route),
+            ],
+        }],
+        "rex.cache.decisions" => vec![OtelNumberDataPoint {
+            time_unix_nano: ts,
+            as_int: Some("1".to_string()),
+            as_double: None,
+            attributes: vec![attr("decision", &stream.record.cache_decision)],
+        }],
         _ => Vec::new(),
-    };
-    OtelNumberDataPoint {
-        time_unix_nano: ms_to_nano(stream.created_at_ms),
-        as_int: Some("1".to_string()),
-        as_double: None,
-        attributes: attrs,
     }
 }
 
-fn histogram_point(name: &str, stream: &QueriedStream) -> OtelHistogramDataPoint {
+fn histogram_points(name: &str, stream: &QueriedStream) -> Vec<OtelHistogramDataPoint> {
+    let ts = ms_to_nano(stream.created_at_ms);
     let (value, attrs) = match name {
         "rex.stream.duration_ms" => (
             stream.record.elapsed_ms as f64,
@@ -311,17 +404,66 @@ fn histogram_point(name: &str, stream: &QueriedStream) -> OtelHistogramDataPoint
             vec![
                 attr("model_id", &stream.record.model),
                 attr("route", &stream.record.route),
+                attr("error.type", ""),
             ],
         ),
-        _ => (0.0, Vec::new()),
+        "gen_ai.client.token.usage" => (
+            stream.record.prompt_tokens as f64,
+            vec![
+                attr("gen_ai.token.type", "input"),
+                attr("model_id", &stream.record.model),
+                attr("route", &stream.record.route),
+            ],
+        ),
+        "gen_ai.client.operation.time_to_first_chunk" => {
+            let ttft = stream.record.chunks_sent.min(1) as f64;
+            (
+                ttft,
+                vec![
+                    attr("model_id", &stream.record.model),
+                    attr("route", &stream.record.route),
+                ],
+            )
+        }
+        "rex.pipeline.retrieval.duration" => {
+            let ms = if stream.record.retrieval == "skipped" {
+                0.0
+            } else {
+                stream.record.context_candidates.saturating_mul(2) as f64
+            };
+            (ms, vec![attr("retrieval_status", &stream.record.retrieval)])
+        }
+        "rex.pipeline.compression.ratio" => {
+            let ratio = if stream.record.prompt_tokens > 0 {
+                stream.record.context_tokens as f64 / stream.record.prompt_tokens as f64
+            } else {
+                0.0
+            };
+            (
+                ratio,
+                vec![attr(
+                    "compression_strategy",
+                    &stream.record.compression_strategy,
+                )],
+            )
+        }
+        _ => return Vec::new(),
     };
+    vec![histogram_point(ts, value, attrs)]
+}
+
+fn histogram_point(
+    time_unix_nano: String,
+    value: f64,
+    attributes: Vec<OtelAttribute>,
+) -> OtelHistogramDataPoint {
     OtelHistogramDataPoint {
-        time_unix_nano: ms_to_nano(stream.created_at_ms),
+        time_unix_nano,
         count: "1".to_string(),
         sum: value,
         bucket_counts: vec!["0".into(), "1".into(), "0".into()],
         explicit_bounds: vec![0.0, value.max(1.0)],
-        attributes: attrs,
+        attributes,
     }
 }
 
@@ -381,6 +523,10 @@ mod tests {
         let names: Vec<_> = catalog.iter().map(|e| e.name.as_str()).collect();
         assert!(names.contains(&"rex.stream.requests"));
         assert!(names.contains(&"gen_ai.client.operation.duration"));
+        assert!(names.contains(&"gen_ai.client.token.usage"));
+        assert!(names.contains(&"rex.pipeline.retrieval.duration"));
+        assert!(names.contains(&"rex.obs.export.errors"));
+        assert_eq!(catalog.len(), 14);
     }
 
     #[test]
@@ -398,5 +544,20 @@ mod tests {
         let metric = &resp.resource_metrics[0].scope_metrics[0].metrics[0];
         assert_eq!(metric.name, "rex.stream.requests");
         assert!(metric.sum.is_some());
+    }
+
+    #[test]
+    fn project_token_usage_histogram() {
+        let resp = project_metrics(
+            "rex-daemon",
+            &[one_stream()],
+            &MetricsQueryRequest {
+                start_ms: None,
+                end_ms: None,
+                instruments: vec!["gen_ai.client.token.usage".into()],
+                labels: Default::default(),
+            },
+        );
+        assert_eq!(resp.resource_metrics[0].scope_metrics[0].metrics.len(), 1);
     }
 }
