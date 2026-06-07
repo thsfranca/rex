@@ -121,13 +121,19 @@ Documented for broker responses and future structured fields; **not** in `error_
 | `plan_save_denied` | `plan.save` not allowed in current mode | daemon broker |
 | `plan_path_invalid` | `plan.save` path outside `.rex/plans/*.md` or malformed | daemon broker |
 
-## Planned economics store codes (not in catalog yet)
+## Economics store codes
 
-When `rex-obs-store` lands, register these in `error_codes.yaml` and the catalog above. User paths: daemon startup or `rex obs` — not NDJSON stream terminals unless store failure aborts a stream.
+Catalog: [`fixtures/guidelines/store_error_codes.yaml`](../fixtures/guidelines/store_error_codes.yaml). User paths: daemon startup or `rex obs` — not NDJSON stream terminals unless store failure aborts a stream.
 
 | Code | Meaning | Layer |
 |------|---------|-------|
 | `store.engine_unsupported` | `observability.store.engine=mmap` on non-macOS (or unknown engine) | daemon / CLI |
+| `store.chce_not_ready` | CHCE mmap selected on macOS but write/read not implemented yet (**R047–R048**) | daemon / CLI |
+
+### Planned store codes (not shipped)
+
+| Code | Meaning | Layer |
+|------|---------|-------|
 | `store.recovery_failed` | Mmap file recovery could not find a valid CRC boundary | daemon |
 | `store.format_version_unsupported` | File `format_version` newer than daemon supports | daemon / CLI |
 

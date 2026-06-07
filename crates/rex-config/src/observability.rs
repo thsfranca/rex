@@ -22,12 +22,7 @@ pub fn validate_observability(obs: &ObservabilityConfig) -> Result<(), ConfigErr
     }
 
     let engine = normalized_store_engine(&obs.store.engine);
-    if engine == DEFAULT_STORE_ENGINE_MMAP {
-        return Err(ConfigError::Validation(
-            "mmap store not implemented; use sqlite".to_string(),
-        ));
-    }
-    if engine != DEFAULT_STORE_ENGINE_SQLITE {
+    if engine != DEFAULT_STORE_ENGINE_SQLITE && engine != DEFAULT_STORE_ENGINE_MMAP {
         return Err(ConfigError::Validation(format!(
             "unknown observability.store.engine: {}",
             obs.store.engine
@@ -162,12 +157,11 @@ mod tests {
     use crate::model::RexConfig;
 
     #[test]
-    fn mmap_rejected_when_enabled() {
+    fn mmap_engine_allowed_in_config() {
         let mut cfg = RexConfig::defaults();
         cfg.observability.enabled = Some(true);
         cfg.observability.store.engine = "mmap".to_string();
-        let err = validate_observability(&cfg.observability).expect_err("mmap");
-        assert!(err.to_string().contains("mmap store not implemented"));
+        validate_observability(&cfg.observability).expect("mmap engine accepted at config layer");
     }
 
     #[test]

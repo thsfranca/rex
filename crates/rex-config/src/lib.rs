@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     #[serial]
-    fn observability_mmap_rejected_when_enabled() {
+    fn observability_mmap_allowed_at_config_layer() {
         let tmp = tempfile::tempdir().unwrap();
         with_rex_root(tmp.path(), || {
             env::set_current_dir(tmp.path()).unwrap();
@@ -262,8 +262,8 @@ mod tests {
 }"#,
             )
             .unwrap();
-            let err = load_merged().expect_err("mmap");
-            assert!(err.to_string().contains("mmap store not implemented"));
+            let loaded = load_merged().expect("mmap engine accepted in JSON");
+            assert_eq!(loaded.effective.observability.store.engine, "mmap");
         });
     }
 

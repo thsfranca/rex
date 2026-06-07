@@ -8,7 +8,7 @@ use rex_config::{
     load, observability_enabled, resolve_store_path, ui_enabled, validate_read_api_listen,
 };
 use rex_obs_api::{serve, ReadApiState};
-use rex_obs_store::{instrument_catalog, ObsStore};
+use rex_obs_store::{instrument_catalog, open_store, StorePort};
 
 const TEMPLATE_ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../templates/obs");
 
@@ -53,11 +53,12 @@ fn run_serve() -> ExitCode {
         eprintln!("{err}");
         return ExitCode::from(1);
     }
-    let store_path = resolve_store_path(&loaded.rex_root, &loaded.effective.observability.store);
-    let store = match ObsStore::open(&store_path) {
+    let store_cfg = &loaded.effective.observability.store;
+    let store_path = resolve_store_path(&loaded.rex_root, store_cfg);
+    let store = match open_store(&store_cfg.engine, &store_path) {
         Ok(store) => store,
         Err(err) => {
-            eprintln!("failed to open observability store: {err}");
+            eprintln!("failed to open observability store: {}", err.user_message());
             return ExitCode::from(1);
         }
     };
@@ -176,17 +177,18 @@ fn run_doctor() -> ExitCode {
         eprintln!("read API not reachable at {listen} (run `rex obs serve` or `rex obs up`)");
         ok = false;
     }
-    let store_path = resolve_store_path(&loaded.rex_root, &loaded.effective.observability.store);
-    match ObsStore::open(&store_path) {
+    let store_cfg = &loaded.effective.observability.store;
+    let store_path = resolve_store_path(&loaded.rex_root, store_cfg);
+    match open_store(&store_cfg.engine, &store_path) {
         Ok(store) => match store.stream_count() {
             Ok(count) => println!("store streams: {count}"),
             Err(err) => {
-                eprintln!("store read failed: {err}");
+                eprintln!("store read failed: {}", err.user_message());
                 ok = false;
             }
         },
         Err(err) => {
-            eprintln!("store open failed: {err}");
+            eprintln!("store open failed: {}", err.user_message());
             ok = false;
         }
     }

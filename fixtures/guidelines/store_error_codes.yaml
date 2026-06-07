@@ -1,0 +1,8 @@
+# Machine-readable economics store error codes (daemon / CLI paths).
+# Keep in sync with docs/ERROR_HANDLING.md store catalog and rex-obs-store error.rs.
+version: 1
+codes:
+  - code: store.engine_unsupported
+    layer: obs_store
+  - code: store.chce_not_ready
+    layer: obs_store

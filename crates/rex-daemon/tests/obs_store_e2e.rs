@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use hyper_util::rt::TokioIo;
 use rex_config::RexConfig;
-use rex_obs_store::ObsStore;
+use rex_obs_store::{ObsStore, StorePort};
 use rex_proto::rex::v1::rex_service_client::RexServiceClient;
 use rex_proto::rex::v1::StreamInferenceRequest;
 use serial_test::serial;

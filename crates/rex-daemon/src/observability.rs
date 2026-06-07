@@ -73,8 +73,9 @@ impl ObservabilityRuntime {
         if !observability_enabled(&loaded.effective.observability) {
             return Ok(None);
         }
-        let path = resolve_store_path(&loaded.rex_root, &loaded.effective.observability.store);
-        let store = SharedObsStore::open(path)?;
+        let store_cfg = &loaded.effective.observability.store;
+        let path = resolve_store_path(&loaded.rex_root, store_cfg);
+        let store = SharedObsStore::open(&store_cfg.engine, path)?;
         let snapshot_id = economics_snapshot_id(&loaded.effective);
         let payload = economics_snapshot_json(&loaded.effective).to_string();
         store.upsert_config_snapshot(&snapshot_id, &payload)?;
@@ -120,7 +121,11 @@ pub fn observability_from_settings() -> Option<Arc<ObservabilityRuntime>> {
         Ok(Some(runtime)) => Some(Arc::new(runtime)),
         Ok(None) => None,
         Err(err) => {
-            eprintln!("obs.store=degraded reason=open_failed error={err}");
+            eprintln!(
+                "obs.store=degraded reason=open_failed code={} error={}",
+                err.machine_code().unwrap_or("none"),
+                err.user_message()
+            );
             None
         }
     }
