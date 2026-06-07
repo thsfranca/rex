@@ -50,7 +50,7 @@ Before adding or materially editing a doc under `docs/`:
 | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) | Long-term / project memory — **design hub** |
 | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) | Agent-oriented project knowledge — **design hub** |
 | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | Observability suite — **design hub** |
-| [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) | Mmap economics store on-disk format (reference) |
+| [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) | CHCE columnar-mmap observability store format (reference) |
 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Economics validation program — **design hub** |
 | [OBS_READ_API.md](OBS_READ_API.md) | Loopback read API contract (OTel JSON) |
 | [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | Bundled Grafana suite (`rex obs up`) + optional interop |
@@ -86,7 +86,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Extension integrated UX | [EXTENSION_UX.md](EXTENSION_UX.md) |
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 | Agent knowledge for AI sessions (planned) | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
-| Observability suite (Phase 3–5 read API + Grafana plugin + `rex obs`; sqlite interim store) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBS_READ_API.md](OBS_READ_API.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [CONFIGURATION.md](CONFIGURATION.md#observability), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) |
+| Observability suite (read API + Grafana plugin + `rex obs`; sqlite interim; CHCE mmap design) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBS_READ_API.md](OBS_READ_API.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [CONFIGURATION.md](CONFIGURATION.md#observability), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) |
 | Native broker tool calling (**R038** planned) | [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | Economics validation + live LLM smoke (**R039–R042** planned) | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
 | MCP-style tool interoperability (design accepted) | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |

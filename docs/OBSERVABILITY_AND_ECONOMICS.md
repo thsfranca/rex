@@ -4,7 +4,7 @@ This document is the **single source** for Rex **observability beyond stdout gre
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention.
 
-**Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) · [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) · **Mmap format:** [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) · **Validation program:** [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) · **Local suite how-to:** [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md)
+**Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) · [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) · [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) · **CHCE format:** [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) · **Validation program:** [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) · **Local suite how-to:** [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md)
 
 ## Configuration surface
 
@@ -14,13 +14,13 @@ Rex observability is controlled only by merged JSON: **`observability.enabled`**
 
 - Make daemon economics **measurable and operable** with **Rex-owned storage** as system of record and **bundled Grafana** as the default UI ([ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md)).
 - Persist OpenTelemetry-shaped telemetry (`gen_ai.*`, `rex.*`) under **`$REX_ROOT`** when observability is enabled; serve **historical and realtime** reads via a **Rex observability read API** — not PromQL, LogQL, or TraceQL against operator-managed TSDBs.
-- Provide **one Rex command** (`rex obs up`, planned) to start the local suite with **default preset dashboards**; operators install Rex only (vendored Grafana kit).
+- Provide **one Rex command** (`rex obs up`) to start the local suite with **default preset dashboards**; operators install Rex only (vendored Grafana kit).
 - Link to the **validation program** for proving cost savings without unacceptable quality loss — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
 - Extend the signal vocabulary in [ARCHITECTURE.md](ARCHITECTURE.md#observability) without duplicating the full [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) lever matrix.
 
 ## Status
 
-**partial** — Phase 2 shipped: SQLite `rex-obs-store`, daemon terminal append, bounded OTLP when `observability.otlp.endpoint` is set. ADR **0026** read API, bundled Grafana, and `rex obs up` remain **planned**. ADRs 0010, 0020, 0021, 0025, 0026.
+**partial** — Phase 2–5 shipped: SQLite `rex-obs-store`, read API, Grafana plugin skeleton, `rex obs` CLI. **CHCE mmap engine** (Phase 2b) and **SSE live tail** (Phase 6) are **design documented** — [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). Sidecar observability API remains **planned**.
 
 ## Scope
 
@@ -28,10 +28,10 @@ Rex observability is controlled only by merged JSON: **`observability.enabled`**
 
 - **Signal catalog** (implemented + planned) shared by stdout, OTLP, store, read API, and Grafana dashboards.
 - **Daemon OTLP export** when `observability.enabled: true` and `observability.otlp.endpoint` is set — **implemented** (core `rex.*` + `gen_ai.client.operation.duration` instruments); store-only + `obs.export=degraded` when endpoint omitted.
-- **`rex-obs-store`** under `$REX_ROOT` when observability enabled — **SQLite implemented**; **mmap opt-in** (macOS) — **planned** (Phase 2b) — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). Grafana does **not** read store files directly.
-- **Rex observability read API** (loopback HTTP; live subscribe + historical query) — **planned** ([ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md)).
-- **Bundled Grafana** + **Rex OTel datasource plugin** + **default dashboard JSON** — **planned**.
-- **`rex obs up`** — start read API, Grafana, provisioning; open UI — **planned** — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
+- **`rex-obs-store`** under `$REX_ROOT` when observability enabled — **SQLite implemented**; **CHCE mmap** (macOS opt-in) — **design documented**, implementation Phase 2b — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). Grafana does **not** read store files directly.
+- **Rex observability read API** (loopback HTTP; historical query) — **implemented**; **SSE live subscribe** — **planned** Phase 6 — [OBS_READ_API.md](OBS_READ_API.md).
+- **Bundled Grafana** + **Rex OTel datasource plugin** + **default dashboard JSON** — **partial** (plugin + templates; operator supplies Grafana binary).
+- **`rex obs up`** — start read API, Grafana, provisioning — **implemented** — [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
 - **`SidecarObservabilityService`** on **daemon UDS** (`daemon.socket` in config) — **planned**.
 
 **Out:**
@@ -48,8 +48,8 @@ Rex observability is controlled only by merged JSON: **`observability.enabled`**
 |---------|--------|--------|
 | **Merged JSON + ingest** | `rex-daemon` | `observability` section — [CONFIGURATION.md](CONFIGURATION.md). |
 | **Telemetry storage (system of record)** | `rex-obs-store` | [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md). |
-| **Historical + realtime reads for UI** | Rex observability read API | Loopback; OTel-shaped responses — **planned**. |
-| **Chart UI** | Bundled Grafana + Rex datasource | Rex supervises Grafana kit — **planned**. |
+| **Historical + realtime reads for UI** | Rex observability read API | Loopback; historical **implemented**; SSE live tail **planned** (Phase 6). |
+| **Chart UI** | Bundled Grafana + Rex datasource | **partial** — `rex obs up` + plugin; vendor binary operator-provided. |
 | **Sidecar custom metrics** | Sidecar via **`SidecarObservabilityService`** on daemon UDS | **planned**; OTel SDKs in sidecar are clients of daemon ingest only. |
 | **Optional fleet interop** | Operator backends via OTLP export | **Could** — not product UI path. |
 | **Lever definitions** | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Cross-link only. |
@@ -87,7 +87,8 @@ flowchart LR
 
 - **Phase 0:** grep daemon stdout; `observability.enabled` false or omitted.
 - **Phase 2 (partial):** store write path; optional OTLP interop export.
-- **Phase 3+ (planned):** read API, bundled Grafana, `rex obs up`, sidecar observability API.
+- **Phase 3–5 (partial):** read API, Grafana plugin, `rex obs up` — shipped.
+- **Phase 2b / 6 (planned):** CHCE mmap engine; SSE live tail + sidecar observability API.
 
 ### Rejected patterns
 
@@ -203,14 +204,33 @@ Correlation: `trace_id`, `stream.request_id`, future `turn_id` on **span attribu
 
 ## rex-obs-store
 
-Active when **`observability.enabled: true`** in merged JSON ([ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md)). Engine: **`observability.store.engine`** — default **`sqlite`**; opt-in **`mmap`** on macOS only. **System of record** — UI reads via Rex read API, not direct file or TSDB queries.
+Active when **`observability.enabled: true`** in merged JSON ([ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)). Engine: **`observability.store.engine`** — default **`sqlite`**; opt-in **`mmap`** (CHCE) on macOS only. **System of record** — UI reads via Rex read API, not direct file or TSDB queries.
 
 ### Store engines
 
 | Engine | Default path | Platform | Format doc |
 |--------|--------------|----------|------------|
 | **`sqlite`** | `obs/store.sqlite` | macOS, Linux CI | SQL schema (ADR 0021) |
-| **`mmap`** | `obs/store.rexobs` | **macOS only** | [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) |
+| **`mmap`** (CHCE) | `obs/store.rexobs` + `store.dict` | **macOS only** | [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) |
+
+### CHCE architecture (mmap engine)
+
+When `engine=mmap`, the store uses the **Custom Hybrid Columnar-mmap Engine** ([ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)):
+
+- **Hot path:** daemon → bounded `mpsc` → `LiveRingBuffer` (&lt;1 ms return).
+- **Seal path:** `AppendCoordinator` transposes rows to columns → `ColumnarCodec` → 16 KB pages in `store.rexobs`.
+- **Reads:** zone-map skip + column projection; `trace_id` / `turn_id` via sparse index.
+- **Live tail (Phase 6):** broadcast channel → read API SSE — see [OBS_READ_API.md](OBS_READ_API.md).
+
+### Programmatic API (intent)
+
+| Operation | Method | Status |
+|-----------|--------|--------|
+| Write config | `append_config` | SQLite shipped; CHCE planned |
+| Write stream | `append_stream` | SQLite shipped; CHCE planned |
+| Time scan | `scan_streams_by_time` / `ObsQuery::query_streams` | Historical shipped |
+| Rollup | `rollup_metrics_by_label` | Planned |
+| Live tail | `tail_telemetry` | Planned Phase 6 |
 
 Shared **logical** tables/records (encoding differs by engine):
 
@@ -223,7 +243,7 @@ Shared **logical** tables/records (encoding differs by engine):
 
 **Write path:** append on `stream.terminal`; harness on run complete. Non-blocking on the inference hot path.
 
-**Read paths (planned):** Rex observability read API (primary for Grafana); `rex obs compare|export|rollup` CLI. Bundled Grafana: [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
+**Read paths:** Rex observability read API (primary for Grafana) — **implemented** for historical query; `rex obs compare|export|rollup` CLI — planned. Bundled Grafana: [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
 
 ## Economics validation program
 
@@ -242,7 +262,7 @@ rg 'stream.metrics' /path/to/daemon.log
 |----------------|-----|------------------------|
 | `observability` JSON + store schema | yes | — |
 | Telemetry storage (system of record) | yes — `rex-obs-store` | — |
-| Read API + bundled Grafana + default dashboards | yes (planned) | — |
+| Read API + bundled Grafana + default dashboards | yes (partial — SSE live deferred) | — |
 | `SidecarObservabilityService` | yes (planned) | — |
 | Stdout economics grep | yes (today) | — |
 | Optional OTLP replication to fleet backends | yes (optional) | receiver when interop enabled |
@@ -254,11 +274,11 @@ rg 'stream.metrics' /path/to/daemon.log
 | **0** | Stdout + grep; observability off in JSON | **implemented** |
 | **1** | Design hubs, ADRs, validation program | **design documented** |
 | **2** | Store write path + bounded OTLP export (**sqlite** engine) | **partial** (sqlite + core OTLP shipped; sidecar signals pending) |
-| **2b** | **mmap** store engine (macOS opt-in) | planned |
+| **2b** | **CHCE mmap** store engine (macOS opt-in) | **design documented** — [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) |
 | **3** | Rex observability read API (loopback) | **implemented** — [OBS_READ_API.md](OBS_READ_API.md) |
 | **4** | Bundled Grafana kit + Rex OTel datasource + default dashboards | **partial** — plugin + provisioning templates; vendor binary operator-provided |
 | **5** | **`rex obs up`** (one command local suite) | **implemented** — `rex obs serve|up|down|doctor|catalog` |
-| **6** | `SidecarObservabilityService` + realtime live feed | planned |
+| **6** | `SidecarObservabilityService` + SSE live feed (CHCE `LiveRingBuffer`) | planned |
 | **7** | `rex obs` CLI helpers, retention, eval harness | planned |
 
 ## Resolved questions
