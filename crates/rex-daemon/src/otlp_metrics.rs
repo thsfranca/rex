@@ -242,6 +242,7 @@ impl OtlpMetrics {
             );
         }
     }
+
 }
 
 pub fn log_export_degraded(reason: &str) {
