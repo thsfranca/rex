@@ -2,6 +2,8 @@
 
 REX keeps **routing/caching/pipeline policy in `rex-daemon`**, runs the **development agent in a supervised sidecar process**, and uses **in-process inference adapters only as broker mechanisms** (HTTP OpenAI-compat today) — **not** as a substitute for the sidecar agent. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [MVP_SPEC.md](MVP_SPEC.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), ADRs [0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md), [0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
+**Prioritization (2026-06-07):** Phase 1 platform **Must RC-*** **Met**. **Next** work is **observability + Rex-owned store** (**RC-S3–RC-S6**) — not new broker surfaces. Global queue: [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+
 ## Current purpose
 
 - Ship reliable **`rex.v1`** streaming for extensions and CLI.
@@ -31,7 +33,9 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 - **Not** the product agent: the sidecar requests inference; the daemon executes the HTTP adapter.
 - **Legacy:** `REX_INFERENCE_RUNTIME=cursor-cli` subprocess — non-MVP.
 - CI: **`mock`** or stub sidecar — [CI.md](CI.md).
-- **Done:** native broker tool calling (**R038**) — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md); live broker validation against Ollama (**R039–R041**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
+- **Done:** native broker tool calling (**R038**) — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md).
+- **Next (Should):** live broker validation (**R039–R040**, **RC-S6**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md); Rex-owned economics store (**R043–R049**, **RC-S4**) — [CHCE_ROADMAP.md](CHCE_ROADMAP.md).
+- **Could:** gateway-path smoke (**R041**); MCP client (**R033**, rank 17).
 
 ## Daemon-first principle
 
@@ -69,8 +73,9 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 | 4 — Proto / CLI knobs | **`model`** / **`mode`** on wire |
 | 4b — Inference Gateway | **Done** — managed LiteLLM supervisor + `rex gateway` — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md) |
 | 5+ | L2 semantic cache | **Could** — [ROADMAP.md](ROADMAP.md) Later, [CACHING.md](CACHING.md) |
-| 5+ | Difficulty-based routing cascade | **Could** — [ROADMAP.md](ROADMAP.md) Next, [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
-| 5+ | `auto` mode, sidecar-only routing | Backlog — see [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) Later optional tracks |
+| 5+ | Difficulty-based routing cascade | **Could** — [ROADMAP.md](ROADMAP.md) Later, [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
+| 5+ | Economics observability + CHCE store | **Should** — **active** — [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), **R043–R051** |
+| 5+ | `auto` mode, sidecar-only routing | Backlog — Later |
 
 **Status:** See [V1_0.md](V1_0.md) **RC-*** (canonical). All Must **RC-*** are **Met**. Broker **`fs.write`**, **`exec.shell`**, and **`BrokerInference`** are shipped ([AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md)).
 

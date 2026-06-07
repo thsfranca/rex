@@ -1,6 +1,6 @@
 # CHCE observability store — delivery program
 
-**Status:** **planned** — design accepted ([ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)); no mmap implementation in `rex-obs-store` yet.
+**Status:** **planned** — design accepted ([ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)); no mmap implementation in `rex-obs-store` yet. **Done** tracking: **RC-S4** (Program A) and related **RC-S5** in [V1_0.md](V1_0.md).
 
 **Parent hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **Format reference:** [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) · **Main queue:** [ROADMAP.md](ROADMAP.md) **R043–R054**
 
@@ -8,7 +8,16 @@ CHCE is an **observability** feature: daemon economics telemetry persistence and
 
 ## Problem
 
-[OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) Phase **2b** calls for a macOS opt-in **mmap** engine alongside the shipped **SQLite** default ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)). CHCE spans multiple subsystems (`LiveRingBuffer`, `AppendCoordinator`, `ColumnarCodec`, `DictionaryManager`, `MmapPaginator`) and hub phases **2b / 6 / 7**, but tracking today is a single **Could** row in [ROADMAP.md](ROADMAP.md) with no ordered slices or acceptance hooks.
+[OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) Phase **2b** calls for a macOS opt-in **mmap** engine alongside the shipped **SQLite** default ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)). CHCE spans multiple subsystems (`LiveRingBuffer`, `AppendCoordinator`, `ColumnarCodec`, `DictionaryManager`, `MmapPaginator`) and hub phases **2b / 6 / 7**. Ordered slices **R043–R054** live in [ROADMAP.md](ROADMAP.md) and [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+
+## Prioritization (2026-06-07)
+
+| Lane | Rank | Notes |
+|------|------|-------|
+| Global | **2** (after **R039**) | **Parallel OK** with **R039** — disjoint path (`rex-obs-store` vs CLI smoke) |
+| MoSCoW | **Should** Program A (**R043–R049**); **Should** Program B (**R050–R051**, **RC-S5**); **Could** Program C (**R052–R054**) |
+| R-ICE | **75** (**R043**); **~65** avg Program A | High learning value; medium ease (multi-PR) |
+| Next slice | **R043** — `StorePort` + engine dispatch | Closes start of **RC-S4** |
 
 ## Current state
 
@@ -106,8 +115,8 @@ One PR per row where feasible; merge-wait between slices. Canonical queue: [ROAD
 
 | Order | ID | Theme | Outcome | Priority |
 |-------|-----|-------|---------|----------|
-| 8 | **R050** | SSE live tail | `tail_telemetry` + read API `GET /v1/metrics/stream` cursor merge — [OBS_READ_API.md](OBS_READ_API.md) | **Could** |
-| 9 | **R051** | Sparse trace index + spans | `trace_id` / `turn_id` sidecar; `append_span` schema | **Could** |
+| 8 | **R050** | SSE live tail | `tail_telemetry` + read API `GET /v1/metrics/stream` cursor merge — [OBS_READ_API.md](OBS_READ_API.md) | **Should** — **RC-S5** |
+| 9 | **R051** | Sparse trace index + spans | `trace_id` / `turn_id` sidecar; `append_span` schema | **Should** — **RC-S5** |
 
 ### Program C — Phase 7 (optimization + promotion)
 

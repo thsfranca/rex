@@ -71,6 +71,15 @@ Canonical design: **[EXTENSION_UX.md](EXTENSION_UX.md)**. One PR slice per row w
 | **E-UX11** | P3 | Multi-file diff review batch | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX11 | Done |
 | **E-PLAN01** | Should | Plan review card, Save, Build handoff | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Done — **R037 PR3** |
 
+## Prioritization (2026-06-07)
+
+**MoSCoW:** **Should** program **Done** (E-UX01…E-UX11, E-PLAN01, **RC-S1–RC-S2**). Extension is **maintenance-only** until observability suite (**RC-S3–RC-S6**) advances — no new feature rows rank above **R039** / **R043** per [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+
+| Priority | Work | Notes |
+|----------|------|-------|
+| **Maintenance** | Release automation, install docs, CLI/daemon lifecycle alignment | Symmetric VS Code + Cursor |
+| **Won't (now)** | MCP in extension, Node gRPC streaming, Chat Participant primary | Unchanged non-goals |
+
 ## What remains (non-UX)
 
 - Keep release automation and install docs aligned with CLI/daemon lifecycle changes.

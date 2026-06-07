@@ -1,6 +1,8 @@
 # Product agent delivery
 
-**Status: partial — product loop shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)). Implementation order: [ROADMAP.md](ROADMAP.md) **R013–R022**.
+**Status: Should program complete — `rex-agent` shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)). **Could** follow-ups only: **R016**, **R033**, **R036** — see [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+
+**Current focus shifted** to observability suite (**RC-S3–RC-S6**) — [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [CHCE_ROADMAP.md](CHCE_ROADMAP.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
 
 ## Problem
 
@@ -190,7 +192,7 @@ Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. 
 
 ## Implementation order
 
-See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-agent-program).
+**Should track Done.** Global priority queue: [ROADMAP.md — Next — prioritized queue](ROADMAP.md#next--prioritized-queue-audit-2026-06-07) · [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
 
 | ID | Theme | Priority |
 |----|-------|----------|
@@ -201,22 +203,22 @@ See [ROADMAP.md — Next — product agent program](ROADMAP.md#next--product-age
 | R021 | Turn correlation Phase 1b | Done |
 | R022 | Workspace binding (daemon fail-closed) | Done |
 | R017 | `rex-agent` scaffold | Done |
-| R018 | LangGraph agent core | Done — prompt JSON tool protocol; [sidecars/rex-agent/DESIGN.md](../sidecars/rex-agent/DESIGN.md) |
+| R018 | LangGraph agent core | Done |
 | R019 | Integration / E2E | Done |
-| R016 | Multi-active broadcast | Could |
-| **R027** | Broker baseline hardening | **Done** — `RexBrokerChatModel`, parse recovery, streaming buffer |
-| **R028** | Viewer/Editor subagents | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
-| **R029** | Intra-turn state compaction | **Done** — `RemoveMessage`, 25% suffix rule; microcompaction tier |
-| **R034** | Raw delimited tool results | **Done** — [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
-| **R037** | Plan mode planning tools | Done — [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md) |
-| **R030** | Diff-only writes | **Done** — sidecar read→patch→write |
-| **R031** | Task-aware read pruning | **Done** — payloads >100 lines; config `read_pruning_enabled` |
-| **R032** | Token playbook + subagent metrics | **Done** — prefix SHA, dedup, hard cap |
-| **R038** | Native broker tool calling | **Done** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
-| **R036** | TRON static schema compression | **Could** — daemon prefix; optional before **R033** |
-| **R033** | MCP gRPC client | **Could** — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) Phase 2 |
+| **R027** | Broker baseline hardening | **Done** |
+| **R028** | Viewer/Editor subagents | **Done** |
+| **R029** | Intra-turn state compaction | **Done** |
+| **R034** | Raw delimited tool results | **Done** |
+| **R037** | Plan mode planning tools | Done |
+| **R030** | Diff-only writes | **Done** |
+| **R031** | Task-aware read pruning | **Done** |
+| **R032** | Token playbook + subagent metrics | **Done** |
+| **R038** | Native broker tool calling | **Done** |
+| R016 | Multi-active broadcast | **Could** — rank **18** |
+| **R036** | TRON static schema compression | **Could** — rank **16** |
+| **R033** | MCP gRPC client | **Could** — rank **17** |
 
-**Program order:** R027 → R028 → R029 → **R034** → R030 → R032 → R031 → **R038** → R033; **R036** optional before R033.
+**Follow-up (observability, not agent program):** **R039** live smoke — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
 
 ## R038 — Native broker tool calling
 
