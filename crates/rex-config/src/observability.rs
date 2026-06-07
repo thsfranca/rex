@@ -104,6 +104,7 @@ pub fn economics_snapshot_json(config: &RexConfig) -> serde_json::Value {
                 "base_url": config.inference.openai_compat.base_url,
                 "model": config.inference.openai_compat.model,
                 "timeout_secs": config.inference.openai_compat.timeout_secs,
+                "native_tools": config.inference.openai_compat.effective_native_tools(),
             },
             "gateway": {
                 "mode": config.inference.gateway.mode,

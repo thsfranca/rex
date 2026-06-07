@@ -146,6 +146,9 @@ fn merge_inference(
     if overlay.openai_compat.timeout_secs != 0 {
         base.openai_compat.timeout_secs = overlay.openai_compat.timeout_secs;
     }
+    if overlay.openai_compat.native_tools.is_some() {
+        base.openai_compat.native_tools = overlay.openai_compat.native_tools;
+    }
     if !overlay.cursor_cli.path.is_empty() {
         base.cursor_cli.path = overlay.cursor_cli.path;
     }

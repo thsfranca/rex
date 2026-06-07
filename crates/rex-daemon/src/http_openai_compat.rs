@@ -1,20 +1,52 @@
 //! OpenAI-compatible HTTP chat/completions adapter (SSE streaming).
 
+use std::collections::BTreeMap;
 use std::time::Duration;
 
 use futures::StreamExt;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::Client;
-use rex_proto::rex::v1::StreamInferenceResponse;
-use serde_json::Value;
+use rex_config::NativeToolsMode;
+use rex_proto::rex::v1::{InferenceProtocol, StreamInferenceResponse};
+use serde_json::{json, Value};
 use tonic::Status;
 
-use crate::adapters::stream_chunks_with_done;
+use crate::adapters::{stream_chunks_with_done, RuntimeKind};
 use crate::domain::chunk_output;
+use crate::ollama_capability::{cached_model_supports_tools, is_ollama_like_base_url};
 
 const TIMEOUT_SECS_DEFAULT: u64 = 120;
 const STREAM_CHUNK_MAX_CHARS: usize = 8;
 pub const MODEL_DEFAULT: &str = "gpt-4o-mini";
+const NATIVE_TOOLS_UNSUPPORTED: &str = "native_tools_unsupported";
+
+#[derive(Debug, Clone)]
+pub struct HttpChatMessage {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct HttpToolSpec {
+    pub name: String,
+    pub description: String,
+    pub parameters_json: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HttpToolCall {
+    pub id: String,
+    pub name: String,
+    pub arguments_json: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct BrokerCompletionResult {
+    pub content: String,
+    pub tool_calls: Vec<HttpToolCall>,
+    pub protocol: InferenceProtocol,
+    pub error: Option<String>,
+}
 
 pub struct HttpOpenAiCompatRuntime {
     client: Client,
@@ -69,12 +101,57 @@ impl HttpOpenAiCompatRuntime {
 
     /// Single completion for sidecar `BrokerInference` (assembled from SSE).
     pub async fn fetch_completion_text(&self, prompt: &str, model: &str) -> Result<String, Status> {
+        let messages = vec![HttpChatMessage {
+            role: "user".to_string(),
+            content: prompt.to_string(),
+        }];
+        let result = self
+            .fetch_broker_completion(&messages, &[], model, false)
+            .await?;
+        if let Some(err) = result.error {
+            return Err(Status::unavailable(err));
+        }
+        if result.content.trim().is_empty() && result.tool_calls.is_empty() {
+            return Err(Status::unavailable(
+                "http inference returned empty completion",
+            ));
+        }
+        Ok(result.content)
+    }
+
+    pub async fn fetch_broker_completion(
+        &self,
+        messages: &[HttpChatMessage],
+        tools: &[HttpToolSpec],
+        model: &str,
+        attach_tools: bool,
+    ) -> Result<BrokerCompletionResult, Status> {
         let effective_model = resolve_inference_model(model, &self.model);
-        let body = serde_json::json!({
+        let mut body = json!({
             "model": effective_model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages.iter().map(|m| json!({"role": m.role, "content": m.content})).collect::<Vec<_>>(),
             "stream": true
         });
+        if attach_tools && !tools.is_empty() {
+            let openai_tools: Vec<Value> = tools
+                .iter()
+                .map(|t| {
+                    let parameters: Value = serde_json::from_str(&t.parameters_json)
+                        .unwrap_or_else(|_| json!({"type": "object", "properties": {}}));
+                    json!({
+                        "type": "function",
+                        "function": {
+                            "name": t.name,
+                            "description": t.description,
+                            "parameters": parameters,
+                        }
+                    })
+                })
+                .collect();
+            body["tools"] = json!(openai_tools);
+            body["tool_choice"] = json!("auto");
+        }
+
         let mut request = self
             .client
             .post(&self.chat_completions_url)
@@ -100,25 +177,121 @@ impl HttpOpenAiCompatRuntime {
                 truncate_body(&detail, 512)
             )));
         }
+
         let mut stream = response.bytes_stream();
-        let mut assembled = String::new();
+        let mut assembler = SseAssemblyState::default();
         while let Some(item) = stream.next().await {
             let chunk = item.map_err(|err| {
                 Status::unavailable(format!("http inference stream read failed: {err}"))
             })?;
             let text = String::from_utf8_lossy(&chunk);
             for line in text.lines() {
-                if let Some(delta) = parse_sse_data_line(line) {
-                    assembled.push_str(&delta);
+                assembler.ingest_line(line);
+            }
+        }
+
+        let protocol = if attach_tools && !tools.is_empty() {
+            InferenceProtocol::Native
+        } else {
+            InferenceProtocol::Interim
+        };
+
+        let tool_calls = assembler.finish_tool_calls();
+        Ok(BrokerCompletionResult {
+            content: assembler.content,
+            tool_calls,
+            protocol,
+            error: None,
+        })
+    }
+
+    pub fn client(&self) -> &Client {
+        &self.client
+    }
+
+    pub fn timeout(&self) -> Duration {
+        self.timeout
+    }
+}
+
+#[derive(Default)]
+struct SseAssemblyState {
+    content: String,
+    tool_parts: BTreeMap<u32, ToolCallPart>,
+}
+
+#[derive(Default, Clone)]
+struct ToolCallPart {
+    id: String,
+    name: String,
+    arguments: String,
+}
+
+impl SseAssemblyState {
+    fn ingest_line(&mut self, line: &str) {
+        let trimmed = line.trim();
+        if !trimmed.starts_with("data:") {
+            return;
+        }
+        let payload = match trimmed.strip_prefix("data:") {
+            Some(p) => p.trim(),
+            None => return,
+        };
+        if payload == "[DONE]" {
+            return;
+        }
+        let value: Value = match serde_json::from_str(payload) {
+            Ok(v) => v,
+            Err(_) => return,
+        };
+        if let Some(content) = value
+            .pointer("/choices/0/delta/content")
+            .and_then(Value::as_str)
+        {
+            self.content.push_str(content);
+        } else if let Some(content) = value
+            .pointer("/choices/0/message/content")
+            .and_then(Value::as_str)
+        {
+            self.content.push_str(content);
+        }
+
+        if let Some(calls) = value
+            .pointer("/choices/0/delta/tool_calls")
+            .and_then(Value::as_array)
+        {
+            for call in calls {
+                let index = call.get("index").and_then(Value::as_u64).unwrap_or(0) as u32;
+                let part = self.tool_parts.entry(index).or_default();
+                if let Some(id) = call.get("id").and_then(Value::as_str) {
+                    if !id.is_empty() {
+                        part.id = id.to_string();
+                    }
+                }
+                if let Some(function) = call.get("function") {
+                    if let Some(name) = function.get("name").and_then(Value::as_str) {
+                        if !name.is_empty() {
+                            part.name = name.to_string();
+                        }
+                    }
+                    if let Some(args) = function.get("arguments").and_then(Value::as_str) {
+                        part.arguments.push_str(args);
+                    }
                 }
             }
         }
-        if assembled.trim().is_empty() {
-            return Err(Status::unavailable(
-                "http inference returned empty completion",
-            ));
-        }
-        Ok(assembled)
+    }
+
+    fn finish_tool_calls(&self) -> Vec<HttpToolCall> {
+        self.tool_parts
+            .values()
+            .filter(|p| !p.name.is_empty())
+            .map(|p| HttpToolCall {
+                id: p.id.clone(),
+                name: p.name.clone(),
+                arguments_json: p.arguments.clone(),
+            })
+            .collect()
     }
 }
 
@@ -135,7 +308,7 @@ impl crate::adapters::InferenceRuntime for HttpOpenAiCompatRuntime {
     }
 }
 
-fn normalize_chat_completions_url(base: &str) -> String {
+pub fn normalize_chat_completions_url(base: &str) -> String {
     let trimmed = base.trim_end_matches('/');
     if trimmed.ends_with("/chat/completions") {
         trimmed.to_string()
@@ -144,28 +317,6 @@ fn normalize_chat_completions_url(base: &str) -> String {
     } else {
         format!("{trimmed}/v1/chat/completions")
     }
-}
-
-fn parse_sse_data_line(line: &str) -> Option<String> {
-    let trimmed = line.trim();
-    if !trimmed.starts_with("data:") {
-        return None;
-    }
-    let payload = trimmed.strip_prefix("data:")?.trim();
-    if payload == "[DONE]" {
-        return None;
-    }
-    let value: Value = serde_json::from_str(payload).ok()?;
-    value
-        .pointer("/choices/0/delta/content")
-        .and_then(Value::as_str)
-        .map(str::to_string)
-        .or_else(|| {
-            value
-                .pointer("/choices/0/message/content")
-                .and_then(Value::as_str)
-                .map(str::to_string)
-        })
 }
 
 /// Resolve request model override against the configured default.
@@ -178,7 +329,86 @@ pub fn resolve_inference_model(request_model: &str, default_model: &str) -> Stri
     }
 }
 
-/// Broker RPC entry: HTTP OpenAI-compat when env is configured.
+pub async fn broker_inference_http(
+    messages: &[HttpChatMessage],
+    tools: &[HttpToolSpec],
+    model: &str,
+    forward_tools: bool,
+    native_tools: NativeToolsMode,
+    runtime: RuntimeKind,
+    base_url: &str,
+) -> Result<BrokerCompletionResult, Status> {
+    let runtime_http = HttpOpenAiCompatRuntime::from_config().map_err(Status::unavailable)?;
+
+    let mut attach_tools = forward_tools && !tools.is_empty();
+    if attach_tools && native_tools == NativeToolsMode::Auto && is_ollama_like_base_url(base_url) {
+        let effective_model = resolve_inference_model(model, &runtime_http.model);
+        let supports = cached_model_supports_tools(
+            runtime_http.client(),
+            base_url,
+            &effective_model,
+            runtime_http.timeout(),
+        )
+        .await;
+        if !supports {
+            attach_tools = false;
+        }
+    }
+
+    if matches!(runtime, RuntimeKind::Mock | RuntimeKind::CursorCli) {
+        attach_tools = false;
+    }
+
+    if native_tools == NativeToolsMode::False {
+        attach_tools = false;
+    }
+
+    let attempted_native = forward_tools && !tools.is_empty();
+    let result = runtime_http
+        .fetch_broker_completion(messages, tools, model, attach_tools)
+        .await?;
+
+    if attempted_native && attach_tools {
+        if result.tool_calls.is_empty() && result.content.trim().is_empty() {
+            return Ok(BrokerCompletionResult {
+                content: String::new(),
+                tool_calls: Vec::new(),
+                protocol: InferenceProtocol::InterimFallback,
+                error: Some(format!(
+                    "{NATIVE_TOOLS_UNSUPPORTED}: provider returned no tool_calls or content"
+                )),
+            });
+        }
+        if result.tool_calls.is_empty() && !result.content.trim().is_empty() {
+            return Ok(BrokerCompletionResult {
+                content: result.content,
+                tool_calls: Vec::new(),
+                protocol: InferenceProtocol::InterimFallback,
+                error: Some(format!(
+                    "{NATIVE_TOOLS_UNSUPPORTED}: provider returned prose-only after tools sent"
+                )),
+            });
+        }
+    }
+
+    let protocol = if attach_tools && !result.tool_calls.is_empty() {
+        InferenceProtocol::Native
+    } else if attempted_native && !attach_tools {
+        InferenceProtocol::Interim
+    } else {
+        result.protocol
+    };
+
+    Ok(BrokerCompletionResult {
+        content: result.content,
+        tool_calls: result.tool_calls,
+        protocol,
+        error: None,
+    })
+}
+
+/// Broker RPC entry: HTTP OpenAI-compat when env is configured (prompt-only legacy).
+#[allow(dead_code)]
 pub async fn broker_inference_completion(prompt: &str, model: &str) -> Result<String, String> {
     let runtime = HttpOpenAiCompatRuntime::from_config()?;
     runtime
@@ -224,8 +454,25 @@ mod tests {
 
     #[test]
     fn parses_sse_delta() {
-        let line = r#"data: {"choices":[{"delta":{"content":"hi"}}]}"#;
-        assert_eq!(parse_sse_data_line(line), Some("hi".to_string()));
+        let mut state = SseAssemblyState::default();
+        state.ingest_line(r#"data: {"choices":[{"delta":{"content":"hi"}}]}"#);
+        assert_eq!(state.content, "hi");
+    }
+
+    #[test]
+    fn assembles_tool_calls_from_sse_fragments() {
+        let mut state = SseAssemblyState::default();
+        state.ingest_line(
+            r#"data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","function":{"name":"fs.read","arguments":"{\"path\""}}]}}]}"#,
+        );
+        state.ingest_line(
+            r#"data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\":\"x\"}"}}]}}]}"#,
+        );
+        let calls = state.finish_tool_calls();
+        assert_eq!(calls.len(), 1);
+        assert_eq!(calls[0].name, "fs.read");
+        assert_eq!(calls[0].id, "call_1");
+        assert!(calls[0].arguments_json.contains("path"));
     }
 
     #[tokio::test]

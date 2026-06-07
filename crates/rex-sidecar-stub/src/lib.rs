@@ -202,6 +202,8 @@ async fn broker_inference(prompt: &str, mode: &str, model: &str) -> Result<Strin
             prompt: prompt.to_string(),
             mode: mode.to_string(),
             model: model.to_string(),
+            messages: Vec::new(),
+            tools: Vec::new(),
         })
         .await
         .map_err(|e| e.to_string())?

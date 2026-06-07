@@ -27,8 +27,8 @@ use crate::broker::{
     broker_exec_shell, broker_list_dir, broker_read_file, broker_save_plan, broker_write_file,
     BrokerError,
 };
+use crate::broker_inference::run_broker_inference;
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
-use crate::http_openai_compat::broker_inference_completion;
 use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::observability::{observability_from_settings, StreamEconomicsDraft};
 use crate::plugins::{
@@ -281,26 +281,37 @@ impl RexService for RexDaemonService {
         let turn_id = extract_turn_id(request.metadata());
         let inner = request.into_inner();
         let mode = normalize_mode(&inner.mode);
+        let tool_count = inner.tools.len();
+        let message_count = if inner.messages.is_empty() {
+            usize::from(!inner.prompt.trim().is_empty())
+        } else {
+            inner.messages.len()
+        };
         println!(
-            "broker.inference=requested turn_id={turn_id} mode={mode} prompt_len={}",
-            inner.prompt.chars().count()
+            "broker.inference=requested turn_id={turn_id} mode={mode} messages={message_count} tools={tool_count}"
         );
-        match broker_inference_completion(&inner.prompt, &inner.model).await {
-            Ok(text) => {
-                println!("broker.inference=ok turn_id={turn_id} mode={mode}");
-                Ok(Response::new(BrokerInferenceResponse {
-                    ok: true,
-                    text,
-                    error: String::new(),
-                }))
+        match run_broker_inference(&inner).await {
+            Ok(response) => {
+                let protocol = response.protocol;
+                let tool_calls = response.tool_calls.len();
+                if response.ok {
+                    println!(
+                        "broker.inference=ok turn_id={turn_id} mode={mode} protocol={protocol} tool_calls={tool_calls}"
+                    );
+                } else {
+                    println!(
+                        "broker.inference=error turn_id={turn_id} mode={mode} protocol={protocol} error={}",
+                        response.error
+                    );
+                }
+                Ok(Response::new(response))
             }
-            Err(message) => {
-                println!("broker.inference=error turn_id={turn_id} mode={mode} error={message}");
-                Ok(Response::new(BrokerInferenceResponse {
-                    ok: false,
-                    text: String::new(),
-                    error: message,
-                }))
+            Err(status) => {
+                println!(
+                    "broker.inference=error turn_id={turn_id} mode={mode} error={}",
+                    status.message()
+                );
+                Err(status)
             }
         }
     }

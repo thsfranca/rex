@@ -8,6 +8,9 @@ use tokio::net::TcpListener;
 const DEFAULT_SSE_BODY: &str = "data: {\"choices\":[{\"delta\":{\"content\":\"hello stub\"}}]}\n\n\
                                 data: [DONE]\n\n";
 
+const TOOL_CALLS_SSE_BODY: &str = "data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_test\",\"function\":{\"name\":\"fs.read\",\"arguments\":\"{\\\"path\\\":\\\"README.md\\\"}\"}}]}}]}\n\n\
+                                  data: [DONE]\n\n";
+
 fn extract_model_from_request(request: &str) -> Option<String> {
     let model_key = "\"model\"";
     let start = request.find(model_key)? + model_key.len();
@@ -61,6 +64,11 @@ pub async fn spawn_loopback_openai_compat_sse_fixture_with_body(body: &str) -> S
         }
     });
     addr
+}
+
+/// SSE fixture that returns a single assembled tool_call (native path smoke).
+pub async fn spawn_loopback_openai_compat_tool_calls_fixture() -> SocketAddr {
+    spawn_loopback_openai_compat_sse_fixture_with_body(TOOL_CALLS_SSE_BODY).await
 }
 
 const MODELS_JSON: &str = "{\"object\":\"list\",\"data\":[{\"id\":\"ollama/llama3\"}]}";
