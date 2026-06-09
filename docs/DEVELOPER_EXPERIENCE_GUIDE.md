@@ -71,7 +71,7 @@ Legacy `REX_OPENAI_COMPAT_*` / `REX_SIDECAR_ENABLED` env vars are **ignored with
 
 **Managed gateway (`inference.gateway.mode: managed`):** `rex gateway init`, set keys in `$REX_ROOT/gateway/.env`, `rex gateway doctor`, then `rex daemon` — [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
 
-**Observability (planned):** set `observability.enabled: true` in merged JSON under `$REX_ROOT`; **`rex obs up`** (planned) starts bundled Grafana via Rex read API — [CONFIGURATION.md](CONFIGURATION.md#observability), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md). Store default **`engine: sqlite`**, optional **`mmap`** on macOS. Only **`REX_ROOT`** is a bootstrap env var for layout.
+**Observability:** set `observability.enabled: true` and configure OTLP toward **LangFuse Cloud** when **LF-F01** lands — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [CONFIGURATION.md](CONFIGURATION.md#observability). Legacy `rex obs` / Rex store path is **cancelled** (**LF-R01**). Only **`REX_ROOT`** is a bootstrap env var for layout.
 
 ### Working modes
 

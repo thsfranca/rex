@@ -2,7 +2,7 @@
 
 Rex is a **small study project** (see [README.md](../README.md)): a hands-on look at local AI infrastructure (daemon, gRPC over UDS, thin clients, streaming contracts). This document gives a **lightweight** way to **order** work and to **park** deferred items, using clear buckets and a short score.
 
-Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view toward **[V1_0.md](V1_0.md)**. Deeper lists live in [MVP_SPEC.md](MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md), and [CHCE_ROADMAP.md](CHCE_ROADMAP.md) (observability mmap store). The **`REX_*` catalog** is in [CONFIGURATION.md](CONFIGURATION.md).
+Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view toward **[V1_0.md](V1_0.md)**. Deeper lists live in [MVP_SPEC.md](MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md), and [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md). The **`REX_*` catalog** is in [CONFIGURATION.md](CONFIGURATION.md).
 
 ## When to use this
 
@@ -72,32 +72,31 @@ Use these as short confidence cues when ranking optimization proposals:
 | VM/container as default Mac dev-agent envelope | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [ROADMAP.md](ROADMAP.md) parked table |
 | Always-on Colima/Docker/Firecracker for local agents | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) deferred catalog |
 
-## Current focus queue (audit 2026-06-07)
+## Current focus queue (audit 2026-06-09)
 
-**Context:** Streaming/agent Must **RC-01–RC-10** are **Met** ([V1_0.md](V1_0.md)). **v1.0 not Met** — observability Must **RC-S3** (**Partial**), **RC-S4** (**Not met**), **RC-S5** (**Not met**) block the **`1.0.0` git tag**. Product agent program (**R013–R038**) is **Done**.
+**Context:** Streaming/agent Must **RC-01–RC-10** are **Met** ([V1_0.md](V1_0.md)). **v1.0 not Met** — observability Must **RC-LF1** (**Not met**) blocks the **`1.0.0` git tag**. Product agent program (**R013–R038**) is **Done**. Rex-owned observability (**R043–R054**) **cancelled**.
 
 **Ordering method:** MoSCoW bucket first; **R-ICE** (Impact × Confidence × Ease, 1–5) for **Should** ties; [tie-breakers](#tie-breakers-rex-specific) for blast radius and CI cost.
 
 | Rank | ID / theme | MoSCoW | R-ICE | RC-* | Blast | Rationale |
 |------|------------|--------|-------|------|-------|-----------|
-| 1 | **R043** — CHCE `StorePort` + engine dispatch | **Must** | **75** (5×5×3) | RC-S4 | `rex-obs-store` | Rex-owned DB foundation; design accepted; starts Program A |
-| 2 | **RC-S3** — observability baseline gaps (Phase 2 OTLP completeness, read API rollups) | **Must** | **48** (4×4×3) | RC-S3 | daemon + obs | Closes **Partial** baseline; hub [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) |
-| 3–8 | **R044–R049** — CHCE Program A (sequential) | **Must** | **~65** avg | RC-S4 | store | Blocked on **R043**; one PR per slice — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
-| 9–10 | **R050–R051** — SSE live tail + trace index | **Must** | **40** (4×4×2.5) | RC-S5 | read API + proto | **After R049**; Phase 6 — [OBS_READ_API.md](OBS_READ_API.md) |
-| 11 | **R039** — opt-in Ollama live smoke | **Should** | **100** (5×5×4) | RC-S6 | CLI + daemon | Opt-in validation; preserves **RC-10** |
-| 12 | **R040** — nightly live-smoke workflow (non-blocking) | **Should** | **60** (3×5×4) | RC-S6 | CI only | **After R039**; informational tier per [CI.md](CI.md) |
-| 13 | **R042** — economics run manifest from harness | **Could** | **35** | — | harness + store | **After R039**; feeds validation store |
-| 14 | **R041** — gateway-path live smoke | **Could** | **30** | — | harness | Same scenarios as R039 via gateway URL |
-| 15 | **R026** — optional Semgrep / Rex guidelines | **Could** | **25** | — | CI | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
-| 16 | **R036** — TRON static schema compression | **Could** | **30** | — | daemon prefix | Agent serialization; optional before **R033** |
-| 17 | **R033** — MCP gRPC client | **Could** | **25** | — | sidecar + proto | Large scope; ADR 0016 Phase 2 |
-| 18 | **R016** — multi-active sidecar broadcast | **Could** | **20** | — | daemon + proto | Deferred until single-active path proven |
+| 1 | **LF-D01** — LangFuse Cloud + OTLP ingest discovery | **Must** | **70** (5×5×2.8) | RC-LF1 | docs + config | Starts LangFuse program — [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) |
+| 2 | **LF-D02** — economics field mapping | **Must** | **65** | RC-LF1 | export contract | Freezes **LF-F01** attributes |
+| 3 | **LF-D09** — v1.0 **RC-LF1** validation | **Must** | **50** | RC-LF1 | docs | Honest tag gate |
+| 4 | **LF-R01** — remove Rex observability dead code | **Must** | **55** | — | crates + CI | **After docs pivot merge** |
+| 5 | **LF-F01** — daemon OTLP → LangFuse Cloud | **Must** | **60** | RC-LF1 | daemon | **After LF-D01–D02** |
+| 6 | **LF-D03–LF-D08** — parallel discovery | **Should** | **40** avg | — | spikes | Features **LF-F02–F07** |
+| 7 | **R040** — nightly live-smoke workflow | **Should** | **60** | RC-S6 | CI only | Informational tier |
+| 8 | **R042** — economics manifest (LangFuse datasets) | **Could** | **35** | — | harness | **LF-D05** |
+| 9 | **R041** — gateway-path live smoke | **Could** | **30** | — | harness | Same as R039 via gateway |
+| 10 | **R026** — optional Semgrep | **Could** | **25** | — | CI | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
+| 11 | **R036** — TRON schema compression | **Could** | **30** | — | daemon | Optional |
+| 12 | **R033** — MCP gRPC client | **Could** | **25** | — | sidecar | ADR 0016 |
+| 13 | **R016** — multi-active sidecar broadcast | **Could** | **20** | — | daemon | Deferred |
 
-**Parallel lanes:** **RC-S3** OTLP/rollup slices may land alongside **R043** when paths are disjoint (`rex-daemon` vs `rex-obs-store`).
+**Deferred (Later / Won't now):** L2 semantic cache, Apple MLX, self-hosted LangFuse on Mac, LTM, agent knowledge — see [ROADMAP.md](ROADMAP.md).
 
-**Deferred (Later / Won't now):** L2 semantic cache, Apple MLX, Anthropic adapter, LTM, agent knowledge, Wasm plugins, VM default envelope — see [ROADMAP.md](ROADMAP.md) **Later** and **Parked**.
-
-**Domain roadmaps:** [CHCE_ROADMAP.md](CHCE_ROADMAP.md) (R043–R054), [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) (Done + Could), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) (maintenance), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) (broker + Later tracks).
+**Domain roadmaps:** [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md).
 
 ## Related
 

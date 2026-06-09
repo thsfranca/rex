@@ -4,7 +4,7 @@
 
 **Status:** **partial** — opt-in live smoke harness (**R039**) and nightly workflow (**R040**) **implemented**; powered statistical gates and run manifest (**R042**) remain **planned**.
 
-**Related:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) (telemetry) · [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) (lever matrix) · [CONFIGURATION.md](CONFIGURATION.md) (`observability` JSON) · [CI.md](CI.md) (no live LLM on PRs by default)
+**Related:** [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) (telemetry sink) · [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) (lever matrix) · [CONFIGURATION.md](CONFIGURATION.md) (`observability` JSON) · [CI.md](CI.md) (no live LLM on PRs by default)
 
 Portable background: research theme on LLM observability and validation (GenAI semconv, benchmarks, cost–quality statistics, local store patterns) in the techythings repository.
 
@@ -34,7 +34,7 @@ Portable background: research theme on LLM observability and validation (GenAI s
 
 | Concern | Owner |
 |---------|--------|
-| Telemetry during runs | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), `rex-obs-store` when `observability.enabled: true` (default **`sqlite`**; **`mmap`** opt-in on macOS — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)) |
+| Telemetry during runs | **LangFuse Cloud** when `observability.enabled: true` (planned **LF-F01** / **LF-F04**) — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md); stdout grep when off |
 | Lever definitions | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
 | Benchmark execution | Operator / scheduled CI (containers, pinned models) |
 

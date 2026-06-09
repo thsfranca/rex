@@ -2,7 +2,7 @@
 
 REX keeps **routing/caching/pipeline policy in `rex-daemon`**, runs the **development agent in a supervised sidecar process**, and uses **in-process inference adapters only as broker mechanisms** (HTTP OpenAI-compat today) — **not** as a substitute for the sidecar agent. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [MVP_SPEC.md](MVP_SPEC.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), ADRs [0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md), [0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
-**Prioritization (2026-06-07):** Streaming/agent **RC-01–RC-10** **Met**; **v1.0 not Met** — observability Must **RC-S3–RC-S5** block the tag. **Next** work is **R043** + observability closure — not new broker surfaces. Global queue: [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+**Prioritization (2026-06-09):** Streaming/agent **RC-01–RC-10** **Met**; **v1.0 not Met** — observability Must **RC-LF1** blocks the tag. **Next** work is LangFuse discovery (**LF-D01**) — not new broker surfaces. Global queue: [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-09).
 
 ## Current purpose
 
@@ -34,7 +34,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 - **Legacy:** `REX_INFERENCE_RUNTIME=cursor-cli` subprocess — non-MVP.
 - CI: **`mock`** or stub sidecar — [CI.md](CI.md).
 - **Done:** native broker tool calling (**R038**) — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md).
-- **Next (Must):** Rex-owned economics store (**R043–R049**, **RC-S4**) — [CHCE_ROADMAP.md](CHCE_ROADMAP.md).
+- **Next (Must):** LangFuse Cloud observability (**RC-LF1**, **LF-D01**) — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md).
 - **Next (Should):** live broker validation (**R039–R040**, **RC-S6**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
 - **Could:** gateway-path smoke (**R041**); MCP client (**R033**, rank 17).
 
@@ -75,10 +75,10 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 | 4b — Inference Gateway | **Done** — managed LiteLLM supervisor + `rex gateway` — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md) |
 | 5+ | L2 semantic cache | **Could** — [ROADMAP.md](ROADMAP.md) Later, [CACHING.md](CACHING.md) |
 | 5+ | Difficulty-based routing cascade | **Could** — [ROADMAP.md](ROADMAP.md) Later, [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) |
-| 5+ | Economics observability + CHCE store | **Should** — **active** — [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), **R043–R051** |
+| 5+ | LangFuse Cloud observability | **Should** — **active** — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), **LF-D01–LF-F01** |
 | 5+ | `auto` mode, sidecar-only routing | Backlog — Later |
 
-**Status:** See [V1_0.md](V1_0.md) **RC-*** (canonical). Streaming/agent **RC-01–RC-10** **Met**; observability **RC-S3–RC-S5** open (v1.0 **not Met**). Broker **`fs.write`**, **`exec.shell`**, and **`BrokerInference`** are shipped ([AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md)).
+**Status:** See [V1_0.md](V1_0.md) **RC-*** (canonical). Streaming/agent **RC-01–RC-10** **Met**; observability **RC-LF1** open (v1.0 **not Met**). Broker **`fs.write`**, **`exec.shell`**, and **`BrokerInference`** are shipped ([AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md)).
 
 ## Later optional tracks
 
