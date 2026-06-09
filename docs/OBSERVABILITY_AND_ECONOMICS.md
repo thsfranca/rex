@@ -1,6 +1,8 @@
 # Observability and economics validation (design hub)
 
-This document is the **single source** for Rex **observability beyond stdout grep** and how it connects to the **economics validation program**. **partial** — Phase 2 write path + Phase 3–5 read API, Grafana Rex OTel datasource plugin, and `rex obs` CLI **implemented**; mmap engine and sidecar observability API remain **planned**.
+> **Product direction superseded (2026-06-09).** Canonical observability hub is **[LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)** (LangFuse Cloud primary). Rex-owned store, Grafana suite, and CHCE are **cancelled**; removal **LF-R01**. This file retains the **signal catalog** as an export reference until code moves.
+
+This document described Rex **observability beyond stdout grep** and economics validation linkage. **Historical** — see LangFuse hub for current direction.
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention.
 
@@ -20,7 +22,7 @@ Rex observability is controlled only by merged JSON: **`observability.enabled`**
 
 ## Status
 
-**partial** — Phase 2–5 shipped: SQLite `rex-obs-store`, read API, Grafana plugin skeleton, `rex obs` CLI. **CHCE mmap engine** (Phase 2b) and **SSE live tail** (Phase 6) are **design documented** — [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). Sidecar observability API remains **planned**. **v1.0 not Met** — Must **RC-S3–RC-S5** block the **`1.0.0` git tag** ([V1_0.md](V1_0.md)). **Next slice:** **R043** — [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+**superseded** — Product observability → [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). Legacy code (store, read API, `rex obs`, Grafana plugin) **legacy until LF-R01**. **v1.0** observability gate → **RC-LF1** in [V1_0.md](V1_0.md). Economics validation program remains in [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) (telemetry sink → LangFuse).
 
 ## Scope
 

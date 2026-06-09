@@ -1,8 +1,10 @@
 # Rex observability read API
 
-**Diátaxis role:** reference — loopback HTTP contract for Rex-owned economics storage.
+> **Status: Cancelled (2026-06-09).** Product UI path is **LangFuse Cloud** — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). This contract is **historical**; code removed in **LF-R01**.
 
-**Status:** **implemented** — historical query (SQLite engine); **SSE live tail planned** (Phase 6, CHCE engine) — [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md).
+**Diátaxis role:** reference — **historical** loopback HTTP contract for Rex-owned economics storage.
+
+**Status:** **cancelled**
 
 **Hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **Integrations:** [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) · **ADRs:** [0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md), [0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)
 

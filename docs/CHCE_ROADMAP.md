@@ -1,23 +1,25 @@
 # CHCE observability store — delivery program
 
-**Status:** **in progress** — **R043** `StorePort` + engine dispatch **shipped**; CHCE write/read parity (**R044–R049**) and **RC-S5** remain open. **Done** tracking: Must **RC-S4** (Program A) and **RC-S5** in [V1_0.md](V1_0.md) — both block the **`1.0.0` git tag**.
+> **Status: Cancelled (2026-06-09).** Superseded by **LangFuse Cloud** as primary observability — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). **R043–R054** cancelled; **RC-S4** cancelled. Remaining code removed in **LF-R01**. Content below is **historical** only.
 
-**Parent hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **Format reference:** [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) · **Main queue:** [ROADMAP.md](ROADMAP.md) **R043–R054**
+**Status:** **cancelled**
+
+**Replacement:** [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) · [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md)
+
+**Parent hub (superseded):** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **Format reference:** [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md)
 
 CHCE is an **observability** feature: daemon economics telemetry persistence and Grafana read paths. It is **not** part of the sidecar agent program, long-term memory, or agent knowledge stores.
 
 ## Problem
 
-[OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) Phase **2b** calls for a macOS opt-in **mmap** engine alongside the shipped **SQLite** default ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)). CHCE spans multiple subsystems (`LiveRingBuffer`, `AppendCoordinator`, `ColumnarCodec`, `DictionaryManager`, `MmapPaginator`) and hub phases **2b / 6 / 7**. Ordered slices **R043–R054** live in [ROADMAP.md](ROADMAP.md) and [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+[OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) Phase **2b** calls for a macOS opt-in **mmap** engine alongside the shipped **SQLite** default ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)). CHCE spans multiple subsystems (`LiveRingBuffer`, `AppendCoordinator`, `ColumnarCodec`, `DictionaryManager`, `MmapPaginator`) and hub phases **2b / 6 / 7**. Ordered slices **R043–R054** were listed in [ROADMAP.md](ROADMAP.md) (now **cancelled**).
 
-## Prioritization (2026-06-07)
+## Prioritization (cancelled 2026-06-09)
 
-| Lane | Rank | Notes |
-|------|------|-------|
-| Global | **1** | **Must** — v1.0 blocked until Program A + **RC-S5** close |
-| MoSCoW | **Must** Program A (**R043–R049**, **RC-S4**); **Must** Program B (**R050–R051**, **RC-S5**); **Could** Program C (**R052–R054**) |
-| R-ICE | **75** (**R043**); **~65** avg Program A | High learning value; medium ease (multi-PR) |
-| Next slice | **R043** — `StorePort` + engine dispatch | Closes start of **RC-S4** |
+| ID | Status |
+|----|--------|
+| **R043–R054** | **Cancelled** — LangFuse-primary observability |
+| **RC-S4**, **RC-S5** | **Cancelled** |
 
 ## Current state
 

@@ -1,8 +1,8 @@
 # Product agent delivery
 
-**Status: Should program complete — `rex-agent` shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)). **Could** follow-ups only: **R016**, **R033**, **R036** — see [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+**Status: Should program complete — `rex-agent` shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)). **Could** follow-ups only: **R016**, **R033**, **R036** — see [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-09).
 
-**Current focus shifted** to observability suite (**RC-S3–RC-S6**) — [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [CHCE_ROADMAP.md](CHCE_ROADMAP.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
+**Current focus shifted** to LangFuse observability (**RC-LF1**, **RC-S6** Met) — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
 
 ## Problem
 
@@ -192,7 +192,7 @@ Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. 
 
 ## Implementation order
 
-**Should track Done.** Global priority queue: [ROADMAP.md — Next — prioritized queue](ROADMAP.md#next--prioritized-queue-audit-2026-06-07) · [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+**Should track Done.** Global priority queue: [ROADMAP.md — Next — prioritized queue](ROADMAP.md#next--prioritized-queue-audit-2026-06-09) · [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-09).
 
 | ID | Theme | Priority |
 |----|-------|----------|

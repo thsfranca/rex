@@ -1,8 +1,10 @@
 # CHCE — columnar-mmap observability store (reference)
 
-**Diátaxis role:** reference — physical layout and engine design for `observability.store.engine: "mmap"`.
+> **Status: Cancelled (2026-06-09).** CHCE program **R043–R054** cancelled — [CHCE_ROADMAP.md](CHCE_ROADMAP.md). Observability → [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md).
 
-**Status:** **design documented** — CHCE architecture per deep research (2026-06-07); not implemented in `rex-obs-store` yet.
+**Diátaxis role:** reference — **historical** mmap engine design.
+
+**Status:** **cancelled**
 
 **Hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **ADRs:** [0025](architecture/decisions/0025-dual-economics-store-engines.md), [0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) · **SQLite default:** [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md)
 

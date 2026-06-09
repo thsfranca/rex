@@ -43,7 +43,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
 | `agent` | `approvals_enabled`, `max_tool_steps`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gate; sidecar tool loop cap (default **12**); intra-turn compaction trigger as fraction of `broker.max_tool_result_bytes` (default **0.25**); goal-hint read pruning for payloads >100 lines (**R031** Done, default off). |
-| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `read_api`, `ui`, `otlp`, `store` | SQLite store (interim) + OTLP + read API + `rex obs` **implemented**; Rex-native store target — [Observability](#observability), [OBS_READ_API.md](OBS_READ_API.md), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md). |
+| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `read_api`, `ui`, `otlp`, `store` | **Legacy** store/read API/`rex obs` until **LF-R01**; **target** LangFuse Cloud OTLP — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [Observability](#observability) |
 
 Minimal example:
 
@@ -88,9 +88,9 @@ Minimal example:
 
 ## Observability
 
-**Status:** **partial** — SQLite store, read API, `rex obs up`, and core OTLP export **implemented**. **CHCE mmap** (`engine=mmap`): **R043** engine dispatch shipped — macOS selects CHCE stub; non-macOS returns `store.engine_unsupported`; write/read parity lands in **R047–R048** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). SSE live tail planned Phase 6.
+**Status:** **transitioning** — Product direction is **LangFuse Cloud** ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)). Legacy SQLite store, read API, and `rex obs` remain in code until **LF-R01**; keys below describe **current shipped behavior**, not the target contract.
 
-When `observability.enabled` is `true` in merged JSON, the daemon enables **`rex-obs-store`** (`$REX_ROOT/<store.path>`) and attempts **OTLP export** when an endpoint is configured (otherwise store-only + `obs.export=degraded` stdout). Bundled Grafana reads via the **Rex observability read API** ([OBS_READ_API.md](OBS_READ_API.md)). When `false` or omitted, phase 0 **stdout grep** only.
+When `observability.enabled` is `true` in merged JSON today, the daemon enables **`rex-obs-store`** and attempts **OTLP export** when an endpoint is configured. **Target (LF-F01):** OTLP to LangFuse Cloud only; no local store. When `false` or omitted, phase 0 **stdout grep** only.
 
 | Key | Default | Purpose |
 |-----|---------|---------|

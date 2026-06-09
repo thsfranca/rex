@@ -17,7 +17,7 @@ REX uses **two independent release planes**: the Rust workspace (`v*` tags) and 
 
 1. Merge feature PRs to `main` with conventional commit messages (or squash titles that match [CONTRIBUTING.md](../CONTRIBUTING.md)).
 2. Wait for **Release-plz** to open or update a Release PR (`release-core` label). Review version bump and [`CHANGELOG.md`](../CHANGELOG.md).
-3. **Tagging `1.0.0`:** every Must **RC-*** in [V1_0.md](V1_0.md) is **Met** (**RC-01–RC-10** and observability **RC-S3–RC-S5**); merge the release-plz Release PR to create the **`v1.0.0`** tag (workspace version is already **`1.0.0`** in tree; **git tag blocked** until those rows close).
+3. **Tagging `1.0.0`:** every Must **RC-*** in [V1_0.md](V1_0.md) is **Met** (**RC-01–RC-10** and observability **RC-LF1**); merge the release-plz Release PR to create the **`v1.0.0`** tag (workspace version is already **`1.0.0`** in tree; **git tag blocked** until those rows close).
 4. Merge the Release PR. release-plz creates the `v*` tag and a GitHub Release (notes only).
 5. **Core Release** workflow runs on the tag: runs [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), builds archives with cargo-dist, uploads assets to the same GitHub Release.
 

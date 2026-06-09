@@ -73,7 +73,7 @@ Canonical design: **[EXTENSION_UX.md](EXTENSION_UX.md)**. One PR slice per row w
 
 ## Prioritization (2026-06-07)
 
-**MoSCoW:** **Should** program **Done** (E-UX01…E-UX11, E-PLAN01, **RC-S1–RC-S2**). Extension is **maintenance-only** until observability suite (**RC-S3–RC-S6**) advances — no new feature rows rank above **R039** / **R043** per [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-07).
+**MoSCoW:** **Should** program **Done** (E-UX01…E-UX11, E-PLAN01, **RC-S1–RC-S2**). Extension is **maintenance-only** until LangFuse observability (**RC-LF1**) advances — no new feature rows rank above **LF-D01** per [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-09).
 
 | Priority | Work | Notes |
 |----------|------|-------|
