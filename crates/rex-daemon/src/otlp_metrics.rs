@@ -8,7 +8,8 @@ use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
 use opentelemetry_sdk::runtime;
 use opentelemetry_sdk::Resource;
 use rex_config::ObservabilityConfig;
-use rex_obs_store::StreamEconomicsRecord;
+
+use crate::economics_record::StreamEconomicsRecord;
 
 static DEGRADED_LOG: OnceLock<()> = OnceLock::new();
 

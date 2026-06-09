@@ -71,7 +71,7 @@ Aligns with [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md): local infere
 
 ## Attribute mapping (export reference)
 
-Maps daemon economics at `stream.terminal` to LangFuse (refinement in **LF-D02**). Source shape today: `StreamEconomicsRecord` in `crates/rex-obs-store` (removed in **LF-R01**; fields retained on export path).
+Maps daemon economics at `stream.terminal` to LangFuse (refinement in **LF-D02**). Source shape: `StreamEconomicsRecord` in `crates/rex-daemon/src/economics_record.rs`.
 
 | Rex field | LangFuse target |
 |-----------|------------------|

@@ -372,13 +372,7 @@ pub struct ObservabilityConfig {
     #[serde(default = "default_true")]
     pub custom_sidecar_metrics: bool,
     #[serde(default)]
-    pub read_api: ReadApiConfig,
-    #[serde(default)]
-    pub ui: UiConfig,
-    #[serde(default)]
     pub otlp: OtlpConfig,
-    #[serde(default)]
-    pub store: StoreConfig,
 }
 
 impl Default for ObservabilityConfig {
@@ -387,56 +381,9 @@ impl Default for ObservabilityConfig {
             enabled: None,
             service_name: default_obs_service_name(),
             custom_sidecar_metrics: true,
-            read_api: ReadApiConfig::default(),
-            ui: UiConfig::default(),
             otlp: OtlpConfig::default(),
-            store: StoreConfig::default(),
         }
     }
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
-pub struct ReadApiConfig {
-    #[serde(default = "default_read_api_listen")]
-    pub listen: String,
-}
-
-impl Default for ReadApiConfig {
-    fn default() -> Self {
-        Self {
-            listen: default_read_api_listen(),
-        }
-    }
-}
-
-fn default_read_api_listen() -> String {
-    "127.0.0.1:9470".to_string()
-}
-
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
-pub struct UiConfig {
-    #[serde(default)]
-    pub enabled: Option<bool>,
-    #[serde(default)]
-    pub grafana: GrafanaUiConfig,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
-pub struct GrafanaUiConfig {
-    #[serde(default = "default_grafana_port")]
-    pub port: u16,
-}
-
-impl Default for GrafanaUiConfig {
-    fn default() -> Self {
-        Self {
-            port: default_grafana_port(),
-        }
-    }
-}
-
-fn default_grafana_port() -> u16 {
-    3000
 }
 
 fn default_obs_service_name() -> String {
@@ -453,30 +400,6 @@ pub struct OtlpConfig {
 
 fn default_otlp_protocol() -> String {
     crate::observability::DEFAULT_OTLP_PROTOCOL.to_string()
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
-pub struct StoreConfig {
-    #[serde(default = "default_store_engine")]
-    pub engine: String,
-    #[serde(default)]
-    pub path: String,
-    #[serde(default)]
-    pub format_version: u32,
-}
-
-impl Default for StoreConfig {
-    fn default() -> Self {
-        Self {
-            engine: default_store_engine(),
-            path: String::new(),
-            format_version: 1,
-        }
-    }
-}
-
-fn default_store_engine() -> String {
-    crate::observability::DEFAULT_STORE_ENGINE_SQLITE.to_string()
 }
 
 #[cfg(test)]

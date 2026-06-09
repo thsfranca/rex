@@ -43,7 +43,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
 | `agent` | `approvals_enabled`, `max_tool_steps`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gate; sidecar tool loop cap (default **12**); intra-turn compaction trigger as fraction of `broker.max_tool_result_bytes` (default **0.25**); goal-hint read pruning for payloads >100 lines (**R031** Done, default off). |
-| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `read_api`, `ui`, `otlp`, `store` | **Legacy** store/read API/`rex obs` until **LF-R01**; **target** LangFuse Cloud OTLP — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [Observability](#observability) |
+| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `otlp` | OTLP export + stdout economics — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [Observability](#observability) |
 
 Minimal example:
 
@@ -74,11 +74,6 @@ Minimal example:
     "otlp": {
       "endpoint": "http://127.0.0.1:4317",
       "protocol": "grpc"
-    },
-    "store": {
-      "engine": "sqlite",
-      "path": "obs/store.sqlite",
-      "format_version": 1
     }
   }
 }
@@ -88,25 +83,19 @@ Minimal example:
 
 ## Observability
 
-**Status:** **transitioning** — Product direction is **LangFuse Cloud** ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)). Legacy SQLite store, read API, and `rex obs` remain in code until **LF-R01**; keys below describe **current shipped behavior**, not the target contract.
+**Status:** **LangFuse Cloud** is the product observability path ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)). Rex-owned store, read API, Grafana plugin, and `rex obs` were removed in **LF-R01**.
 
-When `observability.enabled` is `true` in merged JSON today, the daemon enables **`rex-obs-store`** and attempts **OTLP export** when an endpoint is configured. **Target (LF-F01):** OTLP to LangFuse Cloud only; no local store. When `false` or omitted, phase 0 **stdout grep** only.
+When `observability.enabled` is `true`, the daemon emits economics on **stdout** and exports **OTLP metrics** when `observability.otlp.endpoint` is set. **LF-F01** wires the default endpoint toward LangFuse Cloud. When `false` or omitted, phase 0 **stdout grep** only.
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `observability.enabled` | `false` | Master switch: store ingest + read API path |
+| `observability.enabled` | `false` | Master switch for OTLP export path |
 | `observability.service_name` | `rex-daemon` | OTel resource `service.name` |
-| `observability.custom_sidecar_metrics` | `true` | When `false`, drop sidecar-registered custom metrics at ingest |
-| `observability.read_api.listen` | `127.0.0.1:9470` | Loopback bind for Rex read API — [OBS_READ_API.md](OBS_READ_API.md) |
-| `observability.ui.enabled` | `true` when observability on | Enable Grafana supervision in `rex obs up` |
-| `observability.ui.grafana.port` | `3000` | Local Grafana HTTP port |
-| `observability.otlp.endpoint` | (none) | Optional interop: OTLP URL when replication enabled |
-| `observability.otlp.protocol` | `grpc` | `grpc` or `http/protobuf` (interop only) |
-| `observability.store.engine` | `sqlite` | `sqlite` (default) or `mmap` (CHCE, macOS opt-in) — [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) |
-| `observability.store.path` | `obs/store.sqlite` when `engine=sqlite`; `obs/store.rexobs` when `engine=mmap` | Path relative to `$REX_ROOT`; CHCE also uses `obs/store.dict` |
-| `observability.store.format_version` | `1` | CHCE block header version; ignored for sqlite |
+| `observability.custom_sidecar_metrics` | `true` | Reserved for future sidecar OTLP ingest (**LF-F06**) |
+| `observability.otlp.endpoint` | (none) | OTLP metrics URL (LangFuse Cloud when **LF-F01** lands) |
+| `observability.otlp.protocol` | `grpc` | `grpc` or `http/protobuf` |
 
-Keys marked **planned** are documented for the bundled Grafana suite; the daemon may ignore them until implementation PRs land.
+Legacy `store`, `read_api`, and `ui` keys in older config files are ignored at load time.
 
 ## Legacy environment variables (deprecated)
 

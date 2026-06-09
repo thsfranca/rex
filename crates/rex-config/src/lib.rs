@@ -22,16 +22,13 @@ pub use layout::{ensure_global_layout, EnsureResult};
 pub use merge::LoadedConfig;
 pub use model::{
     AgentConfig, BrokerConfig, CacheConfig, ContextConfig, CursorCliConfig, DaemonConfig,
-    GatewayConfig, GatewayOllamaConfig, GrafanaUiConfig, InferenceConfig, NativeToolsMode,
-    ObservabilityConfig, OpenAiCompatConfig, OtlpConfig, ReadApiConfig, RexConfig, SidecarEntry,
-    SidecarsConfig, StoreConfig, UiConfig, WorkspaceConfig, DEFAULT_DAEMON_SOCKET,
-    DEFAULT_SIDECAR_SOCKET,
+    GatewayConfig, GatewayOllamaConfig, InferenceConfig, NativeToolsMode, ObservabilityConfig,
+    OpenAiCompatConfig, OtlpConfig, RexConfig, SidecarEntry, SidecarsConfig, WorkspaceConfig,
+    DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
 };
 pub use observability::{
-    economics_snapshot_id, economics_snapshot_json, observability_enabled, resolve_store_path,
-    ui_enabled, validate_observability, validate_read_api_listen, DEFAULT_GRAFANA_PORT,
-    DEFAULT_OBS_SERVICE_NAME, DEFAULT_OTLP_PROTOCOL, DEFAULT_READ_API_LISTEN,
-    DEFAULT_STORE_PATH_SQLITE,
+    economics_snapshot_id, economics_snapshot_json, observability_enabled, validate_observability,
+    DEFAULT_OBS_SERVICE_NAME, DEFAULT_OTLP_PROTOCOL,
 };
 pub use paths::{
     gateway_dir, gateway_env_path, global_config_path, proto_gen_path, proto_src_path, rex_root,
@@ -227,7 +224,7 @@ mod tests {
 
     #[test]
     #[serial]
-    fn observability_enabled_sqlite_validate() {
+    fn observability_enabled_otlp_validate() {
         let tmp = tempfile::tempdir().unwrap();
         with_rex_root(tmp.path(), || {
             env::set_current_dir(tmp.path()).unwrap();
@@ -238,7 +235,7 @@ mod tests {
   "version": 1,
   "observability": {
     "enabled": true,
-    "store": { "engine": "sqlite", "path": "obs/store.sqlite" }
+    "otlp": { "endpoint": "http://127.0.0.1:4317", "protocol": "grpc" }
   }
 }"#,
             )
@@ -249,7 +246,7 @@ mod tests {
 
     #[test]
     #[serial]
-    fn observability_mmap_allowed_at_config_layer() {
+    fn legacy_store_fields_ignored_in_json() {
         let tmp = tempfile::tempdir().unwrap();
         with_rex_root(tmp.path(), || {
             env::set_current_dir(tmp.path()).unwrap();
@@ -262,8 +259,7 @@ mod tests {
 }"#,
             )
             .unwrap();
-            let loaded = load_merged().expect("mmap engine accepted in JSON");
-            assert_eq!(loaded.effective.observability.store.engine, "mmap");
+            load_merged().expect("legacy store keys ignored");
         });
     }
 
