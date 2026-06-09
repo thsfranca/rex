@@ -1,6 +1,6 @@
 # Observability integrations (bundled Grafana suite)
 
-> **Status: Cancelled (2026-06-09).** Rex-owned Grafana suite and `rex obs up` are **not** the product path. Use **[LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)** (LangFuse Cloud). Shipped code is **legacy until LF-R01** removes it.
+> **Status: Cancelled (2026-06-09).** Rex-owned Grafana suite and `rex obs up` are **not** the product path. Use **[LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)** (LangFuse Cloud). Shipped code **removed in LF-R01**.
 
 **Diátaxis role:** how-to — **historical** — Rex-owned local observability suite.
 

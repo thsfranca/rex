@@ -4,7 +4,6 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use rex_config::ConfigError;
-use rex_proto::rex::observability::v1::sidecar_observability_service_server::SidecarObservabilityServiceServer;
 use rex_proto::rex::v1::rex_service_server::RexServiceServer;
 use thiserror::Error;
 use tokio::net::UnixListener;
@@ -20,7 +19,6 @@ use crate::policy::PolicyEngine;
 use crate::service::RexDaemonService;
 use crate::settings;
 use crate::sidecar_config::sidecar_harness_direct;
-use crate::sidecar_observability::SidecarObservabilityHandler;
 use crate::supervisor::{supervisor_from_config, SupervisorError};
 
 #[derive(Debug, Error)]
@@ -87,8 +85,6 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
         approval_gate,
         sidecar.clone(),
     );
-    let sidecar_obs = SidecarObservabilityHandler::new(service.observability.clone());
-
     let workspace_log = match settings::get().resolve_workspace_root() {
         Ok(root) => format!("workspace.root={}", root.display()),
         Err(_) => "workspace.error=not_configured".to_string(),
@@ -101,7 +97,6 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
     );
     Server::builder()
         .add_service(RexServiceServer::new(service))
-        .add_service(SidecarObservabilityServiceServer::new(sidecar_obs))
         .serve_with_incoming_shutdown(incoming, shutdown_signal())
         .await?;
     sidecar.stop().await;

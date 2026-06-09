@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
-use rex_config::{
-    economics_snapshot_id, economics_snapshot_json, observability_enabled, resolve_store_path,
-    LoadedConfig,
-};
-use rex_obs_store::{SharedObsStore, StreamEconomicsRecord};
+use rex_config::{economics_snapshot_id, observability_enabled, LoadedConfig};
 
+use crate::economics_record::StreamEconomicsRecord;
 use crate::otlp_metrics::{OtlpMetrics, TerminalOtlpContext};
 use crate::plugins::PipelineMetrics;
 
@@ -63,38 +60,25 @@ impl StreamEconomicsDraft {
 
 #[derive(Clone)]
 pub struct ObservabilityRuntime {
-    store: SharedObsStore,
     snapshot_id: String,
     metrics: Option<Arc<OtlpMetrics>>,
 }
 
 impl ObservabilityRuntime {
-    pub fn from_loaded(
-        loaded: &LoadedConfig,
-    ) -> Result<Option<Self>, rex_obs_store::ObsStoreError> {
+    pub fn from_loaded(loaded: &LoadedConfig) -> Option<Self> {
         if !observability_enabled(&loaded.effective.observability) {
-            return Ok(None);
+            return None;
         }
-        let store_cfg = &loaded.effective.observability.store;
-        let path = resolve_store_path(&loaded.rex_root, store_cfg);
-        let store = SharedObsStore::open(&store_cfg.engine, path)?;
         let snapshot_id = economics_snapshot_id(&loaded.effective);
-        let payload = economics_snapshot_json(&loaded.effective).to_string();
-        store.upsert_config_snapshot(&snapshot_id, &payload)?;
         let metrics = OtlpMetrics::from_config(&loaded.effective.observability).map(Arc::new);
-        Ok(Some(Self {
-            store,
+        Some(Self {
             snapshot_id,
             metrics,
-        }))
+        })
     }
 
     pub fn snapshot_id(&self) -> &str {
         &self.snapshot_id
-    }
-
-    pub fn store(&self) -> &SharedObsStore {
-        &self.store
     }
 
     pub fn record_terminal_async(
@@ -105,35 +89,16 @@ impl ObservabilityRuntime {
         chunks_sent: u64,
         otlp_ctx: TerminalOtlpContext,
     ) {
-        let store = self.store.clone();
-        let metrics = self.metrics.clone();
         let record = draft.into_record(terminal, elapsed_ms, chunks_sent);
-        tokio::task::spawn_blocking(move || {
-            if let Err(err) = store.append_stream(&record) {
-                eprintln!("obs.store=degraded reason=append_failed error={err}");
-            }
-            if let Some(otlp) = metrics.as_ref() {
+        if let Some(otlp) = self.metrics.clone() {
+            tokio::task::spawn_blocking(move || {
                 otlp.record_stream(&record, &otlp_ctx);
-            }
-        });
+            });
+        }
     }
 }
 
 pub fn observability_from_settings() -> Option<Arc<ObservabilityRuntime>> {
     let loaded = crate::settings::get();
-    if !observability_enabled(&loaded.effective.observability) {
-        return None;
-    }
-    match ObservabilityRuntime::from_loaded(&loaded) {
-        Ok(Some(runtime)) => Some(Arc::new(runtime)),
-        Ok(None) => None,
-        Err(err) => {
-            eprintln!(
-                "obs.store=degraded reason=open_failed code={} error={}",
-                err.machine_code().unwrap_or("none"),
-                err.user_message()
-            );
-            None
-        }
-    }
+    ObservabilityRuntime::from_loaded(&loaded).map(Arc::new)
 }

@@ -4,6 +4,7 @@ mod approvals;
 mod broker;
 mod broker_inference;
 mod domain;
+mod economics_record;
 mod gateway_supervisor;
 mod http_openai_compat;
 mod l1_cache;
@@ -18,7 +19,6 @@ mod service;
 mod settings;
 mod sidecar_client;
 mod sidecar_config;
-mod sidecar_observability;
 mod supervisor;
 mod turn_correlation;
 

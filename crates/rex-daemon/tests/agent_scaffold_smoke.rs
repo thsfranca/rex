@@ -41,6 +41,8 @@ mod broker_inference;
 #[allow(dead_code)]
 #[path = "../src/domain.rs"]
 mod domain;
+#[path = "../src/economics_record.rs"]
+mod economics_record;
 #[allow(dead_code)]
 #[path = "../src/gateway_supervisor.rs"]
 mod gateway_supervisor;
@@ -75,8 +77,6 @@ mod sidecar_client;
 #[allow(dead_code)]
 #[path = "../src/sidecar_config.rs"]
 mod sidecar_config;
-#[path = "../src/sidecar_observability.rs"]
-mod sidecar_observability;
 #[allow(dead_code)]
 #[path = "../src/supervisor.rs"]
 mod supervisor;

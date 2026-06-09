@@ -71,7 +71,7 @@ Legacy `REX_OPENAI_COMPAT_*` / `REX_SIDECAR_ENABLED` env vars are **ignored with
 
 **Managed gateway (`inference.gateway.mode: managed`):** `rex gateway init`, set keys in `$REX_ROOT/gateway/.env`, `rex gateway doctor`, then `rex daemon` — [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
 
-**Observability:** set `observability.enabled: true` and configure OTLP toward **LangFuse Cloud** when **LF-F01** lands — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [CONFIGURATION.md](CONFIGURATION.md#observability). Legacy `rex obs` / Rex store path is **cancelled** (**LF-R01**). Only **`REX_ROOT`** is a bootstrap env var for layout.
+**Observability:** set `observability.enabled: true` and configure OTLP toward **LangFuse Cloud** when **LF-F01** lands — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [CONFIGURATION.md](CONFIGURATION.md#observability). Rex-owned store and `rex obs` were **removed** (**LF-R01**). Only **`REX_ROOT`** is a bootstrap env var for layout.
 
 ### Working modes
 

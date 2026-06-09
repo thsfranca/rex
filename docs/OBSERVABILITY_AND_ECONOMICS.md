@@ -22,7 +22,7 @@ Rex observability is controlled only by merged JSON: **`observability.enabled`**
 
 ## Status
 
-**superseded** — Product observability → [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). Legacy code (store, read API, `rex obs`, Grafana plugin) **legacy until LF-R01**. **v1.0** observability gate → **RC-LF1** in [V1_0.md](V1_0.md). Economics validation program remains in [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) (telemetry sink → LangFuse).
+**superseded** — Product observability → [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). Rex-owned store, read API, `rex obs`, and Grafana plugin **removed in LF-R01**. **v1.0** observability gate → **RC-LF1** in [V1_0.md](V1_0.md). Economics validation program remains in [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) (telemetry sink → LangFuse).
 
 ## Scope
 

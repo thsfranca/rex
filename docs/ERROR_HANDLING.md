@@ -121,23 +121,9 @@ Documented for broker responses and future structured fields; **not** in `error_
 | `plan_save_denied` | `plan.save` not allowed in current mode | daemon broker |
 | `plan_path_invalid` | `plan.save` path outside `.rex/plans/*.md` or malformed | daemon broker |
 
-## Economics store codes
+## Economics store codes (removed)
 
-Catalog: [`fixtures/guidelines/store_error_codes.yaml`](../fixtures/guidelines/store_error_codes.yaml). User paths: daemon startup or `rex obs` — not NDJSON stream terminals unless store failure aborts a stream.
-
-| Code | Meaning | Layer |
-|------|---------|-------|
-| `store.engine_unsupported` | `observability.store.engine=mmap` on non-macOS (or unknown engine) | daemon / CLI |
-| `store.chce_not_ready` | CHCE mmap selected on macOS but write/read not implemented yet (**R047–R048**) | daemon / CLI |
-
-### Planned store codes (not shipped)
-
-| Code | Meaning | Layer |
-|------|---------|-------|
-| `store.recovery_failed` | Mmap file recovery could not find a valid CRC boundary | daemon |
-| `store.format_version_unsupported` | File `format_version` newer than daemon supports | daemon / CLI |
-
-Design: [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) · [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md).
+Rex-owned `rex-obs-store` and `rex obs` were removed (**LF-R01**). Historical store error codes and the `store_error_codes.yaml` catalog are superseded by [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). OTLP export degrades to stdout-only when the endpoint is missing or misconfigured (`obs.export=degraded` log line).
 
 ## Known gaps (current codebase)
 

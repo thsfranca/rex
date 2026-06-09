@@ -271,15 +271,6 @@ fn merge_observability(
     if !overlay.otlp.protocol.is_empty() {
         base.otlp.protocol = overlay.otlp.protocol;
     }
-    if !overlay.store.engine.is_empty() {
-        base.store.engine = overlay.store.engine;
-    }
-    if !overlay.store.path.is_empty() {
-        base.store.path = overlay.store.path;
-    }
-    if overlay.store.format_version != 0 {
-        base.store.format_version = overlay.store.format_version;
-    }
 }
 
 #[allow(dead_code)]
