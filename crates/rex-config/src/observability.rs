@@ -35,6 +35,9 @@ pub fn economics_snapshot_json(config: &RexConfig) -> serde_json::Value {
                 "model": config.inference.openai_compat.model,
                 "timeout_secs": config.inference.openai_compat.timeout_secs,
                 "native_tools": config.inference.openai_compat.effective_native_tools(),
+                "header_names": crate::openai_compat::header_names_sorted(
+                    &config.inference.openai_compat.headers,
+                ),
             },
             "gateway": {
                 "mode": config.inference.gateway.mode,
@@ -103,5 +106,19 @@ mod tests {
         let raw = json.to_string();
         assert!(!raw.contains("secret"));
         assert!(!raw.contains("api_key"));
+    }
+
+    #[test]
+    fn economics_snapshot_excludes_header_values() {
+        let mut cfg = RexConfig::defaults();
+        cfg.inference
+            .openai_compat
+            .headers
+            .insert("X-Api-Key".to_string(), "top-secret".to_string());
+        let json = economics_snapshot_json(&cfg);
+        let raw = json.to_string();
+        assert!(!raw.contains("top-secret"));
+        assert!(raw.contains("X-Api-Key"));
+        assert!(raw.contains("header_names"));
     }
 }

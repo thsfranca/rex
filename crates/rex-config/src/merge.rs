@@ -149,6 +149,9 @@ fn merge_inference(
     if overlay.openai_compat.native_tools.is_some() {
         base.openai_compat.native_tools = overlay.openai_compat.native_tools;
     }
+    for (k, v) in overlay.openai_compat.headers {
+        base.openai_compat.headers.insert(k, v);
+    }
     if !overlay.cursor_cli.path.is_empty() {
         base.cursor_cli.path = overlay.cursor_cli.path;
     }

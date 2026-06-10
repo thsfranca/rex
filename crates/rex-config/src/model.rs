@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::error::ConfigError;
 
 pub const DEFAULT_DAEMON_SOCKET: &str = "/tmp/rex.sock";
@@ -53,6 +55,7 @@ impl RexConfig {
                     model: "gpt-4o-mini".to_string(),
                     timeout_secs: 120,
                     native_tools: None,
+                    headers: BTreeMap::new(),
                 },
                 gateway: GatewayConfig::default(),
                 cursor_cli: CursorCliConfig {
@@ -124,6 +127,7 @@ impl RexConfig {
             ));
         }
         crate::observability::validate_observability(&self.observability)?;
+        crate::openai_compat::validate_openai_compat(&self.inference.openai_compat)?;
         Ok(())
     }
 }
@@ -290,6 +294,8 @@ pub struct OpenAiCompatConfig {
     pub timeout_secs: u64,
     #[serde(default)]
     pub native_tools: Option<NativeToolsMode>,
+    #[serde(default)]
+    pub headers: BTreeMap<String, String>,
 }
 
 impl OpenAiCompatConfig {
@@ -422,6 +428,35 @@ mod native_tools_tests {
         assert_eq!(
             base.inference.openai_compat.effective_native_tools(),
             NativeToolsMode::False
+        );
+    }
+
+    #[test]
+    fn headers_merge_overlay_keys() {
+        let mut base = RexConfig::defaults();
+        base.inference
+            .openai_compat
+            .headers
+            .insert("X-Base".to_string(), "a".to_string());
+        let mut overlay = RexConfig::defaults();
+        overlay
+            .inference
+            .openai_compat
+            .headers
+            .insert("X-Overlay".to_string(), "b".to_string());
+        overlay
+            .inference
+            .openai_compat
+            .headers
+            .insert("X-Base".to_string(), "override".to_string());
+        merge::merge_config(&mut base, overlay);
+        assert_eq!(
+            base.inference.openai_compat.headers.get("X-Base"),
+            Some(&"override".to_string())
+        );
+        assert_eq!(
+            base.inference.openai_compat.headers.get("X-Overlay"),
+            Some(&"b".to_string())
         );
     }
 }

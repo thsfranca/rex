@@ -27,7 +27,7 @@ This document is the **canonical** policy for how REX settings work: merged **JS
 
 **Legacy environment variables:** Daemon startup ignores former `REX_INFERENCE_RUNTIME`, `REX_OPENAI_COMPAT_*`, `REX_SIDECAR_*`, `REX_DAEMON_SOCKET`, and `REX_WORKSPACE_ROOT` when present and prints a warning — use JSON instead. **`REX_AGENT_APPROVALS`** is **not read** (migration reference only; canonical key is `agent.approvals_enabled` in JSON — [V1_0.md](V1_0.md) RC-06). **`REX_ROOT`** remains the bootstrap override for layout location (tests, extension auto-start).
 
-**Secret values:** Prefer environment or OS keychain for API keys in JSON (`inference.openai_compat.api_key`). Do not commit secrets to the repository.
+**Secret values:** Prefer environment or OS keychain for API keys and auth header values in JSON (`inference.openai_compat.api_key`, `inference.openai_compat.headers`). Do not commit secrets to the repository.
 
 ## JSON configuration keys (implemented)
 
@@ -178,6 +178,29 @@ Example HTTP backend (Ollama) in `$REX_ROOT/config.json`:
 ```
 
 **`inference.openai_compat.native_tools`** (**R038**): tri-state `auto` \| `true` \| `false`; schema default **`auto`** (omit field → `auto`). Controls whether daemon forwards OpenAI `tools[]` on `BrokerInference` vs interim JSON-in-text. **`auto`** probes Ollama `/api/show` for `tools` capability; direct Ollama is the reference path for agent tool calling — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md). `mock` / `cursor-cli` runtimes always use interim regardless of config.
+
+### `inference.openai_compat` keys
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `base_url` | (none) | OpenAI-compat API root (for example `http://127.0.0.1:11434/v1`). Required when `runtime` is `http-openai-compat` unless managed gateway injects URL. |
+| `api_key` | (none) | Optional `Authorization: Bearer` token when `headers` does not already set `Authorization`. |
+| `model` | `gpt-4o-mini` | Default model id on chat/completions requests. |
+| `timeout_secs` | `120` | Upper bound for a single HTTP completion request. |
+| `native_tools` | `auto` | Tri-state native tool forwarding — see above. |
+| `headers` | `{}` | Optional map of extra HTTP request headers (for example `X-Api-Key`) sent on every broker inference POST. Project `.rex/config.json` overlay merges keys into global headers. Invalid names or values fail `rex config validate`. Rex always sets `Content-Type: application/json` after configured headers. |
+
+Example with custom auth header:
+
+```json
+"openai_compat": {
+  "base_url": "https://my-gateway.example/v1",
+  "model": "my-model",
+  "headers": {
+    "X-Api-Key": "secret-token"
+  }
+}
+```
 
 CI and unit tests set `REX_ROOT` to a temp dir and write `config.json` with `inference.runtime: "mock"` and `sidecars.harness: "direct"` — see [CI.md](CI.md).
 
