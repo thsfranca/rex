@@ -5,6 +5,7 @@ mod layout;
 mod merge;
 mod model;
 mod observability;
+mod openai_compat;
 mod paths;
 mod sidecar_binary;
 mod workspace;

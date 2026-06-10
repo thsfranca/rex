@@ -64,6 +64,7 @@ Runtime id remains **`http-openai-compat`** (`REX_INFERENCE_RUNTIME`). Config ke
 | Context injection | **On** — daemon `ContextPipeline` may shape prompt before HTTP call |
 | Cacheable modes | **`ask`** only (same as mock; **`agent`** never cached) |
 | Timeouts | `REX_OPENAI_COMPAT_TIMEOUT_SECS` (default 120s) |
+| Custom headers | `inference.openai_compat.headers` — optional map forwarded on every `POST …/chat/completions`; `api_key` adds `Authorization: Bearer` only when `Authorization` is not already set — [CONFIGURATION.md](CONFIGURATION.md#inferenceopenai_compat-keys) |
 
 ### Operator profiles (examples)
 

@@ -52,6 +52,7 @@ pub struct HttpOpenAiCompatRuntime {
     client: Client,
     chat_completions_url: String,
     api_key: Option<String>,
+    headers: BTreeMap<String, String>,
     model: String,
     timeout: Duration,
 }
@@ -72,6 +73,7 @@ impl HttpOpenAiCompatRuntime {
             .as_ref()
             .map(|v| v.trim().to_string())
             .filter(|v| !v.is_empty());
+        let headers = cfg.headers.clone();
         let model = {
             let m = cfg.model.trim();
             if m.is_empty() {
@@ -94,6 +96,7 @@ impl HttpOpenAiCompatRuntime {
             client,
             chat_completions_url,
             api_key,
+            headers,
             model,
             timeout,
         })
@@ -152,14 +155,12 @@ impl HttpOpenAiCompatRuntime {
             body["tool_choice"] = json!("auto");
         }
 
-        let mut request = self
-            .client
-            .post(&self.chat_completions_url)
-            .header(CONTENT_TYPE, "application/json")
-            .json(&body);
-        if let Some(key) = &self.api_key {
-            request = request.header(AUTHORIZATION, format!("Bearer {key}"));
-        }
+        let body_str = serde_json::to_string(&body).map_err(|err| {
+            Status::internal(format!("http inference request encode failed: {err}"))
+        })?;
+        let mut request = self.client.post(&self.chat_completions_url);
+        request = apply_inference_headers(request, &self.headers, self.api_key.as_deref());
+        let request = request.body(body_str);
         let response = tokio::time::timeout(self.timeout, request.send())
             .await
             .map_err(|_| {
@@ -417,6 +418,25 @@ pub async fn broker_inference_completion(prompt: &str, model: &str) -> Result<St
         .map_err(|status| status.message().to_string())
 }
 
+fn apply_inference_headers(
+    mut request: reqwest::RequestBuilder,
+    headers: &BTreeMap<String, String>,
+    api_key: Option<&str>,
+) -> reqwest::RequestBuilder {
+    for (name, value) in headers {
+        request = request.header(name.as_str(), value.as_str());
+    }
+    let has_authorization = headers
+        .keys()
+        .any(|name| name.eq_ignore_ascii_case("authorization"));
+    if let Some(key) = api_key {
+        if !has_authorization {
+            request = request.header(AUTHORIZATION, format!("Bearer {key}"));
+        }
+    }
+    request.header(CONTENT_TYPE, "application/json")
+}
+
 fn truncate_body(body: &str, max: usize) -> String {
     if body.chars().count() <= max {
         return body.to_string();
@@ -473,6 +493,83 @@ mod tests {
         assert_eq!(calls[0].name, "fs.read");
         assert_eq!(calls[0].id, "call_1");
         assert!(calls[0].arguments_json.contains("path"));
+    }
+
+    #[test]
+    fn api_key_skipped_when_authorization_header_configured() {
+        let mut headers = BTreeMap::new();
+        headers.insert("Authorization".to_string(), "Custom scheme".to_string());
+        let request = apply_inference_headers(
+            Client::new().post("http://127.0.0.1:9/v1/chat/completions"),
+            &headers,
+            Some("should-not-apply"),
+        );
+        let built = request.build().expect("build request");
+        assert_eq!(
+            built
+                .headers()
+                .get(AUTHORIZATION)
+                .and_then(|v| v.to_str().ok()),
+            Some("Custom scheme")
+        );
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn forwards_custom_headers_to_backend() {
+        use std::sync::Arc;
+
+        use crate::adapters::InferenceRuntime;
+        use rex_config::RexConfig;
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+        use tokio::sync::oneshot;
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.expect("bind");
+        let addr = listener.local_addr().expect("addr");
+        let (tx, rx) = oneshot::channel::<String>();
+        let body = "data: {\"choices\":[{\"delta\":{\"content\":\"hello stub\"}}]}\n\n\
+                    data: [DONE]\n\n";
+        tokio::spawn(async move {
+            if let Ok((mut stream, _)) = listener.accept().await {
+                let mut buf = vec![0u8; 8192];
+                let n = stream.read(&mut buf).await.unwrap_or(0);
+                let request = String::from_utf8_lossy(&buf[..n]).to_string();
+                let _ = tx.send(request);
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = stream.write_all(response.as_bytes()).await;
+            }
+        });
+
+        crate::settings::reset_for_test();
+        let mut cfg = RexConfig::defaults();
+        cfg.inference.runtime = "http-openai-compat".to_string();
+        cfg.inference.openai_compat.base_url = format!("http://{addr}");
+        cfg.inference
+            .openai_compat
+            .headers
+            .insert("X-Api-Key".to_string(), "test-token".to_string());
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
+            rex_root: std::path::PathBuf::from("/tmp/rex-http-test"),
+            global_path: None,
+            project_path: None,
+            effective: cfg,
+        }));
+
+        let runtime = HttpOpenAiCompatRuntime::from_config().expect("runtime");
+        let _chunks = runtime.build_chunks("ping").await;
+
+        let request = rx.await.expect("request captured");
+        let lower = request.to_ascii_lowercase();
+        assert!(
+            lower.contains("x-api-key: test-token"),
+            "expected custom header in request, got: {request}"
+        );
+
+        crate::settings::reset_for_test();
     }
 
     #[tokio::test]
