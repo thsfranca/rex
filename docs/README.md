@@ -106,9 +106,10 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 
 | Path | Purpose |
 |------|---------|
+| [../scripts/reinstall-dev.sh](../scripts/reinstall-dev.sh) | Fast reinstall: `rex` + sidecar stub on PATH + VS Code/Cursor extension |
 | [../scripts/install-cli.sh](../scripts/install-cli.sh) | Install unified `rex` binary to `~/.cargo/bin` |
 | [../scripts/install-extension.sh](../scripts/install-extension.sh) | Local VSIX build + install |
-| [../scripts/dev-rex-extension.sh](../scripts/dev-rex-extension.sh) | Rust build + installer wrapper |
+| [../scripts/dev-rex-extension.sh](../scripts/dev-rex-extension.sh) | Wrapper around `reinstall-dev.sh` |
 | [../scripts/verify_mvp_local.sh](../scripts/verify_mvp_local.sh) | MVP preflight (build, rust verify, sidecar verify, product path) |
 
 ## Source vs generated artifacts
