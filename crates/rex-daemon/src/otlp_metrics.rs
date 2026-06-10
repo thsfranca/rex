@@ -5,7 +5,6 @@ use opentelemetry::metrics::{Counter, Histogram, MeterProvider};
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::metrics::{PeriodicReader, SdkMeterProvider};
-use opentelemetry_sdk::runtime;
 use opentelemetry_sdk::Resource;
 use rex_config::ObservabilityConfig;
 
@@ -65,7 +64,7 @@ impl OtlpMetrics {
                 return None;
             }
         };
-        let reader = PeriodicReader::builder(exporter, runtime::Tokio)
+        let reader = PeriodicReader::builder(exporter)
             .with_interval(Duration::from_secs(5))
             .build();
         let service_name = if obs.service_name.trim().is_empty() {
@@ -73,7 +72,9 @@ impl OtlpMetrics {
         } else {
             obs.service_name.trim()
         };
-        let resource = Resource::new([KeyValue::new("service.name", service_name.to_string())]);
+        let resource = Resource::builder()
+            .with_service_name(service_name.to_string())
+            .build();
         let provider = SdkMeterProvider::builder()
             .with_reader(reader)
             .with_resource(resource)
