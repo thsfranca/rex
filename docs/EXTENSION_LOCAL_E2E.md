@@ -144,18 +144,27 @@ See [EXTENSION_RELEASE.md](./EXTENSION_RELEASE.md) for flags (`--verify`, `--edi
 
 Reload the window when prompted (or run **Developer: Reload Window**).
 
-**One-shot helper** (build Rust, install CLI into `~/.cargo/bin`, then install the VSIX; does **not** start the daemon):
+**One-shot helper** (install CLI + sidecar stub into `~/.cargo/bin`, then install the VSIX; does **not** start the daemon):
 
 ```bash
-chmod +x ./scripts/dev-rex-extension.sh
-./scripts/dev-rex-extension.sh
+chmod +x ./scripts/reinstall-dev.sh
+./scripts/reinstall-dev.sh
+```
+
+For plan/agent with a live model, include the Python sidecar:
+
+```bash
+./scripts/reinstall-dev.sh --agent
 ```
 
 Pass through extra flags to `install-extension.sh`, for example:
 
 ```bash
-./scripts/dev-rex-extension.sh --verify
+./scripts/reinstall-dev.sh --verify
+./scripts/reinstall-dev.sh --extension-only --only-install
 ```
+
+[`scripts/dev-rex-extension.sh`](../scripts/dev-rex-extension.sh) delegates to `reinstall-dev.sh`.
 
 ## 7) Verify in the editor
 
