@@ -56,9 +56,9 @@ When `agent.approvals_enabled` is true in merged JSON:
 
 ## Ask-mode research
 
-`ask` mode uses a **read-only tool loop**: `fs.read`, `fs.list`, `web.search` ([ADR 0029](architecture/decisions/0029-ask-mode-research-broker.md)). No `fs.write`, `exec.shell`, or `plan.save`. L1 cache skips turns that invoked any broker tool ([ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md)).
+`ask` mode uses a **read-only tool loop**: `fs.read`, `fs.list`, `web.search` ([ADR 0031](architecture/decisions/0031-ask-mode-research-broker.md)). No `fs.write`, `exec.shell`, or `plan.save`. L1 cache skips turns that invoked any broker tool ([ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md)).
 
-## Live streaming (ADR 0028)
+## Live streaming (ADR 0030)
 
 Sidecar `RunTurn` flushes events during graph execution via a **stream sink** and LangGraph `stream()` — not only after `invoke()` completes. Daemon live path passthrough-maps chunks unchanged.
 

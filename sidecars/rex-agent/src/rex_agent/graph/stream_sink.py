@@ -1,4 +1,4 @@
-"""Live per-turn event queue for incremental RunTurn streaming (ADR 0028)."""
+"""Live per-turn event queue for incremental RunTurn streaming (ADR 0030)."""
 
 from __future__ import annotations
 

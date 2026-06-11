@@ -1,4 +1,4 @@
-# ADR 0028: Incremental RunTurn streaming
+# ADR 0030: Incremental RunTurn streaming
 
 - **Date:** 2026-06-11
 - **Status:** Accepted

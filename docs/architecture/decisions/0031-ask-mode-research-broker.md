@@ -1,4 +1,4 @@
-# ADR 0029: Ask-mode research broker
+# ADR 0031: Ask-mode research broker
 
 - **Date:** 2026-06-11
 - **Status:** Accepted
