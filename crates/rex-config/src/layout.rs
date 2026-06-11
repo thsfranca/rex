@@ -27,7 +27,7 @@ pub fn ensure_global_layout() -> Result<EnsureResult, ConfigError> {
     let created_config = if config_path.is_file() {
         false
     } else {
-        let template = RexConfig::defaults();
+        let template = RexConfig::operator_init_template();
         let json = serde_json::to_string_pretty(&template).map_err(ConfigError::Json)?;
         fs::write(&config_path, json)
             .map_err(|err| ConfigError::Write(format!("write {}: {err}", config_path.display())))?;

@@ -88,6 +88,37 @@ impl RexConfig {
         }
     }
 
+    /// Template written by `rex config init` for operator installs.
+    /// CI and tests continue to use [`Self::defaults`] (stub sidecar).
+    pub fn operator_init_template() -> Self {
+        Self {
+            sidecars: SidecarsConfig {
+                active: "agent".to_string(),
+                required: Some(true),
+                harness: None,
+                list: vec![
+                    SidecarEntry {
+                        name: "stub".to_string(),
+                        binary: "rex-sidecar-stub".to_string(),
+                        enabled: false,
+                        socket: DEFAULT_SIDECAR_SOCKET.to_string(),
+                    },
+                    SidecarEntry {
+                        name: "agent".to_string(),
+                        binary: "rex-agent".to_string(),
+                        enabled: true,
+                        socket: DEFAULT_SIDECAR_SOCKET.to_string(),
+                    },
+                ],
+            },
+            agent: AgentConfig {
+                approvals_enabled: Some(true),
+                max_tool_steps: 12,
+            },
+            ..Self::defaults()
+        }
+    }
+
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.version != 1 {
             return Err(ConfigError::Validation(format!(

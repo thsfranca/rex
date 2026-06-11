@@ -31,16 +31,11 @@ chmod +x ./scripts/install-cli.sh
 ./scripts/install-cli.sh
 ```
 
-To print the standard install locations for **REX: Cli Path** and **REX: Daemon Binary Path** without re-installing, run `./scripts/install-cli.sh --print-bin-path`.
+The script configures shell PATH for `~/.cargo/bin` by default, runs `rex config init` (operator template uses **`rex-agent`**), and updates the current shell session PATH.
 
-Optional: add `~/.cargo/bin` to your shell and restart the editor so GUI-launched apps inherit it:
+To print absolute paths for manual editor settings, run `./scripts/install-cli.sh --print-bin-path`.
 
-```bash
-./scripts/install-cli.sh --configure-shell
-source ~/.zshrc
-```
-
-Then **fully quit and reopen** Cursor or VS Code (not only Reload Window).
+The extension **auto-discovers** `~/.cargo/bin/rex` when `rex.cliPath` and `rex.daemonBinaryPath` are left at the default `rex`. If the status bar still shows unavailable after install, set those settings explicitly or **fully quit and reopen** Cursor or VS Code (not only Reload Window).
 
 ## 3) Configure JSON (product path: `rex-agent` + live HTTP)
 
@@ -49,10 +44,12 @@ Phase 1 expects a **daemon-supervised sidecar** plus **brokered OpenAI-compatibl
 From the repo root (with [Ollama](https://ollama.com/) or another OpenAI-compatible server on port 11434):
 
 ```bash
-rex config init
+./scripts/reinstall-dev.sh
+# or: ./scripts/install-cli.sh && pip install -e sidecars/rex-agent && rex proto install
+rex config show
 ```
 
-Edit `$REX_ROOT/config.json` or create `.rex/config.json` in your project:
+Fresh `rex config init` (also run automatically by `install-cli.sh`) writes **`sidecars.active: "agent"`** with **`rex-agent`** enabled. Edit `$REX_ROOT/config.json` or create `.rex/config.json` in your project for inference and workspace:
 
 ```json
 {
@@ -80,7 +77,7 @@ Edit `$REX_ROOT/config.json` or create `.rex/config.json` in your project:
 }
 ```
 
-Install the product sidecar and proto stubs:
+Install the product sidecar and proto stubs (included in `./scripts/reinstall-dev.sh` by default; use `--no-agent` for stub-only):
 
 ```bash
 pip install -e sidecars/rex-agent

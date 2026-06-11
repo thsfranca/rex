@@ -144,6 +144,9 @@ mod tests {
             assert!(global_config_path().is_file());
             assert!(proto_src_path().is_dir());
             assert!(proto_gen_path().is_dir());
+            let raw = fs::read_to_string(global_config_path()).unwrap();
+            assert!(raw.contains(r#""active": "agent""#));
+            assert!(raw.contains(r#""binary": "rex-agent""#));
         });
     }
 

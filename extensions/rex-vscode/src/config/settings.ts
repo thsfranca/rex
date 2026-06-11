@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 
+import { resolveRexExecutable } from "./resolveExecutable";
+
 export interface RexSettings {
   readonly cliPath: string;
   readonly daemonBinaryPath: string;
@@ -13,10 +15,12 @@ const SECTION = "rex";
 
 export function readSettings(): RexSettings {
   const config = vscode.workspace.getConfiguration(SECTION);
+  const cliPathSetting = (config.get<string>("cliPath") ?? "rex").trim() || "rex";
+  const daemonBinaryPathSetting =
+    (config.get<string>("daemonBinaryPath") ?? "rex").trim() || "rex";
   return {
-    cliPath: (config.get<string>("cliPath") ?? "rex").trim() || "rex",
-    daemonBinaryPath:
-      (config.get<string>("daemonBinaryPath") ?? "rex").trim() || "rex",
+    cliPath: resolveRexExecutable(cliPathSetting),
+    daemonBinaryPath: resolveRexExecutable(daemonBinaryPathSetting),
     daemonAutoStart: config.get<boolean>("daemonAutoStart") ?? false,
     modelId: (config.get<string>("modelId") ?? "").trim(),
     rexRoot: (config.get<string>("rexRoot") ?? "").trim(),
