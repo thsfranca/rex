@@ -6,6 +6,7 @@ members = [
   "crates/rex-cli",
   "crates/rex",
   "crates/rex-sidecar-stub",
+  "crates/rex-capability-mock",
 ]
 resolver = "2"
 

@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
+# Dev/CI launcher: prefer Rust binary (no Python grpc stubs required).
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+
+if command -v rex-capability-mock >/dev/null 2>&1; then
+  exec rex-capability-mock "$@"
+fi
+
+for profile in debug release; do
+  candidate="${REPO_ROOT}/target/${profile}/rex-capability-mock"
+  if [[ -x "${candidate}" ]]; then
+    exec "${candidate}" "$@"
+  fi
+done
+
 GEN_ROOT="${REX_ROOT:-${HOME}/.rex}/proto/gen"
 export PYTHONPATH="${GEN_ROOT}:${SCRIPT_DIR}/src:${PYTHONPATH:-}"
 exec python3 -m capability_mock "$@"

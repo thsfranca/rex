@@ -5,9 +5,7 @@
 use rex_config::{CapabilitySidecarEntry, RexConfig};
 use serial_test::serial;
 use std::fs;
-use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
-use std::process::Command;
 
 #[allow(dead_code)]
 #[path = "../src/capability_client.rs"]
@@ -41,37 +39,31 @@ fn repo_root() -> PathBuf {
         .to_path_buf()
 }
 
-fn capability_mock_launcher() -> PathBuf {
-    let launcher = repo_root().join("sidecars/capability-mock/capability-mock");
-    let mut perms = fs::metadata(&launcher)
-        .expect("capability-mock launcher")
-        .permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&launcher, perms).expect("chmod capability-mock");
-    launcher
-}
-
-fn install_proto_stubs(rex_root: &std::path::Path) {
-    let rex_binary = std::env::var("CARGO_BIN_EXE_rex").unwrap_or_else(|_| {
-        let target = std::env::var("CARGO_TARGET_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| repo_root().join("target"));
-        for profile in ["debug", "release"] {
-            let candidate = target.join(profile).join("rex");
-            if candidate.exists() {
-                return candidate.display().to_string();
+fn capability_mock_binary() -> PathBuf {
+    for key in [
+        "CARGO_BIN_EXE_rex_capability_mock",
+        "CARGO_BIN_EXE_rex-capability-mock",
+    ] {
+        if let Ok(path) = std::env::var(key) {
+            let path = PathBuf::from(path);
+            if path.exists() {
+                return path;
             }
         }
-        panic!("rex binary not found; build workspace first");
-    });
-    let proto_src = repo_root().join("proto");
-    let status = Command::new(&rex_binary)
-        .args(["proto", "install"])
-        .env("REX_ROOT", rex_root)
-        .env("REX_PROTO_SRC", &proto_src)
-        .status()
-        .expect("rex proto install");
-    assert!(status.success(), "rex proto install failed");
+    }
+    if let Some(path) = option_env!("CARGO_BIN_EXE_rex_capability_mock") {
+        return PathBuf::from(path);
+    }
+    let target_dir = std::env::var("CARGO_TARGET_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| repo_root().join("target"));
+    for profile in ["debug", "release"] {
+        let candidate = target_dir.join(profile).join("rex-capability-mock");
+        if candidate.exists() {
+            return candidate;
+        }
+    }
+    panic!("rex-capability-mock binary not found; run: cargo build -p rex-capability-mock");
 }
 
 fn capability_only_config(cap_socket: &str, binary: &str) -> RexConfig {
@@ -104,18 +96,12 @@ async fn capability_fleet_spawns_mock_and_passes_health() {
     if std::path::Path::new(&cap_socket).exists() {
         let _ = fs::remove_file(&cap_socket);
     }
-    let launcher = capability_mock_launcher();
-    let _guard = install_rex_config(capability_only_config(
-        &cap_socket,
-        &launcher.display().to_string(),
-    ));
+    let binary = capability_mock_binary();
+    let binary_str = binary.display().to_string();
+    let _guard = install_rex_config(capability_only_config(&cap_socket, &binary_str));
     let root = rex_root_path(&_guard);
-    install_proto_stubs(&root);
 
-    let loaded = loaded_from_config(
-        capability_only_config(&cap_socket, &launcher.display().to_string()),
-        &root,
-    );
+    let loaded = loaded_from_config(capability_only_config(&cap_socket, &binary_str), &root);
     settings::init_for_test(loaded.clone());
 
     let fleet = SidecarFleet::new(SidecarFleetConfig {
@@ -131,7 +117,7 @@ async fn capability_fleet_spawns_mock_and_passes_health() {
             name: "mock".to_string(),
             enabled: true,
             required: true,
-            binary: launcher,
+            binary,
             socket_path: cap_socket.clone(),
             is_capability: true,
         }],
@@ -154,8 +140,8 @@ async fn capability_fleet_spawns_mock_and_passes_health() {
 #[serial]
 async fn capability_fleet_config_from_loaded_parses_capabilities() {
     let cap_socket = test_socket_path("cfg");
-    let launcher = capability_mock_launcher();
-    let cfg = capability_only_config(&cap_socket, &launcher.display().to_string());
+    let binary = capability_mock_binary();
+    let cfg = capability_only_config(&cap_socket, &binary.display().to_string());
     let _guard = install_rex_config(cfg.clone());
     let root = rex_root_path(&_guard);
     let loaded = loaded_from_config(cfg, &root);
