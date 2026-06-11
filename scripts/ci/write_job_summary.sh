@@ -18,5 +18,10 @@ echo "::group::PostRunSummary"
   echo "- hint: ${CI_HINT:--}"
   echo "- run_id: ${GITHUB_RUN_ID:-unknown}"
 } >> "$GITHUB_STEP_SUMMARY"
+
+if [ "${CI_RESULT:-unknown}" != "success" ]; then
+  "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/annotate_ci_failure.sh"
+fi
+
 echo "::notice::Summary written for ${job_name}."
 echo "::endgroup::"

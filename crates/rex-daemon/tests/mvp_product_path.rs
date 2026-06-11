@@ -42,6 +42,9 @@ mod broker;
 #[path = "../src/broker_inference.rs"]
 mod broker_inference;
 #[allow(dead_code)]
+#[path = "../src/capability_client.rs"]
+mod capability_client;
+#[allow(dead_code)]
 #[path = "../src/domain.rs"]
 mod domain;
 #[path = "../src/economics_record.rs"]

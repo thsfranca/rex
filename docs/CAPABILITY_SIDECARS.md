@@ -8,7 +8,7 @@ Rex sidecars are **general-purpose supervised processes**, not a single agent st
 
 ## Status
 
-**Design accepted** — [ADR 0028](architecture/decisions/0028-host-and-capability-sidecar-fleet.md). **Not implemented** — roadmap **R056**.
+**Design accepted** — [ADR 0028](architecture/decisions/0028-host-and-capability-sidecar-fleet.md). **R056-1 shipped:** `rex.capability.v1` proto, `sidecars.capabilities[]` config, multi-process supervisor, `sidecars/capability-mock` Health stub. **Open:** capability router (**R056-2**), full mock `Invoke` (**R056-3**).
 
 ## Scope
 
@@ -25,7 +25,7 @@ Rex sidecars are **general-purpose supervised processes**, not a single agent st
 - Host multi-broadcast (`RunTurn` to multiple agents) — still deferred; see **R016** reframe below
 - Replacing LiteLLM **inference gateway** with capability sidecars — gateway stays `inference.gateway.*`
 - MCP lazy discovery — [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md)
-- Implementation of proto, supervisor, or reference sidecar binaries
+- Capability invoke router and full reference sidecar `Invoke` path (R056-2, R056-3)
 
 ## Terminology
 
@@ -129,7 +129,7 @@ Full message shapes live in [ADR 0028](architecture/decisions/0028-host-and-capa
 
 | ID | Outcome |
 |----|---------|
-| **R056-1** | `rex.capability.v1` proto + config + N-process supervisor |
+| **R056-1** | `rex.capability.v1` proto + config + N-process supervisor — **Done** |
 | **R056-2** | Daemon capability router (registry, health, Invoke) |
 | **R056-3** | Reference capability sidecar scaffold + CI mock |
 

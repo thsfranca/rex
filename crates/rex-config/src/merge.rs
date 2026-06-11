@@ -29,13 +29,26 @@ impl LoadedConfig {
         !self.sidecar_harness_direct() && self.active_sidecar().is_some_and(|e| e.enabled)
     }
 
+    pub fn host_sidecar_name(&self) -> &str {
+        self.effective
+            .sidecars
+            .host
+            .as_deref()
+            .filter(|name| !name.trim().is_empty())
+            .unwrap_or(self.effective.sidecars.active.as_str())
+    }
+
     pub fn active_sidecar(&self) -> Option<&crate::model::SidecarEntry> {
-        let name = self.effective.sidecars.active.as_str();
+        let name = self.host_sidecar_name();
         self.effective
             .sidecars
             .list
             .iter()
             .find(|entry| entry.name == name)
+    }
+
+    pub fn capability_sidecars(&self) -> &[crate::model::CapabilitySidecarEntry] {
+        &self.effective.sidecars.capabilities
     }
 
     pub fn cache_bypass(&self) -> bool {
@@ -148,6 +161,9 @@ fn merge_sidecars(base: &mut crate::model::SidecarsConfig, overlay: crate::model
     if !overlay.active.is_empty() {
         base.active = overlay.active;
     }
+    if overlay.host.is_some() {
+        base.host = overlay.host;
+    }
     if overlay.required.is_some() {
         base.required = overlay.required;
     }
@@ -156,6 +172,9 @@ fn merge_sidecars(base: &mut crate::model::SidecarsConfig, overlay: crate::model
     }
     if !overlay.list.is_empty() {
         base.list = overlay.list;
+    }
+    if !overlay.capabilities.is_empty() {
+        base.capabilities = overlay.capabilities;
     }
 }
 

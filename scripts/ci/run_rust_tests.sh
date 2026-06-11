@@ -54,16 +54,14 @@ elif ! ./scripts/ci/test_enforce_ci_gate.sh 2>&1 | tee "ci-observability/gate-sc
   hint="Run scripts/ci/test_enforce_ci_gate.sh locally."
   echo "::error::Gate script contract tests failed."
   echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
+elif ! ./scripts/ci/test_extract_log_excerpt.sh 2>&1 | tee "ci-observability/extract-log-excerpt-test.log"; then
+  result="failure"
+  fail_code="TEST_FAIL"
+  fail_stage="TestExecution"
+  hint="Run scripts/ci/test_extract_log_excerpt.sh locally."
+  echo "::error::Log excerpt contract tests failed."
+  echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
 fi
 echo "::endgroup::"
 
-{
-  echo "CI_RESULT=${result}"
-  echo "CI_FAIL_CODE=${fail_code}"
-  echo "CI_FAIL_STAGE=${fail_stage}"
-  echo "CI_HINT=${hint}"
-} >> "${GITHUB_ENV:-/dev/null}"
-
-if [ "${result}" != "success" ]; then
-  exit 1
-fi
+./scripts/ci/finish_verify_job.sh

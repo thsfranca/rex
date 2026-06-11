@@ -88,7 +88,7 @@ jobs:
 
       - name: Enforce rust verify job status
         if: ${{ steps.run_rust_verify.outcome != 'success' }}
-        run: exit 1
+        run: ./scripts/ci/enforce_verify_job.sh
 
   sidecar-verify:
     needs: [changes]
@@ -133,7 +133,7 @@ jobs:
 
       - name: Enforce sidecar verify job status
         if: ${{ steps.run_sidecar_verify.outcome != 'success' }}
-        run: exit 1
+        run: ./scripts/ci/enforce_verify_job.sh
 
   extension-verify:
     needs: [changes]
@@ -184,7 +184,7 @@ jobs:
 
       - name: Enforce extension verify job status
         if: ${{ steps.run_extension_verify.outcome != 'success' }}
-        run: exit 1
+        run: ./scripts/ci/enforce_verify_job.sh
 
   guidelines-verify:
     needs: [changes]
@@ -216,7 +216,7 @@ jobs:
 
       - name: Enforce guidelines verify status
         if: ${{ steps.run_guidelines_verify.outcome != 'success' }}
-        run: exit 1
+        run: ./scripts/ci/enforce_verify_job.sh
 
   ci-checks:
     if: ${{ always() }}

@@ -42,6 +42,7 @@ impl RexConfig {
             },
             sidecars: SidecarsConfig {
                 active: "stub".to_string(),
+                host: None,
                 required: Some(true),
                 harness: None,
                 list: vec![SidecarEntry {
@@ -50,6 +51,7 @@ impl RexConfig {
                     enabled: true,
                     socket: DEFAULT_SIDECAR_SOCKET.to_string(),
                 }],
+                capabilities: Vec::new(),
             },
             inference: InferenceConfig {
                 runtime: "mock".to_string(),
@@ -101,6 +103,7 @@ impl RexConfig {
         Self {
             sidecars: SidecarsConfig {
                 active: "agent".to_string(),
+                host: None,
                 required: Some(true),
                 harness: None,
                 list: vec![
@@ -117,6 +120,7 @@ impl RexConfig {
                         socket: DEFAULT_SIDECAR_SOCKET.to_string(),
                     },
                 ],
+                capabilities: Vec::new(),
             },
             agent: AgentConfig {
                 approvals_enabled: Some(true),
@@ -179,12 +183,17 @@ pub struct DaemonConfig {
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct SidecarsConfig {
     pub active: String,
+    /// Host sidecar name; when empty, falls back to [`Self::active`].
+    #[serde(default)]
+    pub host: Option<String>,
     #[serde(default)]
     pub required: Option<bool>,
     #[serde(default)]
     pub harness: Option<String>,
     #[serde(default)]
     pub list: Vec<SidecarEntry>,
+    #[serde(default)]
+    pub capabilities: Vec<CapabilitySidecarEntry>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
@@ -194,6 +203,19 @@ pub struct SidecarEntry {
     #[serde(default = "default_true")]
     pub enabled: bool,
     pub socket: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct CapabilitySidecarEntry {
+    pub name: String,
+    pub binary: String,
+    #[serde(default)]
+    pub enabled: bool,
+    pub socket: String,
+    #[serde(default)]
+    pub provides: Vec<String>,
+    #[serde(default)]
+    pub required: Option<bool>,
 }
 
 fn default_true() -> bool {

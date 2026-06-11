@@ -1304,6 +1304,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rex-capability-mock"
+version = "1.0.0"
+dependencies = [
+ "rex-proto",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+]
+
+[[package]]
 name = "rex-cli"
 version = "1.0.0"
 dependencies = [
@@ -1341,6 +1351,7 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "reqwest 0.12.28",
+ "rex-capability-mock",
  "rex-config",
  "rex-proto",
  "rex-sidecar-stub",
