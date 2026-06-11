@@ -72,7 +72,7 @@ def test_compaction_bounds_scratch_on_many_reads() -> None:
 
     graph.set_inference_fn(fake_inference)
     try:
-        with patch("rex_agent.graph.max_tool_steps", return_value=5):
+        with patch("rex_agent.graph.max_tool_steps_for_mode", return_value=5):
             with patch("rex_agent.graph.BrokerClient") as broker_cls:
                 broker_cls.return_value.__enter__.return_value = mock_client
                 broker_cls.return_value.__exit__.return_value = None

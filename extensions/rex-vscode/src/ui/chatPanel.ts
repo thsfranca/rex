@@ -51,6 +51,7 @@ export interface ChatPanelDependencies {
   readonly getDaemonState: () => DaemonLifecycleState | undefined;
   readonly log: (message: string) => void;
   readonly notifyStreamFailure?: (args: { code: StreamErrorCode; message: string }) => void;
+  readonly onStreamActivity?: (hint?: string) => void;
 }
 
 type PendingStream = { readonly controller: AbortController };
@@ -461,6 +462,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       }
 
       this.emitExecutionStep(message.id, "running", "Execution started.", "step");
+      this.deps.onStreamActivity?.("execution");
       const configuredModel = this.deps.getModelId().trim();
       for await (const event of streamComplete(this.deps.getCliOptions(), {
         prompt: promptForDaemon,
@@ -484,12 +486,27 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
           continue;
         }
         if (event.kind === "tool") {
+          if (event.phase === "running") {
+            this.deps.onStreamActivity?.(event.name);
+          }
           this.emitExecutionStep(
             message.id,
             mapToolPhase(event.phase),
             event.name,
             "tool",
             event.detail,
+            event.toolCallId,
+          );
+          continue;
+        }
+        if (event.kind === "activity") {
+          this.deps.onStreamActivity?.(event.summary);
+          this.emitExecutionStep(
+            message.id,
+            "running",
+            event.summary,
+            "activity",
+            event.detail ?? event.phase,
           );
           continue;
         }
@@ -547,6 +564,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     } finally {
       this.pendingStreams.delete(message.id);
       if (this.pendingStreams.size === 0) {
+        this.deps.onStreamActivity?.(undefined);
         void vscode.commands.executeCommand("setContext", "rex.chatStreaming", false);
       }
     }
@@ -741,15 +759,25 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   }
 
   private emitExecutionStep(
-    id: string,
+    streamId: string,
     phase: ExecutionStepPayload["phase"],
     summary: string,
     kind?: ExecutionStepPayload["kind"],
     detail?: string,
+    toolCallId?: string,
   ): void {
+    const id = toolCallId ?? `${streamId}-${phase}-${summary}`;
     this.postMessage({
       type: "executionStep",
-      payload: { id, phase, summary, kind, detail: detail ?? summary },
+      payload: {
+        id,
+        streamId,
+        toolCallId,
+        phase,
+        summary,
+        kind,
+        detail: detail ?? summary,
+      },
     });
   }
 

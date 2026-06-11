@@ -158,7 +158,13 @@ export function App(): React.ReactElement {
         streaming={state.streaming}
         daemonReady={state.daemon.state === "ready"}
         modePolicy={state.modePolicy}
-        timeline={state.timeline}
+        timeline={state.timeline.filter(
+          (entry) =>
+            state.activeStreamId === undefined ||
+            entry.streamId === undefined ||
+            entry.streamId === state.activeStreamId,
+        )}
+        activityHint={state.activityHint}
         planArtifact={state.planArtifact}
         pendingApprovals={state.pendingApprovals}
         prompt={state.prompt}

@@ -26,7 +26,15 @@ export interface ChatProps {
   readonly streaming: boolean;
   readonly daemonReady: boolean;
   readonly modePolicy: ModePolicy;
-  readonly timeline: ReadonlyArray<{ id: string; summary: string; phase: string; kind?: string; detail?: string }>;
+  readonly timeline: ReadonlyArray<{
+    id: string;
+    toolCallId?: string;
+    summary: string;
+    phase: string;
+    kind?: string;
+    detail?: string;
+  }>;
+  readonly activityHint?: string;
   readonly planArtifact?: PlanArtifactPayload;
   readonly pendingApprovals: ReadonlyArray<{ id: string; title: string; detail: string }>;
   readonly prompt: string;
@@ -229,7 +237,7 @@ export function Chat(props: ChatProps): React.ReactElement {
           <div className="rex-timeline" role="status" aria-live="polite">
             {props.timeline.map((entry) => (
               <ToolCard
-                key={`${entry.id}-${entry.phase}-${entry.summary}`}
+                key={entry.toolCallId ?? `${entry.id}-${entry.phase}-${entry.summary}`}
                 phase={entry.phase}
                 summary={entry.summary}
                 kind={entry.kind}
@@ -240,7 +248,15 @@ export function Chat(props: ChatProps): React.ReactElement {
         ) : null}
         <div className="rex-composer__row">
           <span className="rex-hint">
-            {props.streaming ? "Streaming…" : canSend ? "Ready" : props.daemonReady ? "Type a prompt" : "Daemon unavailable"}
+            {props.streaming
+              ? props.activityHint
+                ? `Running ${props.activityHint}…`
+                : "Streaming…"
+              : canSend
+                ? "Ready"
+                : props.daemonReady
+                  ? "Type a prompt"
+                  : "Daemon unavailable"}
           </span>
           <span style={{ display: "inline-flex", gap: 6 }}>
             <button type="button" onClick={props.onRequestContextPicker} aria-label="Attach context">

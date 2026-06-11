@@ -11,6 +11,8 @@ pub enum CliCommand {
         language_id: String,
         selection_text: String,
         format: CompleteOutputFormat,
+        yes: bool,
+        verbose: bool,
     },
 }
 
@@ -39,6 +41,8 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
                 active_file_path,
                 language_id,
                 selection_text,
+                yes,
+                verbose,
             ) = parse_complete_trailing(&mut args)?;
             Ok(CliCommand::Complete {
                 prompt,
@@ -50,6 +54,8 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
                 language_id,
                 selection_text,
                 format,
+                yes,
+                verbose,
             })
         }
         Some(other) => Err(format!("Unknown command: {other}")),
@@ -66,6 +72,8 @@ type CompleteTrailingArgs = (
     String,
     String,
     String,
+    bool,
+    bool,
 );
 
 fn parse_complete_trailing(
@@ -79,8 +87,16 @@ fn parse_complete_trailing(
     let mut active_file_path = String::new();
     let mut language_id = String::new();
     let mut selection_text = String::new();
+    let mut yes = false;
+    let mut verbose = false;
     while let Some(flag) = args.next() {
         match flag.as_str() {
+            "--yes" | "-y" => {
+                yes = true;
+            }
+            "--verbose" => {
+                verbose = true;
+            }
             "--format" => {
                 let value = args
                     .next()
@@ -142,6 +158,8 @@ fn parse_complete_trailing(
         active_file_path,
         language_id,
         selection_text,
+        yes,
+        verbose,
     ))
 }
 
@@ -150,7 +168,7 @@ pub fn print_usage() {
     eprintln!("  rex-cli status");
     eprintln!("  rex-cli complete \"<prompt>\"");
     eprintln!(
-        "  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ] [ --trace-id <id> ] [ --active-file <path> ] [ --language-id <id> ] [ --selection-text <text> ]"
+        "  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ] [ --yes ] [ --verbose ] [ --trace-id <id> ] [ --active-file <path> ] [ --language-id <id> ] [ --selection-text <text> ]"
     );
 }
 
@@ -181,6 +199,8 @@ mod tests {
                 language_id: String::new(),
                 selection_text: String::new(),
                 format: CompleteOutputFormat::Text,
+                yes: false,
+                verbose: false,
             }
         );
     }
@@ -216,6 +236,8 @@ mod tests {
                 language_id: String::new(),
                 selection_text: String::new(),
                 format: CompleteOutputFormat::Ndjson,
+                yes: false,
+                verbose: false,
             }
         );
     }
@@ -265,6 +287,8 @@ mod tests {
                 language_id: String::new(),
                 selection_text: String::new(),
                 format: CompleteOutputFormat::Ndjson,
+                yes: false,
+                verbose: false,
             }
         );
     }
@@ -297,6 +321,8 @@ mod tests {
                 language_id: "typescript".to_string(),
                 selection_text: "fn main".to_string(),
                 format: CompleteOutputFormat::Text,
+                yes: false,
+                verbose: false,
             }
         );
     }

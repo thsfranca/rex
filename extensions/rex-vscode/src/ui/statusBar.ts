@@ -10,6 +10,7 @@ const UNAVAILABLE_TOOLTIP_MAX_CHARS = 800;
 export interface StatusBar {
   readonly item: vscode.StatusBarItem;
   update(state: DaemonLifecycleState): void;
+  setStreamingActivity(hint?: string): void;
   dispose(): void;
 }
 
@@ -20,12 +21,22 @@ export function createStatusBar(): StatusBar {
   );
   item.command = COMMAND_ID;
   item.name = "REX";
-  renderState(item, { kind: "unavailable", reason: "not probed yet" });
+  let daemonState: DaemonLifecycleState = {
+    kind: "unavailable",
+    reason: "not probed yet",
+  };
+  let streamingHint: string | undefined;
+  renderState(item, daemonState, streamingHint);
   item.show();
   return {
     item,
     update(state) {
-      renderState(item, state);
+      daemonState = state;
+      renderState(item, daemonState, streamingHint);
+    },
+    setStreamingActivity(hint) {
+      streamingHint = hint;
+      renderState(item, daemonState, streamingHint);
     },
     dispose() {
       item.dispose();
@@ -33,9 +44,19 @@ export function createStatusBar(): StatusBar {
   };
 }
 
-function renderState(item: vscode.StatusBarItem, state: DaemonLifecycleState): void {
+function renderState(
+  item: vscode.StatusBarItem,
+  state: DaemonLifecycleState,
+  streamingHint?: string,
+): void {
   switch (state.kind) {
     case "ready": {
+      if (streamingHint !== undefined && streamingHint.length > 0) {
+        item.text = "$(sync~spin) REX running";
+        item.tooltip = `rex: ${streamingHint}`;
+        item.backgroundColor = new vscode.ThemeColor("statusBarItem.prominentBackground");
+        return;
+      }
       item.text = "$(zap) REX ready";
       item.tooltip = `rex daemon ${state.status.daemonVersion} (uptime ${state.status.uptimeSeconds}s)`;
       item.backgroundColor = undefined;

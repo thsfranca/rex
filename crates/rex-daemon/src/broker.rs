@@ -282,6 +282,42 @@ fn shell_allowlist() -> Vec<String> {
         .collect()
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WebSearchHit {
+    pub title: String,
+    pub url: String,
+    pub snippet: String,
+}
+
+pub fn broker_web_search(query: &str, mode: &str) -> Result<Vec<WebSearchHit>, BrokerError> {
+    match crate::access_policy::evaluate_broker(
+        crate::access_policy::BrokerCapability::WebSearch,
+        mode,
+        None,
+    ) {
+        AccessDecision::Allow => {}
+        AccessDecision::Deny(deny) => return Err(deny.into()),
+    }
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
+        return Err(BrokerError::Io("query must not be empty".to_string()));
+    }
+    let settings = crate::settings::get();
+    let provider = settings.search_provider();
+    let max_results = settings.search_max_results();
+    if provider == "mock" {
+        return Ok(vec![WebSearchHit {
+            title: format!("Mock result for \"{trimmed}\""),
+            url: "https://example.com/mock".to_string(),
+            snippet: format!("provider=mock max_results={max_results}"),
+        }]);
+    }
+    Err(BrokerError::Io(
+        "web search provider not configured; set search.provider to mock for local demos"
+            .to_string(),
+    ))
+}
+
 fn resolve_under_workspace_for_write(
     root: &Path,
     relative_path: &str,

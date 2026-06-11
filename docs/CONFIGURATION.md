@@ -21,7 +21,7 @@ This document is the **canonical** policy for how REX settings work: merged **JS
 | Built-in defaults | Used when a JSON field is unset. |
 | `$REX_ROOT/config.json` | User defaults: daemon socket, sidecars, inference, workspace, broker, agent. |
 | `.rex/config.json` | Optional project overrides (walked from cwd upward). |
-| CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--trace-id`, `--active-file`, `--language-id`, `--selection-text` per invocation. |
+| CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--yes`, `--verbose`, `--trace-id`, `--active-file`, `--language-id`, `--selection-text` per invocation. |
 
 **Layout root:** `$REX_ROOT` defaults to `~/.rex` when unset. Run `rex config init` to create the layout and operator template `config.json` (**`sidecars.active: agent`**, **`rex-agent`** enabled). CI and harness tests use explicit stub configs or `RexConfig::defaults()` in code — not the init template.
 
@@ -42,10 +42,11 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `context` | `max_prompt_tokens`, `max_context_tokens` | Context pipeline budgets. |
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
-| `agent` | `approvals_enabled`, `max_tool_steps`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gate; sidecar tool loop cap (default **12**); intra-turn compaction trigger as fraction of `broker.max_tool_result_bytes` (default **0.25**); goal-hint read pruning for payloads >100 lines (**R031** Done, default off). |
+| `agent` | `approvals_enabled`, `max_tool_steps`, `max_tool_steps_ask`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gate; sidecar tool loop cap (default **12**); ask-mode research cap (default **5**); intra-turn compaction trigger as fraction of `broker.max_tool_result_bytes` (default **0.25**); goal-hint read pruning for payloads >100 lines (**R031** Done, default off). |
+| `cli` | `stream_idle_timeout_secs_agent`, `stream_idle_timeout_secs_ask` | Per-chunk idle timeout for `rex complete` streams (defaults **120** agent, **15** ask/plan). |
+| `search` | `enabled`, `provider`, `max_results`, `api_key_path` | Ask-mode `web.search` broker (`provider: mock` for local demos). **R055** will migrate to capability sidecar — [WEB_SEARCH.md](WEB_SEARCH.md). |
 
 **Planned (design — not implemented):** `broker.web_search` (enablement, timeouts, rate limits, cache TTL) and `sidecars.capabilities[]` for capability sidecars — [WEB_SEARCH.md](WEB_SEARCH.md), [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md).
-
 | `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `otlp` | OTLP export + stdout economics — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [Observability](#observability) |
 
 Minimal example:
@@ -307,6 +308,21 @@ Versioned **system / project prompt assemblies** assembled in the daemon so clie
 - [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md)
 - [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — economics matrix row
 
+## CLI operation feedback
+
+Keys under `cli` and `search` control stream idle timeouts and ask-mode `web.search` ([OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md)):
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `cli.stream_idle_timeout_secs_agent` | `120` | Per-chunk idle timeout for `agent` / `plan` NDJSON streams |
+| `cli.stream_idle_timeout_secs_ask` | `15` | Per-chunk idle timeout for `ask` streams |
+| `search.enabled` | `false` | Enables broker `web.search` (ask mode only) |
+| `search.provider` | — | `mock` for local demos |
+| `search.max_results` | `5` | Max hits returned per query |
+| `agent.max_tool_steps_ask` | `5` | Ask-mode research tool loop cap |
+
+CLI flags: `rex complete --verbose` (stderr status in text mode), `--yes` / `--approval-id` for agent approval automation.
+
 ## Not implemented yet (roadmap)
 
 - Global CLI flags mirroring all JSON keys — partial today (`rex complete` flags only).
@@ -320,5 +336,6 @@ Versioned **system / project prompt assemblies** assembled in the daemon so clie
 - [ADAPTERS.md](ADAPTERS.md)
 - [CACHING.md](CACHING.md)
 - [EXTENSION.md](EXTENSION.md)
+- [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md)
 - [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
 - [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)

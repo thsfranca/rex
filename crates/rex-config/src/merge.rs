@@ -74,6 +74,36 @@ impl LoadedConfig {
         }
     }
 
+    pub fn stream_idle_timeout_secs(&self, mode: &str) -> u64 {
+        let normalized = mode.trim().to_ascii_lowercase();
+        if normalized == "agent" {
+            self.effective.cli.stream_idle_timeout_secs_agent
+        } else {
+            self.effective.cli.stream_idle_timeout_secs_ask
+        }
+    }
+
+    pub fn search_enabled(&self) -> bool {
+        self.effective.search.enabled.unwrap_or(false)
+    }
+
+    pub fn search_provider(&self) -> &str {
+        self.effective.search.provider.as_str()
+    }
+
+    pub fn search_max_results(&self) -> u32 {
+        let n = self.effective.search.max_results;
+        if n == 0 {
+            5
+        } else {
+            n
+        }
+    }
+
+    pub fn search_api_key_path(&self) -> &str {
+        self.effective.search.api_key_path.as_str()
+    }
+
     /// OpenAI-compat base URL after gateway injection rules.
     pub fn effective_openai_compat_base_url(&self) -> String {
         crate::gateway::resolve_effective_openai_compat_base_url(
@@ -103,6 +133,8 @@ pub fn merge_config(base: &mut RexConfig, overlay: RexConfig) {
     merge_cache(&mut base.cache, overlay.cache);
     merge_broker(&mut base.broker, overlay.broker);
     merge_agent(&mut base.agent, overlay.agent);
+    merge_cli(&mut base.cli, overlay.cli);
+    merge_search(&mut base.search, overlay.search);
     merge_observability(&mut base.observability, overlay.observability);
 }
 
@@ -252,6 +284,33 @@ fn merge_agent(base: &mut crate::model::AgentConfig, overlay: crate::model::Agen
     }
     if overlay.max_tool_steps != 0 {
         base.max_tool_steps = overlay.max_tool_steps;
+    }
+    if overlay.max_tool_steps_ask != 0 {
+        base.max_tool_steps_ask = overlay.max_tool_steps_ask;
+    }
+}
+
+fn merge_cli(base: &mut crate::model::CliConfig, overlay: crate::model::CliConfig) {
+    if overlay.stream_idle_timeout_secs_agent != 0 {
+        base.stream_idle_timeout_secs_agent = overlay.stream_idle_timeout_secs_agent;
+    }
+    if overlay.stream_idle_timeout_secs_ask != 0 {
+        base.stream_idle_timeout_secs_ask = overlay.stream_idle_timeout_secs_ask;
+    }
+}
+
+fn merge_search(base: &mut crate::model::SearchConfig, overlay: crate::model::SearchConfig) {
+    if overlay.enabled.is_some() {
+        base.enabled = overlay.enabled;
+    }
+    if !overlay.provider.is_empty() {
+        base.provider = overlay.provider;
+    }
+    if overlay.max_results != 0 {
+        base.max_results = overlay.max_results;
+    }
+    if !overlay.api_key_path.is_empty() {
+        base.api_key_path = overlay.api_key_path;
     }
 }
 

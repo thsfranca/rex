@@ -4,11 +4,18 @@ from __future__ import annotations
 
 from rex_agent.broker_chat_model import MAX_PARSE_RETRIES
 from rex_agent.graph.state import AgentState
-from rex_agent.tools import TOOL_EXEC, TOOL_LIST, TOOL_READ, TOOL_WRITE, tools_for_mode
+from rex_agent.tools import (
+    TOOL_EXEC,
+    TOOL_LIST,
+    TOOL_READ,
+    TOOL_WEB_SEARCH,
+    TOOL_WRITE,
+    tools_for_mode,
+)
 
 
 def classify_subagent_for_tool(tool: str) -> str:
-    if tool in (TOOL_READ, TOOL_LIST):
+    if tool in (TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH):
         return "viewer"
     if tool in (TOOL_WRITE, TOOL_EXEC):
         return "editor"

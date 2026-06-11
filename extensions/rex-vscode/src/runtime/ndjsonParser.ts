@@ -23,6 +23,15 @@ export interface StreamToolEvent {
   readonly name: string;
   readonly phase: string;
   readonly detail?: string;
+  readonly toolCallId?: string;
+}
+
+export interface StreamActivityEvent {
+  readonly kind: "activity";
+  readonly index: number;
+  readonly phase: string;
+  readonly summary: string;
+  readonly detail?: string;
 }
 
 export interface StreamStepEvent {
@@ -57,6 +66,7 @@ export type StreamEvent =
   | StreamChunkEvent
   | StreamToolEvent
   | StreamStepEvent
+  | StreamActivityEvent
   | StreamPlanEvent
   | StreamDoneEvent
   | StreamErrorEvent;
@@ -149,7 +159,32 @@ function parseLine(raw: string): StreamEvent | undefined {
     if (index === undefined || name.length === 0 || phase.length === 0) {
       return { kind: "error", message: "tool event missing required fields" };
     }
-    return { kind: "tool", index, name, phase, ...(detail === undefined ? {} : { detail }) };
+    const toolCallId =
+      typeof parsed["tool_call_id"] === "string" ? parsed["tool_call_id"] : undefined;
+    return {
+      kind: "tool",
+      index,
+      name,
+      phase,
+      ...(detail === undefined ? {} : { detail }),
+      ...(toolCallId === undefined ? {} : { toolCallId }),
+    };
+  }
+  if (event === "activity") {
+    const index = asFiniteNumber(parsed["index"]);
+    const phase = typeof parsed["phase"] === "string" ? parsed["phase"] : "";
+    const summary = typeof parsed["summary"] === "string" ? parsed["summary"] : "";
+    const detail = typeof parsed["detail"] === "string" ? parsed["detail"] : undefined;
+    if (index === undefined || phase.length === 0 || summary.length === 0) {
+      return { kind: "error", message: "activity event missing required fields" };
+    }
+    return {
+      kind: "activity",
+      index,
+      phase,
+      summary,
+      ...(detail === undefined ? {} : { detail }),
+    };
   }
   if (event === "step") {
     const index = asFiniteNumber(parsed["index"]);

@@ -9,6 +9,7 @@ from typing import Union
 @dataclass(frozen=True)
 class TextStreamEvent:
     text: str
+    sequence: int = 0
 
 
 @dataclass(frozen=True)
@@ -16,12 +17,16 @@ class ToolStreamEvent:
     name: str
     phase: str
     detail: str = ""
+    tool_call_id: str = ""
+    sequence: int = 0
+    elapsed_ms: int | None = None
 
 
 @dataclass(frozen=True)
 class StepStreamEvent:
     phase: str
     summary: str
+    sequence: int = 0
 
 
 @dataclass(frozen=True)
@@ -29,9 +34,24 @@ class PlanStreamEvent:
     phase: str
     title: str
     detail: str = ""
+    sequence: int = 0
 
 
-StreamEvent = Union[TextStreamEvent, ToolStreamEvent, StepStreamEvent, PlanStreamEvent]
+@dataclass(frozen=True)
+class ActivityStreamEvent:
+    phase: str
+    summary: str
+    detail: str = ""
+    sequence: int = 0
+
+
+StreamEvent = Union[
+    TextStreamEvent,
+    ToolStreamEvent,
+    StepStreamEvent,
+    PlanStreamEvent,
+    ActivityStreamEvent,
+]
 
 DETAIL_MAX_CHARS = 240
 
@@ -53,4 +73,7 @@ def tool_detail_from_call(call: object) -> str:
     command = args.get("command")
     if isinstance(command, str) and command.strip():
         return cap_detail(command.strip())
+    query = args.get("query")
+    if isinstance(query, str) and query.strip():
+        return cap_detail(query.strip())
     return cap_detail(str(args))

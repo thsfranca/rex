@@ -64,6 +64,10 @@ pub fn map_run_turn_chunk(chunk: RunTurnChunk) -> StreamInferenceResponse {
         phase: chunk.phase,
         summary: chunk.summary,
         detail: chunk.detail,
+        tool_call_id: chunk.tool_call_id,
+        turn_id: chunk.turn_id,
+        sequence: chunk.sequence,
+        elapsed_ms: chunk.elapsed_ms,
     }
 }
 
@@ -137,6 +141,10 @@ mod tests {
             phase: "running".to_string(),
             summary: String::new(),
             detail: "src/lib.rs".to_string(),
+            tool_call_id: "turn-1:1:fs.read".to_string(),
+            turn_id: "turn-1".to_string(),
+            sequence: 3,
+            elapsed_ms: 0,
         };
         let mapped = map_run_turn_chunk(chunk);
         assert_eq!(mapped.event, "tool");

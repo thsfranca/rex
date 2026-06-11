@@ -6,7 +6,8 @@ const POLICY_BY_MODE: Record<InteractionMode, ModePolicy> = {
     canMutateFiles: false,
     requiresExecutionApproval: false,
     requiresMutationApproval: true,
-    summary: "Research and explain only. File mutations are blocked.",
+    summary:
+      "Research and explain. Read-only tools and web search; file mutations are blocked.",
   },
   plan: {
     mode: "plan",
