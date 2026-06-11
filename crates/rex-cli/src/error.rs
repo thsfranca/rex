@@ -27,4 +27,8 @@ pub enum CliError {
     InferenceConfig { detail: String },
     #[error("failed to write NDJSON to stdout: {0}")]
     Stdout(#[from] io::Error),
+    #[error("agent execution requires approval; re-run with --approval-id <id> or --yes")]
+    ApprovalRequired,
+    #[error("agent execution approval denied")]
+    ApprovalDenied,
 }

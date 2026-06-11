@@ -34,7 +34,16 @@ export interface AppState {
   banner?: BannerState;
   modePolicy: ModePolicy;
   pendingApprovals: ApprovalRequestPayload[];
-  timeline: { id: string; summary: string; phase: string; kind?: string; detail?: string }[];
+  timeline: {
+    id: string;
+    streamId?: string;
+    toolCallId?: string;
+    summary: string;
+    phase: string;
+    kind?: string;
+    detail?: string;
+  }[];
+  activityHint?: string;
   planArtifact?: PlanArtifactPayload;
   sessions: SessionSummary[];
   attachments: ContextAttachment[];
@@ -112,6 +121,8 @@ export function reducer(state: AppState, action: Action): AppState {
         activeStreamId: action.id,
         prompt: "",
         planArtifact: undefined,
+        timeline: [],
+        activityHint: undefined,
       };
     }
     case "clearChat":
@@ -191,6 +202,7 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
         messages: updated,
         streaming: clearsActive ? false : state.streaming,
         activeStreamId: clearsActive ? undefined : state.activeStreamId,
+        activityHint: clearsActive ? undefined : state.activityHint,
       };
     }
     case "streamError": {
@@ -205,6 +217,7 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
         messages: updated,
         streaming: clearsActive ? false : state.streaming,
         activeStreamId: clearsActive ? undefined : state.activeStreamId,
+        activityHint: clearsActive ? undefined : state.activityHint,
       };
     }
     case "applyResult": {
@@ -245,20 +258,37 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
         ...state,
         pendingApprovals: [...state.pendingApprovals, message.payload],
       };
-    case "executionStep":
+    case "executionStep": {
+      const entry = {
+        id: message.payload.id,
+        streamId: message.payload.streamId,
+        toolCallId: message.payload.toolCallId,
+        phase: message.payload.phase,
+        summary: message.payload.summary,
+        kind: message.payload.kind,
+        detail: message.payload.detail,
+      };
+      const scoped =
+        message.payload.streamId === undefined
+          ? state.timeline
+          : state.timeline.filter(
+              (item) => item.streamId === undefined || item.streamId === message.payload.streamId,
+            );
+      const withoutDup =
+        message.payload.toolCallId !== undefined
+          ? scoped.filter((item) => item.toolCallId !== message.payload.toolCallId)
+          : scoped;
+      const activityHint =
+        (message.payload.kind === "tool" || message.payload.kind === "activity") &&
+        message.payload.phase === "running"
+          ? message.payload.summary
+          : state.activityHint;
       return {
         ...state,
-        timeline: [
-          ...state.timeline,
-          {
-            id: message.payload.id,
-            phase: message.payload.phase,
-            summary: message.payload.summary,
-            kind: message.payload.kind,
-            detail: message.payload.detail,
-          },
-        ].slice(-20),
+        activityHint,
+        timeline: [...withoutDup, entry].slice(-20),
       };
+    }
     case "planArtifact":
       return {
         ...state,

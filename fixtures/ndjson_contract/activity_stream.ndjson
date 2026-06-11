@@ -1,0 +1,6 @@
+{"event":"step","index":0,"phase":"running","summary":"Agent turn started","sequence":1}
+{"event":"activity","index":1,"phase":"thinking","summary":"Orchestrator","sequence":2}
+{"event":"tool","index":2,"name":"fs.read","phase":"running","detail":"src/main.rs","tool_call_id":"turn-1:1:fs.read","sequence":3}
+{"event":"tool","index":3,"name":"fs.read","phase":"completed","detail":"ok","tool_call_id":"turn-1:1:fs.read","sequence":4,"elapsed_ms":42}
+{"event":"chunk","index":4,"text":"Answer ","sequence":5}
+{"event":"done","index":5,"sequence":6}

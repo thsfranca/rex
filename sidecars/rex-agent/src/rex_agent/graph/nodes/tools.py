@@ -29,7 +29,15 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
         summary=f"{state.get('active_subagent', 'agent')} invoking {call.tool}",
     )
     detail = tool_detail_from_call(call)
-    events = append_tool(events, name=call.tool, phase="running", detail=detail)
+    turn_id = state.get("turn_id", "") or "turn"
+    tool_call_id = f"{turn_id}:{steps}:{call.tool}"
+    events = append_tool(
+        events,
+        name=call.tool,
+        phase="running",
+        detail=detail,
+        tool_call_id=tool_call_id,
+    )
 
     if steps > state["max_steps"]:
         message = (
@@ -37,7 +45,11 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
             "Try a narrower request."
         )
         events = append_tool(
-            events, name=call.tool, phase="failed", detail="max tool steps exceeded"
+            events,
+            name=call.tool,
+            phase="failed",
+            detail="max tool steps exceeded",
+            tool_call_id=tool_call_id,
         )
         return {
             "done": True,
@@ -63,6 +75,7 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
         name=call.tool,
         phase="completed" if ok else "failed",
         detail=result_detail,
+        tool_call_id=tool_call_id,
     )
     new_messages = [HumanMessage(content=status_line, id=str(uuid.uuid4()))]
     trunc_events = list(state.get("truncation_events") or [])

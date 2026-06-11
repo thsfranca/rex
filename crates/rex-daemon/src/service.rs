@@ -10,9 +10,10 @@ use rex_proto::rex::v1::rex_service_server::RexService;
 use rex_proto::rex::v1::{
     BrokerExecShellRequest, BrokerExecShellResponse, BrokerInferenceRequest,
     BrokerInferenceResponse, BrokerListDirRequest, BrokerListDirResponse, BrokerReadFileRequest,
-    BrokerReadFileResponse, BrokerSavePlanRequest, BrokerSavePlanResponse, BrokerWriteFileRequest,
-    BrokerWriteFileResponse, GetSystemStatusRequest, GetSystemStatusResponse,
-    StreamInferenceRequest, StreamInferenceResponse,
+    BrokerReadFileResponse, BrokerSavePlanRequest, BrokerSavePlanResponse, BrokerWebSearchRequest,
+    BrokerWebSearchResponse, BrokerWriteFileRequest, BrokerWriteFileResponse,
+    GetSystemStatusRequest, GetSystemStatusResponse, StreamInferenceRequest,
+    StreamInferenceResponse, WebSearchResult,
 };
 use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
@@ -24,8 +25,8 @@ use crate::adapters::MockInferenceRuntime;
 use crate::adapters::{active_model_id_from_config, AdapterCapabilities};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
 use crate::broker::{
-    broker_exec_shell, broker_list_dir, broker_read_file, broker_save_plan, broker_write_file,
-    BrokerError,
+    broker_exec_shell, broker_list_dir, broker_read_file, broker_save_plan, broker_web_search,
+    broker_write_file, BrokerError,
 };
 use crate::broker_inference::run_broker_inference;
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
@@ -129,6 +130,41 @@ impl RexDaemonService {
 
 #[tonic::async_trait]
 impl RexService for RexDaemonService {
+    async fn broker_web_search(
+        &self,
+        request: Request<BrokerWebSearchRequest>,
+    ) -> Result<Response<BrokerWebSearchResponse>, Status> {
+        let inner = request.into_inner();
+        let mode = normalize_mode(&inner.mode);
+        let query = inner.query;
+        println!("broker.access_policy=evaluate capability=web.search mode={mode} query={query}");
+        match broker_web_search(&query, &mode) {
+            Ok(hits) => {
+                println!("broker.access_policy=allow capability=web.search mode={mode}");
+                Ok(Response::new(BrokerWebSearchResponse {
+                    ok: true,
+                    results: hits
+                        .into_iter()
+                        .map(|hit| WebSearchResult {
+                            title: hit.title,
+                            url: hit.url,
+                            snippet: hit.snippet,
+                        })
+                        .collect(),
+                    error: String::new(),
+                }))
+            }
+            Err(err) => {
+                log_broker_access_policy_deny("web.search", &mode, &query, &err);
+                Ok(Response::new(BrokerWebSearchResponse {
+                    ok: false,
+                    results: vec![],
+                    error: err.to_string(),
+                }))
+            }
+        }
+    }
+
     async fn broker_exec_shell(
         &self,
         request: Request<BrokerExecShellRequest>,
@@ -577,6 +613,14 @@ impl RexService for RexDaemonService {
             let mut done_seen = false;
             let mut ttft_ms: Option<u64> = None;
             if use_sidecar_live {
+                yield Ok(StreamInferenceResponse {
+                    event: "step".to_string(),
+                    phase: "running".to_string(),
+                    summary: "Context prepared — running agent".to_string(),
+                    turn_id: turn_id_for_stream.clone(),
+                    sequence: 1,
+                    ..Default::default()
+                });
                 sidecar
                     .ensure_running()
                     .await

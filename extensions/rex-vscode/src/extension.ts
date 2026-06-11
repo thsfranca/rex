@@ -61,6 +61,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     },
     getDaemonState: () => lastLifecycleState,
     log: (message) => output.appendLine(message),
+    onStreamActivity: (hint) => statusBar.setStreamingActivity(hint),
     notifyStreamFailure: ({ code, message }) => {
       const firstLine = message.split("\n")[0].trim();
       output.appendLine(`[chat] terminal_error code=${code} detail=${firstLine}`);

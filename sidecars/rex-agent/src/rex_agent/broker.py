@@ -241,6 +241,30 @@ class BrokerClient:
             return True, "ok"
         return False, response.error or "broker save_plan failed"
 
+    def web_search(self, query: str, mode: str | None = None) -> tuple[bool, str]:
+        request = rex_pb2.BrokerWebSearchRequest(
+            query=query,
+            mode=mode or self._mode,
+        )
+        try:
+            response = self._stub.BrokerWebSearch(
+                request,
+                timeout=BROKER_TIMEOUT_SEC,
+                metadata=_metadata(self._turn_id),
+            )
+        except grpc.RpcError as err:
+            return False, str(err)
+        if not response.ok:
+            return False, response.error or "broker web_search failed"
+        lines = []
+        for item in response.results:
+            title = item.title.strip()
+            url = item.url.strip()
+            snippet = item.snippet.strip()
+            lines.append(f"- {title} ({url}): {snippet}")
+        body = "\n".join(lines) if lines else "(no results)"
+        return True, truncate_tool_result(body)
+
     def exec_shell(self, command: str, mode: str | None = None) -> tuple[bool, str]:
         request = rex_pb2.BrokerExecShellRequest(
             command=command,

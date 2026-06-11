@@ -25,6 +25,7 @@ pub enum BrokerCapability {
     FsWrite,
     PlanSave,
     ExecShell,
+    WebSearch,
 }
 
 impl BrokerCapability {
@@ -35,6 +36,7 @@ impl BrokerCapability {
             Self::FsWrite => "fs.write",
             Self::PlanSave => "plan.save",
             Self::ExecShell => "exec.shell",
+            Self::WebSearch => "web.search",
         }
     }
 }
@@ -90,6 +92,7 @@ pub fn evaluate_broker(
         }
         BrokerCapability::PlanSave => evaluate_plan_save_path(relative_path.unwrap_or("")),
         BrokerCapability::ExecShell => AccessDecision::Allow,
+        BrokerCapability::WebSearch => AccessDecision::Allow,
     }
 }
 
@@ -98,6 +101,7 @@ fn capability_allowed_in_mode(capability: BrokerCapability, mode: &str) -> bool 
         BrokerCapability::FsRead | BrokerCapability::FsList => true,
         BrokerCapability::FsWrite | BrokerCapability::ExecShell => mode == "agent",
         BrokerCapability::PlanSave => mode == "plan",
+        BrokerCapability::WebSearch => mode == "ask" && crate::settings::get().search_enabled(),
     }
 }
 

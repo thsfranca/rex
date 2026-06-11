@@ -21,6 +21,7 @@ TOOL_LIST = "fs.list"
 TOOL_WRITE = "fs.write"
 TOOL_EXEC = "exec.shell"
 TOOL_PLAN_SAVE = "plan.save"
+TOOL_WEB_SEARCH = "web.search"
 
 MAX_CLARIFY_QUESTIONS = 3
 PLAN_PROMPT_SLICE = (
@@ -31,12 +32,12 @@ PLAN_PROMPT_SLICE = (
 )
 
 TOOLS_BY_MODE: dict[str, frozenset[str]] = {
-    "ask": frozenset(),
+    "ask": frozenset({TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH}),
     "plan": frozenset({TOOL_READ, TOOL_LIST, TOOL_PLAN_SAVE}),
     "agent": frozenset({TOOL_READ, TOOL_LIST, TOOL_WRITE, TOOL_EXEC}),
 }
 
-VIEWER_TOOLS = frozenset({TOOL_READ, TOOL_LIST})
+VIEWER_TOOLS = frozenset({TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH})
 EDITOR_TOOLS = frozenset({TOOL_READ, TOOL_WRITE, TOOL_EXEC})
 
 TOOL_DESCRIPTIONS: dict[str, str] = {
@@ -45,6 +46,7 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     TOOL_WRITE: "Write or patch a file (content or unified diff)",
     TOOL_EXEC: "Run an allowlisted shell command in the workspace",
     TOOL_PLAN_SAVE: "Save a markdown plan under .rex/plans/",
+    TOOL_WEB_SEARCH: "Search the web for up-to-date information",
 }
 
 TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
@@ -90,6 +92,13 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             "content": {"type": "string", "description": "Markdown plan body"},
         },
         "required": ["path", "content"],
+    },
+    TOOL_WEB_SEARCH: {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "Search query"},
+        },
+        "required": ["query"],
     },
 }
 
@@ -189,6 +198,8 @@ def system_prompt_for_tools(mode: str, *, subagent: str = "orchestrator") -> str
             '{"path": "<name>.md", "content": "<markdown>"} '
             "(under .rex/plans/)"
         )
+    if TOOL_WEB_SEARCH in allowed:
+        tool_docs.append(f'- "{TOOL_WEB_SEARCH}": args {{"query": "<search terms>"}}')
     base = (
         "You are a development agent. Use at most one tool per step.\n"
         "When you need a tool, respond with ONLY a JSON object on one line:\n"
@@ -207,6 +218,11 @@ def system_prompt_for_tools(mode: str, *, subagent: str = "orchestrator") -> str
         "viewer",
     ):
         base += "\n" + PLAN_PROMPT_SLICE + _workspace_plan_prompt_overlay()
+    if (mode or "ask").strip().lower() == "ask":
+        base += (
+            "\nAsk mode: read-only research. Use fs.read/fs.list for the workspace "
+            "and web.search for external facts. Cite sources in your final answer."
+        )
     return base
 
 
@@ -402,6 +418,13 @@ def execute_tool(
     if tool == TOOL_LIST:
         path = str(args.get("path", "")).strip()
         ok, result = client.list_dir(path, mode)
+        return ok, result, False
+
+    if tool == TOOL_WEB_SEARCH:
+        query = str(args.get("query", "")).strip()
+        if not query:
+            return False, "web.search requires query", False
+        ok, result = client.web_search(query, mode)
         return ok, result, False
 
     if tool == TOOL_WRITE:

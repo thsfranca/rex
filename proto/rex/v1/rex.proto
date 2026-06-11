@@ -11,6 +11,8 @@ service RexService {
   rpc BrokerWriteFile(BrokerWriteFileRequest) returns (BrokerWriteFileResponse);
   rpc BrokerSavePlan(BrokerSavePlanRequest) returns (BrokerSavePlanResponse);
   rpc BrokerExecShell(BrokerExecShellRequest) returns (BrokerExecShellResponse);
+  // Sidecar broker: web search (ask-mode research; provider configured in JSON).
+  rpc BrokerWebSearch(BrokerWebSearchRequest) returns (BrokerWebSearchResponse);
   // Sidecar broker: OpenAI-compatible HTTP inference (daemon executes backend).
   rpc BrokerInference(BrokerInferenceRequest) returns (BrokerInferenceResponse);
 }
@@ -106,6 +108,25 @@ message BrokerExecShellResponse {
   string error = 4;
 }
 
+message BrokerWebSearchRequest {
+  string query = 1;
+  // Optional. Empty normalizes to "ask" on the daemon.
+  string mode = 2;
+  uint32 max_results = 3;
+}
+
+message WebSearchResult {
+  string title = 1;
+  string url = 2;
+  string snippet = 3;
+}
+
+message BrokerWebSearchResponse {
+  bool ok = 1;
+  repeated WebSearchResult results = 2;
+  string error = 3;
+}
+
 enum InferenceProtocol {
   INFERENCE_PROTOCOL_UNSPECIFIED = 0;
   INFERENCE_PROTOCOL_NATIVE = 1;
@@ -158,4 +179,8 @@ message StreamInferenceResponse {
   string phase = 6;
   string summary = 7;
   string detail = 8;
+  string tool_call_id = 9;
+  string turn_id = 10;
+  uint64 sequence = 11;
+  uint64 elapsed_ms = 12;
 }

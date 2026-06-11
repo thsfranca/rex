@@ -40,10 +40,13 @@ rex complete "<prompt>" --format ndjson --mode <ask|plan|agent> [--model <id>]
 
 | Event | Fields | Purpose |
 |-------|--------|---------|
-| `tool` | `index`, `name`, `phase`, `detail?` | Broker tool lifecycle (`running`, `completed`, `failed`) |
-| `step` | `index`, `phase`, `summary` | Orchestrator / subagent step visibility |
+| `tool` | `index`, `name`, `phase`, `detail?`, `tool_call_id?`, `sequence?`, `elapsed_ms?`, `turn_id?` | Broker tool lifecycle (`running`, `completed`, `failed`) |
+| `step` | `index`, `phase`, `summary`, `sequence?`, `turn_id?` | Orchestrator / subagent step visibility |
+| `activity` | `index`, `phase`, `summary`, `detail?`, `sequence?` | Heartbeat / coarse phase (`thinking`, `tool_running`, …) |
 
-Fixtures: [`fixtures/ndjson_contract/tool_step_stream.ndjson`](../fixtures/ndjson_contract/tool_step_stream.ndjson).
+Fixtures: [`fixtures/ndjson_contract/tool_step_stream.ndjson`](../fixtures/ndjson_contract/tool_step_stream.ndjson), [`fixtures/ndjson_contract/activity_stream.ndjson`](../fixtures/ndjson_contract/activity_stream.ndjson).
+
+Operation feedback design hub: [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md).
 - `error` objects may expose stable `code` for UX routing.
 
 **Error codes and message quality:** canonical catalog, templates, and review checklist — [ERROR_HANDLING.md](ERROR_HANDLING.md). Wire-shape table (retry guidance):

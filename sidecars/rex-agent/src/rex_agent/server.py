@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from rex_agent import __version__
 from rex_agent.graph import stream_turn
 from rex_agent.stream_events import (
+    ActivityStreamEvent,
     PlanStreamEvent,
     StepStreamEvent,
     TextStreamEvent,
@@ -29,6 +30,62 @@ except ImportError as exc:  # pragma: no cover
 
 CHUNK_DELAY_SEC = 0.005
 RUN_TURN_CAPABILITY = "run_turn"
+
+
+def _chunk_kwargs(
+    event: object,
+    *,
+    index: int,
+    turn_id: str,
+) -> dict:
+    base = {
+        "text": "",
+        "index": index,
+        "done": False,
+        "turn_id": turn_id,
+    }
+    if isinstance(event, TextStreamEvent):
+        return {**base, "text": event.text, "event": "chunk", "sequence": event.sequence}
+    if isinstance(event, ToolStreamEvent):
+        kwargs = {
+            **base,
+            "event": "tool",
+            "tool_name": event.name,
+            "phase": event.phase,
+            "detail": event.detail,
+            "tool_call_id": event.tool_call_id,
+            "sequence": event.sequence,
+        }
+        if event.elapsed_ms is not None:
+            kwargs["elapsed_ms"] = event.elapsed_ms
+        return kwargs
+    if isinstance(event, StepStreamEvent):
+        return {
+            **base,
+            "event": "step",
+            "phase": event.phase,
+            "summary": event.summary,
+            "sequence": event.sequence,
+        }
+    if isinstance(event, ActivityStreamEvent):
+        return {
+            **base,
+            "event": "activity",
+            "phase": event.phase,
+            "summary": event.summary,
+            "detail": event.detail,
+            "sequence": event.sequence,
+        }
+    if isinstance(event, PlanStreamEvent):
+        return {
+            **base,
+            "event": "plan",
+            "phase": event.phase,
+            "summary": event.title,
+            "detail": event.detail,
+            "sequence": event.sequence,
+        }
+    return base
 
 
 class AgentServicer(sidecar_pb2_grpc.SidecarServiceServicer):
@@ -54,51 +111,23 @@ class AgentServicer(sidecar_pb2_grpc.SidecarServiceServicer):
                     if CHUNK_DELAY_SEC > 0:
                         time.sleep(CHUNK_DELAY_SEC)
                     yield sidecar_pb2.RunTurnChunk(
-                        text=piece,
-                        index=index,
-                        done=False,
-                        event="chunk",
+                        **_chunk_kwargs(
+                            TextStreamEvent(text=piece, sequence=event.sequence),
+                            index=index,
+                            turn_id=turn_id,
+                        )
                     )
                     index += 1
                 continue
-            if isinstance(event, ToolStreamEvent):
-                yield sidecar_pb2.RunTurnChunk(
-                    text="",
-                    index=index,
-                    done=False,
-                    event="tool",
-                    tool_name=event.name,
-                    phase=event.phase,
-                    detail=event.detail,
-                )
-                index += 1
-                continue
-            if isinstance(event, StepStreamEvent):
-                yield sidecar_pb2.RunTurnChunk(
-                    text="",
-                    index=index,
-                    done=False,
-                    event="step",
-                    phase=event.phase,
-                    summary=event.summary,
-                )
-                index += 1
-                continue
-            if isinstance(event, PlanStreamEvent):
-                yield sidecar_pb2.RunTurnChunk(
-                    text="",
-                    index=index,
-                    done=False,
-                    event="plan",
-                    phase=event.phase,
-                    summary=event.title,
-                    detail=event.detail,
-                )
-                index += 1
+            yield sidecar_pb2.RunTurnChunk(
+                **_chunk_kwargs(event, index=index, turn_id=turn_id)
+            )
+            index += 1
         yield sidecar_pb2.RunTurnChunk(
             text="",
             index=index,
             done=True,
+            turn_id=turn_id,
         )
 
 

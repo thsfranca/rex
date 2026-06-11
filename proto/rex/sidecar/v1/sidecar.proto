@@ -42,4 +42,8 @@ message RunTurnChunk {
   string phase = 6;
   string summary = 7;
   string detail = 8;
+  string tool_call_id = 9;
+  string turn_id = 10;
+  uint64 sequence = 11;
+  uint64 elapsed_ms = 12;
 }

@@ -87,6 +87,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Extension transport + NDJSON contract | [EXTENSION.md](EXTENSION.md), [ERROR_HANDLING.md](ERROR_HANDLING.md), [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
 | Extension UX phasing | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
 | Extension integrated UX | [EXTENSION_UX.md](EXTENSION_UX.md) |
+| Operation feedback (live stream) | [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md), [ADR 0028](architecture/decisions/0028-incremental-run-turn-streaming.md), [ADR 0029](architecture/decisions/0029-ask-mode-research-broker.md) |
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 | Agent knowledge for AI sessions (planned) | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
 | LangFuse Cloud observability (primary) | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [CONFIGURATION.md](CONFIGURATION.md#observability), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) |

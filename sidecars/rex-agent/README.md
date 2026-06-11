@@ -2,7 +2,7 @@
 
 Python sidecar implementing `rex.sidecar.v1` for the REX product agent program.
 
-**R018:** LangGraph ReAct loops (`ask` / `plan` / `agent`) with broker-only `BrokerInference` and `Broker*` tools. **R017** gRPC server and incremental `RunTurn` streaming.
+**R018:** LangGraph ReAct loops (`ask` / `plan` / `agent`) with broker-only `BrokerInference` and `Broker*` tools. **R017** gRPC server and incremental `RunTurn` streaming. **R044:** live event flush during graph execution via stream sink ([ADR 0028](../../docs/architecture/decisions/0028-incremental-run-turn-streaming.md)); ask-mode `web.search` when `search.enabled` ([ADR 0029](../../docs/architecture/decisions/0029-ask-mode-research-broker.md)).
 
 ## Prerequisites
 

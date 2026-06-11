@@ -35,6 +35,8 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0027](0027-chce-columnar-mmap-engine.md) | CHCE columnar-mmap observability engine (mmap opt-in) | Accepted |
 | [0028](0028-host-and-capability-sidecar-fleet.md) | Host and capability sidecar fleet | Accepted |
 | [0029](0029-web-search-via-capability-sidecar.md) | Web search via capability sidecar (SearXNG) | Accepted |
+| [0030](0030-incremental-run-turn-streaming.md) | Incremental `RunTurn` streaming (live sidecar flush) | Accepted |
+| [0031](0031-ask-mode-research-broker.md) | Ask-mode research tools (`web.search` broker) | Accepted |
 
 ## How to use
 

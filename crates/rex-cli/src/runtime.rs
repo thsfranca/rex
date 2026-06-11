@@ -1,4 +1,4 @@
-use std::io::{self, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::process;
 use std::process::ExitCode;
 use std::time::{Duration, SystemTime};
@@ -58,6 +58,8 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
             language_id,
             selection_text,
             format,
+            yes,
+            verbose,
         } => {
             run_complete(
                 prompt,
@@ -69,6 +71,8 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
                 language_id,
                 selection_text,
                 format,
+                yes,
+                verbose,
             )
             .await
         }
@@ -99,7 +103,11 @@ async fn run_complete(
     language_id: String,
     selection_text: String,
     format: CompleteOutputFormat,
+    yes: bool,
+    verbose: bool,
 ) -> Result<(), CliError> {
+    let approval_id = resolve_approval_id(&mode, &approval_id, yes, format)?;
+    let stream_idle_timeout_secs = stream_idle_timeout_for_mode(&mode);
     let trace_id = resolve_trace_id(trace_id);
     eprintln!("trace_id={trace_id} phase=start operation=complete");
     let mut attempt: u32 = 0;
@@ -152,7 +160,8 @@ async fn run_complete(
             Err(err) => return Err(err),
         };
         let mut stream = response.into_inner();
-        let lifecycle = consume_stream(&mut stream, format).await?;
+        let lifecycle =
+            consume_stream(&mut stream, format, verbose, stream_idle_timeout_secs).await?;
         return match lifecycle {
             StreamLifecycle::Completed => {
                 eprintln!("trace_id={trace_id} phase=terminal result=done");
@@ -195,15 +204,17 @@ fn map_stream_status_error(status: tonic::Status) -> CliError {
 async fn consume_stream(
     stream: &mut tonic::Streaming<rex_proto::rex::v1::StreamInferenceResponse>,
     format: CompleteOutputFormat,
+    verbose: bool,
+    stream_idle_timeout_secs: u64,
 ) -> Result<StreamLifecycle, CliError> {
     loop {
         let next = timeout(
-            Duration::from_secs(STREAM_ITEM_TIMEOUT_SECONDS),
+            Duration::from_secs(stream_idle_timeout_secs),
             stream.message(),
         )
         .await
         .map_err(|_| CliError::StreamTimeout {
-            seconds: STREAM_ITEM_TIMEOUT_SECONDS,
+            seconds: stream_idle_timeout_secs,
         })?;
 
         let maybe_chunk = next.map_err(map_stream_status_error)?;
@@ -232,6 +243,8 @@ async fn consume_stream(
                 CompleteOutputFormat::Text => {
                     if chunk.event.is_empty() || chunk.event == "chunk" {
                         print!("{}", chunk.text);
+                    } else if verbose {
+                        emit_verbose_status_line(&chunk)?;
                     }
                 }
                 CompleteOutputFormat::Ndjson => {
@@ -239,6 +252,84 @@ async fn consume_stream(
                 }
             }
         }
+    }
+}
+
+fn stream_idle_timeout_for_mode(mode: &str) -> u64 {
+    rex_config::load_merged()
+        .map(|loaded| loaded.stream_idle_timeout_secs(mode))
+        .unwrap_or(if mode.trim().eq_ignore_ascii_case("agent") {
+            120
+        } else {
+            STREAM_ITEM_TIMEOUT_SECONDS
+        })
+}
+
+fn resolve_approval_id(
+    mode: &str,
+    approval_id: &str,
+    yes: bool,
+    format: CompleteOutputFormat,
+) -> Result<String, CliError> {
+    if !mode.trim().eq_ignore_ascii_case("agent") {
+        return Ok(approval_id.to_string());
+    }
+    let approvals_enabled = rex_config::load_merged()
+        .map(|loaded| loaded.approvals_enabled())
+        .unwrap_or(false);
+    if !approvals_enabled {
+        return Ok(approval_id.to_string());
+    }
+    if !approval_id.trim().is_empty() {
+        return Ok(approval_id.trim().to_string());
+    }
+    if yes {
+        eprintln!("warning: auto-approving agent execution (--yes)");
+        return Ok(format!("apr-cli-{}", process::id()));
+    }
+    if matches!(format, CompleteOutputFormat::Ndjson) {
+        let line = format_ndjson_step_event(0, "awaiting_approval", "Approve agent execution");
+        emit_ndjson_line_stdout(&line).map_err(CliError::Stdout)?;
+    }
+    if !std::io::stdin().is_terminal() {
+        return Err(CliError::ApprovalRequired);
+    }
+    eprint!("Approve agent execution for this prompt? [y/N] ");
+    io::stderr().flush().ok();
+    let mut answer = String::new();
+    io::stdin()
+        .lock()
+        .read_line(&mut answer)
+        .map_err(CliError::Stdout)?;
+    if answer.trim().eq_ignore_ascii_case("y") || answer.trim().eq_ignore_ascii_case("yes") {
+        return Ok(format!("apr-cli-{}", process::id()));
+    }
+    Err(CliError::ApprovalDenied)
+}
+
+fn emit_verbose_status_line(chunk: &rex_proto::rex::v1::StreamInferenceResponse) -> io::Result<()> {
+    let event = chunk.event.trim();
+    match event {
+        "tool" => writeln!(
+            io::stderr(),
+            "[tool] {} {} {}",
+            chunk.tool_name.trim(),
+            chunk.phase.trim(),
+            chunk.detail.trim()
+        ),
+        "step" | "activity" => writeln!(
+            io::stderr(),
+            "[{event}] {} {}",
+            chunk.phase.trim(),
+            chunk.summary.trim()
+        ),
+        "plan" => writeln!(
+            io::stderr(),
+            "[plan] {} {}",
+            chunk.phase.trim(),
+            chunk.summary.trim()
+        ),
+        _ => Ok(()),
     }
 }
 
@@ -276,15 +367,27 @@ fn format_ndjson_chunk_event(index: u64, text: &str) -> String {
     .to_string()
 }
 
-fn format_ndjson_tool_event(index: u64, name: &str, phase: &str, detail: &str) -> String {
-    json!({
+fn format_ndjson_tool_event(chunk: &rex_proto::rex::v1::StreamInferenceResponse) -> String {
+    let mut value = json!({
         "event": "tool",
-        "index": index,
-        "name": name,
-        "phase": phase,
-        "detail": detail
-    })
-    .to_string()
+        "index": chunk.index,
+        "name": chunk.tool_name.trim(),
+        "phase": chunk.phase.trim(),
+        "detail": chunk.detail.trim(),
+    });
+    if !chunk.tool_call_id.is_empty() {
+        value["tool_call_id"] = json!(chunk.tool_call_id);
+    }
+    if chunk.sequence > 0 {
+        value["sequence"] = json!(chunk.sequence);
+    }
+    if chunk.elapsed_ms > 0 {
+        value["elapsed_ms"] = json!(chunk.elapsed_ms);
+    }
+    if !chunk.turn_id.is_empty() {
+        value["turn_id"] = json!(chunk.turn_id);
+    }
+    value.to_string()
 }
 
 fn format_ndjson_step_event(index: u64, phase: &str, summary: &str) -> String {
@@ -295,6 +398,22 @@ fn format_ndjson_step_event(index: u64, phase: &str, summary: &str) -> String {
         "summary": summary
     })
     .to_string()
+}
+
+fn format_ndjson_activity_event(chunk: &rex_proto::rex::v1::StreamInferenceResponse) -> String {
+    let mut value = json!({
+        "event": "activity",
+        "index": chunk.index,
+        "phase": chunk.phase.trim(),
+        "summary": chunk.summary.trim(),
+    });
+    if !chunk.detail.is_empty() {
+        value["detail"] = json!(chunk.detail.trim());
+    }
+    if chunk.sequence > 0 {
+        value["sequence"] = json!(chunk.sequence);
+    }
+    value.to_string()
 }
 
 fn format_ndjson_plan_event(index: u64, phase: &str, title: &str, detail: &str) -> String {
@@ -320,17 +439,13 @@ fn format_ndjson_stream_event(
                 Some(format_ndjson_chunk_event(chunk.index, &chunk.text))
             }
         }
-        "tool" => Some(format_ndjson_tool_event(
-            chunk.index,
-            chunk.tool_name.trim(),
-            chunk.phase.trim(),
-            chunk.detail.trim(),
-        )),
+        "tool" => Some(format_ndjson_tool_event(chunk)),
         "step" => Some(format_ndjson_step_event(
             chunk.index,
             chunk.phase.trim(),
             chunk.summary.trim(),
         )),
+        "activity" => Some(format_ndjson_activity_event(chunk)),
         "plan" => Some(format_ndjson_plan_event(
             chunk.index,
             chunk.phase.trim(),
@@ -369,6 +484,7 @@ fn ndjson_error_code(err: &CliError) -> &'static str {
         CliError::DaemonConnect { .. } => "daemon_unavailable",
         CliError::Endpoint(_) | CliError::Status(_) => "unknown",
         CliError::Stdout(_) => "unknown",
+        CliError::ApprovalRequired | CliError::ApprovalDenied => "approval_required",
     }
 }
 

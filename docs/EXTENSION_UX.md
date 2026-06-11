@@ -121,6 +121,10 @@ flowchart LR
 
 - **Done:** expandable cards when the host emits NDJSON **`tool`** / **`step`** events via `executionStep` (`kind: tool|step`); graceful empty state when the sidecar emits text only.
 
+### E-UX12 — Operation feedback (live stream)
+
+- **Done:** per-turn timeline with in-place ToolCard updates keyed by `tool_call_id`; composer **`activityHint`** and status bar **running** label during streams; NDJSON **`activity`** events map to `kind: activity` steps. Hub: [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md).
+
 ### E-UX10 — Inline edit on selection
 
 - Command + keybinding: selection → short prompt → stream → virtual doc → existing apply path; mode approvals enforced.
@@ -135,7 +139,7 @@ flowchart LR
 |-------|--------|-------|
 | Layout + polish | **Should** | E-UX01–04 |
 | Composer + context | **Should** | E-UX05–08 |
-| Agent visualization | **Could** | E-UX09–11 |
+| Agent visualization | **Could** | E-UX09–12 |
 
 ## Cross-links
 

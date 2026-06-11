@@ -61,12 +61,23 @@ def daemon_socket() -> str:
 
 
 def max_tool_steps() -> int:
+    return max_tool_steps_for_mode("agent")
+
+
+def max_tool_steps_for_mode(mode: str) -> int:
+    normalized = (mode or "ask").strip().lower() or "ask"
     cfg = _load_config_json()
     if cfg:
         agent = cfg.get("agent") or {}
+        if normalized == "ask":
+            steps = agent.get("max_tool_steps_ask")
+            if isinstance(steps, int) and steps > 0:
+                return steps
         steps = agent.get("max_tool_steps")
         if isinstance(steps, int) and steps > 0:
             return steps
+    if normalized == "ask":
+        return 5
     return DEFAULT_MAX_TOOL_STEPS
 
 

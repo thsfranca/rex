@@ -26,6 +26,10 @@ pub struct RexConfig {
     #[serde(default)]
     pub agent: AgentConfig,
     #[serde(default)]
+    pub cli: CliConfig,
+    #[serde(default)]
+    pub search: SearchConfig,
+    #[serde(default)]
     pub observability: ObservabilityConfig,
 }
 
@@ -83,7 +87,10 @@ impl RexConfig {
             agent: AgentConfig {
                 approvals_enabled: Some(false),
                 max_tool_steps: 12,
+                max_tool_steps_ask: default_max_tool_steps_ask(),
             },
+            cli: CliConfig::default(),
+            search: SearchConfig::default(),
             observability: ObservabilityConfig::default(),
         }
     }
@@ -114,6 +121,7 @@ impl RexConfig {
             agent: AgentConfig {
                 approvals_enabled: Some(true),
                 max_tool_steps: 12,
+                max_tool_steps_ask: default_max_tool_steps_ask(),
             },
             ..Self::defaults()
         }
@@ -392,12 +400,73 @@ impl Default for BrokerConfig {
     }
 }
 
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct AgentConfig {
     #[serde(default)]
     pub approvals_enabled: Option<bool>,
-    #[serde(default)]
+    #[serde(default = "default_max_tool_steps")]
     pub max_tool_steps: u32,
+    #[serde(default = "default_max_tool_steps_ask")]
+    pub max_tool_steps_ask: u32,
+}
+
+impl Default for AgentConfig {
+    fn default() -> Self {
+        Self {
+            approvals_enabled: None,
+            max_tool_steps: default_max_tool_steps(),
+            max_tool_steps_ask: default_max_tool_steps_ask(),
+        }
+    }
+}
+
+fn default_max_tool_steps() -> u32 {
+    12
+}
+
+fn default_max_tool_steps_ask() -> u32 {
+    5
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct CliConfig {
+    #[serde(default = "default_stream_idle_timeout_agent")]
+    pub stream_idle_timeout_secs_agent: u64,
+    #[serde(default = "default_stream_idle_timeout_ask")]
+    pub stream_idle_timeout_secs_ask: u64,
+}
+
+impl Default for CliConfig {
+    fn default() -> Self {
+        Self {
+            stream_idle_timeout_secs_agent: default_stream_idle_timeout_agent(),
+            stream_idle_timeout_secs_ask: default_stream_idle_timeout_ask(),
+        }
+    }
+}
+
+fn default_stream_idle_timeout_agent() -> u64 {
+    120
+}
+
+fn default_stream_idle_timeout_ask() -> u64 {
+    15
+}
+
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct SearchConfig {
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub provider: String,
+    #[serde(default = "default_search_max_results")]
+    pub max_results: u32,
+    #[serde(default)]
+    pub api_key_path: String,
+}
+
+fn default_search_max_results() -> u32 {
+    5
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]

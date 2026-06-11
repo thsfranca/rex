@@ -83,9 +83,11 @@ export interface ApprovalDecisionPayload {
 
 export interface ExecutionStepPayload {
   readonly id: string;
+  readonly streamId?: string;
+  readonly toolCallId?: string;
   readonly phase: "queued" | "running" | "awaiting_approval" | "completed" | "blocked" | "failed" | "cancelled";
   readonly summary: string;
-  readonly kind?: "tool" | "step";
+  readonly kind?: "tool" | "step" | "activity";
   readonly detail?: string;
 }
 
