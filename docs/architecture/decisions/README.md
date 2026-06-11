@@ -33,6 +33,8 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0025](0025-dual-economics-store-engines.md) | Dual economics store engines (SQLite default, mmap opt-in) | Accepted |
 | [0026](0026-rex-owned-storage-grafana-otel-datasource.md) | Rex-owned storage; bundled Grafana via Rex OTel datasource | Accepted |
 | [0027](0027-chce-columnar-mmap-engine.md) | CHCE columnar-mmap observability engine (mmap opt-in) | Accepted |
+| [0028](0028-host-and-capability-sidecar-fleet.md) | Host and capability sidecar fleet | Accepted |
+| [0029](0029-web-search-via-capability-sidecar.md) | Web search via capability sidecar (SearXNG) | Accepted |
 
 ## How to use
 

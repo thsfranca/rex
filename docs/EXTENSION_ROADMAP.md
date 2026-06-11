@@ -69,6 +69,7 @@ Canonical design: **[EXTENSION_UX.md](EXTENSION_UX.md)**. One PR slice per row w
 | **E-UX09** | P3 | Tool / step cards from structured host events | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX09 | Done |
 | **E-UX10** | P3 | Inline edit on selection (virtual-doc apply path) | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX10 | Done |
 | **E-UX11** | P3 | Multi-file diff review batch | [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX11 | Done |
+| **E-WS01** | P3 | Web search progress in stream (`web.search` invoke) | [WEB_SEARCH.md](WEB_SEARCH.md) | Open — **after R055** |
 | **E-PLAN01** | Should | Plan review card, Save, Build handoff | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Done — **R037 PR3** |
 
 ## Prioritization (2026-06-07)

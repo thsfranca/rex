@@ -29,6 +29,7 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 | Layered cache — L2 semantic | Embedding similarity **ask-only** guarded | Planned | [CACHING.md](CACHING.md) | **planned** |
 | Prefix / shared context reuse | TTL prefix cache segments in pipeline | `PrefixCache` in context pipeline | Responsibility map below | **partial** |
 | Vendor KV / prompt cache hints | Depends on outbound API owning runtime | Adapter metadata future | [CACHING.md](CACHING.md#vendor-kv-and-prompt-cache-hints-planned) | **planned** |
+| Web search query cache + per-turn dedup | Daemon L2 cache before capability invoke; cap queries per turn | `BrokerWebSearch` → capability sidecar | [WEB_SEARCH.md](WEB_SEARCH.md) | **planned** |
 | LiteLLM Inference Gateway | One compat hop; opt-in managed or external URL | `http_openai_compat` + gateway | [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md) | **implemented** |
 | Direct OpenAI API (secondary) | Same adapter, direct vendor URL | `http_openai_compat` | [ADAPTERS.md](ADAPTERS.md#http-openai-compatible-chatcompletions-profile-broker) | **documented** |
 | Native Anthropic Messages API (secondary) | No compat hop; Messages wire | Planned `anthropic` runtime + broker dispatch | [ADAPTERS.md](ADAPTERS.md#direct-anthropic-messages-api-planned--secondary) | **planned** |

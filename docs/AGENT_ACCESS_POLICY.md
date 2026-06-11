@@ -11,6 +11,7 @@ Canonical **architecture-level** design for how Rex constrains **agent workloads
 | **`fs.write`** | **Implemented** (broker RPC) | Bounded write under `REX_WORKSPACE_ROOT`; sidecar stub `__rex_write:` directive |
 | **`exec.shell`** | **Implemented** (broker RPC) | Allowlisted programs only (`REX_BROKER_SHELL_ALLOWLIST`); sidecar stub `__rex_exec:` directive |
 | **`net.fetch`** | Won't (now) | Default deny |
+| **`web.search`** | Planned (**R055**) | Via SearXNG capability sidecar — [WEB_SEARCH.md](WEB_SEARCH.md) |
 
 **Daemon RPC surface today:** [`proto/rex/v1/rex.proto`](../proto/rex/v1/rex.proto) exposes **`BrokerReadFile`**, **`BrokerListDir`**, **`BrokerWriteFile`**, **`BrokerSavePlan`** (plan mode only; `.rex/plans/*.md`), and **`BrokerExecShell`** (allowlisted programs).
 
@@ -101,12 +102,15 @@ Daemon enforces before host execution (**R020** Done):
 | `fs.read` / `fs.list` | Allow workspace | Allow workspace | Allow workspace |
 | `fs.write` | Deny | Deny | Allow workspace (policy) |
 | `exec.shell` | Deny | Deny | Allow allowlist |
+| `web.search` | Deny | Allow | Allow + approval (**R055** planned) |
 
 Sidecar graphs must not be the only enforcement layer once **`rex-agent`** ships.
 
 ## Related
 
 - [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) — spawn, API, transport.
+- [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md) — host + capability sidecar fleet (**R056**).
+- [WEB_SEARCH.md](WEB_SEARCH.md) — `web.search` broker (**R055**).
 - [POLICY_ENGINE.md](POLICY_ENGINE.md) — daemon policy pipeline.
 - [ROADMAP.md](ROADMAP.md) — **R020** broker access policy (Done)
 - [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) — phasing.

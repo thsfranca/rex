@@ -36,7 +36,7 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 - **Done:** native broker tool calling (**R038**) — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md).
 - **Next (Must):** LangFuse Cloud observability (**RC-LF1**, **LF-D01**) — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md).
 - **Next (Should):** live broker validation (**R039–R040**, **RC-S6**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
-- **Could:** gateway-path smoke (**R041**); MCP client (**R033**, rank 17).
+- **Could:** gateway-path smoke (**R041**); MCP client (**R033**); capability sidecar fleet (**R056**); web search (**R055**, after **R056**).
 
 ## Daemon-first principle
 
