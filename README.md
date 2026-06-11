@@ -123,16 +123,11 @@ chmod +x scripts/install-cli.sh
 ./scripts/install-cli.sh
 ```
 
-The script reinstalls with `--force` and does not modify shell dotfiles by default.
+The script reinstalls with `--force`, adds `~/.cargo/bin` to your shell profile by default (use `--skip-shell-path` to opt out), and runs `rex config init` when the layout is missing.
 
 Prebuilt binaries for `rex`, `rex-sidecar-stub`, and compatibility shims (`rex-cli`, `rex-daemon`) are attached to GitHub Releases tagged `vX.Y.Z` after merging the release-plz Release PR. See [`docs/RELEASE.md`](docs/RELEASE.md).
 
-If you want automatic `zsh` PATH configuration:
-
-```bash
-./scripts/install-cli.sh --configure-shell
-source ~/.zshrc
-```
+For a full local dev install (CLI, rex-agent, extension), use [`scripts/reinstall-dev.sh`](scripts/reinstall-dev.sh). The VS Code extension auto-discovers `~/.cargo/bin/rex` when `rex.cliPath` is unset.
 
 ## Manual troubleshooting
 

@@ -8,12 +8,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_CLI="${ROOT_DIR}/scripts/install-cli.sh"
 INSTALL_EXT="${ROOT_DIR}/scripts/install-extension.sh"
+CARGO_BIN="${HOME}/.cargo/bin"
+REX_BIN="${CARGO_BIN}/rex"
 
 CLI_ONLY=false
 EXTENSION_ONLY=false
 SKIP_RUST=false
-INSTALL_AGENT=false
-CONFIGURE_SHELL=false
+INSTALL_AGENT=true
+SKIP_SHELL_PATH=false
 EXT_ARGS=()
 
 print_usage() {
@@ -22,17 +24,18 @@ Usage:
   ./scripts/reinstall-dev.sh [options] [-- extension-installer-flags...]
 
 Rebuild and reinstall Rex for local testing:
-  1. Install rex (and shims) to ~/.cargo/bin
-  2. Install rex-sidecar-stub to ~/.cargo/bin (default sidecar in rex config init)
-  3. Build and install the VS Code/Cursor extension VSIX
+  1. Install rex (and shims) to ~/.cargo/bin and configure shell PATH
+  2. Install rex-sidecar-stub to ~/.cargo/bin
+  3. Install rex-agent Python sidecar (default) and run rex config init
+  4. Build and install the VS Code/Cursor extension VSIX
 
 Options:
   --cli-only          Install Rust binaries only; skip the extension.
   --extension-only    Install the extension only; skip Rust binaries.
   --skip-rust         Skip Rust installs (same as --extension-only for binaries).
-  --agent             Also: rex proto install + pip install -e sidecars/rex-agent
-                      (product sidecar for plan/agent testing).
-  --configure-shell   Pass --configure-shell to install-cli.sh (~/.cargo/bin in ~/.zshrc).
+  --no-agent          Skip rex proto install and pip install -e sidecars/rex-agent.
+  --skip-shell-path   Pass --skip-shell-path to install-cli.sh.
+  --configure-shell   Deprecated alias; shell PATH is configured by default.
   -h, --help          Show this help.
 
 Extension flags (pass after -- or as trailing args):
@@ -43,7 +46,7 @@ Extension flags (pass after -- or as trailing args):
 
 Examples:
   ./scripts/reinstall-dev.sh
-  ./scripts/reinstall-dev.sh --agent
+  ./scripts/reinstall-dev.sh --no-agent
   ./scripts/reinstall-dev.sh --extension-only --only-install
   ./scripts/reinstall-dev.sh -- --editor vscode --no-reload
 
@@ -52,8 +55,7 @@ After install:
   rex status
   REX: Open Chat      # Command Palette
 
-If the status bar shows REX unavailable, set rex.cliPath to ~/.cargo/bin/rex
-(see ./scripts/install-cli.sh --print-bin-path).
+The extension auto-discovers ~/.cargo/bin/rex when rex.cliPath is unset.
 EOF
 }
 
@@ -72,8 +74,15 @@ while [[ $# -gt 0 ]]; do
       INSTALL_AGENT=true
       shift
       ;;
+    --no-agent)
+      INSTALL_AGENT=false
+      shift
+      ;;
+    --skip-shell-path)
+      SKIP_SHELL_PATH=true
+      shift
+      ;;
     --configure-shell)
-      CONFIGURE_SHELL=true
       shift
       ;;
     -h|--help)
@@ -113,10 +122,16 @@ if [[ "${CLI_ONLY}" == "true" && "${EXTENSION_ONLY}" == "true" ]]; then
   exit 2
 fi
 
+ensure_session_path() {
+  if [[ ":${PATH}:" != *":${CARGO_BIN}:"* ]]; then
+    export PATH="${CARGO_BIN}:${PATH}"
+  fi
+}
+
 install_rust_binaries() {
   local cli_flags=()
-  if [[ "${CONFIGURE_SHELL}" == "true" ]]; then
-    cli_flags+=(--configure-shell)
+  if [[ "${SKIP_SHELL_PATH}" == "true" ]]; then
+    cli_flags+=(--skip-shell-path)
   fi
 
   echo "=== Installing rex CLI to ~/.cargo/bin ==="
@@ -138,7 +153,8 @@ install_rust_binaries() {
 
 install_agent_sidecar() {
   if ! command -v pip >/dev/null 2>&1 && ! command -v pip3 >/dev/null 2>&1; then
-    echo "pip is required for --agent but was not found in PATH." >&2
+    echo "pip is required for rex-agent install but was not found in PATH." >&2
+    echo "Re-run with --no-agent for stub-only setup, or install Python 3.10+ and pip." >&2
     exit 127
   fi
   local pip_cmd="pip"
@@ -146,19 +162,16 @@ install_agent_sidecar() {
     pip_cmd="pip3"
   fi
 
-  if ! command -v rex >/dev/null 2>&1 && [[ -x "${HOME}/.cargo/bin/rex" ]]; then
-    export PATH="${HOME}/.cargo/bin:${PATH}"
-  fi
+  ensure_session_path
   if ! command -v rex >/dev/null 2>&1; then
-    echo "rex must be on PATH before --agent setup. Run without --extension-only first." >&2
+    echo "rex must be installed before rex-agent setup. Run without --extension-only first." >&2
     exit 127
   fi
 
   echo "=== Installing rex-agent Python sidecar ==="
   rex proto install
   "${pip_cmd}" install -e "${ROOT_DIR}/sidecars/rex-agent"
-  echo "rex-agent installed. Set sidecars.active to agent in \$REX_ROOT/config.json"
-  echo "or use rex.productAgentConfig (default true) with daemon auto-start."
+  echo "rex-agent installed; rex config init uses sidecars.active=agent by default."
 }
 
 install_extension() {
@@ -172,23 +185,20 @@ install_extension() {
 }
 
 print_next_steps() {
-  local bin_base="${HOME}/.cargo/bin"
   cat <<EOF
 
 === Reinstall complete ===
 
-Binaries (add to editor settings if PATH is missing in the GUI):
-  rex.cliPath          ${bin_base}/rex
-  rex.daemonBinaryPath ${bin_base}/rex
-
 Quick test:
   rex daemon            # separate terminal; listens on /tmp/rex.sock by default
   rex status
-  # In editor: REX: Open Chat
+  # In editor: REX: Open Chat (extension auto-finds ${REX_BIN})
 
-Config (first time):
-  rex config init
-  # Edit ~/.rex/config.json — see docs/EXTENSION_LOCAL_E2E.md §3
+Config:
+  rex config show       # operator init defaults to rex-agent sidecar
+
+If the status bar still shows unavailable, set rex.cliPath to ${REX_BIN}
+(see ./scripts/install-cli.sh --print-bin-path).
 
 Full checklist: ${ROOT_DIR}/docs/EXTENSION_LOCAL_E2E.md
 EOF
