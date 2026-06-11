@@ -45,7 +45,12 @@ def _chunk_kwargs(
         "turn_id": turn_id,
     }
     if isinstance(event, TextStreamEvent):
-        return {**base, "text": event.text, "event": "chunk", "sequence": event.sequence}
+        return {
+            **base,
+            "text": event.text,
+            "event": "chunk",
+            "sequence": event.sequence,
+        }
     if isinstance(event, ToolStreamEvent):
         kwargs = {
             **base,

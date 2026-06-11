@@ -37,7 +37,11 @@ class LiveStreamSink:
 
     def emit_step(self, *, phase: str, summary: str) -> None:
         self._queue.append(
-            StepStreamEvent(phase=phase, summary=summary, sequence=self._next_sequence())
+            StepStreamEvent(
+                phase=phase,
+                summary=summary,
+                sequence=self._next_sequence(),
+            )
         )
 
     def emit_activity(self, *, phase: str, summary: str, detail: str = "") -> None:
@@ -88,7 +92,9 @@ class LiveStreamSink:
 
     def emit_text(self, text: str) -> None:
         if text:
-            self._queue.append(TextStreamEvent(text=text, sequence=self._next_sequence()))
+            self._queue.append(
+                TextStreamEvent(text=text, sequence=self._next_sequence())
+            )
 
     def drain(self) -> list[StreamEvent]:
         items = list(self._queue)
