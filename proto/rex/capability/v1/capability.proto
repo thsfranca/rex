@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package rex.capability.v1;
+
+service CapabilityService {
+  rpc Health(HealthRequest) returns (HealthResponse);
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
+  rpc Invoke(InvokeRequest) returns (InvokeResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  bool healthy = 1;
+  string version = 2;
+}
+
+message GetCapabilitiesRequest {}
+
+message GetCapabilitiesResponse {
+  repeated string capability_ids = 1;
+}
+
+message InvokeRequest {
+  string capability_id = 1;
+  string method = 2;
+  string payload_json = 3;
+  string turn_id = 4;
+  string mode = 5;
+}
+
+message InvokeResponse {
+  bool ok = 1;
+  string content = 2;
+  string error_code = 3;
+}

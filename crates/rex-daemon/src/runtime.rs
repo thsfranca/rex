@@ -69,9 +69,9 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
     })?;
     let approval_gate = approval_gate_from_config();
     let sidecar = supervisor_from_config();
-    if !sidecar_harness_direct() && sidecar.config().enabled {
+    if !sidecar_harness_direct() && sidecar.host_config().enabled {
         if let Err(err) = sidecar.ensure_running().await {
-            let config = sidecar.config();
+            let config = sidecar.host_config();
             if config.required {
                 return Err(DaemonRuntimeError::Sidecar(err));
             }

@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+GEN_ROOT="${REX_ROOT:-${HOME}/.rex}/proto/gen"
+export PYTHONPATH="${GEN_ROOT}:${SCRIPT_DIR}/src:${PYTHONPATH:-}"
+exec python3 -m capability_mock "$@"

@@ -3,6 +3,7 @@ mod adapters;
 mod approvals;
 mod broker;
 mod broker_inference;
+mod capability_client;
 mod domain;
 mod economics_record;
 mod gateway_supervisor;

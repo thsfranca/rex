@@ -92,7 +92,7 @@ impl RexDaemonService {
         inference_runtime: &str,
         correlation: &TurnCorrelation,
     ) -> Result<Vec<Result<StreamInferenceResponse, Status>>, Status> {
-        if parse_harness_only().is_some() || !self.sidecar.config().enabled {
+        if parse_harness_only().is_some() || !self.sidecar.host_config().enabled {
             return Ok(self.runtime.build_chunks(effective_prompt).await);
         }
         self.sidecar
@@ -934,22 +934,25 @@ impl PromptDirectives {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
     use super::{
         extract_trace_id, extract_turn_id, format_approval_decision, format_behavior_decision,
         format_cache_status, resolve_route_label_for, PromptDirectives, RexDaemonService,
     };
     use crate::adapters::{MissingDoneMockRuntime, MockInferenceRuntime};
-    use crate::sidecar_config::SidecarConfig;
+    use crate::sidecar_config::{SidecarFleetConfig, SidecarProcessConfig};
     use crate::supervisor::{SharedSupervisor, SidecarSupervisor};
 
     fn disabled_sidecar() -> SharedSupervisor {
-        std::sync::Arc::new(SidecarSupervisor::new(SidecarConfig {
-            enabled: false,
-            required: false,
-            binary: PathBuf::from("rex-sidecar-stub"),
-            socket_path: "/tmp/rex-test-sidecar.sock".to_string(),
+        std::sync::Arc::new(SidecarSupervisor::new(SidecarFleetConfig {
+            host: SidecarProcessConfig {
+                name: "stub".to_string(),
+                enabled: false,
+                required: false,
+                binary: std::path::PathBuf::from("rex-sidecar-stub"),
+                socket_path: "/tmp/rex-test-sidecar.sock".to_string(),
+                is_capability: false,
+            },
+            capabilities: Vec::new(),
         }))
     }
     use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};

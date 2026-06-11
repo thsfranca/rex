@@ -36,7 +36,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | Section | Keys | Purpose |
 |---------|------|---------|
 | `daemon` | `socket` | Daemon UDS path (default `/tmp/rex.sock`). |
-| `sidecars` | `active`, `required`, `harness`, `list[]` | Supervised sidecar; `harness: "direct"` skips spawn (CI/tests). |
+| `sidecars` | `active`, `host`, `required`, `harness`, `list[]`, `capabilities[]` | Host sidecar (`list[]` entry named by `host` or `active`); optional capability fleet (`capabilities[]` with `provides`, `socket`, `binary`); `harness: "direct"` skips spawn (CI/tests). |
 | `inference` | `runtime`, `openai_compat`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. |
 | `workspace` | `root`, `indexer`, `allow_cwd_fallback` | Broker root and lexical indexer (`workspace` or `seeded`). Product path requires non-empty `root` (not `"."`). Harness/CI: `allow_cwd_fallback: true` or `REX_ALLOW_CWD_WORKSPACE=1`. |
 | `context` | `max_prompt_tokens`, `max_context_tokens` | Context pipeline budgets. |
@@ -46,7 +46,9 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `cli` | `stream_idle_timeout_secs_agent`, `stream_idle_timeout_secs_ask` | Per-chunk idle timeout for `rex complete` streams (defaults **120** agent, **15** ask/plan). |
 | `search` | `enabled`, `provider`, `max_results`, `api_key_path` | Ask-mode `web.search` broker (`provider: mock` for local demos). **R055** will migrate to capability sidecar — [WEB_SEARCH.md](WEB_SEARCH.md). |
 
-**Planned (design — not implemented):** `broker.web_search` (enablement, timeouts, rate limits, cache TTL) and `sidecars.capabilities[]` for capability sidecars — [WEB_SEARCH.md](WEB_SEARCH.md), [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md).
+**Capability sidecar entry (`capabilities[]`):** `name`, `binary`, `enabled`, `socket`, `provides` (capability ids, e.g. `web.search`), optional `required`. Daemon spawns enabled entries alongside the host; invoke routing is **R056-2** — [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md).
+
+**Planned (design — not implemented):** `broker.web_search` (enablement, timeouts, rate limits, cache TTL) — [WEB_SEARCH.md](WEB_SEARCH.md).
 | `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `otlp` | OTLP export + stdout economics — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [Observability](#observability) |
 
 Minimal example:

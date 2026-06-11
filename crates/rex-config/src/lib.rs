@@ -22,10 +22,10 @@ pub use gateway_layout::{ensure_gateway_layout, GatewayLayoutResult};
 pub use layout::{ensure_global_layout, EnsureResult};
 pub use merge::LoadedConfig;
 pub use model::{
-    AgentConfig, BrokerConfig, CacheConfig, ContextConfig, CursorCliConfig, DaemonConfig,
-    GatewayConfig, GatewayOllamaConfig, InferenceConfig, NativeToolsMode, ObservabilityConfig,
-    OpenAiCompatConfig, OtlpConfig, RexConfig, SidecarEntry, SidecarsConfig, WorkspaceConfig,
-    DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
+    AgentConfig, BrokerConfig, CacheConfig, CapabilitySidecarEntry, ContextConfig, CursorCliConfig,
+    DaemonConfig, GatewayConfig, GatewayOllamaConfig, InferenceConfig, NativeToolsMode,
+    ObservabilityConfig, OpenAiCompatConfig, OtlpConfig, RexConfig, SidecarEntry, SidecarsConfig,
+    WorkspaceConfig, DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
 };
 pub use observability::{
     economics_snapshot_id, economics_snapshot_json, observability_enabled, validate_observability,
