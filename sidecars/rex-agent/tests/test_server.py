@@ -23,14 +23,15 @@ class _GetCapabilitiesResponse:
 class _RunTurnChunk:
     def __init__(
         self,
-        text: str,
-        index: int,
-        done: bool,
+        text: str = "",
+        index: int = 0,
+        done: bool = False,
         event: str = "",
         tool_name: str = "",
         phase: str = "",
         summary: str = "",
         detail: str = "",
+        **kwargs: object,
     ) -> None:
         self.text = text
         self.index = index
@@ -40,6 +41,8 @@ class _RunTurnChunk:
         self.phase = phase
         self.summary = summary
         self.detail = detail
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
 class _RunTurnRequest:

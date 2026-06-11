@@ -12,11 +12,6 @@ from rex_agent.broker import BrokerClient, InferenceResult, legacy_inference_res
 from rex_agent.broker_chat_model import stream_visible_text
 from rex_agent.config import max_tool_steps_for_mode
 from rex_agent.graph.compaction import compact_state
-from rex_agent.graph.stream_sink import (
-    LiveStreamSink,
-    reset_active_sink,
-    set_active_sink,
-)
 from rex_agent.graph.nodes.llm import llm_node
 from rex_agent.graph.nodes.orchestrator import (
     route_after_editor,
@@ -26,6 +21,11 @@ from rex_agent.graph.nodes.orchestrator import (
 )
 from rex_agent.graph.nodes.tools import tools_node
 from rex_agent.graph.state import AgentState
+from rex_agent.graph.stream_sink import (
+    LiveStreamSink,
+    reset_active_sink,
+    set_active_sink,
+)
 from rex_agent.stream_events import StreamEvent, TextStreamEvent
 from rex_agent.tools import ReadCache, tools_for_mode
 
