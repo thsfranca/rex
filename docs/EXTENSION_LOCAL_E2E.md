@@ -77,20 +77,20 @@ Fresh `rex config init` (also run automatically by `install-cli.sh`) writes **`s
 }
 ```
 
-Install the product sidecar and proto stubs (included in `./scripts/reinstall-dev.sh` by default; use `--no-agent` for stub-only):
+Install scripts attempt the product sidecar automatically (`./scripts/install-cli.sh` or `./scripts/reinstall-dev.sh` call `scripts/install-agent-sidecar.sh`). If **pip** is missing, install continues with a warning; run the agent steps when Python is available:
 
 ```bash
-pip install -e sidecars/rex-agent
 rex proto install
-cargo build --workspace
-./scripts/install-cli.sh
+pip install -e sidecars/rex-agent
 ```
 
-Ensure `rex-agent` is on `PATH` when the daemon starts.
+Or use the one-shot helper after `./scripts/install-cli.sh`.
+
+Ensure `rex-agent` is on `PATH` when the daemon starts (`rex sidecar doctor` checks this).
 
 For automated preflight only (no live LLM), CI uses `inference.runtime: mock` and/or `sidecars.harness: "direct"` — not the operator acceptance path below.
 
-Optional extension overlay: **`rex.productAgentConfig`** defaults to **true** and merges `sidecars.active: agent` plus `agent.approvals_enabled: true` into project `.rex/config.json` on auto-start.
+The extension always merges `sidecars.active: agent` and `agent.approvals_enabled: true` into project `.rex/config.json` when binding the workspace.
 
 ## 4) Run `rex daemon`
 
@@ -146,12 +146,6 @@ Reload the window when prompted (or run **Developer: Reload Window**).
 ```bash
 chmod +x ./scripts/reinstall-dev.sh
 ./scripts/reinstall-dev.sh
-```
-
-For plan/agent with a live model, include the Python sidecar:
-
-```bash
-./scripts/reinstall-dev.sh --agent
 ```
 
 Pass through extra flags to `install-extension.sh`, for example:

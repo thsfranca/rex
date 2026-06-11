@@ -35,7 +35,7 @@ pub use paths::{
     gateway_dir, gateway_env_path, global_config_path, proto_gen_path, proto_src_path, rex_root,
     REX_ROOT_ENV,
 };
-pub use sidecar_binary::sidecar_binary_resolvable;
+pub use sidecar_binary::{sidecar_binary_resolvable, sidecar_install_hint};
 pub use workspace::WorkspaceRootError;
 
 use std::env;
@@ -147,6 +147,8 @@ mod tests {
             let raw = fs::read_to_string(global_config_path()).unwrap();
             assert!(raw.contains(r#""active": "agent""#));
             assert!(raw.contains(r#""binary": "rex-agent""#));
+            assert!(raw.contains(r#""enabled": true"#));
+            assert!(raw.contains(r#""provider": "mock""#));
         });
     }
 

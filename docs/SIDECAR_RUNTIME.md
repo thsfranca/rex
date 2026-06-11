@@ -129,7 +129,7 @@ Operator setup: [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
 
 ## Sidecar author quickstart (`rex-agent` scaffold — R017)
 
-**`rex-agent`** is shipped under [sidecars/rex-agent/](../sidecars/rex-agent/) (**R019** Done). **`rex-sidecar-stub`** remains the harness/CI default (explicit in tests); **`rex config init`** writes the **operator template** with **`rex-agent`** active. Extension **`rex.productAgentConfig`** also merges agent settings into project `.rex/config.json` on auto-start.
+**`rex-agent`** is shipped under [sidecars/rex-agent/](../sidecars/rex-agent/) (**R019** Done). **`rex-sidecar-stub`** remains the harness/CI default (explicit in tests); **`rex config init`** writes the **operator template** with **`rex-agent`** active and **mock web search** enabled. Install scripts attempt `rex-agent` setup by default; the extension merges agent settings into project `.rex/config.json` on workspace bind.
 
 1. **`rex config init`** — create `$REX_ROOT/config.json` (layout root **`REX_ROOT`**, default `~/.rex`).
 2. **`rex proto install`** — materialize Python stubs under `$REX_ROOT/proto/gen` (flat layout; not `gen/python/`).

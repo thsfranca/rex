@@ -127,6 +127,11 @@ impl RexConfig {
                 max_tool_steps: 12,
                 max_tool_steps_ask: default_max_tool_steps_ask(),
             },
+            search: SearchConfig {
+                enabled: Some(true),
+                provider: "mock".to_string(),
+                ..SearchConfig::default()
+            },
             ..Self::defaults()
         }
     }

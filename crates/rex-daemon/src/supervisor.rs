@@ -80,9 +80,11 @@ impl SidecarProcessSupervisor {
         self.stop().await;
         let binary = self.config.binary.to_string_lossy();
         if !rex_config::sidecar_binary_resolvable(binary.as_ref()) {
-            return Err(SupervisorError::BinaryMissing {
-                path: self.config.binary.display().to_string(),
-            });
+            let mut path = self.config.binary.display().to_string();
+            if let Some(hint) = rex_config::sidecar_install_hint(binary.as_ref()) {
+                path = format!("{path}; {hint}");
+            }
+            return Err(SupervisorError::BinaryMissing { path });
         }
         let role = if self.config.is_capability {
             "capability"

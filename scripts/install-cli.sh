@@ -131,6 +131,12 @@ fi
 
 bootstrap_rex_config
 
+INSTALL_AGENT="${ROOT_DIR}/scripts/install-agent-sidecar.sh"
+if [[ -x "${INSTALL_AGENT}" ]]; then
+  chmod +x "${INSTALL_AGENT}"
+  "${INSTALL_AGENT}"
+fi
+
 echo "Install complete."
 echo "Primary command:"
 echo "  rex"

@@ -1,6 +1,6 @@
 use std::process::ExitCode;
 
-use rex_config::{ensure_global_layout, load, sidecar_binary_resolvable};
+use rex_config::{ensure_global_layout, load, sidecar_binary_resolvable, sidecar_install_hint};
 
 pub fn run_sidecar(mut args: impl Iterator<Item = String>) -> ExitCode {
     match args.next().as_deref() {
@@ -65,7 +65,12 @@ fn run_doctor() -> ExitCode {
     let mut ok = true;
     if let Some(entry) = loaded.active_sidecar() {
         if !sidecar_binary_resolvable(&entry.binary) {
-            eprintln!("sidecar binary not found on PATH: {}", entry.binary);
+            eprint!("sidecar binary not found on PATH: {}", entry.binary);
+            if let Some(hint) = sidecar_install_hint(&entry.binary) {
+                eprintln!("; {hint}");
+            } else {
+                eprintln!();
+            }
             ok = false;
         }
     } else {

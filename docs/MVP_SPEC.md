@@ -15,14 +15,14 @@
 
 | | **Shipped today** | **Operator checklist (not “planned product”)** |
 |---|---|---|
-| Sidecar binary | **`rex-sidecar-stub`** — harness/CI default; `__rex_*` directives | **`rex-agent`** — LangGraph ReAct (**R017–R018** Done); enable via JSON or extension overlay |
+| Sidecar binary | **`rex-sidecar-stub`** — harness/CI default; `__rex_*` directives | **`rex-agent`** — LangGraph ReAct (**R017–R018** Done); default via `rex config init` and install scripts |
 | Product sidecar | **`rex-agent`** shipped under `sidecars/rex-agent/` | Live-model proof via [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §8 |
 | CLI | Unified **`rex`** binary (**R014**); **`rex-cli`/`rex-daemon` shims** | — |
-| Config | JSON config + `rex config` (**R015**); `rex config init` defaults **stub** | Product path: set `sidecars.active` to **`rex-agent`** or use **`rex.productAgentConfig`** |
+| Config | JSON config + `rex config` (**R015**); `rex config init` writes **rex-agent** + mock web search | Edit **`inference.openai_compat`** for live backend |
 | Daemon broker policy | Mode × capability matrix; protected paths (**R020** Done) | — |
 | Turn correlation | `turn_id` / `context_revision` on RunTurn (**R021** Done) | — |
 | Workspace binding | Fail-closed daemon; extension supplies root (**R022**, **R019** Done) | — |
-| Extension defaults | **`rex.productAgentConfig`** default **true** merges **`rex-agent`** + **`agent.approvals_enabled`** on auto-start | Manual JSON still supported |
+| Extension defaults | Workspace bind merges **`rex-agent`** + **`agent.approvals_enabled`** into project `.rex/config.json` | Manual JSON still supported |
 | v1.0 **RC-*** | **Met** (stub + product paths) | Live HTTP backend for IDE dogfood — [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md); plan/agent **tool loop** — **R038** **Done** — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 | Observability | **Not met** — **RC-LF1** LangFuse Cloud export (**LF-F01**); discovery **LF-D01** | Live smoke (**R039–R040**, **RC-S6** **Met**) — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
 

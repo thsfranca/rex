@@ -172,7 +172,7 @@ Prerequisites for **`rex-agent`** dogfood (**R017–R018** Done). Design: [DEVEL
 
 ## R019 — Integration and E2E acceptance
 
-**Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, operator checklist in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md#8-r019-acceptance--live-model-operator-not-ci), and extension operator alignment with **`rex-agent`** (JSON setup hints, **`rex.productAgentConfig`** default, NDJSON **`tool`**/**`step`** cards).
+**Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, operator checklist in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md#8-r019-acceptance--live-model-operator-not-ci), and extension operator alignment with **`rex-agent`** (JSON setup hints, default agent workspace overlay, NDJSON **`tool`**/**`step`** cards).
 
 **Known gap:** none — plan-mode native tool loop on direct Ollama is covered by **`./scripts/verify_native_tools_live.sh`** ([NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md), [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §8a). CI/stub paths still use interim JSON.
 
@@ -181,7 +181,7 @@ Prerequisites for **`rex-agent`** dogfood (**R017–R018** Done). Design: [DEVEL
 | Criterion | Evidence |
 |-----------|----------|
 | Extension sets `workspace.root` when auto-starting daemon | Primary `workspaceFolders[0]` |
-| Extension **`rex.productAgentConfig`** merges **`rex-agent`** + approvals on auto-start | [extensions/rex-vscode/package.json](../extensions/rex-vscode/package.json); `rex config init` defaults **stub** |
+| Extension workspace bind merges **`rex-agent`** + approvals | [extensions/rex-vscode/src/workspace/binding.ts](../extensions/rex-vscode/src/workspace/binding.ts); `rex config init` operator template |
 | **C1:** thin `client_hints`; reduce duplicate selection-in-prompt | Document interim double-count until migrated |
 | [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) with **live model** (not stub echo) | `ask`, `plan`, `agent` modes |
 | Optional: refresh [MVP_SPEC.md](MVP_SPEC.md) stub vs product table | When product agent is proven |

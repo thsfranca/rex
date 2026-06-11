@@ -33,7 +33,7 @@ Stream reliability notes:
 - Daemon running locally on `/tmp/rex.sock` (user-managed: `rex daemon`; or set `rex.daemonAutoStart: true`). With auto-start, set `rex.daemonBinaryPath` to an absolute path if `rex` is not on the editor `PATH` (same binary as `rex.cliPath`).
 - VS Code `^1.90` or Cursor with a compatible VS Code engine.
 
-- For **plan/agent** modes with live models, configure JSON per [`docs/EXTENSION_LOCAL_E2E.md`](../../docs/EXTENSION_LOCAL_E2E.md) §3 (`rex-agent`, `inference.openai_compat`). With auto-start, **`rex.productAgentConfig`** (default **true**) merges the product sidecar into project `.rex/config.json`.
+- For **plan/agent** modes with live models, configure JSON per [`docs/EXTENSION_LOCAL_E2E.md`](../../docs/EXTENSION_LOCAL_E2E.md) §3 (`rex-agent`, `inference.openai_compat`). Workspace bind merges the product sidecar into project `.rex/config.json`.
 
 ## Daemon auto-start (opt-in)
 
