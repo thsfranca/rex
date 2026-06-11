@@ -50,12 +50,13 @@ The daemon validates **compatibility metadata** (OS, arch, min runtime version) 
 
 Cross-VM bridging (loopback TCP, vsock) applies only if a **future server** envelope uses a different kernel — not the Mac-first path. See [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) deferred catalog.
 
-## Supervision (0 or 1 process)
+## Supervision (host + capability sidecars)
+
+**Shipped today:** daemon supervises **zero or one** host sidecar (`sidecars.active`). **Planned:** **one host** + **0..N capability** sidecars — [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md), [ADR 0028](architecture/decisions/0028-host-and-capability-sidecar-fleet.md) (**R056**).
 
 Per [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md):
 
-- Daemon supervises **zero or one** active plugin process.
-- Health probes, timeouts, restart policy, graceful degraded mode when sidecar absent.
+- Health probes, timeouts, restart policy, graceful degraded mode when host sidecar absent.
 
 ## Sandbox and broker
 
@@ -150,4 +151,4 @@ Full program: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md).
 - [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)
 - [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) · [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md)
 - [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md) · [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md)
-- [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) · [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) · [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md)
+- [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) · [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) · [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md) · [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md)

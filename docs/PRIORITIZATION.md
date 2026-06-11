@@ -92,7 +92,9 @@ Use these as short confidence cues when ranking optimization proposals:
 | 10 | **R026** — optional Semgrep | **Could** | **25** | — | CI | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
 | 11 | **R036** — TRON schema compression | **Could** | **30** | — | daemon | Optional |
 | 12 | **R033** — MCP gRPC client | **Could** | **25** | — | sidecar | ADR 0016 |
-| 13 | **R016** — multi-active sidecar broadcast | **Could** | **20** | — | daemon | Deferred |
+| 13 | **R056** — capability sidecar fleet | **Could** | **35** | — | daemon + proto | Unblocks **R055** |
+| 14 | **R055** — web search (SearXNG capability) | **Could** | **30** | — | daemon + sidecar | **After R056** |
+| 15 | **R016** — multi-active host broadcast | **Could** | **20** | — | daemon | Deferred — see **R056** |
 
 **Deferred (Later / Won't now):** L2 semantic cache, Apple MLX, self-hosted LangFuse on Mac, LTM, agent knowledge — see [ROADMAP.md](ROADMAP.md).
 
