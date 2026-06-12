@@ -93,17 +93,12 @@ export function applyProductAgentOverlayForTest(config: RexConfigJson): RexConfi
   return applyProductAgentOverlay(config);
 }
 
-export function ensureProjectRexConfig(
-  workspaceRoot: string,
-  options?: { readonly productAgentConfig?: boolean },
-): void {
+export function ensureProjectRexConfig(workspaceRoot: string): void {
   const rexDir = path.join(workspaceRoot, ".rex");
   const configPath = path.join(workspaceRoot, PROJECT_CONFIG_REL);
   fs.mkdirSync(rexDir, { recursive: true });
   let config = readJsonIfExists(configPath);
   config = mergeWorkspaceRoot(config, workspaceRoot);
-  if (options?.productAgentConfig === true) {
-    config = applyProductAgentOverlay(config);
-  }
+  config = applyProductAgentOverlay(config);
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
 }

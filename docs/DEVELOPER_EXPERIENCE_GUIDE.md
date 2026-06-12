@@ -104,6 +104,9 @@ AI responsibilities:
 | Bind fails on `/tmp/rex.sock` | Stale socket file | Stop daemon cleanly; remove stale socket and restart |
 | Protobuf build error | `protoc` missing or incompatible | Reinstall prerequisites from `docs/DEPENDENCIES.md` |
 | Installed command not found | PATH not updated after install | Re-run install script and reload shell |
+| `requires-python >=3.10` on rex-agent install | macOS CLT Python 3.9 or wrong `pip` on PATH | `brew install python@3.12`; `./scripts/install-agent-sidecar.sh`; `rex sidecar doctor` |
+| PEP 668 / externally-managed pip | System Python blocked global install | Use `$REX_ROOT/venv` via `./scripts/install-agent-sidecar.sh` |
+| Extension VSIX engine mismatch | Cursor/VS Code below **^1.120.0** | Upgrade editor or use older VSIX; `./scripts/install-extension.sh` preflights before build |
 
 ## 3) Development workflow and quality gates
 

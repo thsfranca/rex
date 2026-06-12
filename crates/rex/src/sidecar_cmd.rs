@@ -1,6 +1,9 @@
 use std::process::ExitCode;
 
-use rex_config::{ensure_global_layout, load, sidecar_binary_resolvable};
+use rex_config::{
+    ensure_global_layout, load, proto_gen_path, rex_agent_doctor_applies, rex_agent_doctor_checks,
+    sidecar_binary_resolvable, sidecar_install_hint,
+};
 
 pub fn run_sidecar(mut args: impl Iterator<Item = String>) -> ExitCode {
     match args.next().as_deref() {
@@ -65,7 +68,12 @@ fn run_doctor() -> ExitCode {
     let mut ok = true;
     if let Some(entry) = loaded.active_sidecar() {
         if !sidecar_binary_resolvable(&entry.binary) {
-            eprintln!("sidecar binary not found on PATH: {}", entry.binary);
+            eprint!("sidecar binary not found on PATH: {}", entry.binary);
+            if let Some(hint) = sidecar_install_hint(&entry.binary) {
+                eprintln!("; {hint}");
+            } else {
+                eprintln!();
+            }
             ok = false;
         }
     } else {
@@ -75,13 +83,24 @@ fn run_doctor() -> ExitCode {
         );
         ok = false;
     }
-    let gen = rex_config::proto_gen_path();
+    let gen = proto_gen_path();
     if !gen.exists() {
         eprintln!(
             "proto gen dir missing: {} (run `rex proto install`)",
             gen.display()
         );
         ok = false;
+    }
+    if let Some(entry) = loaded.active_sidecar() {
+        if rex_agent_doctor_applies(&entry.binary) {
+            match rex_agent_doctor_checks(&loaded.rex_root, &gen) {
+                Ok(()) => {}
+                Err(err) => {
+                    eprintln!("{err}");
+                    ok = false;
+                }
+            }
+        }
     }
     if ok {
         println!("sidecar doctor OK");

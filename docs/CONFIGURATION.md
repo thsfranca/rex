@@ -23,7 +23,7 @@ This document is the **canonical** policy for how REX settings work: merged **JS
 | `.rex/config.json` | Optional project overrides (walked from cwd upward). |
 | CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--yes`, `--verbose`, `--trace-id`, `--active-file`, `--language-id`, `--selection-text` per invocation. |
 
-**Layout root:** `$REX_ROOT` defaults to `~/.rex` when unset. Run `rex config init` to create the layout and operator template `config.json` (**`sidecars.active: agent`**, **`rex-agent`** enabled). CI and harness tests use explicit stub configs or `RexConfig::defaults()` in code — not the init template.
+**Layout root:** `$REX_ROOT` defaults to `~/.rex` when unset. Run `rex config init` to create the layout and operator template `config.json` (**`sidecars.active: agent`**, **`rex-agent`** enabled, **`search.enabled: true`** with **`search.provider: mock`**). Operators typically edit only **`inference.openai_compat`** for a live backend. CI and harness tests use explicit stub configs or `RexConfig::defaults()` in code — not the init template.
 
 **Legacy environment variables:** Daemon startup ignores former `REX_INFERENCE_RUNTIME`, `REX_OPENAI_COMPAT_*`, `REX_SIDECAR_*`, `REX_DAEMON_SOCKET`, and `REX_WORKSPACE_ROOT` when present and prints a warning — use JSON instead. **`REX_AGENT_APPROVALS`** is **not read** (migration reference only; canonical key is `agent.approvals_enabled` in JSON — [V1_0.md](V1_0.md) RC-06). **`REX_ROOT`** remains the bootstrap override for layout location (tests, extension auto-start).
 
@@ -318,8 +318,8 @@ Keys under `cli` and `search` control stream idle timeouts and ask-mode `web.sea
 |-----|---------|---------|
 | `cli.stream_idle_timeout_secs_agent` | `120` | Per-chunk idle timeout for `agent` / `plan` NDJSON streams |
 | `cli.stream_idle_timeout_secs_ask` | `15` | Per-chunk idle timeout for `ask` streams |
-| `search.enabled` | `false` | Enables broker `web.search` (ask mode only) |
-| `search.provider` | — | `mock` for local demos |
+| `search.enabled` | `false` (operator init: `true`) | Enables broker `web.search` (ask mode only) |
+| `search.provider` | — (operator init: `mock`) | `mock` for local demos |
 | `search.max_results` | `5` | Max hits returned per query |
 | `agent.max_tool_steps_ask` | `5` | Ask-mode research tool loop cap |
 

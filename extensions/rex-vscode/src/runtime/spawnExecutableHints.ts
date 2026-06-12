@@ -6,7 +6,7 @@ export const EXTENSION_LOCAL_E2E_DOC_PATH = "docs/EXTENSION_LOCAL_E2E.md";
 export const CONFIGURATION_DOC_PATH = "docs/CONFIGURATION.md";
 
 const SIDECAR_SETUP_HINT =
-  "Configure sidecars in $REX_ROOT/config.json and project .rex/config.json: set sidecars.active to agent, binary to rex-agent, and ensure rex-agent is on PATH (pip install -e sidecars/rex-agent; rex proto install). Run rex sidecar doctor. See";
+  "Configure sidecars in $REX_ROOT/config.json and project .rex/config.json: set sidecars.active to agent, binary to rex-agent, and ensure rex-agent is on PATH (./scripts/install-agent-sidecar.sh; rex proto install). Run rex sidecar doctor. See";
 const INFERENCE_SETUP_HINT =
   "Set inference.runtime to http-openai-compat and inference.openai_compat.base_url / model in JSON (rex config init). See";
 const DAEMON_SETUP_HINT =

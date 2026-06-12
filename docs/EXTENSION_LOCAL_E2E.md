@@ -4,11 +4,19 @@ This guide walks from a clean clone to **REX ready** in the editor: built binari
 
 ## Prerequisites
 
-- Rust toolchain (`cargo`, `rustc`). See [DEPENDENCIES.md](./DEPENDENCIES.md) for `protoc` (required to build `rex-proto`).
-- Node.js **20+** and `npm` (for the extension build).
-- **Cursor** or **VS Code** with the shell CLI on `PATH`, or set `REX_EXTENSION_EDITOR` to the full path of the `cursor` or `code` binary when using [scripts/install-extension.sh](../scripts/install-extension.sh).
+Full version matrix: [DEPENDENCIES.md](./DEPENDENCIES.md#operator-install-prerequisites-local-e2e). Quick summary:
 
-**Preflight (automated):** From the repo root, run `chmod +x ./scripts/verify_mvp_local.sh && ./scripts/verify_mvp_local.sh`. That command builds the workspace, runs Rust verify (`fmt`, `clippy`, `cargo audit`, tests), **sidecar verify**, **`mvp_product_path`**, and extension checks ([CI.md](./CI.md)). It does **not** start the daemon. Use it before the manual editor checks in step 6 below.
+| Requirement | Minimum | Install / check |
+|---|---|---|
+| Rust + `cargo` | stable | `cargo --version` |
+| `protoc` | 3.x | `brew install protobuf` |
+| Python (`rex-agent`) | **3.10+** | `./scripts/install-agent-sidecar.sh` (venv at `$REX_ROOT/venv`) |
+| Node.js + `npm` | **20+** | Extension build only |
+| Editor | VS Code engine **^1.120.0** | `cursor` or `code` on `PATH`; see [EXTENSION_RELEASE.md](./EXTENSION_RELEASE.md) |
+
+**Operator preflight:** `./scripts/install-preflight.sh` prints pass/fail rows for the above (non-destructive). Use `--strict` before `./scripts/reinstall-dev.sh` when debugging install issues.
+
+**CI preflight (maintainers):** `chmod +x ./scripts/verify_mvp_local.sh && ./scripts/verify_mvp_local.sh` — builds the workspace, runs Rust verify, sidecar verify, `mvp_product_path`, and extension checks ([CI.md](./CI.md)). Does **not** start the daemon. Use before manual editor checks in step 7 below.
 
 ## 1) Build the Rust workspace
 
@@ -45,7 +53,7 @@ From the repo root (with [Ollama](https://ollama.com/) or another OpenAI-compati
 
 ```bash
 ./scripts/reinstall-dev.sh
-# or: ./scripts/install-cli.sh && pip install -e sidecars/rex-agent && rex proto install
+# or: ./scripts/install-cli.sh && ./scripts/install-agent-sidecar.sh
 rex config show
 ```
 
@@ -77,20 +85,23 @@ Fresh `rex config init` (also run automatically by `install-cli.sh`) writes **`s
 }
 ```
 
-Install the product sidecar and proto stubs (included in `./scripts/reinstall-dev.sh` by default; use `--no-agent` for stub-only):
+Install scripts attempt the product sidecar automatically (`./scripts/install-cli.sh` or `./scripts/reinstall-dev.sh` call `scripts/install-agent-sidecar.sh`). The agent installer creates **`$REX_ROOT/venv`** and a **`~/.cargo/bin/rex-agent`** wrapper — it does **not** use macOS CLT Python 3.9 or system `pip` directly.
+
+If rex-agent install fails, fix Python and re-run:
 
 ```bash
-pip install -e sidecars/rex-agent
-rex proto install
-cargo build --workspace
-./scripts/install-cli.sh
+./scripts/install-preflight.sh
+./scripts/install-agent-sidecar.sh
+rex sidecar doctor
 ```
 
-Ensure `rex-agent` is on `PATH` when the daemon starts.
+Manual maintainer path (editable into your own venv): `rex proto install` then `pip install -e sidecars/rex-agent` with Python **>= 3.10** — see [sidecars/rex-agent/README.md](../sidecars/rex-agent/README.md).
+
+Ensure `rex-agent` is on `PATH` when the daemon starts (`rex sidecar doctor` checks this).
 
 For automated preflight only (no live LLM), CI uses `inference.runtime: mock` and/or `sidecars.harness: "direct"` — not the operator acceptance path below.
 
-Optional extension overlay: **`rex.productAgentConfig`** defaults to **true** and merges `sidecars.active: agent` plus `agent.approvals_enabled: true` into project `.rex/config.json` on auto-start.
+The extension always merges `sidecars.active: agent` and `agent.approvals_enabled: true` into project `.rex/config.json` when binding the workspace.
 
 ## 4) Run `rex daemon`
 
@@ -146,12 +157,6 @@ Reload the window when prompted (or run **Developer: Reload Window**).
 ```bash
 chmod +x ./scripts/reinstall-dev.sh
 ./scripts/reinstall-dev.sh
-```
-
-For plan/agent with a live model, include the Python sidecar:
-
-```bash
-./scripts/reinstall-dev.sh --agent
 ```
 
 Pass through extra flags to `install-extension.sh`, for example:
@@ -227,6 +232,16 @@ Use this checklist after the steps above when hardening chat reliability:
 - [ ] **Cancel** mid-stream at least twice; confirm the composer returns to idle (no stuck “streaming” state).
 - [ ] Switch **ask → plan → agent** between turns and send one prompt per mode.
 - [ ] Stop `rex daemon` while the extension is open; confirm the status bar shows **unavailable**, then returns to **ready** after restart (also covered by automated probe recovery tests when using fixtures).
+
+## Install troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `requires-python >=3.10` / pip editable failure | macOS CLT **Python 3.9** or old **pip 21.x** on system Python | `brew install python@3.12`; `./scripts/install-agent-sidecar.sh` |
+| PEP 668 externally-managed-environment | Homebrew/system Python blocks global `pip install` | Use operator script (venv at `$REX_ROOT/venv`) — do not `pip install` into system Python |
+| `rex-agent` on PATH but import fails | Missing proto gen or wrong Python | `rex proto install`; `rex sidecar doctor` |
+| VSIX not compatible with VS Code engine | Cursor/VS Code older than `engines.vscode` (**^1.120.0**) | Upgrade editor; or install a VSIX from an older release tag |
+| `reinstall-dev.sh` skipped extension | Earlier failure aborted before extension step (older scripts) | Re-run `./scripts/reinstall-dev.sh` — agent failure no longer blocks extension install |
 
 ## Terminal works, editor does not
 

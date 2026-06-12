@@ -131,6 +131,15 @@ fi
 
 bootstrap_rex_config
 
+INSTALL_AGENT="${ROOT_DIR}/scripts/install-agent-sidecar.sh"
+if [[ -x "${INSTALL_AGENT}" ]]; then
+  chmod +x "${INSTALL_AGENT}"
+  if ! "${INSTALL_AGENT}"; then
+    echo "WARNING: rex-agent install failed — product sidecar may be unavailable." >&2
+    echo "Run ./scripts/install-agent-sidecar.sh after fixing Python (see ./scripts/install-preflight.sh)." >&2
+  fi
+fi
+
 echo "Install complete."
 echo "Primary command:"
 echo "  rex"

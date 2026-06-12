@@ -57,7 +57,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           reason: "REX extension is not active",
         } as DaemonLifecycleState);
       }
-      return ensureDaemonWithWorkspaceBinding(r.lifecycle, r.settings, r.output, signal);
+      return ensureDaemonWithWorkspaceBinding(r.lifecycle, r.output, signal);
     },
     getDaemonState: () => lastLifecycleState,
     log: (message) => output.appendLine(message),
@@ -92,9 +92,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   let initialSpawnCwd: string | undefined;
   if (initialBinding.ok) {
     try {
-      ensureProjectRexConfig(initialBinding.workspaceRoot, {
-        productAgentConfig: settings.productAgentConfig,
-      });
+      ensureProjectRexConfig(initialBinding.workspaceRoot);
       initialSpawnCwd = initialBinding.workspaceRoot;
       if (initialBinding.multiRoot) {
         output.appendLine("[activate] workspace.warning=multi_root (binding primary folder only)");
@@ -263,7 +261,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   if (settings.daemonAutoStart) {
     output.appendLine("[activate] daemonAutoStart=true -> ensuring daemon is running");
-    void ensureDaemonWithWorkspaceBinding(lifecycle, settings, output).then((state) => {
+    void ensureDaemonWithWorkspaceBinding(lifecycle, output).then((state) => {
       output.appendLine(`[activate] auto-start result -> ${describeState(state)}`);
     });
   } else {
@@ -320,7 +318,6 @@ function buildLifecycle(
 
 async function ensureDaemonWithWorkspaceBinding(
   lifecycle: DaemonLifecycle,
-  settings: RexSettings,
   output: vscode.OutputChannel,
   signal?: AbortSignal,
 ): Promise<DaemonLifecycleState> {
@@ -330,9 +327,7 @@ async function ensureDaemonWithWorkspaceBinding(
     return { kind: "unavailable", reason: binding.reason };
   }
   try {
-    ensureProjectRexConfig(binding.workspaceRoot, {
-      productAgentConfig: settings.productAgentConfig,
-    });
+    ensureProjectRexConfig(binding.workspaceRoot);
     if (binding.multiRoot) {
       output.appendLine("[lifecycle] workspace.warning=multi_root (binding primary folder only)");
     }
@@ -369,7 +364,7 @@ function refreshDaemonConnection(
     return Promise.resolve(undefined);
   }
   if (r.settings.daemonAutoStart) {
-    return ensureDaemonWithWorkspaceBinding(r.lifecycle, r.settings, r.output);
+    return ensureDaemonWithWorkspaceBinding(r.lifecycle, r.output);
   }
   return r.lifecycle.probe();
 }

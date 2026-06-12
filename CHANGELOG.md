@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 ## [Unreleased]
 
+### Changed
+
+- **`rex config init`** operator template enables mock web search (`search.enabled: true`, `search.provider: mock`).
+- Install scripts always attempt `rex-agent` setup (warn when pip missing); removed `--no-agent` / `rex.productAgentConfig` opt-in flags.
+- Missing `rex-agent` errors include install hints (`rex sidecar doctor`, daemon startup, `rex complete`).
+
 ## [1.0.0] - (awaiting tag)
 
 Workspace version **`1.0.0`** preparatory in tree; **`v1.0.0` git tag** lands when a maintainer merges the release-plz Release PR **after** all Must **RC-*** rows are **Met** (**RC-01–RC-10** and **RC-S3–RC-S5**) — [RELEASE.md](docs/RELEASE.md), [V1_0.md](docs/V1_0.md).
