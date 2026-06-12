@@ -62,4 +62,6 @@ if [ "${result}" = "success" ]; then
 fi
 echo "::endgroup::"
 
+cd - > /dev/null
+
 ./scripts/ci/finish_verify_job.sh
