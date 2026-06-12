@@ -6,22 +6,44 @@ Python sidecar implementing `rex.sidecar.v1` for the REX product agent program.
 
 ## Prerequisites
 
-- Python 3.10+
+- Python **3.10+** (macOS CLT default 3.9 is **not** supported)
 - `rex` CLI on `PATH` (from this monorepo)
 - `grpcio-tools` for `rex proto install` (see [docs/DEPENDENCIES.md](../../docs/DEPENDENCIES.md))
 
-## Bootstrap
+## Operator install (recommended)
 
-From the Rex repository root:
+From the Rex repository root (also run automatically by `./scripts/install-cli.sh`):
 
 ```bash
 rex config init
+./scripts/install-agent-sidecar.sh
+rex sidecar doctor
+```
+
+This creates:
+
+- **`$REX_ROOT/venv`** — editable `rex-agent` install (default `~/.rex/venv`)
+- **`~/.cargo/bin/rex-agent`** — wrapper that sets `PYTHONPATH=$REX_ROOT/proto/gen` and runs the venv interpreter
+
+Check dependencies first: `./scripts/install-preflight.sh`
+
+## Maintainer install (manual venv)
+
+When developing the sidecar package itself:
+
+```bash
 rex proto install
+python3.12 -m venv .venv   # or any Python >= 3.10
+source .venv/bin/activate
 pip install -e sidecars/rex-agent
 export PYTHONPATH="$(rex proto path):${PYTHONPATH}"
 ```
 
-Run manually (daemon must be up for `RunTurn` to succeed):
+Or use the dev launcher (no pip install): `sidecars/rex-agent/rex-agent` sets `PYTHONPATH` to proto gen + `src/`.
+
+## Run
+
+Daemon must be up for `RunTurn` to succeed:
 
 ```bash
 rex-agent

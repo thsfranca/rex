@@ -13,7 +13,7 @@ For a single ordered path from **clone** to **REX ready** in the editor (includi
 
 Prerequisites:
 
-- VS Code `>= 1.90` (or a recent Cursor build with a compatible VS Code engine).
+- VS Code engine **^1.120.0** (see `extensions/rex-vscode/package.json`). [`install-extension.sh`](../scripts/install-extension.sh) compares your editor's reported engine version **before** building the VSIX and exits with upgrade instructions on mismatch.
 - Unified **`rex`** on `PATH` (or set `rex.cliPath`; default **`rex`**).
 - Daemon reachable via `/tmp/rex.sock` or **`rex`** available if you enable auto-start (`rex daemon`).
 
@@ -88,6 +88,7 @@ Open the `REX` output channel (`REX: Open Output Channel`) for details on every 
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
+| `Unable to install extension … not compatible with VS Code` | Host engine below **^1.120.0** (common on older Cursor builds). | Upgrade Cursor/VS Code, or install a VSIX built for your engine from a release tag. Re-run `./scripts/install-extension.sh` — preflight prints required vs host engine before `npm run package`. |
 | `REX unavailable` at activation | **`rex`** not on `PATH` (common when VS Code/Cursor is launched from the Dock on macOS). | Set `rex.cliPath` to the absolute path of **`rex`** (for example from `which rex` in a login shell). |
 | `REX unavailable: daemon did not become ready within Nms` | Daemon took too long to bind its socket. | Increase daemon warm-up time by starting it manually, or leave auto-start off. |
 | `REX unavailable: rex daemon exited with code N` | Daemon crashed on startup. | Inspect daemon logs; ensure only one instance runs on `/tmp/rex.sock`. |

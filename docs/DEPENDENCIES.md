@@ -24,6 +24,21 @@ Install `protobuf` on macOS:
 brew install protobuf
 ```
 
+### Operator install prerequisites (local E2E)
+
+Use this table before `./scripts/reinstall-dev.sh` or the step-by-step path in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md). Run `./scripts/install-preflight.sh` for a live summary; add `--strict` to fail fast.
+
+| Component | Minimum | macOS install hint |
+|---|---|---|
+| Rust + `cargo` | stable (2021 edition) | [rustup.rs](https://rustup.rs) |
+| `protoc` | 3.x | `brew install protobuf` |
+| Python (`rex-agent`) | **3.10+** | `brew install python@3.12` — avoid macOS CLT default **3.9** |
+| `pip` (rex-agent venv) | auto-upgraded in venv | Created at `$REX_ROOT/venv` by [`install-agent-sidecar.sh`](../scripts/install-agent-sidecar.sh) |
+| Node.js (extension build) | **20+** | Required only when packaging/installing the VSIX |
+| Editor VS Code engine | **^1.120.0** | Must match `extensions/rex-vscode/package.json`; [`install-extension.sh`](../scripts/install-extension.sh) preflights before build |
+
+**rex-agent layout:** editable install into `$REX_ROOT/venv` (default `~/.rex/venv`); wrapper at `~/.cargo/bin/rex-agent` sets `PYTHONPATH=$REX_ROOT/proto/gen`. Verify with `rex sidecar doctor`.
+
 ## 2) Runtime-critical dependencies (required now)
 
 | Dependency | Why it is required | Notes |
@@ -41,8 +56,8 @@ brew install protobuf
 
 | Dependency | Why | Notes |
 |---|---|---|
-| Python 3.10+ | Runs `rex-agent` (LangGraph state typing) | CI prefers `python3.11` / `python3.10` when available |
-| `grpcio`, `protobuf` | gRPC runtime for sidecar + broker client | `pip install` with the sidecar package |
+| Python 3.10+ | Runs `rex-agent` (LangGraph state typing) | Operator path: [`install-agent-sidecar.sh`](../scripts/install-agent-sidecar.sh) picks `python3.14` … `python3.10`; CI prefers `python3.11` / `python3.10` |
+| `grpcio`, `protobuf` | gRPC runtime for sidecar + broker client | Installed into `$REX_ROOT/venv` with the sidecar package |
 | `langgraph`, `langchain-core` | ReAct graphs (**R018**) | Installed in CI via [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) |
 | `grpcio-tools` | Maintainer: `rex proto install` | Same as `rex proto doctor` toolchain |
 | `pytest` | Sidecar unit tests | CI: [`run_rex_agent_checks.sh`](../scripts/ci/run_rex_agent_checks.sh) |

@@ -1,27 +1,25 @@
 #!/usr/bin/env bash
 # Install rex-agent Python sidecar and proto stubs (operator default).
-# Exits 0 when pip is missing (warn only); exits non-zero on pip install failure.
+# Uses $REX_ROOT/venv (default ~/.rex/venv) — not system site-packages.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LIB_DIR="${ROOT_DIR}/scripts/lib"
+# shellcheck source=lib/python_sidecar.sh
+source "${LIB_DIR}/python_sidecar.sh"
 
 if ! command -v rex >/dev/null 2>&1; then
   echo "rex must be on PATH before installing rex-agent." >&2
+  echo "Run ./scripts/install-cli.sh first." >&2
   exit 127
-fi
-
-if ! command -v pip >/dev/null 2>&1 && ! command -v pip3 >/dev/null 2>&1; then
-  echo "WARNING: pip not found — skipped rex-agent install." >&2
-  echo "Install Python 3.10+ and pip, then run: rex proto install && pip install -e sidecars/rex-agent" >&2
-  exit 0
-fi
-
-pip_cmd="pip"
-if ! command -v pip >/dev/null 2>&1; then
-  pip_cmd="pip3"
 fi
 
 echo "=== Installing rex-agent Python sidecar ==="
 rex proto install
-"${pip_cmd}" install -e "${ROOT_DIR}/sidecars/rex-agent"
-echo "rex-agent installed."
+
+if ! python_sidecar_install "${ROOT_DIR}"; then
+  echo "rex-agent install failed — see messages above." >&2
+  exit 1
+fi
+
+echo "rex-agent installed (venv: $(python_sidecar__rex_root)/venv, wrapper: ${HOME}/.cargo/bin/rex-agent)."

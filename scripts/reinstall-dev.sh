@@ -8,6 +8,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INSTALL_CLI="${ROOT_DIR}/scripts/install-cli.sh"
 INSTALL_EXT="${ROOT_DIR}/scripts/install-extension.sh"
+INSTALL_PREFLIGHT="${ROOT_DIR}/scripts/install-preflight.sh"
 CARGO_BIN="${HOME}/.cargo/bin"
 REX_BIN="${CARGO_BIN}/rex"
 
@@ -161,7 +162,7 @@ Quick test:
 Config:
   rex config show       # operator init defaults to rex-agent + mock web search
 
-If rex-agent was skipped (no pip), run: rex proto install && pip install -e sidecars/rex-agent
+If rex-agent install failed, run: ./scripts/install-agent-sidecar.sh (see ./scripts/install-preflight.sh)
 
 If the status bar still shows unavailable, set rex.cliPath to ${REX_BIN}
 (see ./scripts/install-cli.sh --print-bin-path).
@@ -169,6 +170,11 @@ If the status bar still shows unavailable, set rex.cliPath to ${REX_BIN}
 Full checklist: ${ROOT_DIR}/docs/EXTENSION_LOCAL_E2E.md
 EOF
 }
+
+if [[ -x "${INSTALL_PREFLIGHT}" ]]; then
+  chmod +x "${INSTALL_PREFLIGHT}"
+  "${INSTALL_PREFLIGHT}" || true
+fi
 
 if [[ "${EXTENSION_ONLY}" != "true" ]]; then
   install_rust_binaries

@@ -1,6 +1,9 @@
 use std::process::ExitCode;
 
-use rex_config::{ensure_global_layout, load, sidecar_binary_resolvable, sidecar_install_hint};
+use rex_config::{
+    ensure_global_layout, load, proto_gen_path, rex_agent_doctor_applies, rex_agent_doctor_checks,
+    sidecar_binary_resolvable, sidecar_install_hint,
+};
 
 pub fn run_sidecar(mut args: impl Iterator<Item = String>) -> ExitCode {
     match args.next().as_deref() {
@@ -80,13 +83,24 @@ fn run_doctor() -> ExitCode {
         );
         ok = false;
     }
-    let gen = rex_config::proto_gen_path();
+    let gen = proto_gen_path();
     if !gen.exists() {
         eprintln!(
             "proto gen dir missing: {} (run `rex proto install`)",
             gen.display()
         );
         ok = false;
+    }
+    if let Some(entry) = loaded.active_sidecar() {
+        if rex_agent_doctor_applies(&entry.binary) {
+            match rex_agent_doctor_checks(&loaded.rex_root, &gen) {
+                Ok(()) => {}
+                Err(err) => {
+                    eprintln!("{err}");
+                    ok = false;
+                }
+            }
+        }
     }
     if ok {
         println!("sidecar doctor OK");

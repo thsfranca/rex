@@ -133,7 +133,7 @@ Operator setup: [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
 
 1. **`rex config init`** — create `$REX_ROOT/config.json` (layout root **`REX_ROOT`**, default `~/.rex`).
 2. **`rex proto install`** — materialize Python stubs under `$REX_ROOT/proto/gen` (flat layout; not `gen/python/`).
-3. **`pip install -e sidecars/rex-agent`** (or use the repo [launcher](../sidecars/rex-agent/rex-agent) with `PYTHONPATH` including proto gen + `sidecars/rex-agent/src`).
+3. **`./scripts/install-agent-sidecar.sh`** — venv at `$REX_ROOT/venv` and `~/.cargo/bin/rex-agent` wrapper (or maintainer: `pip install -e` with Python **>= 3.10**, or the repo [launcher](../sidecars/rex-agent/rex-agent)).
 4. Add a `sidecars.list` entry with `"binary": "rex-agent"` and set **`sidecars.active`** to that name when dogfooding.
 
 Broker calls from Python use `grpc.default_authority=localhost` on daemon UDS (interop with tonic). See [sidecars/rex-agent/README.md](../sidecars/rex-agent/README.md).

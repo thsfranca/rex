@@ -189,6 +189,14 @@ EOF
 
 EDITOR_CLI="$(resolve_editor_cli)"
 
+LIB_DIR="${ROOT_DIR}/scripts/lib"
+# shellcheck source=lib/editor_cli.sh
+source "${LIB_DIR}/editor_cli.sh"
+PACKAGE_JSON="${EXT_DIR}/package.json"
+if ! extension_engine_preflight "${EDITOR_CLI}" "${PACKAGE_JSON}"; then
+  exit 1
+fi
+
 if [[ "${ONLY_INSTALL}" != "true" ]]; then
   echo "Using editor CLI: ${EDITOR_CLI}"
   echo "Installing dependencies in ${EXT_DIR}"
