@@ -115,6 +115,10 @@ On each `BrokerInference`, the **provider** chooses (native: structured `tool_ca
 
 **Fail-closed fallback (one retry per step):** stable code `native_tools_unsupported` when provider 4xx, SSE lacks `tool_calls` deltas after tools sent, or assembled response is empty. Sidecar re-issues same step on interim path; log `protocol=interim_fallback`.
 
+#### Strict provider tool names (HTTP wire)
+
+Some OpenAI-compat providers (for example **DeepSeek**) require `tools[].function.name` to match `^[a-zA-Z0-9_-]+$` — no dots. Rex canonical broker names use dots (`fs.read`, `web.search`). The daemon **`http_openai_compat`** adapter encodes names on the HTTP wire (`.` → `_`) and decodes `tool_calls` back to canonical names before returning `BrokerInferenceResponse`. Sidecar and broker execution continue to use dotted names unchanged.
+
 #### Response routing in sidecar
 
 | `BrokerInferenceResponse` | Graph action |

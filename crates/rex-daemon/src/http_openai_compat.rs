@@ -1,6 +1,6 @@
 //! OpenAI-compatible HTTP chat/completions adapter (SSE streaming).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::time::Duration;
 
 use futures::StreamExt;
@@ -135,6 +135,7 @@ impl HttpOpenAiCompatRuntime {
             "messages": messages.iter().map(|m| json!({"role": m.role, "content": m.content})).collect::<Vec<_>>(),
             "stream": true
         });
+        let tool_name_map = build_tool_name_map(tools);
         if attach_tools && !tools.is_empty() {
             let openai_tools: Vec<Value> = tools
                 .iter()
@@ -144,7 +145,7 @@ impl HttpOpenAiCompatRuntime {
                     json!({
                         "type": "function",
                         "function": {
-                            "name": t.name,
+                            "name": encode_tool_name_for_provider(&t.name),
                             "description": t.description,
                             "parameters": parameters,
                         }
@@ -173,6 +174,17 @@ impl HttpOpenAiCompatRuntime {
         if !response.status().is_success() {
             let status = response.status();
             let detail = response.text().await.unwrap_or_default();
+            if attach_tools && status.is_client_error() {
+                return Ok(BrokerCompletionResult {
+                    content: String::new(),
+                    tool_calls: Vec::new(),
+                    protocol: InferenceProtocol::InterimFallback,
+                    error: Some(format!(
+                        "{NATIVE_TOOLS_UNSUPPORTED}: http status={status} body={}",
+                        truncate_body(&detail, 512)
+                    )),
+                });
+            }
             return Err(Status::unavailable(format!(
                 "http inference failed: status={status} body={}",
                 truncate_body(&detail, 512)
@@ -197,7 +209,7 @@ impl HttpOpenAiCompatRuntime {
             InferenceProtocol::Interim
         };
 
-        let tool_calls = assembler.finish_tool_calls();
+        let tool_calls = decode_tool_calls_from_provider(assembler.finish_tool_calls(), &tool_name_map);
         Ok(BrokerCompletionResult {
             content: assembler.content,
             tool_calls,
@@ -369,6 +381,10 @@ pub async fn broker_inference_http(
         .fetch_broker_completion(messages, tools, model, attach_tools)
         .await?;
 
+    if result.error.is_some() {
+        return Ok(result);
+    }
+
     if attempted_native && attach_tools {
         if result.tool_calls.is_empty() && result.content.trim().is_empty() {
             return Ok(BrokerCompletionResult {
@@ -437,6 +453,40 @@ fn apply_inference_headers(
     request.header(CONTENT_TYPE, "application/json")
 }
 
+/// Encode Rex canonical tool names for strict OpenAI-compat providers (e.g. DeepSeek).
+fn encode_tool_name_for_provider(name: &str) -> String {
+    name.replace('.', "_")
+}
+
+fn build_tool_name_map(tools: &[HttpToolSpec]) -> HashMap<String, String> {
+    tools
+        .iter()
+        .map(|t| {
+            let wire = encode_tool_name_for_provider(&t.name);
+            (wire, t.name.clone())
+        })
+        .collect()
+}
+
+fn decode_tool_name_from_provider(wire: &str, map: &HashMap<String, String>) -> String {
+    map.get(wire)
+        .cloned()
+        .unwrap_or_else(|| wire.to_string())
+}
+
+fn decode_tool_calls_from_provider(
+    calls: Vec<HttpToolCall>,
+    map: &HashMap<String, String>,
+) -> Vec<HttpToolCall> {
+    calls
+        .into_iter()
+        .map(|mut call| {
+            call.name = decode_tool_name_from_provider(&call.name, map);
+            call
+        })
+        .collect()
+}
+
 fn truncate_body(body: &str, max: usize) -> String {
     if body.chars().count() <= max {
         return body.to_string();
@@ -447,6 +497,56 @@ fn truncate_body(body: &str, max: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn encodes_and_decodes_tool_names_for_provider_wire() {
+        let tools = vec![
+            HttpToolSpec {
+                name: "fs.read".to_string(),
+                description: String::new(),
+                parameters_json: "{}".to_string(),
+            },
+            HttpToolSpec {
+                name: "web.search".to_string(),
+                description: String::new(),
+                parameters_json: "{}".to_string(),
+            },
+        ];
+        let map = build_tool_name_map(&tools);
+        assert_eq!(encode_tool_name_for_provider("fs.read"), "fs_read");
+        assert_eq!(encode_tool_name_for_provider("exec.shell"), "exec_shell");
+        assert_eq!(
+            decode_tool_name_from_provider("fs_read", &map),
+            "fs.read"
+        );
+        assert_eq!(
+            decode_tool_name_from_provider("web_search", &map),
+            "web.search"
+        );
+        assert_eq!(
+            decode_tool_name_from_provider("unknown_tool", &map),
+            "unknown_tool"
+        );
+    }
+
+    #[test]
+    fn decodes_provider_tool_calls_to_canonical_names() {
+        let tools = vec![HttpToolSpec {
+            name: "fs.read".to_string(),
+            description: String::new(),
+            parameters_json: "{}".to_string(),
+        }];
+        let map = build_tool_name_map(&tools);
+        let calls = decode_tool_calls_from_provider(
+            vec![HttpToolCall {
+                id: "call_1".to_string(),
+                name: "fs_read".to_string(),
+                arguments_json: r#"{"path":"x"}"#.to_string(),
+            }],
+            &map,
+        );
+        assert_eq!(calls[0].name, "fs.read");
+    }
 
     #[test]
     fn resolves_model_override() {

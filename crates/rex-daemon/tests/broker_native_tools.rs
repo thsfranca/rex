@@ -13,6 +13,8 @@ mod support;
 
 use support::openai_compat_sse::{
     spawn_loopback_openai_compat_sse_fixture, spawn_loopback_openai_compat_tool_calls_fixture,
+    spawn_loopback_openai_compat_tool_calls_capture_fixture,
+    spawn_loopback_openai_compat_tool_reject_fixture,
 };
 
 #[allow(dead_code)]
@@ -134,6 +136,83 @@ async fn mock_runtime_strips_tools_and_uses_interim() {
     assert!(response.ok, "{}", response.error);
     assert_eq!(response.protocol, InferenceProtocol::Interim as i32);
     assert!(response.tool_calls.is_empty());
+
+    settings::reset_for_test();
+}
+
+#[tokio::test]
+#[serial]
+async fn native_tool_calls_encode_wire_names_on_request() {
+    let (addr, rx) = spawn_loopback_openai_compat_tool_calls_capture_fixture().await;
+    init_http_config(&format!("http://{addr}/v1"), NativeToolsMode::True);
+
+    let response = broker_inference::run_broker_inference(&BrokerInferenceRequest {
+        prompt: String::new(),
+        mode: "plan".to_string(),
+        model: String::new(),
+        messages: vec![rex_proto::rex::v1::ChatMessage {
+            role: "user".to_string(),
+            content: "read README".to_string(),
+        }],
+        tools: vec![ToolSpec {
+            name: "fs.read".to_string(),
+            description: "Read a file".to_string(),
+            parameters_json: r#"{"type":"object","properties":{"path":{"type":"string"}}}"#
+                .to_string(),
+        }],
+    })
+    .await
+    .expect("broker inference");
+
+    assert!(response.ok, "{}", response.error);
+    assert_eq!(response.tool_calls[0].name, "fs.read");
+
+    let request = rx.await.expect("request captured");
+    assert!(
+        request.contains(r#""name":"fs_read""#),
+        "expected wire-encoded tool name in request, got: {request}"
+    );
+    assert!(
+        !request.contains(r#""name":"fs.read""#),
+        "canonical dotted name must not appear on HTTP wire: {request}"
+    );
+
+    settings::reset_for_test();
+}
+
+#[tokio::test]
+#[serial]
+async fn provider_4xx_with_tools_returns_interim_fallback() {
+    let addr = spawn_loopback_openai_compat_tool_reject_fixture().await;
+    init_http_config(&format!("http://{addr}/v1"), NativeToolsMode::True);
+
+    let response = broker_inference::run_broker_inference(&BrokerInferenceRequest {
+        prompt: String::new(),
+        mode: "ask".to_string(),
+        model: String::new(),
+        messages: vec![rex_proto::rex::v1::ChatMessage {
+            role: "user".to_string(),
+            content: "hello".to_string(),
+        }],
+        tools: vec![ToolSpec {
+            name: "fs.read".to_string(),
+            description: String::new(),
+            parameters_json: "{}".to_string(),
+        }],
+    })
+    .await
+    .expect("broker inference");
+
+    assert!(!response.ok);
+    assert_eq!(
+        response.protocol,
+        InferenceProtocol::InterimFallback as i32
+    );
+    assert!(
+        response.error.contains("native_tools_unsupported"),
+        "expected native_tools_unsupported, got: {}",
+        response.error
+    );
 
     settings::reset_for_test();
 }
