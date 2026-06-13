@@ -1,6 +1,6 @@
 """Tool protocol parsing tests."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from rex_agent.graph.nodes.init import (
     prompt_has_explicit_file_reference,
@@ -16,7 +16,9 @@ from rex_agent.tools import (
     TOOL_WRITE,
     ToolCall,
     ToolGateContext,
+    ToolResultCache,
     explicit_web_intent,
+    execute_tool,
     is_policy_config_failure,
     normalize_plan_save_path,
     normalize_tool_batch,
@@ -255,3 +257,17 @@ def test_policy_deny_batch_increments_error_count_semantics() -> None:
 
 def test_agent_loop_stuck_code_constant() -> None:
     assert AGENT_LOOP_STUCK_CODE == "agent_loop_stuck"
+
+
+def test_exact_match_cache_bills_once_for_three_reads() -> None:
+    client = MagicMock()
+    client.read_file.return_value = (True, "<<TOOL_RESULT:fs.read>>\nbody\n<<END>>")
+    cache = ToolResultCache()
+    call = ToolCall(tool=TOOL_READ, args={"path": "main.rs"})
+    ok1, _, _, dup1 = execute_tool(client, call, "agent", read_cache=cache)
+    ok2, _, _, dup2 = execute_tool(client, call, "agent", read_cache=cache)
+    ok3, _, _, dup3 = execute_tool(client, call, "agent", read_cache=cache)
+    assert ok1 and not dup1
+    assert ok2 and dup2
+    assert ok3 and dup3
+    client.read_file.assert_called_once()

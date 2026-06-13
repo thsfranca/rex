@@ -199,8 +199,8 @@ Follow-on program after **R057–R058** to reduce cap-terminal failures and impr
 
 | ID | Theme | Status | Notes |
 |----|-------|--------|-------|
-| **R060** | Deterministic ask init + hybrid circuit breaker | **Open** | Pre-LLM `fs.read`/`fs.list`; `agent_loop_stuck` at 3 policy-deny rounds; `agent.deterministic_init_enabled` (default true) |
-| **R061** | Exact-match tool result cache | Open | `(tool, args)` hash; duplicate intercept → no bill + error_count |
+| **R060** | Deterministic ask init + hybrid circuit breaker | **Done** | Pre-LLM `fs.read`/`fs.list`; `agent_loop_stuck` at 3 policy-deny rounds; `agent.deterministic_init_enabled` (default true) |
+| **R061** | Exact-match tool result cache | **Open** | `(tool, args)` hash; duplicate intercept → no bill + error_count |
 | **R062** | Prefix-safe compaction defaults | Open | `agent.compaction_enabled` default false; typed Rust config fields |
 | **R063** | Soft cap Continue UX | Open | NDJSON activity pause; cap elevation 15/25/25 |
 | **R064** | Loop observability + golden prompts | Open | `cap_terminal`, productive-step ratio; CI golden set |
@@ -213,6 +213,7 @@ Follow-on program after **R057–R058** to reduce cap-terminal failures and impr
 | Tool success or exploratory failure | Yes | Reset to 0 |
 | Parse / validation error | No | +1 |
 | Policy / config denial (all failures in batch) | No | +1 |
+| Exact duplicate `(tool, args)` (R061) | No | +1 per duplicate |
 | Terminal at `tool_error_count >= 3` | — | Stable code `agent_loop_stuck` |
 
 **Deterministic init (R060):** Ask mode entry node runs before first LLM when the prompt has no explicit file reference and README is not already in `daemon_context`. Bills one productive step; sets `workspace_explored`.

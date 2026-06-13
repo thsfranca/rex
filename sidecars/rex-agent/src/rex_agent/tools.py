@@ -205,14 +205,25 @@ class ToolGateContext:
 
 
 @dataclass
-class ReadCache:
-    entries: dict[str, str] = field(default_factory=dict)
+class ToolResultCache:
+    """Intra-turn exact-match cache keyed by tool name + canonical args JSON."""
 
-    def get(self, path: str) -> str | None:
-        return self.entries.get(path)
+    entries: dict[str, tuple[bool, str]] = field(default_factory=dict)
 
-    def put(self, path: str, content: str) -> None:
-        self.entries[path] = content
+    @staticmethod
+    def cache_key(tool: str, args: dict[str, Any]) -> str:
+        payload = json.dumps(args, sort_keys=True, separators=(",", ":"))
+        return f"{tool}:{payload}"
+
+    def get_call(self, tool: str, args: dict[str, Any]) -> tuple[bool, str] | None:
+        return self.entries.get(self.cache_key(tool, args))
+
+    def put_call(self, tool: str, args: dict[str, Any], ok: bool, result: str) -> None:
+        self.entries[self.cache_key(tool, args)] = (ok, result)
+
+
+# Backward-compatible alias for state field name.
+ReadCache = ToolResultCache
 
 
 def explicit_web_intent(prompt: str) -> bool:
@@ -604,21 +615,23 @@ def execute_tool(
     call: ToolCall,
     mode: str,
     *,
-    read_cache: ReadCache | None = None,
+    read_cache: ToolResultCache | None = None,
     goal_hint: str = "",
-) -> tuple[bool, str, bool]:
+) -> tuple[bool, str, bool, bool]:
     tool = call.tool
     args = call.args
     truncated = False
 
+    if read_cache is not None:
+        cached = read_cache.get_call(tool, args)
+        if cached is not None:
+            ok, result = cached
+            return ok, f"[cached {tool} result]\n{result}", False, True
+
     if tool == TOOL_READ:
         path = str(args.get("path", "")).strip()
         if not path:
-            return False, "fs.read requires path", False
-        if read_cache is not None:
-            cached = read_cache.get(path)
-            if cached is not None:
-                return True, f"[cached read of {path}]\n{cached}", False
+            return False, "fs.read requires path", False, False
         ok, result = client.read_file(path, mode)
         if ok:
             raw_body = strip_tool_result_delimiters(result)
@@ -626,31 +639,35 @@ def execute_tool(
             if read_pruning_enabled() and goal_hint:
                 pruned = prune_read_result(raw_body, goal_hint)
             if read_cache is not None:
-                read_cache.put(path, pruned)
+                read_cache.put_call(tool, args, True, result)
             if len(raw_body.encode("utf-8")) >= max_tool_result_bytes():
                 truncated = True
             if " [rex: tool output truncated]" in raw_body:
                 truncated = True
             if pruned != raw_body:
                 result = format_delimited_tool_result_for_prompt(TOOL_READ, pruned)
-        return ok, result, truncated
+        return ok, result, truncated, False
 
     if tool == TOOL_LIST:
         path = str(args.get("path", "")).strip()
         ok, result = client.list_dir(path, mode)
-        return ok, result, False
+        if ok and read_cache is not None:
+            read_cache.put_call(tool, args, ok, result)
+        return ok, result, False, False
 
     if tool == TOOL_WEB_SEARCH:
         query = str(args.get("query", "")).strip()
         if not query:
-            return False, "web.search requires query", False
+            return False, "web.search requires query", False, False
         ok, result = client.web_search(query, mode)
-        return ok, result, False
+        if ok and read_cache is not None:
+            read_cache.put_call(tool, args, ok, result)
+        return ok, result, False, False
 
     if tool == TOOL_WRITE:
         path = str(args.get("path", "")).strip()
         if not path:
-            return False, "fs.write requires path", False
+            return False, "fs.write requires path", False, False
         diff_text = args.get("diff")
         content = args.get("content")
         if diff_text is not None and str(diff_text).strip():
@@ -661,11 +678,11 @@ def execute_tool(
                 existing = strip_tool_result_delimiters(existing)
             ok_patch, patched = apply_unified_diff(existing, str(diff_text))
             if not ok_patch:
-                return False, patched, False
+                return False, patched, False, False
             ok, msg = client.write_file(path, patched, mode)
-            return ok, msg if ok else msg, False
+            return ok, msg if ok else msg, False, False
         if content is None:
-            return False, "fs.write requires content or diff", False
+            return False, "fs.write requires content or diff", False, False
         content_str = str(content)
         ok_read, existing = client.read_file(path, mode)
         if not ok_read:
@@ -674,28 +691,28 @@ def execute_tool(
             existing = strip_tool_result_delimiters(existing)
         reject = reject_whole_file_write(path, content_str, existing)
         if reject:
-            return False, reject, False
+            return False, reject, False, False
         ok, msg = client.write_file(path, content_str, mode)
-        return ok, msg if ok else msg, False
+        return ok, msg if ok else msg, False, False
 
     if tool == TOOL_EXEC:
         command = str(args.get("command", "")).strip()
         if not command:
-            return False, "exec.shell requires command", False
+            return False, "exec.shell requires command", False, False
         ok, result = client.exec_shell(command, mode)
-        return ok, result, False
+        return ok, result, False, False
 
     if tool == TOOL_PLAN_SAVE:
         path = normalize_plan_save_path(str(args.get("path", "")))
         content = str(args.get("content", ""))
         if not path:
-            return False, "plan.save requires path", False
+            return False, "plan.save requires path", False, False
         if not content.strip():
-            return False, "plan.save requires content", False
+            return False, "plan.save requires content", False, False
         ok, msg = client.save_plan(path, content, mode)
-        return ok, msg if ok else msg, False
+        return ok, msg if ok else msg, False, False
 
-    return False, f"Unknown tool: {tool}", False
+    return False, f"Unknown tool: {tool}", False, False
 
 
 def format_delimited_tool_result_for_prompt(tool: str, body: str) -> str:

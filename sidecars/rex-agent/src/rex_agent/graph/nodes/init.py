@@ -97,7 +97,7 @@ def init_workspace_node(state: AgentState, *, client: BrokerClient) -> dict:
             detail=detail,
             tool_call_id=tool_call_id,
         )
-        ok, result, truncated = execute_tool(
+        ok, result, truncated, _exact_duplicate = execute_tool(
             client,
             call,
             state["mode"],
