@@ -44,6 +44,7 @@ export interface ChatProps {
     phase: string;
     kind?: string;
     detail?: string;
+    target?: string;
   }>;
   readonly activityHint?: string;
   readonly planArtifact?: PlanArtifactPayload;
@@ -308,6 +309,7 @@ export function Chat(props: ChatProps): React.ReactElement {
                         summary={entry.summary}
                         kind={entry.kind}
                         detail={entry.detail}
+                        target={entry.target}
                       />
                     ))}
                 </div>

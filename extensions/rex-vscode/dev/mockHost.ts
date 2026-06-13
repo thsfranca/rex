@@ -122,13 +122,37 @@ async function seedUiState(): Promise<void> {
     {
       type: "executionStep",
       payload: {
+        id: "e1-running",
+        streamId: STREAM_ID,
+        toolCallId: "tc-read",
+        phase: "running",
+        summary: "fs.read",
+        kind: "tool",
+        detail: "README.md",
+      },
+    },
+    {
+      type: "executionStep",
+      payload: {
         id: "e1",
         streamId: STREAM_ID,
         toolCallId: "tc-read",
         phase: "completed",
-        summary: "read_file",
+        summary: "fs.read",
         kind: "tool",
-        detail: "src/ui/chatPanel.ts",
+        detail: "[cached read of README.md]\n# REX\n\nThis repository is an experimental study in local AI runtime design.",
+      },
+    },
+    {
+      type: "executionStep",
+      payload: {
+        id: "e2-running",
+        streamId: STREAM_ID,
+        toolCallId: "tc-list-root",
+        phase: "running",
+        summary: "fs.list",
+        kind: "tool",
+        detail: "",
       },
     },
     {
@@ -136,11 +160,11 @@ async function seedUiState(): Promise<void> {
       payload: {
         id: "e2",
         streamId: STREAM_ID,
-        toolCallId: "tc-grep",
+        toolCallId: "tc-list-root",
         phase: "completed",
-        summary: "grep",
+        summary: "fs.list",
         kind: "tool",
-        detail: "executionStep",
+        detail: "cliff.toml, CONTRIBUTING.md, config.json, ARCHITECTURE.md, ARCHITECTURE_GUIDELINES.md",
       },
     },
     {
@@ -150,7 +174,7 @@ async function seedUiState(): Promise<void> {
         streamId: STREAM_ID,
         toolCallId: "tc-shell",
         phase: "running",
-        summary: "run_terminal_cmd",
+        summary: "exec.shell",
         kind: "tool",
         detail: "npm test -- --run extensions/rex-vscode",
       },

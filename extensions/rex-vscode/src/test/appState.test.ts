@@ -146,7 +146,7 @@ describe("appState reducer — cancel to idle", () => {
           id: "e1",
           toolCallId: "tc-1",
           phase: "running",
-          summary: "read_file",
+          summary: "fs.read",
           kind: "tool",
           detail: "chatPanel.ts",
         },
@@ -160,7 +160,7 @@ describe("appState reducer — cancel to idle", () => {
           id: "e2",
           toolCallId: "tc-2",
           phase: "running",
-          summary: "grep",
+          summary: "fs.list",
           kind: "tool",
           detail: "timeline",
         },
@@ -174,9 +174,9 @@ describe("appState reducer — cancel to idle", () => {
           id: "e1-done",
           toolCallId: "tc-1",
           phase: "completed",
-          summary: "read_file",
+          summary: "fs.read",
           kind: "tool",
-          detail: "chatPanel.ts",
+          detail: "[cached read of chatPanel.ts]\nfile body",
         },
       },
     });
@@ -184,6 +184,7 @@ describe("appState reducer — cancel to idle", () => {
     expect(state.timeline).toHaveLength(2);
     expect(state.timeline[0]?.toolCallId).toBe("tc-1");
     expect(state.timeline[0]?.phase).toBe("completed");
+    expect(state.timeline[0]?.target).toBe("chatPanel.ts");
     expect(state.timeline[1]?.toolCallId).toBe("tc-2");
   });
 
