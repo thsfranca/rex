@@ -34,7 +34,11 @@ export function Message(props: MessageProps): React.ReactElement {
     );
   }
 
-  const segments = splitByCodeBlocks(message.buffer);
+  const stableContent =
+    message.streaming && message.trailingRaw.length > 0
+      ? message.buffer.slice(0, message.buffer.length - message.trailingRaw.length)
+      : message.buffer;
+  const segments = splitByCodeBlocks(stableContent);
   return (
     <div className="rex-message rex-message--assistant" aria-label="Assistant reply">
       <div className="rex-message__body">

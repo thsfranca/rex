@@ -229,7 +229,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     return found ?? createDefaultSession();
   }
 
-  private broadcastSessions(): void {
+  private broadcastSessionList(): void {
     this.postMessage({
       type: "sessionList",
       sessions: this.sessionSnapshot.sessions.map((session) => ({
@@ -238,11 +238,20 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
         isActive: session.id === this.sessionSnapshot.activeSessionId,
       })),
     });
+  }
+
+  private broadcastSessionMessages(): void {
     const active = this.activeSession();
     this.postMessage({
       type: "sessionMessages",
       payload: { sessionId: active.id, messages: active.messages },
     });
+  }
+
+  /** Push session list + active messages (session switch / ready only). */
+  private broadcastSessions(): void {
+    this.broadcastSessionList();
+    this.broadcastSessionMessages();
   }
 
   private async persistActiveSession(
@@ -269,7 +278,8 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     });
     this.sessionSnapshot = { sessions, activeSessionId: activeId };
     await this.sessionStore.save(this.sessionSnapshot);
-    this.broadcastSessions();
+    // Persist only — do not push sessionMessages while the webview may be streaming.
+    this.broadcastSessionList();
   }
 
   private async handleWebviewMessage(message: WebviewToExtension): Promise<void> {
