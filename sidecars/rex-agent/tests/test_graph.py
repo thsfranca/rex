@@ -82,6 +82,45 @@ def test_tool_step_limit_stops_loop() -> None:
     assert "agent.max_tool_steps" in answer
 
 
+def test_plan_mode_batches_three_reads_one_step() -> None:
+    step = {"n": 0}
+
+    def fake_inference(
+        prompt: str, mode: str, model: str, **kwargs: object
+    ) -> InferenceResult:
+        tools = kwargs.get("tools")
+        step["n"] += 1
+        if step["n"] == 1 and tools:
+            return InferenceResult(
+                ok=True,
+                tool_calls=[
+                    BrokerToolCall(tool="fs.read", args={"path": "a.md"}),
+                    BrokerToolCall(tool="fs.read", args={"path": "b.md"}),
+                    BrokerToolCall(tool="fs.read", args={"path": "c.md"}),
+                ],
+            )
+        return legacy_inference_result(
+            True, '{"type":"final","answer":"batched reads done"}'
+        )
+
+    mock_client = MagicMock()
+    mock_client.read_file.return_value = (True, "content")
+
+    graph.set_inference_fn(fake_inference)
+    try:
+        with patch("rex_agent.graph.BrokerClient") as broker_cls:
+            broker_cls.return_value.__enter__.return_value = mock_client
+            broker_cls.return_value.__exit__.return_value = None
+            _reset_graphs()
+            answer, _ = graph.run_turn("read three", "plan", "", "")
+    finally:
+        graph.set_inference_fn(None)
+        _reset_graphs()
+
+    assert "batched reads done" in answer
+    assert mock_client.read_file.call_count == 3
+
+
 def test_plan_mode_native_tool_call_routes_to_tools() -> None:
     step = {"n": 0}
 

@@ -217,6 +217,9 @@ Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. 
 | **R032** | Token playbook + subagent metrics | **Done** |
 | **R038** | Native broker tool calling | **Done** |
 | **R044** | Operation feedback (live stream, ask research, CLI approval parity) | **Done** — [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md) |
+| **R057** | Parallel read-only tool batching (cross-mode) | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
+| **R058** | Per-mode step caps + generic mode prompts | Open |
+| **R059** | `workspace.search` broker tool | Open |
 | R016 | Multi-active broadcast | **Could** — rank **18** |
 | **R036** | TRON static schema compression | **Could** — rank **16** |
 | **R033** | MCP gRPC client | **Could** — rank **17** |

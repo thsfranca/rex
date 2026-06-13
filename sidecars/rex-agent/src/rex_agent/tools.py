@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from rex_agent.broker import BrokerClient, strip_tool_result_delimiters
-from rex_agent.config import max_tool_result_bytes, read_pruning_enabled
+from rex_agent.config import max_tool_result_bytes, max_tools_per_step, read_pruning_enabled
 from rex_agent.diff import (
     apply_unified_diff,
     editor_write_prompt_suffix,
@@ -39,6 +39,20 @@ TOOLS_BY_MODE: dict[str, frozenset[str]] = {
 
 VIEWER_TOOLS = frozenset({TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH})
 EDITOR_TOOLS = frozenset({TOOL_READ, TOOL_WRITE, TOOL_EXEC})
+
+BATCHABLE_READ_TOOLS = frozenset({TOOL_READ, TOOL_LIST})
+NON_BATCHABLE_TOOLS = frozenset({TOOL_WRITE, TOOL_EXEC, TOOL_PLAN_SAVE})
+
+BATCH_MIXED_ERROR = (
+    "Cannot mix read-only batch tools with write, exec, or plan.save in one step. "
+    "Request read/list/search tools together, or a single write/exec/plan.save alone."
+)
+BATCH_EDITOR_MULTI_ERROR = (
+    "Editor step allows exactly one fs.write or exec.shell tool per step."
+)
+BATCH_TRUNCATED_NOTE = (
+    "Tool batch exceeded agent.max_tools_per_step; extra tool calls were not executed."
+)
 
 TOOL_DESCRIPTIONS: dict[str, str] = {
     TOOL_READ: "Read a file relative to the workspace root",
@@ -149,6 +163,58 @@ def tools_for_subagent(subagent: str, mode: str) -> frozenset[str]:
     return allowed
 
 
+def batchable_tools_for_mode(mode: str) -> frozenset[str]:
+    normalized = (mode or "ask").strip().lower() or "ask"
+    allowed = set(BATCHABLE_READ_TOOLS)
+    if normalized == "ask":
+        allowed.add(TOOL_WEB_SEARCH)
+    return frozenset(allowed)
+
+
+def is_batchable_tool(tool: str, mode: str) -> bool:
+    return tool in batchable_tools_for_mode(mode)
+
+
+def normalize_tool_batch(
+    calls: list[ToolCall],
+    *,
+    mode: str,
+    subagent: str,
+    max_batch: int | None = None,
+) -> tuple[list[ToolCall] | None, str | None, bool]:
+    """Validate and cap a tool batch. Returns (calls, error, truncated)."""
+    if not calls:
+        return None, "No tool calls in model response.", False
+
+    cap = max_batch if max_batch is not None else max_tools_per_step()
+    truncated = False
+
+    if subagent == "editor":
+        if len(calls) != 1 or calls[0].tool not in (TOOL_WRITE, TOOL_EXEC):
+            return None, BATCH_EDITOR_MULTI_ERROR, False
+        return calls, None, False
+
+    batchable = batchable_tools_for_mode(mode)
+    allowed_mode = tools_for_mode(mode)
+
+    if len(calls) == 1 and calls[0].tool not in batchable:
+        if calls[0].tool in allowed_mode:
+            return calls, None, False
+        return None, f"Tool {calls[0].tool!r} is not allowed in {mode} mode.", False
+
+    for call in calls:
+        if call.tool not in batchable:
+            return None, BATCH_MIXED_ERROR, False
+        if call.tool not in allowed_mode:
+            return None, f"Tool {call.tool!r} is not allowed in {mode} mode.", False
+
+    if len(calls) > cap:
+        calls = calls[:cap]
+        truncated = True
+
+    return calls, None, truncated
+
+
 def tool_specs_for_subagent(subagent: str, mode: str) -> list[Any]:
     """OpenAI-shaped ToolSpec protos for native broker tool calling (R038)."""
     if rex_pb2 is None:
@@ -200,9 +266,20 @@ def system_prompt_for_tools(mode: str, *, subagent: str = "orchestrator") -> str
         )
     if TOOL_WEB_SEARCH in allowed:
         tool_docs.append(f'- "{TOOL_WEB_SEARCH}": args {{"query": "<search terms>"}}')
+    if subagent == "editor":
+        tool_policy = (
+            "You are a development agent. Use exactly one fs.write or exec.shell "
+            "tool per step (no batching with reads).\n"
+        )
+    else:
+        tool_policy = (
+            "You are a development agent. You may request multiple read/list/search "
+            "tools in one native tool_calls response; that counts as one step.\n"
+        )
     base = (
-        "You are a development agent. Use at most one tool per step.\n"
-        "When you need a tool, respond with ONLY a JSON object on one line:\n"
+        f"{tool_policy}"
+        "When you need a tool (interim JSON path), respond with ONLY a JSON object "
+        "on one line:\n"
         '{"type":"tool","tool":"<name>","args":{...}}\n'
         "When you are done, respond with ONLY:\n"
         '{"type":"final","answer":"<your reply>"}\n'

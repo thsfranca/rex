@@ -12,7 +12,7 @@ Turn **`plan` mode** from read-only ReAct into a **plan-first product path**: st
 
 **In**
 
-- Tools: `fs.read`, `fs.list`, `plan.save` (broker), `plan.clarify` / `plan.final` (sidecar JSON).
+- Tools: `fs.read`, `fs.list`, `plan.save` (broker), `plan.clarify` / `plan.final` (sidecar JSON). Native path may batch multiple read/list calls per LLM round (**R057**).
 - Additive NDJSON `plan` event (`draft` | `clarify` | `ready`).
 - Extension plan card, Save, Build; path policy mirrored for extension Save.
 - Compact plan mode prompt (sidecar interim; daemon `prompts/mode/plan.md` when [ADR 0012](architecture/decisions/0012-layered-prompt-assemblies.md) lands).
@@ -28,7 +28,7 @@ Turn **`plan` mode** from read-only ReAct into a **plan-first product path**: st
 | Cursor | Rex |
 |--------|-----|
 | No execution in plan | Broker denies write/exec except **`plan.save`** under `.rex/plans/` |
-| Codebase research | `fs.read` / `fs.list` + daemon context pipeline |
+| Codebase research | `fs.read` / `fs.list` (batched per round when native tools enabled, **R057**) + daemon context pipeline |
 | Clarifying questions | `plan.clarify` → NDJSON `plan` `phase=clarify` |
 | Editable plan | Plan card + **`plan.save`** |
 | Build in Agent | Extension **Build** → `agent` + plan reference in prompt |

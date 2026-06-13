@@ -90,6 +90,7 @@ impl RexConfig {
                 approvals_enabled: Some(false),
                 max_tool_steps: 12,
                 max_tool_steps_ask: default_max_tool_steps_ask(),
+                max_tools_per_step: 8,
             },
             cli: CliConfig::default(),
             search: SearchConfig::default(),
@@ -126,6 +127,7 @@ impl RexConfig {
                 approvals_enabled: Some(true),
                 max_tool_steps: 12,
                 max_tool_steps_ask: default_max_tool_steps_ask(),
+                max_tools_per_step: 8,
             },
             search: SearchConfig {
                 enabled: Some(true),
@@ -435,6 +437,8 @@ pub struct AgentConfig {
     pub max_tool_steps: u32,
     #[serde(default = "default_max_tool_steps_ask")]
     pub max_tool_steps_ask: u32,
+    #[serde(default = "default_max_tools_per_step")]
+    pub max_tools_per_step: u32,
 }
 
 impl Default for AgentConfig {
@@ -443,6 +447,7 @@ impl Default for AgentConfig {
             approvals_enabled: None,
             max_tool_steps: default_max_tool_steps(),
             max_tool_steps_ask: default_max_tool_steps_ask(),
+            max_tools_per_step: default_max_tools_per_step(),
         }
     }
 }
@@ -453,6 +458,10 @@ fn default_max_tool_steps() -> u32 {
 
 fn default_max_tool_steps_ask() -> u32 {
     5
+}
+
+fn default_max_tools_per_step() -> u32 {
+    8
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]

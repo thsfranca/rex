@@ -118,3 +118,21 @@ def test_read_pruning_enabled_from_config(
 def test_read_pruning_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
     assert config.read_pruning_enabled() is False
+
+
+def test_max_tools_per_step_from_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "rex"
+    root.mkdir()
+    (root / "config.json").write_text(
+        json.dumps({"agent": {"max_tools_per_step": 3}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
+    assert config.max_tools_per_step() == 3
+
+
+def test_max_tools_per_step_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
+    assert config.max_tools_per_step() == config.DEFAULT_MAX_TOOLS_PER_STEP

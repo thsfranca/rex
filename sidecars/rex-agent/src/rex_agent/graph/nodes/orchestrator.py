@@ -25,7 +25,7 @@ def classify_subagent_for_tool(tool: str) -> str:
 def _route_after_llm(state: AgentState, node: str) -> str:
     if state.get("done"):
         return "end"
-    if state.get("pending_tool") is not None:
+    if state.get("pending_tools"):
         return "tools"
     errors = state.get("tool_error_count", 0)
     if errors > 0 and errors <= MAX_PARSE_RETRIES and tools_for_mode(state["mode"]):

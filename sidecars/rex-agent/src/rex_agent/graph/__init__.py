@@ -188,7 +188,8 @@ def _initial_state(prompt: str, mode: str, model: str, turn_id: str) -> AgentSta
         stream_events=[],
         final_answer="",
         done=False,
-        pending_tool=None,
+        pending_tools=[],
+        batch_truncated=False,
         read_cache=ReadCache(),
         goal_hint=prompt[:500],
     )
