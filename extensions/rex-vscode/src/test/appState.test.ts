@@ -135,4 +135,64 @@ describe("appState reducer — cancel to idle", () => {
     expect(state.timeline[0]?.id).toBe("step-5");
     expect(state.timeline[19]?.id).toBe("step-24");
   });
+
+  it("ignores sessionMessages while a stream is active", () => {
+    let state = userSend("turn-1", "hello");
+    state = reducer(state, {
+      type: "hostMessage",
+      payload: { type: "streamChunk", id: "turn-1", text: "Entendo que você" },
+    });
+
+    state = reducer(state, {
+      type: "hostMessage",
+      payload: {
+        type: "sessionMessages",
+        payload: {
+          sessionId: "session-default",
+          messages: [
+            { id: "user-turn-1", role: "user", buffer: "hello" },
+            { id: "turn-1", role: "assistant", buffer: "Ent" },
+          ],
+        },
+      },
+    });
+
+    const assistant = state.messages.find((msg) => msg.id === "turn-1");
+    expect(assistant?.buffer).toBe("Entendo que você");
+    expect(state.streaming).toBe(true);
+    expect(state.activeStreamId).toBe("turn-1");
+  });
+
+  it("simulates stream chunks interleaved with stale sessionMessages without corrupting buffer", () => {
+    let state = userSend("turn-1", "Estou testando esse modelo");
+    const chunks = "Entendo que você está testando. Estou funcionando.".split("");
+    for (let index = 0; index < chunks.length; index += 1) {
+      if (index === 20) {
+        state = reducer(state, {
+          type: "hostMessage",
+          payload: {
+            type: "sessionMessages",
+            payload: {
+              sessionId: "session-default",
+              messages: [
+                { id: "user-turn-1", role: "user", buffer: "Estou testando esse modelo" },
+                { id: "turn-1", role: "assistant", buffer: "Entendo que" },
+              ],
+            },
+          },
+        });
+      }
+      state = reducer(state, {
+        type: "hostMessage",
+        payload: { type: "streamChunk", id: "turn-1", text: chunks[index] ?? "" },
+      });
+    }
+    state = reducer(state, {
+      type: "hostMessage",
+      payload: { type: "streamDone", id: "turn-1" },
+    });
+
+    const assistant = state.messages.find((msg) => msg.id === "turn-1");
+    expect(assistant?.buffer).toBe("Entendo que você está testando. Estou funcionando.");
+  });
 });

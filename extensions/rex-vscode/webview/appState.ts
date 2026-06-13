@@ -313,6 +313,9 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
         activeSessionId: message.sessions.find((session) => session.isActive)?.id,
       };
     case "sessionMessages": {
+      if (state.streaming || state.activeStreamId !== undefined) {
+        return state;
+      }
       const restored = message.payload.messages.map((entry) => ({
         id: entry.id,
         role: entry.role,
