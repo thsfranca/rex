@@ -10,6 +10,7 @@ from rex_agent.tools import (
     TOOL_READ,
     TOOL_WEB_SEARCH,
     TOOL_WRITE,
+    tool_gate_from_state,
     tools_for_mode,
 )
 
@@ -28,7 +29,11 @@ def _route_after_llm(state: AgentState, node: str) -> str:
     if state.get("pending_tools"):
         return "tools"
     errors = state.get("tool_error_count", 0)
-    if errors > 0 and errors <= MAX_PARSE_RETRIES and tools_for_mode(state["mode"]):
+    if (
+        errors > 0
+        and errors <= MAX_PARSE_RETRIES
+        and tools_for_mode(state["mode"], gate=tool_gate_from_state(state))
+    ):
         return node
     return "end"
 

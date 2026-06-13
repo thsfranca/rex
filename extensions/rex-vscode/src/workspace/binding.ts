@@ -85,7 +85,22 @@ function applyProductAgentOverlay(config: RexConfigJson): RexConfigJson {
       ? { ...(config.agent as Record<string, unknown>) }
       : {};
   agent.approvals_enabled = true;
-  return { ...config, sidecars, agent };
+  if (agent.max_tool_steps_ask === undefined) {
+    agent.max_tool_steps_ask = 12;
+  }
+
+  const search =
+    config.search !== undefined &&
+    typeof config.search === "object" &&
+    !Array.isArray(config.search)
+      ? { ...(config.search as Record<string, unknown>) }
+      : {};
+  if (search.enabled === undefined) {
+    search.enabled = true;
+    search.provider = search.provider ?? "mock";
+  }
+
+  return { ...config, sidecars, agent, search, version: config.version ?? 1 };
 }
 
 /** Exported for unit tests. */

@@ -10,7 +10,7 @@ from typing import Any, Optional
 DEFAULT_DAEMON_SOCKET = "/tmp/rex.sock"
 DEFAULT_SIDECAR_SOCKET = "/tmp/rex-sidecar.sock"
 DEFAULT_MAX_TOOL_STEPS = 12
-DEFAULT_MAX_TOOL_STEPS_ASK = 8
+DEFAULT_MAX_TOOL_STEPS_ASK = 12
 DEFAULT_MAX_TOOL_STEPS_PLAN = 20
 DEFAULT_MAX_TOOLS_PER_STEP = 8
 DEFAULT_MAX_TOOL_RESULT_BYTES = 8192
@@ -25,14 +25,59 @@ def rex_root() -> Path:
     return Path.home() / ".rex"
 
 
-def _load_config_json() -> Optional[dict[str, Any]]:
-    path = rex_root() / "config.json"
+def _read_config_file(path: Path) -> Optional[dict[str, Any]]:
     if not path.is_file():
         return None
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
+    return data if isinstance(data, dict) else None
+
+
+def _deep_merge_dict(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in overlay.items():
+        if (
+            key in merged
+            and isinstance(merged[key], dict)
+            and isinstance(value, dict)
+        ):
+            merged[key] = _deep_merge_dict(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _project_config_path(workspace_root: str) -> Optional[Path]:
+    trimmed = workspace_root.strip()
+    if not trimmed:
+        return None
+    candidate = Path(trimmed).expanduser() / ".rex" / "config.json"
+    return candidate if candidate.is_file() else None
+
+
+def load_merged_config() -> dict[str, Any]:
+    """Merge $REX_ROOT/config.json with project .rex/config.json (via workspace.root)."""
+    effective: dict[str, Any] = {}
+    global_cfg = _read_config_file(rex_root() / "config.json")
+    if global_cfg:
+        effective = _deep_merge_dict(effective, global_cfg)
+    workspace = effective.get("workspace")
+    workspace_root = ""
+    if isinstance(workspace, dict):
+        workspace_root = str(workspace.get("root") or "")
+    project_path = _project_config_path(workspace_root)
+    if project_path is not None:
+        project_cfg = _read_config_file(project_path)
+        if project_cfg:
+            effective = _deep_merge_dict(effective, project_cfg)
+    return effective
+
+
+def _load_config_json() -> Optional[dict[str, Any]]:
+    merged = load_merged_config()
+    return merged or None
 
 
 def sidecar_socket() -> str:
@@ -129,4 +174,14 @@ def read_pruning_enabled() -> bool:
         flag = agent.get("read_pruning_enabled")
         if isinstance(flag, bool):
             return flag
+    return False
+
+
+def search_enabled() -> bool:
+    cfg = _load_config_json()
+    if cfg:
+        search = cfg.get("search") or {}
+        enabled = search.get("enabled")
+        if isinstance(enabled, bool):
+            return enabled
     return False

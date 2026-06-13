@@ -462,7 +462,7 @@ fn default_max_tool_steps() -> u32 {
 }
 
 fn default_max_tool_steps_ask() -> u32 {
-    8
+    12
 }
 
 fn default_max_tool_steps_plan() -> u32 {

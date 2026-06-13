@@ -31,3 +31,4 @@ class AgentState(TypedDict):
     batch_truncated: bool
     read_cache: ReadCache
     goal_hint: str
+    workspace_explored: bool

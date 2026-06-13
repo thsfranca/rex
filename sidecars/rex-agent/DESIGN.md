@@ -50,8 +50,8 @@ flowchart TB
 
 - **Per turn start:** Treat `RunTurn.prompt` as the authoritative initial model input (includes daemon-injected context). Do not re-read the same files via broker unless the workspace may have changed.
 - **Intra-turn:** Tool outputs live in graph/scratch state; cap size to `max_tool_result_bytes` (aligned with daemon broker truncation per [ADR 0013](../../docs/architecture/decisions/0013-access-policy-broker-completion.md)).
-- **`max_tool_steps`:** From R015 config (default **12**, [CONFIGURATION.md](../../docs/CONFIGURATION.md)); stop with terminal message when exceeded.
-- **`max_tools_per_step`:** Max batchable read/list/search calls per LLM round (default **8**, **R057**); one tool step = one inference round.
+- **`max_tool_steps*`:** Mode-specific caps from merged config ([CONFIGURATION.md](../../docs/CONFIGURATION.md)): `agent.max_tool_steps` (**12**), `agent.max_tool_steps_ask` (**12**), `agent.max_tool_steps_plan` (**20**). Before each batch, if `tool_steps >= max_steps` → terminal cap message. After execute, increment **only** when `should_bill_tool_step` is true: any `ok=True` or exploratory broker failure bills; **policy/config** failures (daemon `mode_denied`, `access policy denied`, sidecar validation) do **not** bill — see [ADR 0013](../../docs/architecture/decisions/0013-access-policy-broker-completion.md).
+- **`max_tools_per_step`:** Max batchable read/list calls per LLM round (default **8**, **R057**); one billed tool step = one productive inference round. `web.search` is never batched with read/list.
 - **`compaction_suffix_fraction`**, **`read_pruning_enabled`:** Sidecar intra-turn controls — see [CONFIGURATION.md](../../docs/CONFIGURATION.md) and [AGENT_GRAPH_ARCHITECTURE.md](../../docs/AGENT_GRAPH_ARCHITECTURE.md).
 
 ## Wire format (broker payloads)
@@ -77,8 +77,8 @@ MCP gRPC client remains **out of scope** until **R038** ships ([ADR 0016](../../
 
 | Mode | Tools |
 |------|-------|
-| `ask` | None — inference only |
-| `plan` | `fs.read`, `fs.list` |
+| `ask` | `fs.read`, `fs.list`; `web.search` when `search.enabled` and workspace explored or explicit web intent ([ADR 0031](../../docs/architecture/decisions/0031-ask-mode-research-broker.md)) |
+| `plan` | `fs.read`, `fs.list`, `plan.save` |
 | `agent` | `fs.read`, `fs.list`, `fs.write`, `exec.shell` (allowlisted) |
 
 Approvals: extension supplies `approval_id`; daemon `ApprovalGate` for `agent` ([ADR 0009](../../docs/architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md)).

@@ -200,3 +200,49 @@ def test_interim_fallback_retries_without_tools() -> None:
     assert attempts[1] is False
     assert "done after fallback" in answer
     mock_client.read_file.assert_called_once()
+
+
+def test_agent_denied_exec_does_not_bill_step() -> None:
+    step = {"n": 0}
+
+    def fake_inference(
+        prompt: str, mode: str, model: str, **kwargs: object
+    ) -> InferenceResult:
+        tools = kwargs.get("tools") or []
+        step["n"] += 1
+        if step["n"] == 1 and tools:
+            return InferenceResult(
+                ok=True,
+                tool_calls=[
+                    BrokerToolCall(
+                        tool="fs.write",
+                        args={"path": ".env", "content": "secret"},
+                    )
+                ],
+            )
+        return legacy_inference_result(
+            True, '{"type":"final","answer":"done after denied write"}'
+        )
+
+    mock_client = MagicMock()
+    mock_client.read_file.return_value = (False, "missing")
+    mock_client.write_file.return_value = (
+        False,
+        "access policy denied (protected_path): read denied for .env",
+    )
+
+    graph.set_inference_fn(fake_inference)
+    try:
+        with patch("rex_agent.graph.max_tool_steps_for_mode", return_value=1):
+            with patch("rex_agent.graph.BrokerClient") as broker_cls:
+                broker_cls.return_value.__enter__.return_value = mock_client
+                broker_cls.return_value.__exit__.return_value = None
+                _reset_graphs()
+                answer, _ = graph.run_turn("write env", "agent", "", "")
+    finally:
+        graph.set_inference_fn(None)
+        _reset_graphs()
+
+    assert "done after denied write" in answer
+    assert "agent.max_tool_steps" not in answer
+    mock_client.write_file.assert_called_once()

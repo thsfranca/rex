@@ -163,3 +163,34 @@ def test_max_tools_per_step_from_config(
 def test_max_tools_per_step_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
     assert config.max_tools_per_step() == config.DEFAULT_MAX_TOOLS_PER_STEP
+
+
+def test_search_enabled_from_merged_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "rex"
+    root.mkdir()
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / ".rex").mkdir()
+    (root / "config.json").write_text(
+        json.dumps({"workspace": {"root": str(project)}}),
+        encoding="utf-8",
+    )
+    (project / ".rex" / "config.json").write_text(
+        json.dumps({"search": {"enabled": True, "provider": "mock"}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
+    assert config.search_enabled() is True
+
+
+def test_search_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
+    assert config.search_enabled() is False
+
+
+def test_ask_default_step_cap_is_twelve(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
+    assert config.DEFAULT_MAX_TOOL_STEPS_ASK == 12
+    assert config.max_tool_steps_for_mode("ask") == 12

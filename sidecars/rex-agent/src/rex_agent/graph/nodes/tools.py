@@ -15,8 +15,10 @@ from rex_agent.metrics import log_subagent_event
 from rex_agent.stream_events import cap_detail, tool_detail_from_call
 from rex_agent.tools import (
     BATCH_TRUNCATED_NOTE,
-    ReadCache,
+    TOOL_LIST,
     TOOL_READ,
+    ReadCache,
+    should_bill_tool_step,
     execute_tool,
     format_tool_status,
 )
@@ -31,12 +33,46 @@ def _limit_key_for_mode(mode: str) -> str:
     return "agent.max_tool_steps"
 
 
+def _terminal_cap_response(
+    state: AgentState,
+    *,
+    calls: list,
+    events: list,
+    steps: int,
+) -> dict:
+    mode = (state.get("mode") or "ask").strip().lower() or "ask"
+    limit_key = _limit_key_for_mode(mode)
+    message = (
+        f"Stopped after {state['max_steps']} tool steps ({limit_key}). "
+        "Try a narrower request."
+    )
+    turn_id = state.get("turn_id", "") or "turn"
+    call = calls[0]
+    tool_call_id = f"{turn_id}:{steps + 1}:{call.tool}"
+    events = append_tool(
+        events,
+        name=call.tool,
+        phase="failed",
+        detail="max tool steps exceeded",
+        tool_call_id=tool_call_id,
+    )
+    return {
+        "done": True,
+        "final_answer": message,
+        "stream_parts": state["stream_parts"] + [message],
+        "stream_events": events,
+        "tool_steps": steps,
+        "pending_tools": [],
+        "batch_truncated": False,
+    }
+
+
 def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
     calls = list(state.get("pending_tools") or [])
     if not calls:
         return {}
 
-    steps = state["tool_steps"] + 1
+    current_steps = state["tool_steps"]
     events = list(state.get("stream_events") or [])
     subagent = state.get("active_subagent", "orchestrator")
     if len(calls) == 1:
@@ -47,39 +83,21 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
 
     turn_id = state.get("turn_id", "") or "turn"
 
-    if steps > state["max_steps"]:
-        mode = (state.get("mode") or "ask").strip().lower() or "ask"
-        limit_key = _limit_key_for_mode(mode)
-        message = (
-            f"Stopped after {state['max_steps']} tool steps ({limit_key}). "
-            "Try a narrower request."
+    if current_steps >= state["max_steps"]:
+        return _terminal_cap_response(
+            state, calls=calls, events=events, steps=current_steps
         )
-        call = calls[0]
-        tool_call_id = f"{turn_id}:{steps}:{call.tool}"
-        events = append_tool(
-            events,
-            name=call.tool,
-            phase="failed",
-            detail="max tool steps exceeded",
-            tool_call_id=tool_call_id,
-        )
-        return {
-            "done": True,
-            "final_answer": message,
-            "stream_parts": state["stream_parts"] + [message],
-            "stream_events": events,
-            "tool_steps": steps,
-            "pending_tools": [],
-            "batch_truncated": False,
-        }
 
     read_cache = state.get("read_cache") or ReadCache()
     new_messages: list[HumanMessage] = []
     stream_parts = list(state["stream_parts"])
     trunc_events = list(state.get("truncation_events") or [])
+    workspace_explored = bool(state.get("workspace_explored"))
+    batch_results: list[tuple[bool, str]] = []
+    log_step = current_steps + 1
 
     for index, call in enumerate(calls):
-        tool_call_id = f"{turn_id}:{steps}:{index}:{call.tool}"
+        tool_call_id = f"{turn_id}:{log_step}:{index}:{call.tool}"
         detail = tool_detail_from_call(call)
         events = append_tool(
             events,
@@ -95,6 +113,7 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
             read_cache=read_cache,
             goal_hint=state.get("goal_hint", ""),
         )
+        batch_results.append((ok, result))
         status_line = format_tool_status(call, ok, result)
         result_detail = cap_detail(result if ok else status_line)
         events = append_tool(
@@ -106,13 +125,15 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
         )
         new_messages.append(HumanMessage(content=status_line, id=str(uuid.uuid4())))
         stream_parts.append(status_line)
+        if ok and call.tool in (TOOL_READ, TOOL_LIST):
+            workspace_explored = True
         if truncated and call.tool == TOOL_READ:
             path = str(call.args.get("path", ""))
             new_messages.append(truncation_note(path))
             trunc_events.append(path)
         log_subagent_event(
             subagent=classify_subagent_for_tool(call.tool),
-            step=steps,
+            step=log_step,
             event="tool_execute",
             turn_id=state.get("turn_id", ""),
             extra={"tool": call.tool, "ok": ok, "batch_index": index},
@@ -125,9 +146,11 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
         stream_parts.append(BATCH_TRUNCATED_NOTE)
 
     last_subagent = classify_subagent_for_tool(calls[-1].tool)
+    steps = current_steps + 1 if should_bill_tool_step(batch_results) else current_steps
 
     return {
         "tool_steps": steps,
+        "workspace_explored": workspace_explored,
         "stream_parts": stream_parts,
         "stream_events": events,
         "pending_tools": [],

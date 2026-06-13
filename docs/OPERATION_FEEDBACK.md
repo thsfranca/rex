@@ -56,7 +56,13 @@ When `agent.approvals_enabled` is true in merged JSON:
 
 ## Ask-mode research
 
-`ask` mode uses a **read-only tool loop**: `fs.read`, `fs.list`, `web.search` ([ADR 0031](architecture/decisions/0031-ask-mode-research-broker.md)). Native broker path may batch multiple read/list/search calls per LLM round (**R057**). No `fs.write`, `exec.shell`, or `plan.save`. L1 cache skips turns that invoked any broker tool ([ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md)).
+`ask` mode uses a **read-only tool loop**: `fs.read`, `fs.list`, and optionally `web.search` ([ADR 0031](architecture/decisions/0031-ask-mode-research-broker.md)). Native broker path may batch multiple read/list calls per LLM round (**R057**); `web.search` is never mixed with read/list in one batch. No `fs.write`, `exec.shell`, or `plan.save`. L1 cache skips turns that invoked any broker tool ([ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md)).
+
+**Workspace-first:** The sidecar advertises `web.search` only when `search.enabled` is true in merged config **and** the model has successfully read or listed workspace files in the turn, or the user prompt signals explicit web intent. Early `web.search` attempts are rejected with stable guidance so the model retries with local reads.
+
+## Tool step billing (all modes)
+
+`tool_steps` counts **productive** broker rounds toward the mode cap (`agent.max_tool_steps`, `agent.max_tool_steps_ask`, or `agent.max_tool_steps_plan`). A round bills when any tool returns `ok=True` or the broker executed and returned exploratory feedback (for example not-found, non-zero exit). Rounds where **every** failure is policy or configuration class (`mode_denied`, `access policy denied`, sidecar validation) do **not** increment — the model may retry without exhausting the cap ([ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md)). Sidecar pre-gate rejections (invalid batch, workspace-first) never reach billing.
 
 ## Live streaming (ADR 0030)
 
