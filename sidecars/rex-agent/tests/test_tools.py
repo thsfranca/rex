@@ -1,10 +1,14 @@
 """Tool protocol parsing tests."""
 
 from rex_agent.tools import (
+    BATCH_MIXED_ERROR,
     TOOL_LIST,
     TOOL_PLAN_SAVE,
     TOOL_READ,
+    TOOL_WRITE,
+    ToolCall,
     normalize_plan_save_path,
+    normalize_tool_batch,
     parse_model_output,
     tool_specs_for_subagent,
     tools_for_mode,
@@ -86,3 +90,41 @@ def test_tool_specs_for_subagent_viewer_masks_write() -> None:
     assert TOOL_LIST in names
     assert "fs.write" not in names
     assert "exec.shell" not in names
+
+
+def test_normalize_tool_batch_accepts_parallel_reads() -> None:
+    calls = [
+        ToolCall(tool=TOOL_READ, args={"path": "a.md"}),
+        ToolCall(tool=TOOL_READ, args={"path": "b.md"}),
+        ToolCall(tool=TOOL_READ, args={"path": "c.md"}),
+    ]
+    normalized, error, truncated = normalize_tool_batch(
+        calls, mode="plan", subagent="viewer"
+    )
+    assert error is None
+    assert normalized is not None
+    assert len(normalized) == 3
+    assert truncated is False
+
+
+def test_normalize_tool_batch_rejects_mixed_write() -> None:
+    calls = [
+        ToolCall(tool=TOOL_READ, args={"path": "a.md"}),
+        ToolCall(tool=TOOL_WRITE, args={"path": "a.md", "content": "x"}),
+    ]
+    normalized, error, truncated = normalize_tool_batch(
+        calls, mode="agent", subagent="viewer"
+    )
+    assert normalized is None
+    assert error == BATCH_MIXED_ERROR
+    assert truncated is False
+
+
+def test_normalize_tool_batch_single_plan_save() -> None:
+    calls = [ToolCall(tool=TOOL_PLAN_SAVE, args={"path": "p.md", "content": "# P"})]
+    normalized, error, truncated = normalize_tool_batch(
+        calls, mode="plan", subagent="orchestrator"
+    )
+    assert error is None
+    assert normalized == calls
+    assert truncated is False

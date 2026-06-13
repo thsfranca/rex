@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Optional, TypedDict
+from typing import Annotated, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -27,6 +27,7 @@ class AgentState(TypedDict):
     stream_events: StreamEventList
     final_answer: str
     done: bool
-    pending_tool: Optional[ToolCall]
+    pending_tools: list[ToolCall]
+    batch_truncated: bool
     read_cache: ReadCache
     goal_hint: str

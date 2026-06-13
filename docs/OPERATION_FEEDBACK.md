@@ -56,7 +56,7 @@ When `agent.approvals_enabled` is true in merged JSON:
 
 ## Ask-mode research
 
-`ask` mode uses a **read-only tool loop**: `fs.read`, `fs.list`, `web.search` ([ADR 0031](architecture/decisions/0031-ask-mode-research-broker.md)). No `fs.write`, `exec.shell`, or `plan.save`. L1 cache skips turns that invoked any broker tool ([ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md)).
+`ask` mode uses a **read-only tool loop**: `fs.read`, `fs.list`, `web.search` ([ADR 0031](architecture/decisions/0031-ask-mode-research-broker.md)). Native broker path may batch multiple read/list/search calls per LLM round (**R057**). No `fs.write`, `exec.shell`, or `plan.save`. L1 cache skips turns that invoked any broker tool ([ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md)).
 
 ## Live streaming (ADR 0030)
 

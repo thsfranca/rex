@@ -11,6 +11,7 @@ DEFAULT_DAEMON_SOCKET = "/tmp/rex.sock"
 DEFAULT_SIDECAR_SOCKET = "/tmp/rex-sidecar.sock"
 DEFAULT_MAX_TOOL_STEPS = 12
 DEFAULT_MAX_TOOL_STEPS_ASK = 5
+DEFAULT_MAX_TOOLS_PER_STEP = 8
 DEFAULT_MAX_TOOL_RESULT_BYTES = 8192
 DEFAULT_COMPACTION_SUFFIX_FRACTION = 0.25
 REX_ROOT_ENV = "REX_ROOT"
@@ -81,6 +82,16 @@ def max_tool_steps_for_mode(mode: str) -> int:
     if normalized == "ask":
         return DEFAULT_MAX_TOOL_STEPS_ASK
     return DEFAULT_MAX_TOOL_STEPS
+
+
+def max_tools_per_step() -> int:
+    cfg = _load_config_json()
+    if cfg:
+        agent = cfg.get("agent") or {}
+        cap = agent.get("max_tools_per_step")
+        if isinstance(cap, int) and cap > 0:
+            return cap
+    return DEFAULT_MAX_TOOLS_PER_STEP
 
 
 def max_tool_result_bytes() -> int:

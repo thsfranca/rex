@@ -21,7 +21,12 @@ from rex_agent.graph.state import AgentState
 from rex_agent.graph.stream_queue import append_plan, append_step
 from rex_agent.metrics import log_subagent_event
 from rex_agent.stream_events import cap_detail
-from rex_agent.tools import ToolCall, tool_specs_for_subagent, tools_for_mode
+from rex_agent.tools import (
+    ToolCall,
+    normalize_tool_batch,
+    tool_specs_for_subagent,
+    tools_for_mode,
+)
 
 
 def _messages_for_subagent(state: AgentState) -> list[BaseMessage]:
@@ -36,24 +41,86 @@ def _messages_for_subagent(state: AgentState) -> list[BaseMessage]:
     ]
 
 
+def _route_tool_batch(
+    calls: list[ToolCall],
+    *,
+    raw_text: str,
+    state: AgentState,
+    truncated: bool = False,
+) -> dict:
+    active = state.get("active_subagent", "orchestrator")
+    if calls:
+        active = classify_subagent_for_tool(calls[0].tool)
+    summary_tool = calls[0].tool if len(calls) == 1 else f"{len(calls)} tools"
+    events = append_step(
+        list(state.get("stream_events") or []),
+        phase="running",
+        summary=f"Routing to {active} for {summary_tool}",
+    )
+    updates: dict = {
+        "messages": [AIMessage(content=raw_text, id=str(uuid.uuid4()))],
+        "pending_tools": calls,
+        "active_subagent": active,
+        "stream_events": events,
+        "batch_truncated": truncated,
+    }
+    return updates
+
+
+def _batch_validation_error(
+    message: str,
+    *,
+    raw_text: str,
+    state: AgentState,
+) -> dict:
+    errors = state.get("tool_error_count", 0) + 1
+    updates: dict = {
+        "tool_error_count": errors,
+        "messages": [
+            AIMessage(content=raw_text, id=str(uuid.uuid4())),
+            HumanMessage(content=message, id=str(uuid.uuid4())),
+        ],
+    }
+    if errors >= MAX_PARSE_RETRIES or not tools_for_mode(state["mode"]):
+        updates["done"] = True
+        updates["final_answer"] = message
+        updates["stream_parts"] = state["stream_parts"] + [message]
+    return updates
+
+
+def _resolve_tool_calls(
+    calls: list[ToolCall],
+    *,
+    raw_text: str,
+    state: AgentState,
+) -> dict:
+    subagent = state.get("active_subagent", "orchestrator")
+    normalized, error, truncated = normalize_tool_batch(
+        calls,
+        mode=state["mode"],
+        subagent=subagent,
+    )
+    if error is not None or normalized is None:
+        return _batch_validation_error(
+            error or "Invalid tool batch.",
+            raw_text=raw_text,
+            state=state,
+        )
+    return _route_tool_batch(
+        normalized,
+        raw_text=raw_text,
+        state=state,
+        truncated=truncated,
+    )
+
+
 def _route_tool_call(
     call: ToolCall,
     *,
     raw_text: str,
     state: AgentState,
 ) -> dict:
-    active = classify_subagent_for_tool(call.tool)
-    events = append_step(
-        list(state.get("stream_events") or []),
-        phase="running",
-        summary=f"Routing to {active} for {call.tool}",
-    )
-    return {
-        "messages": [AIMessage(content=raw_text, id=str(uuid.uuid4()))],
-        "pending_tool": call,
-        "active_subagent": active,
-        "stream_events": events,
-    }
+    return _resolve_tool_calls([call], raw_text=raw_text, state=state)
 
 
 def _invoke_broker_inference(
@@ -145,9 +212,11 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
     ai, parsed = route_inference_result(result, state["mode"])
 
     if ai.tool_calls:
-        tc = ai.tool_calls[0]
-        call = ToolCall(tool=str(tc.get("name", "")), args=dict(tc.get("args") or {}))
-        return _route_tool_call(call, raw_text=raw_text, state=state)
+        calls = [
+            ToolCall(tool=str(tc.get("name", "")), args=dict(tc.get("args") or {}))
+            for tc in ai.tool_calls
+        ]
+        return _resolve_tool_calls(calls, raw_text=raw_text, state=state)
 
     if parsed is None:
         return {}
