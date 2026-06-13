@@ -55,6 +55,25 @@ def test_compact_state_runs_for_ask_when_over_threshold() -> None:
     assert "viewer_summary" in result
 
 
+def test_graph_compaction_node_skips_when_disabled() -> None:
+    from rex_agent.graph import _compaction_node
+
+    state = {
+        "mode": "ask",
+        "messages": [
+            HumanMessage(
+                content=f"\n[tool fs.read ok]\n{'x' * 5000}",
+                id="msg-1",
+            )
+        ],
+        "active_subagent": "viewer",
+        "tool_steps": 1,
+        "turn_id": "turn-1",
+    }
+    with patch("rex_agent.graph.compaction_enabled", return_value=False):
+        assert _compaction_node(state) == {}
+
+
 def test_ask_research_read_then_final_answer() -> None:
     step = {"n": 0}
 

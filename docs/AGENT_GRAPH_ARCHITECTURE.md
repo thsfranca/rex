@@ -200,8 +200,8 @@ Follow-on program after **R057–R058** to reduce cap-terminal failures and impr
 | ID | Theme | Status | Notes |
 |----|-------|--------|-------|
 | **R060** | Deterministic ask init + hybrid circuit breaker | **Done** | Pre-LLM `fs.read`/`fs.list`; `agent_loop_stuck` at 3 policy-deny rounds; `agent.deterministic_init_enabled` (default true) |
-| **R061** | Exact-match tool result cache | **Open** | `(tool, args)` hash; duplicate intercept → no bill + error_count |
-| **R062** | Prefix-safe compaction defaults | Open | `agent.compaction_enabled` default false; typed Rust config fields |
+| **R061** | Exact-match tool result cache | **Done** | `(tool, args)` hash; duplicate intercept → no bill + error_count |
+| **R062** | Prefix-safe compaction defaults | **Done** | `agent.compaction_enabled` default false; typed Rust config fields |
 | **R063** | Soft cap Continue UX | Open | NDJSON activity pause; cap elevation 15/25/25 |
 | **R064** | Loop observability + golden prompts | Open | `cap_terminal`, productive-step ratio; CI golden set |
 | **R065** | `injected_files` manifest on `RunTurn` | Open | Skip redundant reads when daemon pre-injects |

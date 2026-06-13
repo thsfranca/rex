@@ -313,6 +313,18 @@ fn merge_agent(base: &mut crate::model::AgentConfig, overlay: crate::model::Agen
     if overlay.max_tools_per_step != 0 {
         base.max_tools_per_step = overlay.max_tools_per_step;
     }
+    if overlay.deterministic_init_enabled.is_some() {
+        base.deterministic_init_enabled = overlay.deterministic_init_enabled;
+    }
+    if overlay.compaction_enabled.is_some() {
+        base.compaction_enabled = overlay.compaction_enabled;
+    }
+    if overlay.soft_cap_enabled.is_some() {
+        base.soft_cap_enabled = overlay.soft_cap_enabled;
+    }
+    if overlay.soft_cap_fraction.is_some() {
+        base.soft_cap_fraction = overlay.soft_cap_fraction;
+    }
 }
 
 fn merge_cli(base: &mut crate::model::CliConfig, overlay: crate::model::CliConfig) {

@@ -324,6 +324,10 @@ Keys under `cli` and `search` control stream idle timeouts and ask-mode `web.sea
 | `agent.max_tool_steps_ask` | `12` | Ask-mode research tool loop cap (productive steps only — see [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md)) |
 | `agent.max_tool_steps_plan` | `20` | Plan-mode tool loop cap (**R058**) |
 | `agent.max_tools_per_step` | `8` | Max batchable read/list/search broker calls per LLM round (**R057**) |
+| `agent.deterministic_init_enabled` | `true` | Pre-LLM ask init (`fs.read` README + `fs.list`) before first inference (**R060**) |
+| `agent.compaction_enabled` | `false` | Intra-turn suffix compaction node (**R029**, **R062** — off by default to preserve prefix cache) |
+| `agent.soft_cap_enabled` | `false` | Soft step-cap pause before hard limit (**R063** — reserved; default off until R063 ships) |
+| `agent.soft_cap_fraction` | `0.667` | Fraction of mode step cap at which soft cap fires when enabled (**R063**) |
 
 CLI flags: `rex complete --verbose` (stderr status in text mode), `--yes` / `--approval-id` for agent approval automation.
 

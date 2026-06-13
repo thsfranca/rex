@@ -212,3 +212,31 @@ def test_deterministic_init_disabled_from_config(
     )
     monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
     assert config.deterministic_init_enabled() is False
+
+
+def test_compaction_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
+    assert config.compaction_enabled() is False
+
+
+def test_compaction_enabled_from_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "rex"
+    root.mkdir()
+    (root / "config.json").write_text(
+        json.dumps({"agent": {"compaction_enabled": True}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
+    assert config.compaction_enabled() is True
+
+
+def test_soft_cap_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
+    assert config.soft_cap_enabled() is False
+
+
+def test_soft_cap_fraction_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
+    assert config.soft_cap_fraction() == pytest.approx(config.DEFAULT_SOFT_CAP_FRACTION)
