@@ -1,5 +1,6 @@
 import type {
   ApprovalRequestPayload,
+  ContinueTurnPayload,
   ApplyResultPayload,
   ContextAttachment,
   DaemonStatePayload,
@@ -35,6 +36,7 @@ export interface AppState {
   banner?: BannerState;
   modePolicy: ModePolicy;
   pendingApprovals: ApprovalRequestPayload[];
+  pendingContinueTurn: ContinueTurnPayload | null;
   timeline: {
     id: string;
     streamId?: string;
@@ -61,6 +63,7 @@ export type Action =
   | { type: "clearChat" }
   | { type: "cancelStream" }
   | { type: "approvalDecision"; id: string; approved: boolean }
+  | { type: "continueTurnDecision"; streamId: string; continueToken: string; continue: boolean }
   | { type: "clearBanner" }
   | { type: "updatePlanContent"; content: string }
   | { type: "updatePlanSavePath"; path: string };
@@ -83,6 +86,7 @@ export const initialState: AppState = {
     summary: "Research and explain only. File mutations are blocked.",
   },
   pendingApprovals: [],
+  pendingContinueTurn: null,
   timeline: [],
   sessions: [],
   attachments: [],
@@ -143,6 +147,11 @@ export function reducer(state: AppState, action: Action): AppState {
       return {
         ...state,
         pendingApprovals: state.pendingApprovals.filter((pending) => pending.id !== action.id),
+      };
+    case "continueTurnDecision":
+      return {
+        ...state,
+        pendingContinueTurn: null,
       };
     case "updatePlanContent":
       if (state.planArtifact === undefined) {
@@ -259,6 +268,11 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
       return {
         ...state,
         pendingApprovals: [...state.pendingApprovals, message.payload],
+      };
+    case "continueTurnRequested":
+      return {
+        ...state,
+        pendingContinueTurn: message.payload,
       };
     case "executionStep": {
       const scoped =

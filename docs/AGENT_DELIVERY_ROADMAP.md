@@ -223,7 +223,7 @@ Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. 
 | **R060** | Deterministic ask init + loop circuit breaker | **Open** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) |
 | **R061** | Exact-match tool cache | **Done** |
 | **R062** | Prefix-safe compaction config | **Done** |
-| **R063** | Soft cap Continue UX | Open — **after R062** |
+| **R063** | Soft cap Continue UX | **Done** |
 | **R064** | Loop observability + golden prompts | Open — **after R063** |
 | **R065** | Injected files manifest | Open — **after R064** |
 | R016 | Multi-active broadcast | **Could** — rank **18** |

@@ -321,13 +321,15 @@ Keys under `cli` and `search` control stream idle timeouts and ask-mode `web.sea
 | `search.enabled` | `false` (operator init: `true`) | Enables broker `web.search` (ask mode only) |
 | `search.provider` | — (operator init: `mock`) | `mock` for local demos |
 | `search.max_results` | `5` | Max hits returned per query |
-| `agent.max_tool_steps_ask` | `12` | Ask-mode research tool loop cap (productive steps only — see [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md)) |
-| `agent.max_tool_steps_plan` | `20` | Plan-mode tool loop cap (**R058**) |
+| `agent.max_tool_steps_ask` | `15` | Ask-mode research tool loop cap (productive steps only — see [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md)) |
+| `agent.max_tool_steps_plan` | `25` | Plan-mode tool loop cap (**R058**, **R063**) |
+| `agent.max_tool_steps` | `25` | Agent-mode tool loop cap (**R063**) |
 | `agent.max_tools_per_step` | `8` | Max batchable read/list/search broker calls per LLM round (**R057**) |
 | `agent.deterministic_init_enabled` | `true` | Pre-LLM ask init (`fs.read` README + `fs.list`) before first inference (**R060**) |
 | `agent.compaction_enabled` | `false` | Intra-turn suffix compaction node (**R029**, **R062** — off by default to preserve prefix cache) |
-| `agent.soft_cap_enabled` | `false` | Soft step-cap pause before hard limit (**R063** — reserved; default off until R063 ships) |
+| `agent.soft_cap_enabled` | `true` | Soft step-cap pause before hard limit (**R063**) |
 | `agent.soft_cap_fraction` | `0.667` | Fraction of mode step cap at which soft cap fires when enabled (**R063**) |
+| `agent.soft_cap_step_extension` | `10` | Productive steps added when operator continues after soft cap (**R063**) |
 
 CLI flags: `rex complete --verbose` (stderr status in text mode), `--yes` / `--approval-id` for agent approval automation.
 

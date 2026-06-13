@@ -9,16 +9,17 @@ from typing import Any, Optional
 
 DEFAULT_DAEMON_SOCKET = "/tmp/rex.sock"
 DEFAULT_SIDECAR_SOCKET = "/tmp/rex-sidecar.sock"
-DEFAULT_MAX_TOOL_STEPS = 12
-DEFAULT_MAX_TOOL_STEPS_ASK = 12
-DEFAULT_MAX_TOOL_STEPS_PLAN = 20
+DEFAULT_MAX_TOOL_STEPS = 25
+DEFAULT_MAX_TOOL_STEPS_ASK = 15
+DEFAULT_MAX_TOOL_STEPS_PLAN = 25
 DEFAULT_MAX_TOOLS_PER_STEP = 8
 DEFAULT_MAX_TOOL_RESULT_BYTES = 8192
 DEFAULT_COMPACTION_SUFFIX_FRACTION = 0.25
 DEFAULT_COMPACTION_ENABLED = False
 DEFAULT_DETERMINISTIC_INIT_ENABLED = True
-DEFAULT_SOFT_CAP_ENABLED = False
+DEFAULT_SOFT_CAP_ENABLED = True
 DEFAULT_SOFT_CAP_FRACTION = 2 / 3
+DEFAULT_SOFT_CAP_STEP_EXTENSION = 10
 REX_ROOT_ENV = "REX_ROOT"
 
 
@@ -229,3 +230,17 @@ def soft_cap_fraction() -> float:
         if isinstance(fraction, (int, float)) and 0 < float(fraction) < 1:
             return float(fraction)
     return DEFAULT_SOFT_CAP_FRACTION
+
+
+def soft_cap_step_extension() -> int:
+    cfg = _load_config_json()
+    if cfg:
+        agent = cfg.get("agent") or {}
+        bonus = agent.get("soft_cap_step_extension")
+        if isinstance(bonus, int) and bonus > 0:
+            return bonus
+    return DEFAULT_SOFT_CAP_STEP_EXTENSION
+
+
+def soft_cap_threshold(max_steps: int) -> int:
+    return max(1, int(max_steps * soft_cap_fraction()))

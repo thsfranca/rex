@@ -32,3 +32,4 @@ class AgentState(TypedDict):
     read_cache: ReadCache
     goal_hint: str
     workspace_explored: bool
+    soft_cap_continued: bool

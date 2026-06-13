@@ -88,7 +88,7 @@ impl RexConfig {
             },
             agent: AgentConfig {
                 approvals_enabled: Some(false),
-                max_tool_steps: 12,
+                max_tool_steps: 25,
                 max_tool_steps_ask: default_max_tool_steps_ask(),
                 max_tool_steps_plan: default_max_tool_steps_plan(),
                 max_tools_per_step: 8,
@@ -130,7 +130,7 @@ impl RexConfig {
             },
             agent: AgentConfig {
                 approvals_enabled: Some(true),
-                max_tool_steps: 12,
+                max_tool_steps: 25,
                 max_tool_steps_ask: default_max_tool_steps_ask(),
                 max_tool_steps_plan: default_max_tool_steps_plan(),
                 max_tools_per_step: 8,
@@ -482,15 +482,15 @@ impl Default for AgentConfig {
 }
 
 fn default_max_tool_steps() -> u32 {
-    12
+    25
 }
 
 fn default_max_tool_steps_ask() -> u32 {
-    12
+    15
 }
 
 fn default_max_tool_steps_plan() -> u32 {
-    20
+    25
 }
 
 fn default_max_tools_per_step() -> u32 {
