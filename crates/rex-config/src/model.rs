@@ -515,11 +515,15 @@ impl Default for CliConfig {
 }
 
 fn default_stream_idle_timeout_agent() -> u64 {
-    120
+    default_stream_idle_timeout_secs()
 }
 
 fn default_stream_idle_timeout_ask() -> u64 {
-    15
+    default_stream_idle_timeout_secs()
+}
+
+fn default_stream_idle_timeout_secs() -> u64 {
+    120
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
@@ -575,6 +579,18 @@ pub struct OtlpConfig {
 
 fn default_otlp_protocol() -> String {
     crate::observability::DEFAULT_OTLP_PROTOCOL.to_string()
+}
+
+#[cfg(test)]
+mod cli_config_tests {
+    use super::CliConfig;
+
+    #[test]
+    fn stream_idle_timeout_defaults_are_120_for_all_modes() {
+        let cfg = CliConfig::default();
+        assert_eq!(cfg.stream_idle_timeout_secs_agent, 120);
+        assert_eq!(cfg.stream_idle_timeout_secs_ask, 120);
+    }
 }
 
 #[cfg(test)]

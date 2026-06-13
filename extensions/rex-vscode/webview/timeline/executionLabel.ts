@@ -196,6 +196,20 @@ export function extractTargetFromResult(toolName: string, detail: string): strin
   return undefined;
 }
 
+function isPlaceholderToolTarget(value: string): boolean {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return true;
+  }
+  if (trimmed === "{}" || trimmed === "[]") {
+    return true;
+  }
+  if (/^\{\s*['"]?path['"]?\s*:\s*['"]?\s*['"]?\s*\}$/.test(trimmed)) {
+    return true;
+  }
+  return false;
+}
+
 export function resolveTimelineTarget(
   summary: string,
   phase: string,
@@ -210,7 +224,11 @@ export function resolveTimelineTarget(
   const trimmedDetail = detail?.trim() ?? "";
 
   if (phase === "running") {
-    if (trimmedDetail.length > 0 && !isToolResultBody(trimmedDetail)) {
+    if (
+      trimmedDetail.length > 0 &&
+      !isToolResultBody(trimmedDetail) &&
+      !isPlaceholderToolTarget(trimmedDetail)
+    ) {
       return trimmedDetail;
     }
     return previousTarget;
@@ -277,7 +295,7 @@ function formatToolLabel(input: ExecutionLabelInput): string {
     toolName === "exec.shell";
 
   const subjectSource =
-    target.length > 0
+    target.length > 0 && !isPlaceholderToolTarget(target)
       ? target
       : extractTargetFromResult(toolName, input.detail?.trim() ?? "") ?? "";
 
@@ -302,7 +320,11 @@ function formatToolLabel(input: ExecutionLabelInput): string {
   }
 
   const rawDetail = input.detail?.trim() ?? "";
-  if (rawDetail.length > 0 && !isToolResultBody(rawDetail)) {
+  if (
+    rawDetail.length > 0 &&
+    !isToolResultBody(rawDetail) &&
+    !isPlaceholderToolTarget(rawDetail)
+  ) {
     return `${verb} ${truncate(rawDetail, 72)}`;
   }
 
@@ -351,7 +373,7 @@ export function formatExecutionLabel(input: ExecutionLabelInput): string {
 }
 
 export function shouldShowExecutionDetail(
-  summary: string,
+  _summary: string,
   detail: string | undefined,
   target?: string,
 ): boolean {

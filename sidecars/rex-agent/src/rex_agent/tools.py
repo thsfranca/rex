@@ -71,6 +71,13 @@ VIEWER_TOOLS = frozenset({TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH})
 EDITOR_TOOLS = frozenset({TOOL_READ, TOOL_WRITE, TOOL_EXEC})
 
 BATCHABLE_READ_TOOLS = frozenset({TOOL_READ, TOOL_LIST})
+
+FIND_MAX_DEPTH = 12
+FIND_MAX_DIRS = 96
+FIND_MAX_MATCHES = 8
+FIND_SKIP_DIR_NAMES = frozenset(
+    {".git", "node_modules", "target", "__pycache__", ".venv", "venv", "dist", "build"}
+)
 NON_BATCHABLE_TOOLS = frozenset({TOOL_WRITE, TOOL_EXEC, TOOL_PLAN_SAVE})
 
 BATCH_MIXED_ERROR = (
@@ -183,6 +190,134 @@ except ImportError:  # pragma: no cover
 class ToolCall:
     tool: str
     args: dict[str, Any]
+
+
+def _non_empty_str(value: Any) -> str:
+    if not isinstance(value, str):
+        return ""
+    return value.strip()
+
+
+def _join_relative_path(base: str, name: str) -> str:
+    if not base:
+        return name
+    return f"{base}/{name}"
+
+
+def is_read_path_not_found(error: str) -> bool:
+    lower = error.lower().strip()
+    return lower.startswith("path not found:") or lower.startswith("not found:")
+
+
+def find_paths_by_basename(
+    client: BrokerClient,
+    basename: str,
+    mode: str,
+) -> list[str]:
+    """Breadth-first workspace search for relative paths matching basename."""
+    if not basename or basename in (".", ".."):
+        return []
+    matches: list[str] = []
+    queue: list[tuple[str, int]] = [("", 0)]
+    visited = 0
+    while queue and visited < FIND_MAX_DIRS and len(matches) < FIND_MAX_MATCHES:
+        dir_path, depth = queue.pop(0)
+        visited += 1
+        ok, payload = client.list_dir_entries(dir_path, mode)
+        if not ok or not isinstance(payload, list):
+            continue
+        for name, is_dir in payload:
+            if is_dir:
+                if name in FIND_SKIP_DIR_NAMES or depth >= FIND_MAX_DEPTH:
+                    continue
+                queue.append((_join_relative_path(dir_path, name), depth + 1))
+                continue
+            if name == basename:
+                matches.append(_join_relative_path(dir_path, name))
+                if len(matches) >= FIND_MAX_MATCHES:
+                    return matches
+    return matches
+
+
+def resolve_read_path_after_not_found(
+    client: BrokerClient,
+    requested_path: str,
+    mode: str,
+) -> tuple[str | None, str | None]:
+    """Search by basename when a read path is missing."""
+    basename = Path(requested_path).name
+    if not basename:
+        return None, None
+    matches = find_paths_by_basename(client, basename, mode)
+    if len(matches) == 1:
+        return matches[0], None
+    if not matches:
+        return None, None
+    listed = ", ".join(matches)
+    overflow = ""
+    if len(matches) >= FIND_MAX_MATCHES:
+        overflow = f" (showing first {FIND_MAX_MATCHES} matches)"
+    return None, (
+        f"path not found: {requested_path}. "
+        f"Basename {basename!r} exists at: {listed}{overflow}"
+    )
+
+
+def coerce_tool_args(tool: str, args: dict[str, Any] | None) -> dict[str, Any]:
+    """Normalize common provider arg aliases before validation."""
+    coerced = dict(args or {})
+    if tool in (TOOL_READ, TOOL_WRITE, TOOL_LIST, TOOL_PLAN_SAVE):
+        if not _non_empty_str(coerced.get("path")):
+            for alt in ("file", "filepath", "file_path", "filename", "name"):
+                candidate = _non_empty_str(coerced.get(alt))
+                if candidate:
+                    coerced["path"] = candidate
+                    break
+    if tool == TOOL_WEB_SEARCH and not _non_empty_str(coerced.get("query")):
+        for alt in ("q", "search", "text", "terms"):
+            candidate = _non_empty_str(coerced.get(alt))
+            if candidate:
+                coerced["query"] = candidate
+                break
+    if tool == TOOL_EXEC and not _non_empty_str(coerced.get("command")):
+        for alt in ("cmd", "shell", "script"):
+            candidate = _non_empty_str(coerced.get(alt))
+            if candidate:
+                coerced["command"] = candidate
+                break
+    return coerced
+
+
+def validate_tool_call(call: ToolCall) -> str | None:
+    """Return operator-facing error when required args are missing."""
+    args = call.args
+    if call.tool == TOOL_READ:
+        if not _non_empty_str(args.get("path")):
+            return "fs.read requires a non-empty path argument."
+    elif call.tool == TOOL_WRITE:
+        if not _non_empty_str(args.get("path")):
+            return "fs.write requires a non-empty path argument."
+    elif call.tool == TOOL_WEB_SEARCH:
+        if not _non_empty_str(args.get("query")):
+            return "web.search requires a non-empty query argument."
+    elif call.tool == TOOL_EXEC:
+        if not _non_empty_str(args.get("command")):
+            return "exec.shell requires a non-empty command argument."
+    elif call.tool == TOOL_PLAN_SAVE:
+        if not _non_empty_str(args.get("path")):
+            return "plan.save requires a non-empty path argument."
+        if not _non_empty_str(args.get("content")):
+            return "plan.save requires content."
+    return None
+
+
+def normalize_tool_call(call: ToolCall) -> tuple[ToolCall | None, str | None]:
+    coerced = coerce_tool_args(call.tool, call.args)
+    normalized = ToolCall(tool=call.tool, args=coerced)
+    error = validate_tool_call(normalized)
+    if error:
+        return None, error
+    return normalized, None
 
 
 @dataclass(frozen=True)
@@ -362,7 +497,14 @@ def normalize_tool_batch(
         calls = calls[:cap]
         truncated = True
 
-    return calls, None, truncated
+    normalized_calls: list[ToolCall] = []
+    for call in calls:
+        normalized, error = normalize_tool_call(call)
+        if error is not None or normalized is None:
+            return None, error, False
+        normalized_calls.append(normalized)
+
+    return normalized_calls, None, truncated
 
 
 def tool_specs_for_subagent(
@@ -651,7 +793,16 @@ def execute_tool(
         path = str(args.get("path", "")).strip()
         if not path:
             return False, "fs.read requires path", False, False
+        resolve_note = ""
         ok, result = client.read_file(path, mode)
+        if not ok and is_read_path_not_found(result):
+            resolved, hint = resolve_read_path_after_not_found(client, path, mode)
+            if resolved:
+                ok, result = client.read_file(resolved, mode)
+                if ok:
+                    resolve_note = f"[fs.read: resolved {path} -> {resolved}]\n"
+            elif hint:
+                result = hint
         if ok:
             raw_body = strip_tool_result_delimiters(result)
             pruned = raw_body
@@ -665,6 +816,8 @@ def execute_tool(
                 truncated = True
             if pruned != raw_body:
                 result = format_delimited_tool_result_for_prompt(TOOL_READ, pruned)
+            if resolve_note:
+                result = resolve_note + result
         return ok, result, truncated, False
 
     if tool == TOOL_LIST:

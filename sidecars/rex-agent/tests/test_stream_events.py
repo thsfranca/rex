@@ -18,6 +18,11 @@ def test_tool_detail_from_call_prefers_path() -> None:
     assert tool_detail_from_call(call) == "src/main.rs"
 
 
+def test_tool_detail_from_call_empty_args_returns_blank() -> None:
+    call = ToolCall(tool="fs.read", args={})
+    assert tool_detail_from_call(call) == ""
+
+
 def test_append_tool_and_step_build_event_list() -> None:
     events = append_step([], phase="running", summary="Routing to viewer for fs.read")
     events = append_tool(events, name="fs.read", phase="running", detail="src/main.rs")

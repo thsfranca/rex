@@ -1,5 +1,7 @@
 """Tool protocol parsing tests."""
 
+from __future__ import annotations
+
 from unittest.mock import MagicMock, patch
 
 from rex_agent.graph.nodes.init import (
@@ -104,6 +106,121 @@ def test_tool_specs_for_subagent_viewer_masks_write() -> None:
     assert TOOL_LIST in names
     assert "fs.write" not in names
     assert "exec.shell" not in names
+
+
+def test_normalize_tool_batch_rejects_empty_read_path() -> None:
+    calls = [ToolCall(tool=TOOL_READ, args={})]
+    normalized, error, truncated = normalize_tool_batch(
+        calls, mode="ask", subagent="viewer"
+    )
+    assert normalized is None
+    assert error == "fs.read requires a non-empty path argument."
+    assert truncated is False
+
+
+def test_coerce_tool_args_maps_file_alias_to_path() -> None:
+    from rex_agent.tools import coerce_tool_args, normalize_tool_call
+
+    normalized, error = normalize_tool_call(
+        ToolCall(tool=TOOL_READ, args={"file": "README.md"})
+    )
+    assert error is None
+    assert normalized is not None
+    assert normalized.args["path"] == "README.md"
+    assert coerce_tool_args(TOOL_READ, {"file": "docs/X.md"})["path"] == "docs/X.md"
+
+
+class _TreeBrokerClient:
+    def __init__(
+        self,
+        *,
+        files: set[str],
+        dirs: dict[str, list[tuple[str, bool]]],
+    ) -> None:
+        self.files = files
+        self.dirs = dirs
+        self.read_calls: list[str] = []
+
+    def read_file(self, path: str, mode: str) -> tuple[bool, str]:
+        self.read_calls.append(path)
+        if path in self.files:
+            return True, f"<<TOOL_RESULT:fs.read>>\nbody:{path}\n<<END>>"
+        return False, f"path not found: {path}"
+
+    def list_dir_entries(
+        self, path: str, mode: str | None = None
+    ) -> tuple[bool, list[tuple[str, bool]] | str]:
+        return True, self.dirs.get(path, [])
+
+
+def test_find_paths_by_basename_discovers_unique_match() -> None:
+    from rex_agent.tools import find_paths_by_basename
+
+    client = _TreeBrokerClient(
+        files={"docs/architecture/decisions/0001-example.md"},
+        dirs={
+            "": [("docs", True)],
+            "docs": [("architecture", True)],
+            "docs/architecture": [("decisions", True)],
+            "docs/architecture/decisions": [("0001-example.md", False)],
+        },
+    )
+    matches = find_paths_by_basename(client, "0001-example.md", "ask")
+    assert matches == ["docs/architecture/decisions/0001-example.md"]
+
+
+def test_execute_tool_read_resolves_unique_basename_match() -> None:
+    from rex_agent.tools import ToolCall, execute_tool
+
+    client = _TreeBrokerClient(
+        files={"docs/architecture/decisions/0001-example.md"},
+        dirs={
+            "": [("docs", True)],
+            "docs": [("architecture", True)],
+            "docs/architecture": [("decisions", True)],
+            "docs/architecture/decisions": [("0001-example.md", False)],
+        },
+    )
+    call = ToolCall(
+        tool=TOOL_READ,
+        args={
+            "path": (
+                "docs/architecturedecisions/"
+                "0001-example.md"
+            )
+        },
+    )
+    ok, result, truncated, cached = execute_tool(client, call, "ask")
+    assert ok is True
+    assert "resolved" in result
+    assert "docs/architecture/decisions/0001-example.md" in result
+    assert "body:docs/architecture/decisions/0001-example.md" in result
+    assert client.read_calls[0].endswith("0001-example.md")
+    assert client.read_calls[-1] == "docs/architecture/decisions/0001-example.md"
+    assert truncated is False
+    assert cached is False
+
+
+def test_execute_tool_read_lists_ambiguous_basename_matches() -> None:
+    from rex_agent.tools import ToolCall, execute_tool
+
+    client = _TreeBrokerClient(
+        files={"docs/a/README.md", "docs/b/README.md"},
+        dirs={
+            "": [("docs", True)],
+            "docs": [("a", True), ("b", True)],
+            "docs/a": [("README.md", False)],
+            "docs/b": [("README.md", False)],
+        },
+    )
+    call = ToolCall(tool=TOOL_READ, args={"path": "README.md"})
+    ok, result, truncated, cached = execute_tool(client, call, "ask")
+    assert ok is False
+    assert "Basename 'README.md' exists at:" in result
+    assert "docs/a/README.md" in result
+    assert "docs/b/README.md" in result
+    assert truncated is False
+    assert cached is False
 
 
 def test_normalize_tool_batch_accepts_parallel_reads() -> None:

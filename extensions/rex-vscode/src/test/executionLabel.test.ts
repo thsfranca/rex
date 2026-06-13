@@ -69,6 +69,21 @@ describe("formatExecutionLabel", () => {
 });
 
 describe("resolveTimelineTarget", () => {
+  it("ignores placeholder tool target detail", () => {
+    expect(
+      resolveTimelineTarget("fs.read", "running", "tool", "{}"),
+    ).toBeUndefined();
+    expect(
+      formatExecutionLabel({
+        summary: "fs.read",
+        target: "{}",
+        detail: "fs.read requires path",
+        phase: "failed",
+        kind: "tool",
+      }),
+    ).toBe("Failed to read fs.read requires path");
+  });
+
   it("preserves path from running phase through completion", () => {
     const running = resolveTimelineTarget("fs.read", "running", "tool", "README.md");
     expect(running).toBe("README.md");

@@ -139,6 +139,23 @@ def test_grpc_error_surfaces_as_failure() -> None:
             result = client.inference("x", "ask", "")
     assert result.ok is False
     assert result.error
+    assert "_InactiveRpcError" not in result.error
+
+
+def test_format_grpc_error_deadline_exceeded_is_single_line() -> None:
+    from rex_agent.broker import format_grpc_error
+
+    class _DeadlineError(grpc.RpcError):
+        def code(self) -> grpc.StatusCode:
+            return grpc.StatusCode.DEADLINE_EXCEEDED
+
+        def details(self) -> str:
+            return "Deadline Exceeded"
+
+    message = format_grpc_error(_DeadlineError())
+    assert "Deadline Exceeded" in message or "timed out after" in message
+    assert "\n" not in message
+    assert "_InactiveRpcError" not in message
 
 
 def test_broker_inference_sends_messages_and_tools() -> None:

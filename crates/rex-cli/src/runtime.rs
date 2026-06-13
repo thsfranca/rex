@@ -11,7 +11,7 @@ use tonic::Code;
 use crate::command::{parse_command, print_usage, CliCommand, CompleteOutputFormat};
 use crate::domain::{
     StreamLifecycle, REQUEST_TIMEOUT_SECONDS, STREAM_ITEM_TIMEOUT_SECONDS,
-    STREAM_START_RETRY_ATTEMPTS, STREAM_START_RETRY_DELAY_MS,
+    STREAM_START_RETRY_ATTEMPTS, STREAM_START_RETRY_DELAY_MS, stream_request_timeout_seconds,
 };
 use crate::error::CliError;
 use crate::transport::connect_client;
@@ -149,7 +149,9 @@ async fn run_complete(
         request
             .metadata_mut()
             .insert("x-rex-trace-id", metadata_value);
-        request.set_timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS));
+        request.set_timeout(Duration::from_secs(stream_request_timeout_seconds(
+            stream_idle_timeout_secs,
+        )));
         let response = match client
             .stream_inference(request)
             .await
@@ -262,11 +264,7 @@ async fn consume_stream(
 fn stream_idle_timeout_for_mode(mode: &str) -> u64 {
     rex_config::load_merged()
         .map(|loaded| loaded.stream_idle_timeout_secs(mode))
-        .unwrap_or(if mode.trim().eq_ignore_ascii_case("agent") {
-            120
-        } else {
-            STREAM_ITEM_TIMEOUT_SECONDS
-        })
+        .unwrap_or(STREAM_ITEM_TIMEOUT_SECONDS)
 }
 
 fn resolve_approval_id(
