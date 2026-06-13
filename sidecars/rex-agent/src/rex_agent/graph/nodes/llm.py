@@ -177,6 +177,7 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
         subagent=subagent,
         viewer_summary=state.get("viewer_summary", ""),
         gate=gate,
+        injected_files=list(state.get("injected_files") or []),
     )
     chat_messages = messages_to_chat_messages(
         messages,
@@ -185,6 +186,7 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
         subagent=subagent,
         viewer_summary=state.get("viewer_summary", ""),
         gate=gate,
+        injected_files=list(state.get("injected_files") or []),
     )
     tool_specs = tool_specs_for_subagent(subagent, state["mode"], gate=gate)
 

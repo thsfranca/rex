@@ -104,7 +104,7 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 | 23 | **R062** — prefix-safe compaction config | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | **Done** |
 | 24 | **R063** — soft cap Continue UX | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | **Done** |
 | 25 | **R064** — loop observability + golden prompts | **Should** | — | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | **Done** |
-| 26 | **R065** — injected files manifest | **Could** | — | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) | Open — **after R064** |
+| 26 | **R065** — injected files manifest | **Could** | — | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) | **Done** |
 
 ### LangFuse integration (RC-LF1)
 

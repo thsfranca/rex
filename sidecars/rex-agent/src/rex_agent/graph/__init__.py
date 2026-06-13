@@ -181,7 +181,13 @@ def _reset_graphs() -> None:
     _ASK = None
 
 
-def _initial_state(prompt: str, mode: str, model: str, turn_id: str) -> AgentState:
+def _initial_state(
+    prompt: str,
+    mode: str,
+    model: str,
+    turn_id: str,
+    injected_files: list[str] | None = None,
+) -> AgentState:
     normalized = (mode or "ask").strip().lower() or "ask"
     return AgentState(
         daemon_context=prompt,
@@ -205,6 +211,7 @@ def _initial_state(prompt: str, mode: str, model: str, turn_id: str) -> AgentSta
         goal_hint=prompt[:500],
         workspace_explored=False,
         soft_cap_continued=False,
+        injected_files=list(injected_files or []),
     )
 
 
@@ -291,8 +298,9 @@ def stream_turn(
     mode: str,
     model: str,
     turn_id: str = "",
+    injected_files: list[str] | None = None,
 ) -> Iterator[StreamEvent]:
-    state = _initial_state(prompt, mode, model, turn_id)
+    state = _initial_state(prompt, mode, model, turn_id, injected_files)
     yield from _stream_agent_state(state, turn_id)
 
 

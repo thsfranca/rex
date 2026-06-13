@@ -204,7 +204,7 @@ Follow-on program after **R057–R058** to reduce cap-terminal failures and impr
 | **R062** | Prefix-safe compaction defaults | **Done** | `agent.compaction_enabled` default false; typed Rust config fields |
 | **R063** | Soft cap Continue UX | **Done** | NDJSON `awaiting_continue`; `ContinueTurn` RPC; caps 15/25/25 |
 | **R064** | Loop observability + golden prompts | **Done** | `cap_terminal` metrics; golden pytest suite |
-| **R065** | `injected_files` manifest on `RunTurn` | Open | Skip redundant reads when daemon pre-injects |
+| **R065** | `injected_files` manifest on `RunTurn` | **Done** | Daemon emits paths; sidecar skips redundant reads |
 
 ### Hybrid billing (R060+)
 
@@ -216,7 +216,9 @@ Follow-on program after **R057–R058** to reduce cap-terminal failures and impr
 | Exact duplicate `(tool, args)` (R061) | No | +1 per duplicate |
 | Terminal at `tool_error_count >= 3` | — | Stable code `agent_loop_stuck` |
 
-**Deterministic init (R060):** Ask mode entry node runs before first LLM when the prompt has no explicit file reference and README is not already in `daemon_context`. Bills one productive step; sets `workspace_explored`.
+**Deterministic init (R060):** Ask mode entry node runs before first LLM when the prompt has no explicit file reference and README is not already in `daemon_context`. Bills one productive step; sets `workspace_explored`. Skips `fs.read` for paths listed in `RunTurnRequest.injected_files` (R065).
+
+**Injected files manifest (R065):** Daemon `build_injected_files_manifest` derives paths from `active_file_path` and injected context markers; sidecar init and system prompt avoid redundant broker reads.
 
 ## Cross-links
 

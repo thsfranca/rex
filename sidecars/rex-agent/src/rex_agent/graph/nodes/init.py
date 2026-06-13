@@ -49,6 +49,17 @@ def prompt_already_has_readme_context(text: str) -> bool:
     return any(marker in lower for marker in _README_INJECTED_MARKERS)
 
 
+def _normalize_manifest_path(path: str) -> str:
+    return path.strip().lstrip("./").lower()
+
+
+def path_in_injected_manifest(path: str, injected_files: list[str]) -> bool:
+    target = _normalize_manifest_path(path)
+    if not target:
+        return False
+    return any(_normalize_manifest_path(entry) == target for entry in injected_files)
+
+
 def should_run_deterministic_init(state: AgentState) -> bool:
     if not deterministic_init_enabled():
         return False
@@ -69,14 +80,18 @@ def init_workspace_node(state: AgentState, *, client: BrokerClient) -> dict:
     if not should_run_deterministic_init(state):
         return {}
 
-    calls: list[ToolCall] = [ToolCall(tool=TOOL_READ, args={"path": "README.md"})]
+    injected = list(state.get("injected_files") or [])
+    calls: list[ToolCall] = []
+    if not path_in_injected_manifest("README.md", injected):
+        calls.append(ToolCall(tool=TOOL_READ, args={"path": "README.md"}))
 
     events = list(state.get("stream_events") or [])
-    events = append_step(
-        events,
-        phase="running",
-        summary="Deterministic workspace init (README + root listing)",
+    summary = (
+        "Deterministic workspace init (root listing)"
+        if not calls
+        else "Deterministic workspace init (README + root listing)"
     )
+    events = append_step(events, phase="running", summary=summary)
 
     read_cache = state.get("read_cache") or ReadCache()
     new_messages: list[HumanMessage] = []
@@ -130,15 +145,24 @@ def init_workspace_node(state: AgentState, *, client: BrokerClient) -> dict:
             extra={"tool": call.tool, "ok": ok, "batch_index": index},
         )
 
-    _run_call(0, calls[0])
-    if not batch_results[-1][0]:
-        fallback = ToolCall(tool=TOOL_READ, args={"path": "README"})
-        calls.append(fallback)
-        _run_call(1, fallback)
+    call_index = 0
+    for call in calls:
+        _run_call(call_index, call)
+        call_index += 1
+        if (
+            batch_results
+            and not batch_results[-1][0]
+            and call.tool == TOOL_READ
+            and str(call.args.get("path", "")) == "README.md"
+            and not path_in_injected_manifest("README", injected)
+        ):
+            fallback = ToolCall(tool=TOOL_READ, args={"path": "README"})
+            calls.append(fallback)
+            _run_call(call_index, fallback)
+            call_index += 1
 
     list_call = ToolCall(tool=TOOL_LIST, args={"path": ""})
-    calls.append(list_call)
-    _run_call(len(calls) - 1, list_call)
+    _run_call(call_index, list_call)
 
     steps = 1 if should_bill_tool_step(batch_results) else 0
     error_count = 0 if should_bill_tool_step(batch_results) else state.get(

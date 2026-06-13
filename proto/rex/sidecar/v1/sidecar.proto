@@ -32,6 +32,8 @@ message RunTurnRequest {
   string turn_id = 4;
   // Optional (Phase 1b). Hash of assembled context stages for cache/debug.
   string context_revision = 5;
+  // Paths already present in daemon-assembled context (R065).
+  repeated string injected_files = 7;
 }
 
 message ContinueTurnRequest {

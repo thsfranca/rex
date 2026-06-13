@@ -34,7 +34,8 @@ use crate::l1_cache::{l1_cachable_responses, normalize_mode};
 use crate::observability::{observability_from_settings, StreamEconomicsDraft};
 use crate::otlp_metrics::TerminalOtlpContext;
 use crate::plugins::{
-    BehaviorDecision, BehaviorSnapshot, CacheStatus, ContextPipeline, ContextRequest,
+    build_injected_files_manifest, BehaviorDecision, BehaviorSnapshot, CacheStatus,
+    ContextPipeline, ContextRequest,
 };
 use crate::policy::{CacheDecision, CacheDecisionState, PolicyEngine, PolicyRequest};
 use crate::routing::decide_route;
@@ -91,6 +92,7 @@ impl RexDaemonService {
         model: &str,
         inference_runtime: &str,
         correlation: &TurnCorrelation,
+        injected_files: Vec<String>,
     ) -> Result<Vec<Result<StreamInferenceResponse, Status>>, Status> {
         if parse_harness_only().is_some() || !self.sidecar.host_config().enabled {
             return Ok(self.runtime.build_chunks(effective_prompt).await);
@@ -103,10 +105,16 @@ impl RexDaemonService {
         let mut client = connect_sidecar(&socket)
             .await
             .map_err(|e| Status::unavailable(format!("sidecar connect failed: {e}")))?;
-        let sidecar_chunks =
-            run_turn_collect(&mut client, effective_prompt, mode, model, correlation)
-                .await
-                .map_err(|e| Status::internal(format!("sidecar RunTurn failed: {e}")))?;
+        let sidecar_chunks = run_turn_collect(
+            &mut client,
+            effective_prompt,
+            mode,
+            model,
+            correlation,
+            injected_files,
+        )
+        .await
+        .map_err(|e| Status::internal(format!("sidecar RunTurn failed: {e}")))?;
         println!(
             "stream.sidecar=ok inference_runtime=sidecar sidecar_socket={socket} mode={} turn_id={}",
             normalize_mode(mode),
@@ -517,6 +525,10 @@ impl RexService for RexDaemonService {
         let effective_prompt = pipeline_result.effective_prompt.clone();
         let effective_model = model.clone();
         let correlation_for_sidecar = correlation.clone();
+        let injected_files = build_injected_files_manifest(
+            context_request.active_file_path.as_deref(),
+            &pipeline_result.injected_context,
+        );
         let sidecar_live = self.sidecar_live_stream_active();
         let lookup_key = match &decision {
             CacheDecision::Lookup(key) => Some(key.clone()),
@@ -543,6 +555,7 @@ impl RexService for RexDaemonService {
                         &effective_model,
                         inference_runtime,
                         &correlation_for_sidecar,
+                        injected_files.clone(),
                     )
                     .await?;
                 if let Some(to_store) = l1_cachable_responses(&built) {
@@ -556,6 +569,7 @@ impl RexService for RexDaemonService {
                     &effective_model,
                     inference_runtime,
                     &correlation_for_sidecar,
+                    injected_files.clone(),
                 )
                 .await?
             };
@@ -595,6 +609,7 @@ impl RexService for RexDaemonService {
         let sidecar = self.sidecar.clone();
         let sidecar_socket = self.sidecar.config().socket_path.clone();
         let turn_id_for_stream = correlation.turn_id.clone();
+        let injected_files_for_sidecar = injected_files.clone();
         let observability = self.observability.clone();
         let economics_draft = observability.as_ref().map(|obs| StreamEconomicsDraft {
             snapshot_id: obs.snapshot_id().to_string(),
@@ -639,6 +654,7 @@ impl RexService for RexDaemonService {
                         &mode,
                         &effective_model,
                         &correlation_for_sidecar,
+                        injected_files_for_sidecar.clone(),
                     )
                     .await
                 } else {
