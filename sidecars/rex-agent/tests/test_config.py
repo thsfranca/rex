@@ -194,3 +194,21 @@ def test_ask_default_step_cap_is_twelve(monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
     assert config.DEFAULT_MAX_TOOL_STEPS_ASK == 12
     assert config.max_tool_steps_for_mode("ask") == 12
+
+
+def test_deterministic_init_enabled_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
+    assert config.deterministic_init_enabled() is True
+
+
+def test_deterministic_init_disabled_from_config(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "rex"
+    root.mkdir()
+    (root / "config.json").write_text(
+        json.dumps({"agent": {"deterministic_init_enabled": False}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
+    assert config.deterministic_init_enabled() is False

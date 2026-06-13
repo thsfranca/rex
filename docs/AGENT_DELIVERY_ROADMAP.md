@@ -220,6 +220,12 @@ Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. 
 | **R057** | Parallel read-only tool batching (cross-mode) | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R058** | Per-mode step caps + generic mode prompts | **Done** |
 | **R059** | `workspace.search` broker tool | Open |
+| **R060** | Deterministic ask init + loop circuit breaker | **Open** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) |
+| **R061** | Exact-match tool cache | Open — **after R060** |
+| **R062** | Prefix-safe compaction config | Open — **after R061** |
+| **R063** | Soft cap Continue UX | Open — **after R062** |
+| **R064** | Loop observability + golden prompts | Open — **after R063** |
+| **R065** | Injected files manifest | Open — **after R064** |
 | R016 | Multi-active broadcast | **Could** — rank **18** |
 | **R036** | TRON static schema compression | **Could** — rank **16** |
 | **R033** | MCP gRPC client | **Could** — rank **17** |
