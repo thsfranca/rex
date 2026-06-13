@@ -221,8 +221,8 @@ Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. 
 | **R058** | Per-mode step caps + generic mode prompts | **Done** |
 | **R059** | `workspace.search` broker tool | Open |
 | **R060** | Deterministic ask init + loop circuit breaker | **Open** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) |
-| **R061** | Exact-match tool cache | Open — **after R060** |
-| **R062** | Prefix-safe compaction config | Open — **after R061** |
+| **R061** | Exact-match tool cache | **Done** |
+| **R062** | Prefix-safe compaction config | **Done** |
 | **R063** | Soft cap Continue UX | Open — **after R062** |
 | **R064** | Loop observability + golden prompts | Open — **after R063** |
 | **R065** | Injected files manifest | Open — **after R064** |

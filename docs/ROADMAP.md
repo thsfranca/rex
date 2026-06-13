@@ -100,8 +100,8 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 | 19 | **R058** — per-mode step caps + mode prompts | **Should** | — | [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md) | Done |
 | 20 | **R059** — `workspace.search` broker | **Should** | — | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | Open — **after R058** |
 | 21 | **R060** — deterministic ask init + loop circuit breaker | **Must** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | Open |
-| 22 | **R061** — exact-match tool cache | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | Open — **after R060** |
-| 23 | **R062** — prefix-safe compaction config | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | Open — **after R061** |
+| 22 | **R061** — exact-match tool cache | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | **Done** |
+| 23 | **R062** — prefix-safe compaction config | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | **Done** |
 | 24 | **R063** — soft cap Continue UX | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | Open — **after R062** |
 | 25 | **R064** — loop observability + golden prompts | **Should** | — | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Open — **after R063** |
 | 26 | **R065** — injected files manifest | **Could** | — | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) | Open — **after R064** |

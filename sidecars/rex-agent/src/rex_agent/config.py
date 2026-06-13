@@ -15,7 +15,10 @@ DEFAULT_MAX_TOOL_STEPS_PLAN = 20
 DEFAULT_MAX_TOOLS_PER_STEP = 8
 DEFAULT_MAX_TOOL_RESULT_BYTES = 8192
 DEFAULT_COMPACTION_SUFFIX_FRACTION = 0.25
+DEFAULT_COMPACTION_ENABLED = False
 DEFAULT_DETERMINISTIC_INIT_ENABLED = True
+DEFAULT_SOFT_CAP_ENABLED = False
+DEFAULT_SOFT_CAP_FRACTION = 2 / 3
 REX_ROOT_ENV = "REX_ROOT"
 
 
@@ -196,3 +199,33 @@ def deterministic_init_enabled() -> bool:
         if isinstance(flag, bool):
             return flag
     return DEFAULT_DETERMINISTIC_INIT_ENABLED
+
+
+def compaction_enabled() -> bool:
+    cfg = _load_config_json()
+    if cfg:
+        agent = cfg.get("agent") or {}
+        flag = agent.get("compaction_enabled")
+        if isinstance(flag, bool):
+            return flag
+    return DEFAULT_COMPACTION_ENABLED
+
+
+def soft_cap_enabled() -> bool:
+    cfg = _load_config_json()
+    if cfg:
+        agent = cfg.get("agent") or {}
+        flag = agent.get("soft_cap_enabled")
+        if isinstance(flag, bool):
+            return flag
+    return DEFAULT_SOFT_CAP_ENABLED
+
+
+def soft_cap_fraction() -> float:
+    cfg = _load_config_json()
+    if cfg:
+        agent = cfg.get("agent") or {}
+        fraction = agent.get("soft_cap_fraction")
+        if isinstance(fraction, (int, float)) and 0 < float(fraction) < 1:
+            return float(fraction)
+    return DEFAULT_SOFT_CAP_FRACTION

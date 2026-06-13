@@ -295,4 +295,24 @@ mod tests {
             assert!(err.to_string().contains("base_url"));
         });
     }
+
+    #[test]
+    fn agent_config_merge_loop_optimization_fields() {
+        use crate::merge::merge_config;
+
+        let mut base = RexConfig::defaults();
+        base.agent.compaction_enabled = Some(false);
+        base.agent.deterministic_init_enabled = Some(true);
+
+        let mut overlay = RexConfig::default();
+        overlay.agent.compaction_enabled = Some(true);
+        overlay.agent.soft_cap_enabled = Some(true);
+        overlay.agent.soft_cap_fraction = Some(0.5);
+
+        merge_config(&mut base, overlay);
+        assert_eq!(base.agent.compaction_enabled, Some(true));
+        assert_eq!(base.agent.soft_cap_enabled, Some(true));
+        assert_eq!(base.agent.soft_cap_fraction, Some(0.5));
+        assert_eq!(base.agent.deterministic_init_enabled, Some(true));
+    }
 }

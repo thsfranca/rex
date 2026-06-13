@@ -92,6 +92,10 @@ impl RexConfig {
                 max_tool_steps_ask: default_max_tool_steps_ask(),
                 max_tool_steps_plan: default_max_tool_steps_plan(),
                 max_tools_per_step: 8,
+                deterministic_init_enabled: None,
+                compaction_enabled: None,
+                soft_cap_enabled: None,
+                soft_cap_fraction: None,
             },
             cli: CliConfig::default(),
             search: SearchConfig::default(),
@@ -130,6 +134,10 @@ impl RexConfig {
                 max_tool_steps_ask: default_max_tool_steps_ask(),
                 max_tool_steps_plan: default_max_tool_steps_plan(),
                 max_tools_per_step: 8,
+                deterministic_init_enabled: None,
+                compaction_enabled: None,
+                soft_cap_enabled: None,
+                soft_cap_fraction: None,
             },
             search: SearchConfig {
                 enabled: Some(true),
@@ -443,6 +451,18 @@ pub struct AgentConfig {
     pub max_tool_steps_plan: u32,
     #[serde(default = "default_max_tools_per_step")]
     pub max_tools_per_step: u32,
+    /// Pre-LLM ask init (README + list). Sidecar default true when unset.
+    #[serde(default)]
+    pub deterministic_init_enabled: Option<bool>,
+    /// Intra-turn suffix compaction (R029). Sidecar default false when unset.
+    #[serde(default)]
+    pub compaction_enabled: Option<bool>,
+    /// Soft cap pause before hard step limit (R063). Sidecar default false when unset.
+    #[serde(default)]
+    pub soft_cap_enabled: Option<bool>,
+    /// Fraction of mode step cap at which soft cap fires (R063). Sidecar default 2/3 when unset.
+    #[serde(default)]
+    pub soft_cap_fraction: Option<f64>,
 }
 
 impl Default for AgentConfig {
@@ -453,6 +473,10 @@ impl Default for AgentConfig {
             max_tool_steps_ask: default_max_tool_steps_ask(),
             max_tool_steps_plan: default_max_tool_steps_plan(),
             max_tools_per_step: default_max_tools_per_step(),
+            deterministic_init_enabled: None,
+            compaction_enabled: None,
+            soft_cap_enabled: None,
+            soft_cap_fraction: None,
         }
     }
 }

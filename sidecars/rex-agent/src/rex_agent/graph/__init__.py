@@ -10,7 +10,7 @@ from langgraph.graph import END, StateGraph
 
 from rex_agent.broker import BrokerClient, InferenceResult, legacy_inference_result
 from rex_agent.broker_chat_model import stream_visible_text
-from rex_agent.config import max_tool_steps_for_mode
+from rex_agent.config import compaction_enabled, max_tool_steps_for_mode
 from rex_agent.graph.compaction import compact_state
 from rex_agent.graph.nodes.init import init_workspace_node
 from rex_agent.graph.nodes.llm import llm_node
@@ -106,6 +106,8 @@ def _init_workspace_wrapper(state: AgentState) -> dict:
 
 
 def _compaction_node(state: AgentState) -> dict:
+    if not compaction_enabled():
+        return {}
     return compact_state(state)
 
 
