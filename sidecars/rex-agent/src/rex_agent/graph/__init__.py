@@ -12,6 +12,7 @@ from rex_agent.broker import BrokerClient, InferenceResult, legacy_inference_res
 from rex_agent.broker_chat_model import stream_visible_text
 from rex_agent.config import max_tool_steps_for_mode
 from rex_agent.graph.compaction import compact_state
+from rex_agent.graph.nodes.init import init_workspace_node
 from rex_agent.graph.nodes.llm import llm_node
 from rex_agent.graph.nodes.orchestrator import (
     route_after_editor,
@@ -100,19 +101,25 @@ def _tools_wrapper(state: AgentState) -> dict:
     return tools_node(state, client=_client())
 
 
+def _init_workspace_wrapper(state: AgentState) -> dict:
+    return init_workspace_node(state, client=_client())
+
+
 def _compaction_node(state: AgentState) -> dict:
     return compact_state(state)
 
 
 def _compile_react_graph() -> Any:
     graph: StateGraph = StateGraph(AgentState)
+    graph.add_node("init_workspace", _init_workspace_wrapper)
     graph.add_node("orchestrator", _orchestrator_node)
     graph.add_node("viewer", _viewer_node)
     graph.add_node("editor", _editor_node)
     graph.add_node("tools", _tools_wrapper)
     graph.add_node("compact", _compaction_node)
 
-    graph.set_entry_point("orchestrator")
+    graph.set_entry_point("init_workspace")
+    graph.add_edge("init_workspace", "orchestrator")
     graph.add_conditional_edges(
         "orchestrator",
         route_after_orchestrator,

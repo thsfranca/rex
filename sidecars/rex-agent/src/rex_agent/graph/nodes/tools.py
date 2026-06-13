@@ -7,6 +7,7 @@ import uuid
 from langchain_core.messages import HumanMessage
 
 from rex_agent.broker import BrokerClient
+from rex_agent.broker_chat_model import MAX_PARSE_RETRIES
 from rex_agent.graph.compaction import truncation_note
 from rex_agent.graph.nodes.orchestrator import classify_subagent_for_tool
 from rex_agent.graph.state import AgentState
@@ -18,9 +19,16 @@ from rex_agent.tools import (
     TOOL_LIST,
     TOOL_READ,
     ReadCache,
-    should_bill_tool_step,
     execute_tool,
     format_tool_status,
+    is_policy_config_failure,
+    should_bill_tool_step,
+)
+
+AGENT_LOOP_STUCK_CODE = "agent_loop_stuck"
+AGENT_LOOP_STUCK_MESSAGE = (
+    "Agent stopped after repeated blocked or invalid tool attempts "
+    f"({AGENT_LOOP_STUCK_CODE}). Try rephrasing or narrowing the request."
 )
 
 
@@ -146,10 +154,43 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
         stream_parts.append(BATCH_TRUNCATED_NOTE)
 
     last_subagent = classify_subagent_for_tool(calls[-1].tool)
-    steps = current_steps + 1 if should_bill_tool_step(batch_results) else current_steps
+    bill_step = should_bill_tool_step(batch_results)
+    steps = current_steps + 1 if bill_step else current_steps
+    error_count = state.get("tool_error_count", 0)
+    if bill_step:
+        error_count = 0
+    elif batch_results and all(
+        not ok and is_policy_config_failure(result) for ok, result in batch_results
+    ):
+        error_count += 1
+
+    if error_count >= MAX_PARSE_RETRIES:
+        events = append_tool(
+            events,
+            name=calls[-1].tool,
+            phase="failed",
+            detail=AGENT_LOOP_STUCK_CODE,
+            tool_call_id=f"{turn_id}:loop:{error_count}:{calls[-1].tool}",
+        )
+        return {
+            "done": True,
+            "final_answer": AGENT_LOOP_STUCK_MESSAGE,
+            "stream_parts": stream_parts + [AGENT_LOOP_STUCK_MESSAGE],
+            "stream_events": events,
+            "tool_steps": steps,
+            "tool_error_count": error_count,
+            "workspace_explored": workspace_explored,
+            "pending_tools": [],
+            "batch_truncated": False,
+            "messages": new_messages,
+            "active_subagent": last_subagent,
+            "read_cache": read_cache,
+            "truncation_events": trunc_events,
+        }
 
     return {
         "tool_steps": steps,
+        "tool_error_count": error_count,
         "workspace_explored": workspace_explored,
         "stream_parts": stream_parts,
         "stream_events": events,

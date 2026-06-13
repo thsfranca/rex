@@ -15,6 +15,7 @@ DEFAULT_MAX_TOOL_STEPS_PLAN = 20
 DEFAULT_MAX_TOOLS_PER_STEP = 8
 DEFAULT_MAX_TOOL_RESULT_BYTES = 8192
 DEFAULT_COMPACTION_SUFFIX_FRACTION = 0.25
+DEFAULT_DETERMINISTIC_INIT_ENABLED = True
 REX_ROOT_ENV = "REX_ROOT"
 
 
@@ -185,3 +186,13 @@ def search_enabled() -> bool:
         if isinstance(enabled, bool):
             return enabled
     return False
+
+
+def deterministic_init_enabled() -> bool:
+    cfg = _load_config_json()
+    if cfg:
+        agent = cfg.get("agent") or {}
+        flag = agent.get("deterministic_init_enabled")
+        if isinstance(flag, bool):
+            return flag
+    return DEFAULT_DETERMINISTIC_INIT_ENABLED

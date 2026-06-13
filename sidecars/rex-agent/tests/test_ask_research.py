@@ -9,7 +9,7 @@ from langchain_core.messages import HumanMessage
 from rex_agent import graph
 from rex_agent.broker import BrokerToolCall, InferenceResult, legacy_inference_result
 from rex_agent.graph.compaction import compact_state
-from rex_agent.tools import TOOL_READ, TOOL_WEB_SEARCH
+from rex_agent.tools import TOOL_READ
 
 MARKER = "REX_MARKER_LOCAL_RUNTIME"
 README_BODY = (
@@ -78,13 +78,16 @@ def test_ask_research_read_then_final_answer() -> None:
 
     graph.set_inference_fn(fake_inference)
     try:
-        with patch("rex_agent.graph.BrokerClient") as broker_cls:
-            broker_cls.return_value.__enter__.return_value = mock_client
-            broker_cls.return_value.__exit__.return_value = None
-            _reset_graphs()
-            answer, parts = graph.run_turn(
-                "Can you tell me what rex is?", "ask", "", "turn-ask"
-            )
+        with patch(
+            "rex_agent.graph.nodes.init.deterministic_init_enabled", return_value=False
+        ):
+            with patch("rex_agent.graph.BrokerClient") as broker_cls:
+                broker_cls.return_value.__enter__.return_value = mock_client
+                broker_cls.return_value.__exit__.return_value = None
+                _reset_graphs()
+                answer, parts = graph.run_turn(
+                    "Can you tell me what rex is?", "ask", "", "turn-ask"
+                )
     finally:
         graph.set_inference_fn(None)
         _reset_graphs()
@@ -111,7 +114,7 @@ def test_ask_step_limit_returns_terminal_message() -> None:
             )
         return legacy_inference_result(
             True,
-            f'{{"type":"final","answer":"should not reach"}}',
+            '{"type":"final","answer":"should not reach"}',
         )
 
     mock_client = MagicMock()
@@ -119,12 +122,15 @@ def test_ask_step_limit_returns_terminal_message() -> None:
 
     graph.set_inference_fn(fake_inference)
     try:
-        with patch("rex_agent.graph.max_tool_steps_for_mode", return_value=1):
-            with patch("rex_agent.graph.BrokerClient") as broker_cls:
-                broker_cls.return_value.__enter__.return_value = mock_client
-                broker_cls.return_value.__exit__.return_value = None
-                _reset_graphs()
-                answer, _ = graph.run_turn("list forever", "ask", "", "")
+        with patch(
+            "rex_agent.graph.nodes.init.deterministic_init_enabled", return_value=False
+        ):
+            with patch("rex_agent.graph.max_tool_steps_for_mode", return_value=1):
+                with patch("rex_agent.graph.BrokerClient") as broker_cls:
+                    broker_cls.return_value.__enter__.return_value = mock_client
+                    broker_cls.return_value.__exit__.return_value = None
+                    _reset_graphs()
+                    answer, _ = graph.run_turn("list forever", "ask", "", "")
     finally:
         graph.set_inference_fn(None)
         _reset_graphs()
@@ -155,11 +161,14 @@ def test_ask_mode_batches_two_reads_one_step() -> None:
 
     graph.set_inference_fn(fake_inference)
     try:
-        with patch("rex_agent.graph.BrokerClient") as broker_cls:
-            broker_cls.return_value.__enter__.return_value = mock_client
-            broker_cls.return_value.__exit__.return_value = None
-            _reset_graphs()
-            answer, _ = graph.run_turn("research", "ask", "", "")
+        with patch(
+            "rex_agent.graph.nodes.init.deterministic_init_enabled", return_value=False
+        ):
+            with patch("rex_agent.graph.BrokerClient") as broker_cls:
+                broker_cls.return_value.__enter__.return_value = mock_client
+                broker_cls.return_value.__exit__.return_value = None
+                _reset_graphs()
+                answer, _ = graph.run_turn("research", "ask", "", "")
     finally:
         graph.set_inference_fn(None)
         _reset_graphs()
@@ -206,15 +215,21 @@ def test_ask_cap_regression_denied_web_search_does_not_exhaust_cap() -> None:
 
     graph.set_inference_fn(fake_inference)
     try:
-        with patch("rex_agent.config.search_enabled", return_value=True):
-            with patch("rex_agent.graph.max_tool_steps_for_mode", return_value=5):
-                with patch("rex_agent.graph.BrokerClient") as broker_cls:
-                    broker_cls.return_value.__enter__.return_value = mock_client
-                    broker_cls.return_value.__exit__.return_value = None
-                    _reset_graphs()
-                    answer, _ = graph.run_turn(
-                        "search the web for what rex is", "ask", "", "cap-regression"
-                    )
+        with patch(
+            "rex_agent.graph.nodes.init.deterministic_init_enabled", return_value=False
+        ):
+            with patch("rex_agent.config.search_enabled", return_value=True):
+                with patch("rex_agent.graph.max_tool_steps_for_mode", return_value=5):
+                    with patch("rex_agent.graph.BrokerClient") as broker_cls:
+                        broker_cls.return_value.__enter__.return_value = mock_client
+                        broker_cls.return_value.__exit__.return_value = None
+                        _reset_graphs()
+                        answer, _ = graph.run_turn(
+                            "search the web for what rex is",
+                            "ask",
+                            "",
+                            "cap-regression",
+                        )
     finally:
         graph.set_inference_fn(None)
         _reset_graphs()
@@ -223,3 +238,91 @@ def test_ask_cap_regression_denied_web_search_does_not_exhaust_cap() -> None:
     assert "agent.max_tool_steps_ask" not in answer
     assert mock_client.web_search.call_count == 2
     mock_client.read_file.assert_called_once()
+
+
+def test_ask_deterministic_init_what_is_rex_zero_llm_before_readme() -> None:
+    """Golden ask prompt: README loaded before first LLM inference."""
+    llm_calls: list[list] = []
+
+    def fake_inference(
+        prompt: str, mode: str, model: str, **kwargs: object
+    ) -> InferenceResult:
+        messages = kwargs.get("messages") or []
+        llm_calls.append(list(messages))
+        combined = " ".join(
+            m.content if hasattr(m, "content") else str(m) for m in messages
+        )
+        assert MARKER in combined
+        return legacy_inference_result(
+            True,
+            f'{{"type":"final","answer":"REX is described in README: {MARKER}"}}',
+        )
+
+    mock_client = MagicMock()
+    mock_client.read_file.return_value = (True, README_BODY)
+    mock_client.list_dir.return_value = (True, "README.md\nCargo.toml")
+
+    graph.set_inference_fn(fake_inference)
+    try:
+        with patch("rex_agent.graph.BrokerClient") as broker_cls:
+            broker_cls.return_value.__enter__.return_value = mock_client
+            broker_cls.return_value.__exit__.return_value = None
+            _reset_graphs()
+            answer, parts = graph.run_turn("What is rex?", "ask", "", "golden-ask")
+    finally:
+        graph.set_inference_fn(None)
+        _reset_graphs()
+
+    assert MARKER in answer
+    assert len(llm_calls) == 1
+    mock_client.read_file.assert_called_once_with("README.md", "ask")
+    mock_client.list_dir.assert_called_once()
+    combined = "".join(parts)
+    assert MARKER in combined
+
+
+def test_ask_circuit_breaker_stops_policy_deny_loop() -> None:
+    """Three consecutive policy-denied web.search attempts terminate the loop."""
+    step = {"n": 0}
+
+    def fake_inference(
+        prompt: str, mode: str, model: str, **kwargs: object
+    ) -> InferenceResult:
+        tools = kwargs.get("tools") or []
+        step["n"] += 1
+        if tools:
+            return InferenceResult(
+                ok=True,
+                tool_calls=[
+                    BrokerToolCall(
+                        tool="web.search",
+                        args={"query": "what is rex"},
+                    )
+                ],
+            )
+        return legacy_inference_result(True, '{"type":"final","answer":"unexpected"}')
+
+    mock_client = MagicMock()
+    mock_client.read_file.return_value = (True, README_BODY)
+    mock_client.list_dir.return_value = (True, "README.md")
+    mock_client.web_search.return_value = (
+        False,
+        "access policy denied (mode_denied): web.search denied for mode ask",
+    )
+
+    graph.set_inference_fn(fake_inference)
+    try:
+        with patch("rex_agent.config.search_enabled", return_value=True):
+            with patch("rex_agent.graph.BrokerClient") as broker_cls:
+                broker_cls.return_value.__enter__.return_value = mock_client
+                broker_cls.return_value.__exit__.return_value = None
+                _reset_graphs()
+                answer, _ = graph.run_turn("What is rex?", "ask", "", "breaker")
+    finally:
+        graph.set_inference_fn(None)
+        _reset_graphs()
+
+    assert "agent_loop_stuck" in answer
+    assert step["n"] == 3
+    assert mock_client.web_search.call_count == 3
+    assert "agent.max_tool_steps_ask" not in answer

@@ -105,7 +105,7 @@ Truncation at **line boundaries** when exceeding `max_tool_result_bytes`.
 | **Prefix SHA-256 stable** across steps 1–12 within a turn (`[system]` + `daemon_context` unchanged) | R027, R032 |
 | Static prefix before volatile tool results (cache-friendly) | R027 |
 | Dynamic tool disclosure: ask=none, plan=read/list, agent=all | R027, R032 |
-| **Microcompaction:** replace `fs.read` transcripts older than **2** steps with stubs; keep `viewer_summary` | R029 Done |
+| **Microcompaction:** replace `fs.read` transcripts older than **2** steps with stubs; keep `viewer_summary` | R029 — **cancelled** (not implemented; prefix cache wins) |
 | 25% suffix compaction trigger vs broker result budget (`RemoveMessage`) | R029 |
 | **Raw delimited tool results** from daemon; no JSON wrap of file/shell stdout | R034 |
 | Viewer isolation — Editor without raw read dumps | R028 |
@@ -135,7 +135,7 @@ Truncation at **line boundaries** when exceeding `max_tool_result_bytes`.
 |-------|--------|---------------|-----------------|
 | Prefix immutability + vendor cache | Must (design) | Every agent turn with 2+ steps | ~90% input savings on cached steps |
 | Raw delimited results | Should | All broker tool returns to prompt | ~5–10% tokens; fewer truncation failures |
-| Microcompaction tier | Should | Before each inference in long loops | ~40–60% step token reduction |
+| Microcompaction tier | Should | Before each inference in long loops | **Cancelled** — mutates prefix; use deterministic init + exact-match cache (**R060–R061**) instead |
 | Editor isolation + extension C1 | Should | Viewer/Editor topology | Cuts redundant reads in Editor |
 | str_replace + linter PRM | Should (Phase 2) | Writes and fix loops | Fewer hallucinated repair iterations |
 | TRON schema in prefix | Could | Large static tool schema in prefix | ~27% on schema portion |
@@ -192,6 +192,30 @@ flowchart TB
 | R033 | MCP gRPC client | Could |
 
 **Program order:** R027 → R028 → R029 → **R034** → R030 → R032 → R031 → **R038** → R033; **R036** optional before R033.
+
+## Loop optimization (R060–R065)
+
+Follow-on program after **R057–R058** to reduce cap-terminal failures and improve token economics without breaking daemon/sidecar boundaries.
+
+| ID | Theme | Status | Notes |
+|----|-------|--------|-------|
+| **R060** | Deterministic ask init + hybrid circuit breaker | **Open** | Pre-LLM `fs.read`/`fs.list`; `agent_loop_stuck` at 3 policy-deny rounds; `agent.deterministic_init_enabled` (default true) |
+| **R061** | Exact-match tool result cache | Open | `(tool, args)` hash; duplicate intercept → no bill + error_count |
+| **R062** | Prefix-safe compaction defaults | Open | `agent.compaction_enabled` default false; typed Rust config fields |
+| **R063** | Soft cap Continue UX | Open | NDJSON activity pause; cap elevation 15/25/25 |
+| **R064** | Loop observability + golden prompts | Open | `cap_terminal`, productive-step ratio; CI golden set |
+| **R065** | `injected_files` manifest on `RunTurn` | Open | Skip redundant reads when daemon pre-injects |
+
+### Hybrid billing (R060+)
+
+| Outcome | Bill step? | `tool_error_count` |
+|---------|------------|-------------------|
+| Tool success or exploratory failure | Yes | Reset to 0 |
+| Parse / validation error | No | +1 |
+| Policy / config denial (all failures in batch) | No | +1 |
+| Terminal at `tool_error_count >= 3` | — | Stable code `agent_loop_stuck` |
+
+**Deterministic init (R060):** Ask mode entry node runs before first LLM when the prompt has no explicit file reference and README is not already in `daemon_context`. Bills one productive step; sets `workspace_explored`.
 
 ## Cross-links
 
