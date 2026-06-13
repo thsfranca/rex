@@ -609,11 +609,13 @@ impl RexService for RexDaemonService {
             model: log_model.to_string(),
             metrics: pipeline_result.metrics.clone(),
             approval_outcome: approval_outcome_label.clone(),
+            agent_loop_terminal: None,
         });
         let output = stream! {
             let mut chunk_count: u64 = 0;
             let mut done_seen = false;
             let mut ttft_ms: Option<u64> = None;
+            let mut agent_loop_terminal: Option<String> = None;
             if use_sidecar_live {
                 yield Ok(StreamInferenceResponse {
                     event: "step".to_string(),
@@ -666,6 +668,7 @@ impl RexService for RexDaemonService {
                             if chunk.done {
                                 done_seen = true;
                             }
+                            observe_agent_loop_terminal(&mut agent_loop_terminal, &chunk);
                             yield Ok(chunk);
                         }
                         Err(err) => {
@@ -679,6 +682,8 @@ impl RexService for RexDaemonService {
                             if let (Some(obs), Some(draft)) =
                                 (observability.as_ref(), economics_draft.clone())
                             {
+                                let mut draft = draft;
+                                draft.agent_loop_terminal = agent_loop_terminal.clone();
                                 let ctx = terminal_otlp_ctx(ttft_ms, &draft, Some("grpc_error"));
                                 obs.record_terminal_async(
                                     draft,
@@ -726,6 +731,8 @@ impl RexService for RexDaemonService {
                             if let (Some(obs), Some(draft)) =
                                 (observability.as_ref(), economics_draft.clone())
                             {
+                                let mut draft = draft;
+                                draft.agent_loop_terminal = agent_loop_terminal.clone();
                                 let ctx = terminal_otlp_ctx(ttft_ms, &draft, Some("grpc_error"));
                                 obs.record_terminal_async(
                                     draft,
@@ -750,6 +757,8 @@ impl RexService for RexDaemonService {
                 if let (Some(obs), Some(draft)) =
                     (observability.as_ref(), economics_draft.clone())
                 {
+                    let mut draft = draft;
+                    draft.agent_loop_terminal = agent_loop_terminal.clone();
                     let ctx = terminal_otlp_ctx(ttft_ms, &draft, None);
                     obs.record_terminal_async(draft, "done", elapsed_ms, chunk_count, ctx);
                 }
@@ -761,6 +770,8 @@ impl RexService for RexDaemonService {
                 if let (Some(obs), Some(draft)) =
                     (observability.as_ref(), economics_draft.clone())
                 {
+                    let mut draft = draft;
+                    draft.agent_loop_terminal = agent_loop_terminal.clone();
                     let ctx = terminal_otlp_ctx(ttft_ms, &draft, Some("missing_done"));
                     obs.record_terminal_async(
                         draft,
@@ -885,6 +896,25 @@ fn terminal_otlp_ctx(
         error_type: error_type.map(str::to_string),
         broker_inference_outcome: None,
         load_duration_ms: None,
+    }
+}
+
+fn observe_agent_loop_terminal(
+    terminal: &mut Option<String>,
+    chunk: &StreamInferenceResponse,
+) {
+    if chunk.event == "activity" && chunk.phase == "awaiting_continue" {
+        *terminal = Some("cap_soft_paused".to_string());
+        return;
+    }
+    if chunk.event == "tool"
+        && (chunk.detail.contains("agent_loop_stuck") || chunk.summary.contains("agent_loop_stuck"))
+    {
+        *terminal = Some("loop_circuit_breaker".to_string());
+        return;
+    }
+    if chunk.text.contains("Stopped after") && chunk.text.contains("tool steps") {
+        *terminal = Some("cap_hard".to_string());
     }
 }
 

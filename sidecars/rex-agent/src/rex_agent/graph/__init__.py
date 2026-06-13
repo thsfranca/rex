@@ -28,8 +28,8 @@ from rex_agent.graph.stream_sink import (
     reset_active_sink,
     set_active_sink,
 )
-from rex_agent.stream_events import StreamEvent, TextStreamEvent
-from rex_agent.stream_events import ActivityStreamEvent
+from rex_agent.metrics import log_turn_loop_metrics, monotonic_now
+from rex_agent.stream_events import ActivityStreamEvent, StreamEvent, TextStreamEvent
 from rex_agent.tools import ReadCache, tool_gate_from_state, tools_for_mode
 
 _inference_fn: Any | None = None
@@ -321,6 +321,8 @@ def _stream_agent_state(state: AgentState, turn_id: str) -> Iterator[StreamEvent
     sink.emit_step(phase="running", summary="Agent turn started")
     emitted_text = False
     final_box: list[AgentState] = [state]
+    started_at = monotonic_now()
+    first_productive_at: float | None = None
 
     with BrokerClient(turn_id=turn_id or None) as client:
         client_token = _active_client.set(client)
@@ -330,10 +332,21 @@ def _stream_agent_state(state: AgentState, turn_id: str) -> Iterator[StreamEvent
                 if isinstance(event, TextStreamEvent):
                     emitted_text = True
                 yield event
+                if (
+                    first_productive_at is None
+                    and int(final_box[0].get("tool_steps") or 0) > 0
+                ):
+                    first_productive_at = monotonic_now()
         finally:
             reset_active_sink(sink_token)
             _active_client.reset(client_token)
 
+    log_turn_loop_metrics(
+        final_box[0],
+        turn_id=turn_id,
+        started_at=started_at,
+        first_productive_at=first_productive_at,
+    )
     yield from _emit_final_text(final_box[0], emitted_text)
 
 

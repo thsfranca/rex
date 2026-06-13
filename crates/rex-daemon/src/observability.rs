@@ -21,6 +21,7 @@ pub struct StreamEconomicsDraft {
     pub metrics: PipelineMetrics,
     /// Agent approval gate outcome when mode is agent (`allow`, `deny`, `checkpoint`).
     pub approval_outcome: Option<String>,
+    pub agent_loop_terminal: Option<String>,
 }
 
 impl StreamEconomicsDraft {
@@ -54,6 +55,7 @@ impl StreamEconomicsDraft {
             cached_tokens: None,
             prefix_hash: None,
             parse_retries: None,
+            agent_loop_terminal: self.agent_loop_terminal,
         }
     }
 }
