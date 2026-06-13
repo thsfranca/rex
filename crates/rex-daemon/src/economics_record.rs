@@ -24,4 +24,6 @@ pub struct StreamEconomicsRecord {
     pub cached_tokens: Option<u64>,
     pub prefix_hash: Option<String>,
     pub parse_retries: Option<u64>,
+    /// Agent loop terminal class when route uses live sidecar (R064).
+    pub agent_loop_terminal: Option<String>,
 }
