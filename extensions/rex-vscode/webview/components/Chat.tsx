@@ -17,6 +17,7 @@ import { SendIcon, StopIcon } from "./icons";
 import { Message, type RenderedMessage } from "./Message";
 import { PlanCard } from "./PlanCard";
 import { ToolCard } from "./ToolCard";
+import { isTimelineNoise } from "../timeline/executionLabel";
 
 const MODES: ReadonlyArray<{ value: InteractionMode; label: string }> = [
   { value: "ask", label: "Ask" },
@@ -91,7 +92,7 @@ function composerStatusHint(args: {
   daemonReady: boolean;
 }): string {
   if (args.streaming) {
-    return args.activityHint !== undefined ? `Running ${args.activityHint}…` : "Generating…";
+    return args.activityHint !== undefined ? `${args.activityHint}…` : "Generating…";
   }
   if (!args.daemonReady) {
     return "Daemon unavailable";
@@ -295,17 +296,20 @@ export function Chat(props: ChatProps): React.ReactElement {
                   ))}
                 </div>
               ) : null}
-              {props.timeline.length > 0 ? (
-                <div className="rex-timeline" role="status" aria-live="polite">
-                  {props.timeline.map((entry) => (
-                    <ToolCard
-                      key={entry.toolCallId ?? `${entry.id}-${entry.phase}-${entry.summary}`}
-                      phase={entry.phase}
-                      summary={entry.summary}
-                      kind={entry.kind}
-                      detail={entry.detail}
-                    />
-                  ))}
+              {props.timeline.some((entry) => !isTimelineNoise(entry)) ? (
+                <div className="rex-timeline" role="log" aria-live="polite" aria-label="Tool activity">
+                  {props.timeline
+                    .filter((entry) => !isTimelineNoise(entry))
+                    .map((entry) => (
+                      <ToolCard
+                        key={entry.toolCallId ?? entry.id}
+                        id={entry.id}
+                        phase={entry.phase}
+                        summary={entry.summary}
+                        kind={entry.kind}
+                        detail={entry.detail}
+                      />
+                    ))}
                 </div>
               ) : null}
               <div className="rex-composer-shell">

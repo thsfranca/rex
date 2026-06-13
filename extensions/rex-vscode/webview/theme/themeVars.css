@@ -1025,65 +1025,134 @@ button:focus-visible {
 /* --- Timeline / tools --- */
 
 .rex-timeline {
-  max-height: 120px;
+  max-height: 148px;
   overflow-y: auto;
   min-width: 0;
   border: 1px solid var(--rex-subtle-border);
   border-radius: var(--rex-radius-md);
-  padding: 6px 8px;
+  padding: 4px 6px;
   font-size: 11px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 1px;
   background: var(--vscode-editorWidget-background, transparent);
 }
 
-.rex-tool-card {
-  border: none;
-  margin: 0;
-  padding: 0;
-}
-
-.rex-tool-card__summary {
+.rex-exec-log {
   display: flex;
+  align-items: flex-start;
   gap: 6px;
   min-width: 0;
-  cursor: pointer;
-  list-style: none;
-  padding: 2px 0;
+  padding: 2px 2px;
+  border-radius: var(--rex-radius-sm);
 }
 
-.rex-tool-card__summary::-webkit-details-marker {
-  display: none;
-}
-
-.rex-tool-card__phase {
-  text-transform: uppercase;
-  opacity: 0.65;
-  min-width: 64px;
+.rex-exec-log__icon {
   flex-shrink: 0;
-  font-size: 10px;
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.rex-tool-card__label {
+.rex-exec-icon {
+  display: block;
+}
+
+.rex-exec-icon--spin {
+  animation: rex-exec-spin 0.9s linear infinite;
+  color: var(--vscode-progressBar-background, var(--vscode-textLink-foreground, #3794ff));
+}
+
+.rex-exec-icon--done {
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.rex-exec-icon--failed {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.rex-exec-icon--cancelled,
+.rex-exec-icon--blocked {
+  color: var(--vscode-descriptionForeground, #999);
+}
+
+.rex-exec-icon--approval {
+  color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.rex-exec-icon--queued {
+  color: var(--vscode-descriptionForeground, #999);
+}
+
+@keyframes rex-exec-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rex-exec-log__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.rex-exec-log__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.rex-exec-log__label {
   min-width: 0;
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--vscode-foreground, #ccc);
 }
 
-.rex-tool-card__detail {
-  margin: 4px 0 0;
-  padding: 6px 8px;
+.rex-exec-log--running .rex-exec-log__label {
+  color: var(--vscode-foreground, #ccc);
+}
+
+.rex-exec-log--completed .rex-exec-log__label {
+  color: var(--vscode-descriptionForeground, #999);
+}
+
+.rex-exec-log--failed .rex-exec-log__label {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
+.rex-exec-log__toggle {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  font: inherit;
   font-size: 10px;
-  max-height: 80px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.rex-exec-log__toggle:hover {
+  text-decoration: underline;
+}
+
+.rex-exec-log__detail {
+  margin: 3px 0 0;
+  padding: 4px 6px;
+  font-size: 10px;
+  max-height: 72px;
   overflow: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
   background: var(--vscode-textBlockQuote-background, rgba(127, 127, 127, 0.08));
   border-radius: var(--rex-radius-sm);
+  color: var(--vscode-descriptionForeground, #999);
 }
 
 /* --- Plan card --- */

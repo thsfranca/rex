@@ -123,10 +123,36 @@ async function seedUiState(): Promise<void> {
       type: "executionStep",
       payload: {
         id: "e1",
-        phase: "running",
+        streamId: STREAM_ID,
+        toolCallId: "tc-read",
+        phase: "completed",
         summary: "read_file",
         kind: "tool",
-        detail: "chatPanel.ts",
+        detail: "src/ui/chatPanel.ts",
+      },
+    },
+    {
+      type: "executionStep",
+      payload: {
+        id: "e2",
+        streamId: STREAM_ID,
+        toolCallId: "tc-grep",
+        phase: "completed",
+        summary: "grep",
+        kind: "tool",
+        detail: "executionStep",
+      },
+    },
+    {
+      type: "executionStep",
+      payload: {
+        id: "e3",
+        streamId: STREAM_ID,
+        toolCallId: "tc-shell",
+        phase: "running",
+        summary: "run_terminal_cmd",
+        kind: "tool",
+        detail: "npm test -- --run extensions/rex-vscode",
       },
     },
     {

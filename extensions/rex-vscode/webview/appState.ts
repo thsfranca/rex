@@ -14,6 +14,7 @@ import type {
 
 import type { RenderedMessage } from "./renderedMessage";
 import { MarkdownStream } from "./streaming/markdownStream";
+import { formatExecutionLabel } from "./timeline/executionLabel";
 
 export interface BannerState {
   readonly level: "info" | "warn" | "error";
@@ -274,19 +275,25 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
           : state.timeline.filter(
               (item) => item.streamId === undefined || item.streamId === message.payload.streamId,
             );
-      const withoutDup =
-        message.payload.toolCallId !== undefined
-          ? scoped.filter((item) => item.toolCallId !== message.payload.toolCallId)
-          : scoped;
+      const existingIndex = scoped.findIndex(
+        (item) =>
+          (message.payload.toolCallId !== undefined &&
+            item.toolCallId === message.payload.toolCallId) ||
+          (message.payload.toolCallId === undefined && item.id === message.payload.id),
+      );
+      const nextTimeline =
+        existingIndex >= 0
+          ? scoped.map((item, index) => (index === existingIndex ? { ...item, ...entry } : item))
+          : [...scoped, entry];
       const activityHint =
         (message.payload.kind === "tool" || message.payload.kind === "activity") &&
         message.payload.phase === "running"
-          ? message.payload.summary
+          ? formatExecutionLabel(message.payload)
           : state.activityHint;
       return {
         ...state,
         activityHint,
-        timeline: [...withoutDup, entry].slice(-20),
+        timeline: nextTimeline.slice(-20),
       };
     }
     case "planArtifact":
