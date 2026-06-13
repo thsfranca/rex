@@ -68,6 +68,34 @@ def test_agent_limits_from_config(
     assert config.max_tool_result_bytes() == 1024
 
 
+def test_ask_tool_steps_do_not_inherit_agent_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "rex"
+    root.mkdir()
+    (root / "config.json").write_text(
+        json.dumps({"agent": {"max_tool_steps": 12}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
+    assert config.max_tool_steps_for_mode("ask") == config.DEFAULT_MAX_TOOL_STEPS_ASK
+    assert config.max_tool_steps_for_mode("agent") == 12
+
+
+def test_ask_tool_steps_from_config_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "rex"
+    root.mkdir()
+    (root / "config.json").write_text(
+        json.dumps({"agent": {"max_tool_steps": 12, "max_tool_steps_ask": 2}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
+    assert config.max_tool_steps_for_mode("ask") == 2
+    assert config.max_tool_steps_for_mode("agent") == 12
+
+
 def test_agent_limits_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
     assert config.max_tool_steps() == config.DEFAULT_MAX_TOOL_STEPS

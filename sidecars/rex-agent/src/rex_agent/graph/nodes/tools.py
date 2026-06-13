@@ -40,8 +40,14 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
     )
 
     if steps > state["max_steps"]:
+        mode = (state.get("mode") or "ask").strip().lower() or "ask"
+        limit_key = (
+            "agent.max_tool_steps_ask"
+            if mode == "ask"
+            else "agent.max_tool_steps"
+        )
         message = (
-            f"Stopped after {state['max_steps']} tool steps (agent.max_tool_steps). "
+            f"Stopped after {state['max_steps']} tool steps ({limit_key}). "
             "Try a narrower request."
         )
         events = append_tool(
