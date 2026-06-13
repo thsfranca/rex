@@ -7,7 +7,7 @@ from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 from rex_agent import __version__
-from rex_agent.graph import stream_turn
+from rex_agent.graph import stream_continue_turn, stream_turn
 from rex_agent.stream_events import (
     ActivityStreamEvent,
     PlanStreamEvent,
@@ -30,6 +30,7 @@ except ImportError as exc:  # pragma: no cover
 
 CHUNK_DELAY_SEC = 0.005
 RUN_TURN_CAPABILITY = "run_turn"
+CONTINUE_TURN_CAPABILITY = "continue_turn"
 
 
 def _chunk_kwargs(
@@ -100,17 +101,26 @@ class AgentServicer(sidecar_pb2_grpc.SidecarServiceServicer):
         return sidecar_pb2.HealthResponse(healthy=True, version=__version__)
 
     def GetCapabilities(self, request, context):  # noqa: N802, ARG002
-        return sidecar_pb2.GetCapabilitiesResponse(capabilities=[RUN_TURN_CAPABILITY])
+        return sidecar_pb2.GetCapabilitiesResponse(
+            capabilities=[RUN_TURN_CAPABILITY, CONTINUE_TURN_CAPABILITY]
+        )
 
     def RunTurn(self, request, context) -> Iterator[sidecar_pb2.RunTurnChunk]:  # noqa: N802
-        mode = (request.mode or "").strip() or "ask"
-        model = request.model or ""
-        turn_id = getattr(request, "turn_id", "") or ""
-        if turn_id:
-            print(f"rex-agent event=run_turn turn_id={turn_id} mode={mode}")
+        yield from self._stream_events(
+            stream_turn(request.prompt, (request.mode or "").strip() or "ask", request.model or "", getattr(request, "turn_id", "") or ""),
+            getattr(request, "turn_id", "") or "",
+        )
 
+    def ContinueTurn(self, request, context) -> Iterator[sidecar_pb2.RunTurnChunk]:  # noqa: N802
+        turn_id = getattr(request, "turn_id", "") or ""
+        token = getattr(request, "continue_token", "") or ""
+        yield from self._stream_events(stream_continue_turn(token, turn_id), turn_id)
+
+    def _stream_events(
+        self, events: Iterator[object], turn_id: str
+    ) -> Iterator[sidecar_pb2.RunTurnChunk]:
         index = 0
-        for event in stream_turn(request.prompt, mode, model, turn_id):
+        for event in events:
             if isinstance(event, TextStreamEvent):
                 for piece in chunk_text(event.text):
                     if CHUNK_DELAY_SEC > 0:

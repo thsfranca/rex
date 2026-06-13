@@ -62,6 +62,7 @@ export interface CompleteStreamOptions {
   readonly mode?: string;
   readonly model?: string;
   readonly approvalId?: string;
+  readonly continueToken?: string;
   readonly clientHints?: ClientHintsOptions;
 }
 
@@ -79,6 +80,9 @@ export function buildCompleteNdjsonArgs(
   }
   if (stream?.approvalId !== undefined && stream.approvalId.length > 0) {
     args.push("--approval-id", stream.approvalId);
+  }
+  if (stream?.continueToken !== undefined && stream.continueToken.length > 0) {
+    args.push("--continue-token", stream.continueToken);
   }
   if (traceId !== undefined && traceId.length > 0) {
     args.push("--trace-id", traceId);

@@ -40,7 +40,7 @@ use crate::policy::{CacheDecision, CacheDecisionState, PolicyEngine, PolicyReque
 use crate::routing::decide_route;
 use crate::settings;
 use crate::sidecar_client::{
-    connect_sidecar, map_sidecar_to_inference_chunks, run_turn_collect, run_turn_stream,
+    connect_sidecar, continue_turn_stream, map_sidecar_to_inference_chunks, run_turn_collect, run_turn_stream,
 };
 use crate::sidecar_config::parse_harness_only;
 use crate::supervisor::{SharedSupervisor, SupervisorError};
@@ -397,6 +397,7 @@ impl RexService for RexDaemonService {
         }
         let model = inner.model;
         let mode = inner.mode;
+        let continue_token = inner.continue_token.trim().to_string();
         let route = decide_route(&mode, &model);
         let runtime_kind = route.runtime;
         let inference_runtime = runtime_kind.log_label();
@@ -522,7 +523,8 @@ impl RexService for RexDaemonService {
             _ => None,
         };
         let cached_chunks = lookup_key.as_ref().and_then(|key| self.policy.get(key));
-        let use_sidecar_live = sidecar_live && cached_chunks.is_none();
+        let use_sidecar_live =
+            (sidecar_live && cached_chunks.is_none()) || !continue_token.is_empty();
         let chunks: Vec<Result<StreamInferenceResponse, Status>> =
             if let Some(cached) = cached_chunks {
                 l1_state = Some("hit");
@@ -628,14 +630,23 @@ impl RexService for RexDaemonService {
                 let mut client = connect_sidecar(&sidecar_socket)
                     .await
                     .map_err(|e| Status::unavailable(format!("sidecar connect failed: {e}")))?;
-                let mut sidecar_stream = run_turn_stream(
-                    &mut client,
-                    &effective_prompt,
-                    &mode,
-                    &effective_model,
-                    &correlation_for_sidecar,
-                )
-                .await
+                let mut sidecar_stream = if continue_token.is_empty() {
+                    run_turn_stream(
+                        &mut client,
+                        &effective_prompt,
+                        &mode,
+                        &effective_model,
+                        &correlation_for_sidecar,
+                    )
+                    .await
+                } else {
+                    continue_turn_stream(
+                        &mut client,
+                        &continue_token,
+                        &correlation_for_sidecar,
+                    )
+                    .await
+                }
                 .map_err(|e| Status::internal(format!("sidecar RunTurn failed: {e}")))?;
                 println!(
                     "stream.sidecar=ok inference_runtime=sidecar sidecar_socket={sidecar_socket} mode={log_mode} turn_id={turn_id_for_stream}",

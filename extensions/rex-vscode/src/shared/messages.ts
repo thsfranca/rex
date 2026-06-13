@@ -69,6 +69,18 @@ export interface ModePolicy {
   readonly summary: string;
 }
 
+export interface ContinueTurnPayload {
+  readonly streamId: StreamId;
+  readonly continueToken: string;
+  readonly summary: string;
+}
+
+export interface ContinueTurnDecisionPayload {
+  readonly streamId: StreamId;
+  readonly continueToken: string;
+  readonly continue: boolean;
+}
+
 export interface ApprovalRequestPayload {
   readonly id: string;
   readonly scope: ApprovalScope;
@@ -94,7 +106,7 @@ export interface ExecutionStepPayload {
   readonly id: string;
   readonly streamId?: string;
   readonly toolCallId?: string;
-  readonly phase: "queued" | "running" | "awaiting_approval" | "completed" | "blocked" | "failed" | "cancelled";
+  readonly phase: "queued" | "running" | "awaiting_approval" | "awaiting_continue" | "completed" | "blocked" | "failed" | "cancelled";
   readonly summary: string;
   readonly kind?: "tool" | "step" | "activity";
   readonly detail?: string;
@@ -159,6 +171,7 @@ export type ExtensionToWebview =
   | { readonly type: "applyResult"; readonly id: StreamId; readonly result: ApplyResultPayload }
   | { readonly type: "modeState"; readonly payload: ModePolicy }
   | { readonly type: "approvalRequested"; readonly payload: ApprovalRequestPayload }
+  | { readonly type: "continueTurnRequested"; readonly payload: ContinueTurnPayload }
   | { readonly type: "executionStep"; readonly payload: ExecutionStepPayload }
   | { readonly type: "planArtifact"; readonly payload: PlanArtifactPayload }
   | { readonly type: "planSaveResult"; readonly payload: PlanSaveResultPayload }
@@ -190,6 +203,7 @@ export type WebviewToExtension =
   | { readonly type: "copyCodeBlock"; readonly code: string }
   | { readonly type: "setMode"; readonly mode: InteractionMode }
   | { readonly type: "approvalDecision"; readonly payload: ApprovalDecisionPayload }
+  | { readonly type: "continueTurnDecision"; readonly payload: ContinueTurnDecisionPayload }
   | { readonly type: "requestContextSnapshot" }
   | { readonly type: "clearChatRequested" }
   | { readonly type: "createSession" }

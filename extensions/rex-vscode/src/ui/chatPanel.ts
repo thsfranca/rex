@@ -3,17 +3,18 @@ import * as vscode from "vscode";
 import { formatAttachmentsForPrompt, pickContextAttachments } from "../editor/contextPicker";
 import { snapshotActiveEditor } from "../editor/context";
 import { RexProposalProvider } from "../editor/virtualDocs";
-import type { CliBridgeOptions } from "../runtime/cliBridge";
+import type { CliBridgeOptions, ClientHintsOptions } from "../runtime/cliBridge";
 import type { DaemonLifecycleState } from "../runtime/daemonLifecycle";
 import { classifyStreamError, classifyStreamErrorMessage } from "../runtime/errorTaxonomy";
 import { formatPlanDetailMarkdown } from "../runtime/planContent";
 import { defaultPlanSavePath, validatePlanSavePath } from "../runtime/planPath";
 import { resolveModePolicy } from "../runtime/modePolicy";
-import type { StreamErrorCode } from "../runtime/ndjsonParser";
+import type { StreamErrorCode, StreamEvent } from "../runtime/ndjsonParser";
 import { streamComplete } from "../runtime/streamClient";
 import type {
   ApprovalDecisionPayload,
   ApprovalScope,
+  ContinueTurnDecisionPayload,
   ContextAttachment,
   ExecutionStepPayload,
   ExtensionToWebview,
@@ -67,6 +68,10 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
   private readonly disposables: vscode.Disposable[] = [];
   private readonly pendingStreams = new Map<string, PendingStream>();
   private readonly pendingApprovals = new Map<string, PendingApproval>();
+  private readonly pendingContinueTurns = new Map<
+    string,
+    { continueToken: string; clientHints?: ClientHintsOptions }
+  >();
   private readonly pendingPrefills: PromptPrefillPayload[] = [];
   private readonly sessionStore: SessionStore;
   private sessionSnapshot: SessionStoreSnapshot;
@@ -312,6 +317,9 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       case "approvalDecision":
         this.resolveApproval(message.payload);
         return;
+      case "continueTurnDecision":
+        void this.resumeAfterSoftCap(message.payload);
+        return;
       case "cancelStream":
         this.cancelPendingStream(message.id);
         return;
@@ -511,6 +519,30 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
           continue;
         }
         if (event.kind === "activity") {
+          if (event.phase === "awaiting_continue") {
+            this.emitExecutionStep(
+              message.id,
+              "awaiting_continue",
+              event.summary,
+              "activity",
+              event.detail,
+            );
+            if (event.detail && event.detail.trim().length > 0) {
+              this.pendingContinueTurns.set(message.id, {
+                continueToken: event.detail.trim(),
+                clientHints,
+              });
+              this.postMessage({
+                type: "continueTurnRequested",
+                payload: {
+                  streamId: message.id,
+                  continueToken: event.detail.trim(),
+                  summary: event.summary,
+                },
+              });
+            }
+            continue;
+          }
           this.deps.onStreamActivity?.(event.summary);
           this.emitExecutionStep(
             message.id,
@@ -778,6 +810,143 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     return await new Promise<boolean>((resolve) => {
       this.pendingApprovals.set(id, { resolve, scope });
     });
+  }
+
+  private async resumeAfterSoftCap(payload: ContinueTurnDecisionPayload): Promise<void> {
+    const pending = this.pendingContinueTurns.get(payload.streamId);
+    this.pendingContinueTurns.delete(payload.streamId);
+    if (!payload.continue || pending === undefined) {
+      this.emitExecutionStep(
+        payload.streamId,
+        "blocked",
+        "Step budget extension declined.",
+        "step",
+      );
+      return;
+    }
+    const active = this.pendingStreams.get(payload.streamId);
+    const controller = active?.controller ?? new AbortController();
+    this.emitExecutionStep(
+      payload.streamId,
+      "running",
+      "Continuing after step budget pause.",
+      "step",
+    );
+    const configuredModel = this.deps.getModelId().trim();
+    try {
+      for await (const event of streamComplete(this.deps.getCliOptions(), {
+        prompt: "continue",
+        continueToken: pending.continueToken,
+        clientHints: pending.clientHints,
+        mode: this.mode,
+        model: configuredModel.length > 0 ? configuredModel : undefined,
+        signal: controller.signal,
+      })) {
+        await this.dispatchStreamEvent(payload.streamId, event, pending.clientHints);
+      }
+    } catch (error) {
+      const errText = error instanceof Error ? error.message : String(error);
+      const classified = classifyStreamErrorMessage(errText);
+      this.emitExecutionStep(payload.streamId, "failed", `Execution failed: ${classified.code}.`, "step");
+      this.postMessage({
+        type: "streamError",
+        id: payload.streamId,
+        message: classified.message,
+        code: classified.code,
+        retryable: classified.retryable,
+      });
+    }
+  }
+
+  private async dispatchStreamEvent(
+    streamId: string,
+    event: StreamEvent,
+    clientHints?: ClientHintsOptions,
+  ): Promise<void> {
+    if (event.kind === "chunk") {
+      this.postMessage({ type: "streamChunk", id: streamId, text: event.text });
+      return;
+    }
+    if (event.kind === "tool") {
+      if (event.phase === "running") {
+        this.deps.onStreamActivity?.(event.name);
+      }
+      this.emitExecutionStep(
+        streamId,
+        mapToolPhase(event.phase),
+        event.name,
+        "tool",
+        event.detail,
+        event.toolCallId,
+      );
+      return;
+    }
+    if (event.kind === "activity") {
+      if (event.phase === "awaiting_continue") {
+        this.emitExecutionStep(
+          streamId,
+          "awaiting_continue",
+          event.summary,
+          "activity",
+          event.detail,
+        );
+        if (event.detail && event.detail.trim().length > 0) {
+          this.pendingContinueTurns.set(streamId, {
+            continueToken: event.detail.trim(),
+            clientHints,
+          });
+          this.postMessage({
+            type: "continueTurnRequested",
+            payload: {
+              streamId,
+              continueToken: event.detail.trim(),
+              summary: event.summary,
+            },
+          });
+        }
+        return;
+      }
+      this.deps.onStreamActivity?.(event.summary);
+      this.emitExecutionStep(streamId, "running", event.summary, "activity", event.detail ?? event.phase);
+      return;
+    }
+    if (event.kind === "step") {
+      this.emitExecutionStep(streamId, "running", event.summary, "step", event.summary);
+      return;
+    }
+    if (event.kind === "plan") {
+      const content =
+        event.phase === "ready"
+          ? formatPlanDetailMarkdown(event.title, event.detail)
+          : event.detail;
+      this.postMessage({
+        type: "planArtifact",
+        payload: {
+          streamId,
+          phase: event.phase,
+          title: event.title,
+          detail: event.detail,
+          content,
+          savePath: defaultPlanSavePath(event.title),
+        },
+      });
+      return;
+    }
+    if (event.kind === "done") {
+      this.emitExecutionStep(streamId, "completed", "Execution completed.", "step");
+      this.postMessage({ type: "streamDone", id: streamId });
+      return;
+    }
+    const classified = classifyStreamError(event);
+    this.emitExecutionStep(streamId, "failed", `Execution failed: ${classified.code}.`, "step");
+    this.postMessage({
+      type: "streamError",
+      id: streamId,
+      message: classified.message,
+      code: classified.code,
+      retryable: classified.retryable,
+    });
+    this.deps.notifyStreamFailure?.({ code: classified.code, message: classified.message });
   }
 
   private resolveApproval(payload: ApprovalDecisionPayload): void {

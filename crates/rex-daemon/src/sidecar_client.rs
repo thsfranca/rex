@@ -6,7 +6,7 @@ use std::time::Duration;
 use async_stream::stream;
 use hyper_util::rt::TokioIo;
 use rex_proto::rex::sidecar::v1::sidecar_service_client::SidecarServiceClient;
-use rex_proto::rex::sidecar::v1::{HealthRequest, RunTurnChunk, RunTurnRequest};
+use rex_proto::rex::sidecar::v1::{ContinueTurnRequest, HealthRequest, RunTurnChunk, RunTurnRequest};
 use rex_proto::rex::v1::StreamInferenceResponse;
 use tokio::net::UnixStream;
 use tokio_stream::Stream;
@@ -89,6 +89,23 @@ pub async fn run_turn_collect(
 
 pub type RunTurnInferenceStream =
     Pin<Box<dyn Stream<Item = Result<StreamInferenceResponse, Status>> + Send>>;
+
+pub async fn continue_turn_stream(
+    client: &mut SidecarServiceClient<tonic::transport::Channel>,
+    continue_token: &str,
+    correlation: &TurnCorrelation,
+) -> Result<RunTurnInferenceStream, tonic::Status> {
+    let request = ContinueTurnRequest {
+        continue_token: continue_token.to_string(),
+        turn_id: correlation.turn_id.clone(),
+    };
+    let mut grpc_stream = client.continue_turn(request).await?.into_inner();
+    Ok(Box::pin(stream! {
+        while let Some(chunk) = grpc_stream.message().await? {
+            yield Ok(map_run_turn_chunk(chunk));
+        }
+    }))
+}
 
 pub async fn run_turn_stream(
     client: &mut SidecarServiceClient<tonic::transport::Channel>,

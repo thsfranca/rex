@@ -16,6 +16,7 @@ export interface StreamRequest {
   readonly mode?: string;
   readonly model?: string;
   readonly approvalId?: string;
+  readonly continueToken?: string;
   readonly clientHints?: ClientHintsOptions;
   readonly signal?: AbortSignal;
   readonly onLifecycle?: (event: StreamLifecycleEvent) => void;
@@ -49,6 +50,7 @@ export async function* streamComplete(
     mode: request.mode,
     model: request.model,
     approvalId: request.approvalId,
+    continueToken: request.continueToken,
     clientHints: request.clientHints,
   });
   const parser = new NdjsonLineParser();

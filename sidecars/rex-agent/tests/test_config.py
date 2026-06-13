@@ -190,10 +190,10 @@ def test_search_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.search_enabled() is False
 
 
-def test_ask_default_step_cap_is_twelve(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ask_default_step_cap_is_fifteen(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
-    assert config.DEFAULT_MAX_TOOL_STEPS_ASK == 12
-    assert config.max_tool_steps_for_mode("ask") == 12
+    assert config.DEFAULT_MAX_TOOL_STEPS_ASK == 15
+    assert config.max_tool_steps_for_mode("ask") == 15
 
 
 def test_deterministic_init_enabled_default(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -232,9 +232,9 @@ def test_compaction_enabled_from_config(
     assert config.compaction_enabled() is True
 
 
-def test_soft_cap_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_soft_cap_enabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
-    assert config.soft_cap_enabled() is False
+    assert config.soft_cap_enabled() is True
 
 
 def test_soft_cap_fraction_default(monkeypatch: pytest.MonkeyPatch) -> None:

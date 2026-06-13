@@ -53,6 +53,7 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
             model,
             mode,
             approval_id,
+            continue_token,
             trace_id,
             active_file_path,
             language_id,
@@ -66,6 +67,7 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
                 model,
                 mode,
                 approval_id,
+                continue_token,
                 trace_id,
                 active_file_path,
                 language_id,
@@ -98,6 +100,7 @@ async fn run_complete(
     model: String,
     mode: String,
     approval_id: String,
+    continue_token: String,
     trace_id: String,
     active_file_path: String,
     language_id: String,
@@ -137,6 +140,7 @@ async fn run_complete(
             mode: mode.clone(),
             approval_id: approval_id.clone(),
             client_hints,
+            continue_token: continue_token.clone(),
         });
         let metadata_value =
             tonic::metadata::MetadataValue::try_from(trace_id.as_str()).map_err(|_| {

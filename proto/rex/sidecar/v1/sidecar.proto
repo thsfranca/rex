@@ -6,6 +6,8 @@ service SidecarService {
   rpc Health(HealthRequest) returns (HealthResponse);
   rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
   rpc RunTurn(RunTurnRequest) returns (stream RunTurnChunk);
+  // Resume a soft-cap paused turn (R063).
+  rpc ContinueTurn(ContinueTurnRequest) returns (stream RunTurnChunk);
 }
 
 message HealthRequest {}
@@ -30,6 +32,13 @@ message RunTurnRequest {
   string turn_id = 4;
   // Optional (Phase 1b). Hash of assembled context stages for cache/debug.
   string context_revision = 5;
+}
+
+message ContinueTurnRequest {
+  // Token from soft-cap activity detail (R063).
+  string continue_token = 1;
+  // Optional correlation from the paused turn.
+  string turn_id = 2;
 }
 
 message RunTurnChunk {

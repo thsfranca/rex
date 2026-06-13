@@ -7,6 +7,7 @@ import type {
 
 import { initialState, reducer } from "./appState";
 import { Chat } from "./components/Chat";
+import { ContinueSection } from "./components/ContinueSection";
 import { postToHost, subscribeToHost } from "./messageBus";
 
 function parseSlashCommand(raw: string): { command: string | null; prompt: string } {
@@ -115,6 +116,18 @@ export function App(): React.ReactElement {
     postToHost({ type: "approvalDecision", payload: { id, approved } });
   };
 
+  const handleContinueDecision = (
+    streamId: string,
+    continueToken: string,
+    continueTurn: boolean,
+  ): void => {
+    dispatch({ type: "continueTurnDecision", streamId, continueToken, continue: continueTurn });
+    postToHost({
+      type: "continueTurnDecision",
+      payload: { streamId, continueToken, continue: continueTurn },
+    });
+  };
+
   const handleCopy = (code: string): void => {
     postToHost({ type: "copyCodeBlock", code });
   };
@@ -148,6 +161,7 @@ export function App(): React.ReactElement {
           {state.banner.text}
         </div>
       ) : null}
+      <ContinueSection pending={state.pendingContinueTurn} onDecision={handleContinueDecision} />
       <Chat
         messages={state.messages}
         theme={state.theme}

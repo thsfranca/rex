@@ -6,6 +6,7 @@ from typing import Annotated
 
 from rex_agent.graph.stream_sink import active_sink
 from rex_agent.stream_events import (
+    ActivityStreamEvent,
     PlanStreamEvent,
     StepStreamEvent,
     StreamEvent,
@@ -81,3 +82,18 @@ def append_plan(
     if sink is not None:
         sink.emit_plan(phase=phase, title=title, detail=detail)
     return events + [PlanStreamEvent(phase=phase, title=title, detail=detail)]
+
+
+def append_activity(
+    events: list[StreamEvent],
+    *,
+    phase: str,
+    summary: str,
+    detail: str = "",
+) -> list[StreamEvent]:
+    sink = active_sink()
+    if sink is not None:
+        sink.emit_activity(phase=phase, summary=summary, detail=detail)
+    return events + [
+        ActivityStreamEvent(phase=phase, summary=summary, detail=detail)
+    ]

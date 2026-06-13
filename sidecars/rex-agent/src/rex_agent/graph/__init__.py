@@ -10,7 +10,8 @@ from langgraph.graph import END, StateGraph
 
 from rex_agent.broker import BrokerClient, InferenceResult, legacy_inference_result
 from rex_agent.broker_chat_model import stream_visible_text
-from rex_agent.config import compaction_enabled, max_tool_steps_for_mode
+from rex_agent.config import compaction_enabled, max_tool_steps_for_mode, soft_cap_step_extension
+from rex_agent.graph.checkpoints import consume_soft_cap_checkpoint
 from rex_agent.graph.compaction import compact_state
 from rex_agent.graph.nodes.init import init_workspace_node
 from rex_agent.graph.nodes.llm import llm_node
@@ -28,6 +29,7 @@ from rex_agent.graph.stream_sink import (
     set_active_sink,
 )
 from rex_agent.stream_events import StreamEvent, TextStreamEvent
+from rex_agent.stream_events import ActivityStreamEvent
 from rex_agent.tools import ReadCache, tool_gate_from_state, tools_for_mode
 
 _inference_fn: Any | None = None
@@ -202,7 +204,48 @@ def _initial_state(prompt: str, mode: str, model: str, turn_id: str) -> AgentSta
         read_cache=ReadCache(),
         goal_hint=prompt[:500],
         workspace_explored=False,
+        soft_cap_continued=False,
     )
+
+
+def _graph_for_state(state: AgentState) -> Any:
+    if tools_for_mode(state["mode"], gate=tool_gate_from_state(state)):
+        return _react_graph()
+    return _ask_graph()
+
+
+def _run_graph_stream(
+    state: AgentState,
+    sink: LiveStreamSink,
+    final_box: list[AgentState],
+) -> Iterator[StreamEvent]:
+    current: AgentState = state
+    graph = _graph_for_state(state)
+    for update in graph.stream(state, stream_mode="updates"):
+        yield from _yield_visible_events(sink.drain())
+        for partial in update.values():
+            if isinstance(partial, dict):
+                current = {**current, **partial}
+        if current.get("soft_cap_paused"):
+            break
+    yield from _yield_visible_events(sink.drain())
+    final_box[0] = current
+
+
+def _emit_final_text(final: AgentState, emitted_text: bool) -> Iterator[StreamEvent]:
+    answer = final.get("final_answer") or ""
+    parts = list(final.get("stream_parts") or [])
+    if not answer and parts:
+        answer = "".join(p for p in parts if p.strip())
+    if not emitted_text and answer:
+        for segment in stream_visible_text(answer):
+            if segment:
+                yield TextStreamEvent(text=segment)
+    elif not emitted_text and parts:
+        for part in parts:
+            for segment in stream_visible_text(part):
+                if segment:
+                    yield TextStreamEvent(text=segment)
 
 
 def _invoke(state: AgentState) -> AgentState:
@@ -250,51 +293,48 @@ def stream_turn(
     turn_id: str = "",
 ) -> Iterator[StreamEvent]:
     state = _initial_state(prompt, mode, model, turn_id)
+    yield from _stream_agent_state(state, turn_id)
+
+
+def stream_continue_turn(continue_token: str, turn_id: str = "") -> Iterator[StreamEvent]:
+    checkpoint = consume_soft_cap_checkpoint(continue_token)
+    if checkpoint is None:
+        yield ActivityStreamEvent(
+            phase="failed",
+            summary="Invalid or expired continue token",
+            detail="continue_token",
+        )
+        return
+    resumed = {
+        **checkpoint,
+        "max_steps": checkpoint["max_steps"] + soft_cap_step_extension(),
+        "soft_cap_continued": True,
+        "done": False,
+        "soft_cap_paused": False,
+        "turn_id": turn_id or checkpoint.get("turn_id", ""),
+    }
+    yield from _stream_agent_state(resumed, resumed["turn_id"])
+
+
+def _stream_agent_state(state: AgentState, turn_id: str) -> Iterator[StreamEvent]:
     sink = LiveStreamSink(turn_id=turn_id)
     sink.emit_step(phase="running", summary="Agent turn started")
     emitted_text = False
-    final: AgentState = state
+    final_box: list[AgentState] = [state]
 
     with BrokerClient(turn_id=turn_id or None) as client:
         client_token = _active_client.set(client)
         sink_token = set_active_sink(sink)
         try:
-            graph = (
-                _react_graph()
-                if tools_for_mode(state["mode"], gate=tool_gate_from_state(state))
-                else _ask_graph()
-            )
-            current: AgentState = state
-            for update in graph.stream(state, stream_mode="updates"):
-                for event in _yield_visible_events(sink.drain()):
-                    if isinstance(event, TextStreamEvent):
-                        emitted_text = True
-                    yield event
-                for partial in update.values():
-                    if isinstance(partial, dict):
-                        current = {**current, **partial}
-            for event in _yield_visible_events(sink.drain()):
+            for event in _run_graph_stream(state, sink, final_box):
                 if isinstance(event, TextStreamEvent):
                     emitted_text = True
                 yield event
-            final = current
         finally:
             reset_active_sink(sink_token)
             _active_client.reset(client_token)
 
-    answer = final.get("final_answer") or ""
-    parts = list(final.get("stream_parts") or [])
-    if not answer and parts:
-        answer = "".join(p for p in parts if p.strip())
-    if not emitted_text and answer:
-        for segment in stream_visible_text(answer):
-            if segment:
-                yield TextStreamEvent(text=segment)
-    elif not emitted_text and parts:
-        for part in parts:
-            for segment in stream_visible_text(part):
-                if segment:
-                    yield TextStreamEvent(text=segment)
+    yield from _emit_final_text(final_box[0], emitted_text)
 
 
 def run_turn_with_events(

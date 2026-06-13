@@ -8,10 +8,15 @@ from langchain_core.messages import HumanMessage
 
 from rex_agent.broker import BrokerClient
 from rex_agent.broker_chat_model import MAX_PARSE_RETRIES
+from rex_agent.config import (
+    soft_cap_enabled,
+    soft_cap_threshold,
+)
+from rex_agent.graph.checkpoints import save_soft_cap_checkpoint
 from rex_agent.graph.compaction import truncation_note
 from rex_agent.graph.nodes.orchestrator import classify_subagent_for_tool
 from rex_agent.graph.state import AgentState
-from rex_agent.graph.stream_queue import append_step, append_tool
+from rex_agent.graph.stream_queue import append_activity, append_step, append_tool
 from rex_agent.metrics import log_subagent_event
 from rex_agent.stream_events import cap_detail, tool_detail_from_call
 from rex_agent.tools import (
@@ -29,6 +34,11 @@ AGENT_LOOP_STUCK_CODE = "agent_loop_stuck"
 AGENT_LOOP_STUCK_MESSAGE = (
     "Agent stopped after repeated blocked or invalid tool attempts "
     f"({AGENT_LOOP_STUCK_CODE}). Try rephrasing or narrowing the request."
+)
+SOFT_CAP_PAUSE_PHASE = "awaiting_continue"
+SOFT_CAP_PAUSE_SUMMARY = "Step budget pause — continue to extend"
+SOFT_CAP_PAUSE_MESSAGE = (
+    "Paused before the tool step limit. Continue to add more steps."
 )
 
 
@@ -75,6 +85,26 @@ def _terminal_cap_response(
     }
 
 
+def _soft_cap_pause_response(state: AgentState, *, events: list, steps: int) -> dict:
+    token = save_soft_cap_checkpoint(state)
+    events = append_activity(
+        events,
+        phase=SOFT_CAP_PAUSE_PHASE,
+        summary=SOFT_CAP_PAUSE_SUMMARY,
+        detail=token,
+    )
+    return {
+        "done": True,
+        "final_answer": SOFT_CAP_PAUSE_MESSAGE,
+        "stream_parts": state["stream_parts"] + [SOFT_CAP_PAUSE_MESSAGE],
+        "stream_events": events,
+        "tool_steps": steps,
+        "pending_tools": list(state.get("pending_tools") or []),
+        "batch_truncated": False,
+        "soft_cap_paused": True,
+    }
+
+
 def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
     calls = list(state.get("pending_tools") or [])
     if not calls:
@@ -95,6 +125,14 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
         return _terminal_cap_response(
             state, calls=calls, events=events, steps=current_steps
         )
+
+    if (
+        soft_cap_enabled()
+        and not state.get("soft_cap_continued")
+        and current_steps >= soft_cap_threshold(state["max_steps"])
+        and current_steps < state["max_steps"]
+    ):
+        return _soft_cap_pause_response(state, events=events, steps=current_steps)
 
     read_cache = state.get("read_cache") or ReadCache()
     new_messages: list[HumanMessage] = []

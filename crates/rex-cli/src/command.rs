@@ -6,6 +6,7 @@ pub enum CliCommand {
         model: String,
         mode: String,
         approval_id: String,
+        continue_token: String,
         trace_id: String,
         active_file_path: String,
         language_id: String,
@@ -37,6 +38,7 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
                 model,
                 mode,
                 approval_id,
+                continue_token,
                 trace_id,
                 active_file_path,
                 language_id,
@@ -49,6 +51,7 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
                 model,
                 mode,
                 approval_id,
+                continue_token,
                 trace_id,
                 active_file_path,
                 language_id,
@@ -72,6 +75,7 @@ type CompleteTrailingArgs = (
     String,
     String,
     String,
+    String,
     bool,
     bool,
 );
@@ -83,6 +87,7 @@ fn parse_complete_trailing(
     let mut model = String::new();
     let mut mode = String::new();
     let mut approval_id = String::new();
+    let mut continue_token = String::new();
     let mut trace_id = String::new();
     let mut active_file_path = String::new();
     let mut language_id = String::new();
@@ -126,6 +131,11 @@ fn parse_complete_trailing(
                     .next()
                     .ok_or_else(|| "Missing value for `--approval-id`.".to_string())?;
             }
+            "--continue-token" => {
+                continue_token = args
+                    .next()
+                    .ok_or_else(|| "Missing value for `--continue-token`.".to_string())?;
+            }
             "--trace-id" => {
                 trace_id = args
                     .next()
@@ -154,6 +164,7 @@ fn parse_complete_trailing(
         model,
         mode,
         approval_id,
+        continue_token,
         trace_id,
         active_file_path,
         language_id,
@@ -194,6 +205,7 @@ mod tests {
                 model: String::new(),
                 mode: String::new(),
                 approval_id: String::new(),
+                continue_token: String::new(),
                 trace_id: String::new(),
                 active_file_path: String::new(),
                 language_id: String::new(),
@@ -231,6 +243,7 @@ mod tests {
                 model: String::new(),
                 mode: String::new(),
                 approval_id: String::new(),
+                continue_token: String::new(),
                 trace_id: String::new(),
                 active_file_path: String::new(),
                 language_id: String::new(),
@@ -282,6 +295,7 @@ mod tests {
                 model: "m1".to_string(),
                 mode: "ask".to_string(),
                 approval_id: String::new(),
+                continue_token: String::new(),
                 trace_id: String::new(),
                 active_file_path: String::new(),
                 language_id: String::new(),
@@ -316,6 +330,7 @@ mod tests {
                 model: String::new(),
                 mode: String::new(),
                 approval_id: String::new(),
+                continue_token: String::new(),
                 trace_id: String::new(),
                 active_file_path: "/proj/a.ts".to_string(),
                 language_id: "typescript".to_string(),

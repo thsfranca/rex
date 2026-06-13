@@ -40,6 +40,8 @@ message StreamInferenceRequest {
   // Optional. Set when extension approved agent execution (ADR 0009).
   string approval_id = 4;
   ClientHints client_hints = 5;
+  // Optional. Resume a soft-cap paused sidecar turn (R063 / ADR 0032).
+  string continue_token = 6;
 }
 
 message BrokerReadFileRequest {

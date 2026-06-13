@@ -14,8 +14,8 @@ use tower::service_fn;
 
 use rex_proto::rex::sidecar::v1::sidecar_service_server::{SidecarService, SidecarServiceServer};
 use rex_proto::rex::sidecar::v1::{
-    GetCapabilitiesRequest, GetCapabilitiesResponse, HealthRequest, HealthResponse, RunTurnChunk,
-    RunTurnRequest,
+    ContinueTurnRequest, GetCapabilitiesRequest, GetCapabilitiesResponse, HealthRequest,
+    HealthResponse, RunTurnChunk, RunTurnRequest,
 };
 use tokio::net::UnixListener;
 use tokio_stream::wrappers::UnixListenerStream;
@@ -157,6 +157,17 @@ impl SidecarService for StubSidecar {
             });
         };
         Ok(Response::new(Box::pin(stream)))
+    }
+
+    type ContinueTurnStream = Self::RunTurnStream;
+
+    async fn continue_turn(
+        &self,
+        _request: Request<ContinueTurnRequest>,
+    ) -> Result<Response<Self::ContinueTurnStream>, Status> {
+        Err(Status::unimplemented(
+            "continue_turn requires rex-agent sidecar (R063)",
+        ))
     }
 }
 
