@@ -26,9 +26,18 @@ TOOL_WEB_SEARCH = "web.search"
 MAX_CLARIFY_QUESTIONS = 3
 PLAN_PROMPT_SLICE = (
     "Plan mode: explore with fs.read/fs.list only; no patches or shell. "
+    "Batch reads when helpful. "
     'Use {"type":"clarify","questions":[...]} (max 3) when scope is unclear. '
     'Finish with {"type":"final","plan":{title,steps[],risks[],open_questions[]}} '
     "or plan.save to .rex/plans/<name>.md when the user should persist the plan."
+)
+ASK_PROMPT_SLICE = (
+    "Ask mode: read-only research. Batch fs.read/fs.list and web.search when helpful. "
+    "Minimize tool rounds; cite sources in your final answer."
+)
+AGENT_PROMPT_SLICE = (
+    "Agent mode: batch viewer reads before editing. Use exactly one fs.write or "
+    "exec.shell per editor step."
 )
 
 TOOLS_BY_MODE: dict[str, frozenset[str]] = {
@@ -294,23 +303,31 @@ def system_prompt_for_tools(mode: str, *, subagent: str = "orchestrator") -> str
         "orchestrator",
         "viewer",
     ):
-        base += "\n" + PLAN_PROMPT_SLICE + _workspace_plan_prompt_overlay()
-    if (mode or "ask").strip().lower() == "ask":
-        base += (
-            "\nAsk mode: read-only research. Use fs.read/fs.list for the workspace "
-            "and web.search for external facts. Cite sources in your final answer."
-        )
+        base += "\n" + PLAN_PROMPT_SLICE + _workspace_mode_prompt_overlay("plan")
+    if (mode or "ask").strip().lower() == "ask" and subagent in (
+        "orchestrator",
+        "viewer",
+    ):
+        base += "\n" + ASK_PROMPT_SLICE + _workspace_mode_prompt_overlay("ask")
+    if (mode or "ask").strip().lower() == "agent" and subagent in (
+        "orchestrator",
+        "viewer",
+        "editor",
+    ):
+        base += "\n" + AGENT_PROMPT_SLICE + _workspace_mode_prompt_overlay("agent")
     return base
 
 
-def _workspace_plan_prompt_overlay() -> str:
-    for candidate in (".rex/prompts/mode/plan.md", "prompts/mode/plan.md"):
+def _workspace_mode_prompt_overlay(mode: str) -> str:
+    normalized = (mode or "ask").strip().lower() or "ask"
+    rel = f"prompts/mode/{normalized}.md"
+    for candidate in (f".rex/{rel}", rel):
         try:
             text = Path(candidate).read_text(encoding="utf-8").strip()
         except OSError:
             continue
         if text:
-            return f"\n[project plan instructions]\n{text}"
+            return f"\n[project {normalized} mode instructions]\n{text}"
     return ""
 
 

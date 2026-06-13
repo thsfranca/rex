@@ -97,7 +97,7 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 | 16 | **R055** — `web.search` via SearXNG capability sidecar | **Could** | — | [WEB_SEARCH.md](WEB_SEARCH.md) | Open — **after R056** |
 | 17 | **R016** — multi-active sidecar broadcast | **Could** | — | [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md) | Deferred — capability fleet is near-term multi-process path |
 | 18 | **R057** — parallel read-only tool batching | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | Done |
-| 19 | **R058** — per-mode step caps + mode prompts | **Should** | — | [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md) | Open |
+| 19 | **R058** — per-mode step caps + mode prompts | **Should** | — | [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md) | Done |
 | 20 | **R059** — `workspace.search` broker | **Should** | — | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | Open — **after R058** |
 
 ### LangFuse integration (RC-LF1)
