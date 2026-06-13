@@ -136,6 +136,57 @@ describe("appState reducer — cancel to idle", () => {
     expect(state.timeline[19]?.id).toBe("step-24");
   });
 
+  it("updates executionStep in place when toolCallId matches", () => {
+    let state = initialState;
+    state = reducer(state, {
+      type: "hostMessage",
+      payload: {
+        type: "executionStep",
+        payload: {
+          id: "e1",
+          toolCallId: "tc-1",
+          phase: "running",
+          summary: "read_file",
+          kind: "tool",
+          detail: "chatPanel.ts",
+        },
+      },
+    });
+    state = reducer(state, {
+      type: "hostMessage",
+      payload: {
+        type: "executionStep",
+        payload: {
+          id: "e2",
+          toolCallId: "tc-2",
+          phase: "running",
+          summary: "grep",
+          kind: "tool",
+          detail: "timeline",
+        },
+      },
+    });
+    state = reducer(state, {
+      type: "hostMessage",
+      payload: {
+        type: "executionStep",
+        payload: {
+          id: "e1-done",
+          toolCallId: "tc-1",
+          phase: "completed",
+          summary: "read_file",
+          kind: "tool",
+          detail: "chatPanel.ts",
+        },
+      },
+    });
+
+    expect(state.timeline).toHaveLength(2);
+    expect(state.timeline[0]?.toolCallId).toBe("tc-1");
+    expect(state.timeline[0]?.phase).toBe("completed");
+    expect(state.timeline[1]?.toolCallId).toBe("tc-2");
+  });
+
   it("ignores sessionMessages while a stream is active", () => {
     let state = userSend("turn-1", "hello");
     state = reducer(state, {
