@@ -20,6 +20,7 @@ DEFAULT_DETERMINISTIC_INIT_ENABLED = True
 DEFAULT_SOFT_CAP_ENABLED = True
 DEFAULT_SOFT_CAP_FRACTION = 2 / 3
 DEFAULT_SOFT_CAP_STEP_EXTENSION = 10
+DEFAULT_BROKER_TIMEOUT_SEC = 120.0
 REX_ROOT_ENV = "REX_ROOT"
 
 
@@ -244,3 +245,19 @@ def soft_cap_step_extension() -> int:
 
 def soft_cap_threshold(max_steps: int) -> int:
     return max(1, int(max_steps * soft_cap_fraction()))
+
+
+def broker_timeout_secs() -> float:
+    """Match sidecar broker gRPC budget to daemon HTTP inference timeout."""
+    cfg = _load_config_json()
+    if cfg:
+        inference = cfg.get("inference") or {}
+        openai_compat = inference.get("openai_compat") or {}
+        timeout = openai_compat.get("timeout_secs")
+        if isinstance(timeout, (int, float)) and float(timeout) > 0:
+            return float(timeout)
+        cursor_cli = inference.get("cursor_cli") or {}
+        cursor_timeout = cursor_cli.get("timeout_secs")
+        if isinstance(cursor_timeout, (int, float)) and float(cursor_timeout) > 0:
+            return float(cursor_timeout)
+    return DEFAULT_BROKER_TIMEOUT_SEC

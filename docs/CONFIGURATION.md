@@ -43,7 +43,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
 | `agent` | `approvals_enabled`, `max_tool_steps`, `max_tool_steps_ask`, `max_tool_steps_plan`, `max_tools_per_step`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gate; sidecar tool loop cap (default **12**); ask-mode research cap (default **12**); plan-mode cap (default **20**, **R058**); max batchable broker calls per LLM round (default **8**, **R057**); intra-turn compaction trigger as fraction of `broker.max_tool_result_bytes` (default **0.25**); goal-hint read pruning for payloads >100 lines (**R031** Done, default off). |
-| `cli` | `stream_idle_timeout_secs_agent`, `stream_idle_timeout_secs_ask` | Per-chunk idle timeout for `rex complete` streams (defaults **120** agent, **15** ask/plan). |
+| `cli` | `stream_idle_timeout_secs_agent`, `stream_idle_timeout_secs_ask` | Per-chunk idle timeout for `rex complete` streams (defaults **120** for all modes). |
 | `search` | `enabled`, `provider`, `max_results`, `api_key_path` | Ask-mode `web.search` broker (`provider: mock` for local demos). **R055** will migrate to capability sidecar — [WEB_SEARCH.md](WEB_SEARCH.md). |
 
 **Capability sidecar entry (`capabilities[]`):** `name`, `binary`, `enabled`, `socket`, `provides` (capability ids, e.g. `web.search`), optional `required`. Daemon spawns enabled entries alongside the host; invoke routing is **R056-2** — [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md).
@@ -316,8 +316,8 @@ Keys under `cli` and `search` control stream idle timeouts and ask-mode `web.sea
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `cli.stream_idle_timeout_secs_agent` | `120` | Per-chunk idle timeout for `agent` / `plan` NDJSON streams |
-| `cli.stream_idle_timeout_secs_ask` | `15` | Per-chunk idle timeout for `ask` streams |
+| `cli.stream_idle_timeout_secs_agent` | `120` | Per-chunk idle timeout for `agent` NDJSON streams |
+| `cli.stream_idle_timeout_secs_ask` | `120` | Per-chunk idle timeout for `ask` / `plan` NDJSON streams |
 | `search.enabled` | `false` (operator init: `true`) | Enables broker `web.search` (ask mode only) |
 | `search.provider` | — (operator init: `mock`) | `mock` for local demos |
 | `search.max_results` | `5` | Max hits returned per query |

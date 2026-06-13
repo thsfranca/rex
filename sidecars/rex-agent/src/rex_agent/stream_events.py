@@ -76,4 +76,4 @@ def tool_detail_from_call(call: object) -> str:
     query = args.get("query")
     if isinstance(query, str) and query.strip():
         return cap_detail(query.strip())
-    return cap_detail(str(args))
+    return ""

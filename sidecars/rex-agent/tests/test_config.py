@@ -49,6 +49,29 @@ def test_defaults_without_config(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.daemon_socket() == config.DEFAULT_DAEMON_SOCKET
 
 
+def test_broker_timeout_reads_openai_compat_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "rex"
+    root.mkdir()
+    (root / "config.json").write_text(
+        json.dumps({"inference": {"openai_compat": {"timeout_secs": 90}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
+    assert config.broker_timeout_secs() == 90.0
+
+
+def test_broker_timeout_default_when_unconfigured(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "rex"
+    root.mkdir()
+    (root / "config.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
+    assert config.broker_timeout_secs() == config.DEFAULT_BROKER_TIMEOUT_SEC
+
+
 def test_agent_limits_from_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

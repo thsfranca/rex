@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 import grpc
 
-from rex_agent.config import daemon_socket, max_tool_result_bytes
+from rex_agent.config import broker_timeout_secs, daemon_socket, max_tool_result_bytes
 
 if TYPE_CHECKING:
     from rex.v1 import rex_pb2, rex_pb2_grpc
@@ -22,7 +22,6 @@ except ImportError as exc:  # pragma: no cover
         "PYTHONPATH to $(rex proto path)."
     ) from exc
 
-BROKER_TIMEOUT_SEC = 30.0
 _TOOL_RESULT_PATTERN = re.compile(
     r"^<<TOOL_RESULT:(?P<tool>[^>]+)>>\n(?P<body>.*)\n<<END>>\s*$",
     re.DOTALL,
@@ -46,6 +45,27 @@ class InferenceResult:
 
     def effective_text(self) -> str:
         return self.content or self.text
+
+
+def format_grpc_error(err: grpc.RpcError) -> str:
+    """Stable, single-line operator message (no raw Python gRPC repr)."""
+    code_fn = getattr(err, "code", None)
+    details_fn = getattr(err, "details", None)
+    code = code_fn() if callable(code_fn) else None
+    details = (details_fn() or "").strip() if callable(details_fn) else ""
+    if code == grpc.StatusCode.DEADLINE_EXCEEDED:
+        timeout = broker_timeout_secs()
+        if details and len(details) <= 160 and "\n" not in details:
+            return details
+        return (
+            f"broker call timed out after {timeout:.0f}s "
+            "(adjust inference.openai_compat.timeout_secs)"
+        )
+    if details and len(details) <= 200 and "\n" not in details:
+        return details
+    if code is not None:
+        return code.name.replace("_", " ").lower()
+    return "broker call failed"
 
 
 def legacy_inference_result(ok: bool, text: str) -> InferenceResult:
@@ -74,6 +94,8 @@ def is_interim_fallback(result: InferenceResult) -> bool:
 def _parse_tool_calls(
     response: rex_pb2.BrokerInferenceResponse,
 ) -> list[BrokerToolCall]:
+    from rex_agent.tools import coerce_tool_args
+
     calls: list[BrokerToolCall] = []
     for tc in response.tool_calls:
         args: dict[str, Any]
@@ -82,7 +104,7 @@ def _parse_tool_calls(
         except json.JSONDecodeError:
             parsed = {}
         args = parsed if isinstance(parsed, dict) else {}
-        calls.append(BrokerToolCall(tool=tc.name, args=args))
+        calls.append(BrokerToolCall(tool=tc.name, args=coerce_tool_args(tc.name, args)))
     return calls
 
 
@@ -165,11 +187,11 @@ class BrokerClient:
         try:
             response = self._stub.BrokerInference(
                 request,
-                timeout=BROKER_TIMEOUT_SEC,
+                timeout=broker_timeout_secs(),
                 metadata=_metadata(self._turn_id),
             )
         except grpc.RpcError as err:
-            return legacy_inference_result(False, str(err))
+            return legacy_inference_result(False, format_grpc_error(err))
         return _parse_inference_response(response)
 
     def read_file(self, path: str, mode: str | None = None) -> tuple[bool, str]:
@@ -179,7 +201,9 @@ class BrokerClient:
         )
         return self._read_file_response(request)
 
-    def list_dir(self, path: str, mode: str | None = None) -> tuple[bool, str]:
+    def list_dir_entries(
+        self, path: str, mode: str | None = None
+    ) -> tuple[bool, list[tuple[str, bool]] | str]:
         request = rex_pb2.BrokerListDirRequest(
             path=path,
             mode=mode or self._mode,
@@ -187,17 +211,22 @@ class BrokerClient:
         try:
             response = self._stub.BrokerListDir(
                 request,
-                timeout=BROKER_TIMEOUT_SEC,
+                timeout=broker_timeout_secs(),
                 metadata=_metadata(self._turn_id),
             )
         except grpc.RpcError as err:
-            return False, str(err)
+            return False, format_grpc_error(err)
         if not response.ok:
             return False, response.error or "broker list_dir failed"
-        lines = []
-        for entry in response.entries:
-            name = entry.name
-            lines.append(f"{name}/" if entry.is_dir else name)
+        entries = [(entry.name, entry.is_dir) for entry in response.entries]
+        return True, entries
+
+    def list_dir(self, path: str, mode: str | None = None) -> tuple[bool, str]:
+        ok, payload = self.list_dir_entries(path, mode)
+        if not ok:
+            return False, str(payload)
+        entries = payload
+        lines = [f"{name}/" if is_dir else name for name, is_dir in entries]
         text = ", ".join(lines) if lines else "(empty)"
         return True, truncate_tool_result(text)
 
@@ -212,11 +241,11 @@ class BrokerClient:
         try:
             response = self._stub.BrokerWriteFile(
                 request,
-                timeout=BROKER_TIMEOUT_SEC,
+                timeout=broker_timeout_secs(),
                 metadata=_metadata(self._turn_id),
             )
         except grpc.RpcError as err:
-            return False, str(err)
+            return False, format_grpc_error(err)
         if response.ok:
             return True, "ok"
         return False, response.error or "broker write_file failed"
@@ -232,11 +261,11 @@ class BrokerClient:
         try:
             response = self._stub.BrokerSavePlan(
                 request,
-                timeout=BROKER_TIMEOUT_SEC,
+                timeout=broker_timeout_secs(),
                 metadata=_metadata(self._turn_id),
             )
         except grpc.RpcError as err:
-            return False, str(err)
+            return False, format_grpc_error(err)
         if response.ok:
             return True, "ok"
         return False, response.error or "broker save_plan failed"
@@ -249,11 +278,11 @@ class BrokerClient:
         try:
             response = self._stub.BrokerWebSearch(
                 request,
-                timeout=BROKER_TIMEOUT_SEC,
+                timeout=broker_timeout_secs(),
                 metadata=_metadata(self._turn_id),
             )
         except grpc.RpcError as err:
-            return False, str(err)
+            return False, format_grpc_error(err)
         if not response.ok:
             return False, response.error or "broker web_search failed"
         lines = []
@@ -273,11 +302,11 @@ class BrokerClient:
         try:
             response = self._stub.BrokerExecShell(
                 request,
-                timeout=BROKER_TIMEOUT_SEC,
+                timeout=broker_timeout_secs(),
                 metadata=_metadata(self._turn_id),
             )
         except grpc.RpcError as err:
-            return False, str(err)
+            return False, format_grpc_error(err)
         if not response.ok:
             return False, response.error or "broker exec_shell failed"
         return True, response.stdout
@@ -288,11 +317,11 @@ class BrokerClient:
         try:
             response = self._stub.BrokerReadFile(
                 request,
-                timeout=BROKER_TIMEOUT_SEC,
+                timeout=broker_timeout_secs(),
                 metadata=_metadata(self._turn_id),
             )
         except grpc.RpcError as err:
-            return False, str(err)
+            return False, format_grpc_error(err)
         if response.ok:
             return True, response.content
         return False, response.error or "broker read_file failed"

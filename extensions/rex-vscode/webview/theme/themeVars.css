@@ -277,6 +277,7 @@ button:focus-visible {
   line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: anywhere;
   overflow: visible;
 }
 
@@ -1273,6 +1274,10 @@ button:focus-visible {
 .rex-error {
   color: var(--vscode-errorForeground, #f85149);
   font-size: 12px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: pre-wrap;
+  max-width: 100%;
 }
 
 .rex-status-banner {

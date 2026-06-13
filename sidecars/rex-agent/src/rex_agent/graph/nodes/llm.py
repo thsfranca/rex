@@ -163,6 +163,19 @@ def _invoke_broker_inference(
     )
 
 
+def _inference_failure_message(detail: str) -> str:
+    base = (
+        "Inference failed. Check that the daemon is running and "
+        "HTTP inference is configured."
+    )
+    trimmed = detail.strip()
+    if not trimmed:
+        return base
+    if len(trimmed) > 160:
+        trimmed = trimmed[:157] + "..."
+    return f"{base} {trimmed}"
+
+
 def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
     if state.get("done"):
         return {}
@@ -206,12 +219,7 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
         tool_specs=tool_specs,
     )
     if not result.ok:
-        message = (
-            "Inference failed. Check that the daemon is running and "
-            "HTTP inference is configured."
-        )
-        if result.error.strip():
-            message = f"{message} ({result.error.strip()})"
+        message = _inference_failure_message(result.error)
         return {
             "done": True,
             "final_answer": message,
