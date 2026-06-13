@@ -13,6 +13,11 @@ describe("applyProductAgentOverlay", () => {
 
     const agent = result.agent as Record<string, unknown>;
     expect(agent.approvals_enabled).toBe(true);
+    expect(agent.max_tool_steps_ask).toBe(12);
+
+    const search = result.search as Record<string, unknown>;
+    expect(search.enabled).toBe(true);
+    expect(search.provider).toBe("mock");
   });
 
   it("preserves existing sidecar list entries", () => {

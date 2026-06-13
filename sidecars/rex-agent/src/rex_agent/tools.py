@@ -32,7 +32,9 @@ PLAN_PROMPT_SLICE = (
     "or plan.save to .rex/plans/<name>.md when the user should persist the plan."
 )
 ASK_PROMPT_SLICE = (
-    "Ask mode: read-only research. Batch fs.read/fs.list and web.search when helpful. "
+    "Ask mode: read-only research. Explore the workspace first (README.md, docs/, "
+    "root listing) with batched fs.read/fs.list. Use web.search only after local "
+    "docs are insufficient or the user explicitly asked for web lookup. "
     "Minimize tool rounds; cite sources in your final answer."
 )
 AGENT_PROMPT_SLICE = (
@@ -61,6 +63,33 @@ BATCH_EDITOR_MULTI_ERROR = (
 )
 BATCH_TRUNCATED_NOTE = (
     "Tool batch exceeded agent.max_tools_per_step; extra tool calls were not executed."
+)
+
+ASK_WEB_SEARCH_WORKSPACE_FIRST = (
+    "web.search is not available until you have read or listed workspace files. "
+    "Use fs.read or fs.list first, or ask the user to request a web search explicitly."
+)
+ASK_WEB_SEARCH_MIXED_BATCH = (
+    "Cannot batch web.search with fs.read or fs.list in ask mode. "
+    "Use workspace tools first, then web.search in a separate step."
+)
+
+_EXPLICIT_WEB_INTENT = re.compile(
+    r"\b(search the web|web search|look online|google|internet|latest news|online)\b",
+    re.IGNORECASE,
+)
+
+_POLICY_CONFIG_FAILURE_MARKERS = (
+    "mode_denied",
+    "access policy denied",
+    "plan_save_denied",
+    "requires path",
+    "requires query",
+    "requires content",
+    "not allowed in",
+    "unknown tool:",
+    "web.search is not available until",
+    "cannot batch web.search",
 )
 
 TOOL_DESCRIPTIONS: dict[str, str] = {
@@ -147,6 +176,34 @@ class ParsedModelOutput:
     clarify_questions: list[dict[str, Any]] | None = None
 
 
+@dataclass(frozen=True)
+class ToolGateContext:
+    search_enabled: bool = False
+    workspace_explored: bool = False
+    explicit_web_intent: bool = False
+
+    @classmethod
+    def defaults(cls) -> ToolGateContext:
+        from rex_agent.config import search_enabled
+
+        return cls(search_enabled=search_enabled())
+
+    @classmethod
+    def from_goal_hint(
+        cls,
+        goal_hint: str,
+        *,
+        workspace_explored: bool = False,
+    ) -> ToolGateContext:
+        from rex_agent.config import search_enabled
+
+        return cls(
+            search_enabled=search_enabled(),
+            workspace_explored=workspace_explored,
+            explicit_web_intent=explicit_web_intent(goal_hint),
+        )
+
+
 @dataclass
 class ReadCache:
     entries: dict[str, str] = field(default_factory=dict)
@@ -158,13 +215,58 @@ class ReadCache:
         self.entries[path] = content
 
 
-def tools_for_mode(mode: str) -> frozenset[str]:
+def explicit_web_intent(prompt: str) -> bool:
+    return bool(_EXPLICIT_WEB_INTENT.search(prompt or ""))
+
+
+def ask_web_search_allowed(gate: ToolGateContext) -> bool:
+    return gate.search_enabled and (
+        gate.workspace_explored or gate.explicit_web_intent
+    )
+
+
+def is_policy_config_failure(result: str) -> bool:
+    lower = (result or "").lower()
+    return any(marker in lower for marker in _POLICY_CONFIG_FAILURE_MARKERS)
+
+
+def should_bill_tool_step(results: list[tuple[bool, str]]) -> bool:
+    """Return True when a tool batch should count toward max_tool_steps*."""
+    if not results:
+        return False
+    if any(ok for ok, _ in results):
+        return True
+    return not all(is_policy_config_failure(result) for _, result in results)
+
+
+def tools_for_mode(
+    mode: str,
+    *,
+    gate: ToolGateContext | None = None,
+) -> frozenset[str]:
     normalized = (mode or "ask").strip().lower() or "ask"
-    return TOOLS_BY_MODE.get(normalized, TOOLS_BY_MODE["ask"])
+    allowed = set(TOOLS_BY_MODE.get(normalized, TOOLS_BY_MODE["ask"]))
+    ctx = gate or ToolGateContext.defaults()
+    if normalized == "ask" and TOOL_WEB_SEARCH in allowed:
+        if not ask_web_search_allowed(ctx):
+            allowed.discard(TOOL_WEB_SEARCH)
+    return frozenset(allowed)
 
 
-def tools_for_subagent(subagent: str, mode: str) -> frozenset[str]:
-    allowed = tools_for_mode(mode)
+def tool_gate_from_state(state: dict[str, Any]) -> ToolGateContext:
+    return ToolGateContext.from_goal_hint(
+        str(state.get("goal_hint") or ""),
+        workspace_explored=bool(state.get("workspace_explored")),
+    )
+
+
+def tools_for_subagent(
+    subagent: str,
+    mode: str,
+    *,
+    gate: ToolGateContext | None = None,
+) -> frozenset[str]:
+    allowed = tools_for_mode(mode, gate=gate)
     if subagent == "viewer":
         return allowed & VIEWER_TOOLS
     if subagent == "editor":
@@ -173,11 +275,7 @@ def tools_for_subagent(subagent: str, mode: str) -> frozenset[str]:
 
 
 def batchable_tools_for_mode(mode: str) -> frozenset[str]:
-    normalized = (mode or "ask").strip().lower() or "ask"
-    allowed = set(BATCHABLE_READ_TOOLS)
-    if normalized == "ask":
-        allowed.add(TOOL_WEB_SEARCH)
-    return frozenset(allowed)
+    return frozenset(BATCHABLE_READ_TOOLS)
 
 
 def is_batchable_tool(tool: str, mode: str) -> bool:
@@ -190,6 +288,7 @@ def normalize_tool_batch(
     mode: str,
     subagent: str,
     max_batch: int | None = None,
+    gate: ToolGateContext | None = None,
 ) -> tuple[list[ToolCall] | None, str | None, bool]:
     """Validate and cap a tool batch. Returns (calls, error, truncated)."""
     if not calls:
@@ -197,14 +296,26 @@ def normalize_tool_batch(
 
     cap = max_batch if max_batch is not None else max_tools_per_step()
     truncated = False
+    ctx = gate or ToolGateContext.defaults()
+    normalized_mode = (mode or "ask").strip().lower() or "ask"
 
     if subagent == "editor":
         if len(calls) != 1 or calls[0].tool not in (TOOL_WRITE, TOOL_EXEC):
             return None, BATCH_EDITOR_MULTI_ERROR, False
         return calls, None, False
 
+    if normalized_mode == "ask":
+        has_search = any(call.tool == TOOL_WEB_SEARCH for call in calls)
+        has_workspace = any(
+            call.tool in (TOOL_READ, TOOL_LIST) for call in calls
+        )
+        if has_search and has_workspace:
+            return None, ASK_WEB_SEARCH_MIXED_BATCH, False
+        if has_search and not ask_web_search_allowed(ctx):
+            return None, ASK_WEB_SEARCH_WORKSPACE_FIRST, False
+
     batchable = batchable_tools_for_mode(mode)
-    allowed_mode = tools_for_mode(mode)
+    allowed_mode = tools_for_mode(mode, gate=ctx)
 
     if len(calls) == 1 and calls[0].tool not in batchable:
         if calls[0].tool in allowed_mode:
@@ -224,13 +335,18 @@ def normalize_tool_batch(
     return calls, None, truncated
 
 
-def tool_specs_for_subagent(subagent: str, mode: str) -> list[Any]:
+def tool_specs_for_subagent(
+    subagent: str,
+    mode: str,
+    *,
+    gate: ToolGateContext | None = None,
+) -> list[Any]:
     """OpenAI-shaped ToolSpec protos for native broker tool calling (R038)."""
     if rex_pb2 is None:
         raise ImportError(
             "rex.v1 protobuf stubs not found. Run `rex proto install`."
         )
-    allowed = tools_for_subagent(subagent, mode)
+    allowed = tools_for_subagent(subagent, mode, gate=gate)
     specs: list[Any] = []
     for name in sorted(allowed):
         schema = TOOL_SCHEMAS.get(name)
@@ -246,8 +362,13 @@ def tool_specs_for_subagent(subagent: str, mode: str) -> list[Any]:
     return specs
 
 
-def system_prompt_for_tools(mode: str, *, subagent: str = "orchestrator") -> str:
-    allowed = tools_for_subagent(subagent, mode)
+def system_prompt_for_tools(
+    mode: str,
+    *,
+    subagent: str = "orchestrator",
+    gate: ToolGateContext | None = None,
+) -> str:
+    allowed = tools_for_subagent(subagent, mode, gate=gate)
     if not allowed:
         return (
             "You are a helpful assistant. Respond with your final answer "
@@ -355,8 +476,13 @@ _PARSE_JSON_ERROR = (
 )
 
 
-def parse_model_output(text: str, mode: str) -> ParsedModelOutput:
-    allowed = tools_for_mode(mode)
+def parse_model_output(
+    text: str,
+    mode: str,
+    *,
+    gate: ToolGateContext | None = None,
+) -> ParsedModelOutput:
+    allowed = tools_for_mode(mode, gate=gate)
     raw = text.strip()
     if not raw:
         return ParsedModelOutput(

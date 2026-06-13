@@ -32,7 +32,7 @@
 
 - **Positive:** One story for Codex-like sandbox + REX broker; lean error surface for LLM.
 - **Negative:** More policy code in daemon; mode matrix must stay in sync with extension UX.
-- **Risks / follow-up:** Implement unified evaluator — [ROADMAP.md](../../ROADMAP.md) **R020**; extend tests for deny paths per mode.
+- **Risks / follow-up:** Implement unified evaluator — [ROADMAP.md](../../ROADMAP.md) **R020**; extend tests for deny paths per mode. **Sidecar billing (shipped):** `rex-agent` does not increment `tool_steps` when every tool in a batch fails with policy/config class errors — avoids token-wasting cap exhaustion per this ADR.
 
 ## Related
 

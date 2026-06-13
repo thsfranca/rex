@@ -27,7 +27,7 @@ from rex_agent.graph.stream_sink import (
     set_active_sink,
 )
 from rex_agent.stream_events import StreamEvent, TextStreamEvent
-from rex_agent.tools import ReadCache, tools_for_mode
+from rex_agent.tools import ReadCache, tool_gate_from_state, tools_for_mode
 
 _inference_fn: Any | None = None
 _active_client: contextvars.ContextVar[BrokerClient | None] = contextvars.ContextVar(
@@ -192,11 +192,12 @@ def _initial_state(prompt: str, mode: str, model: str, turn_id: str) -> AgentSta
         batch_truncated=False,
         read_cache=ReadCache(),
         goal_hint=prompt[:500],
+        workspace_explored=False,
     )
 
 
 def _invoke(state: AgentState) -> AgentState:
-    if tools_for_mode(state["mode"]):
+    if tools_for_mode(state["mode"], gate=tool_gate_from_state(state)):
         return _react_graph().invoke(state)
     return _ask_graph().invoke(state)
 
@@ -249,7 +250,11 @@ def stream_turn(
         client_token = _active_client.set(client)
         sink_token = set_active_sink(sink)
         try:
-            graph = _react_graph() if tools_for_mode(state["mode"]) else _ask_graph()
+            graph = (
+                _react_graph()
+                if tools_for_mode(state["mode"], gate=tool_gate_from_state(state))
+                else _ask_graph()
+            )
             current: AgentState = state
             for update in graph.stream(state, stream_mode="updates"):
                 for event in _yield_visible_events(sink.drain()):

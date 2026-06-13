@@ -24,6 +24,7 @@ from rex_agent.stream_events import cap_detail
 from rex_agent.tools import (
     ToolCall,
     normalize_tool_batch,
+    tool_gate_from_state,
     tool_specs_for_subagent,
     tools_for_mode,
 )
@@ -81,7 +82,9 @@ def _batch_validation_error(
             HumanMessage(content=message, id=str(uuid.uuid4())),
         ],
     }
-    if errors >= MAX_PARSE_RETRIES or not tools_for_mode(state["mode"]):
+    if errors >= MAX_PARSE_RETRIES or not tools_for_mode(
+        state["mode"], gate=tool_gate_from_state(state)
+    ):
         updates["done"] = True
         updates["final_answer"] = message
         updates["stream_parts"] = state["stream_parts"] + [message]
@@ -95,10 +98,12 @@ def _resolve_tool_calls(
     state: AgentState,
 ) -> dict:
     subagent = state.get("active_subagent", "orchestrator")
+    gate = tool_gate_from_state(state)
     normalized, error, truncated = normalize_tool_batch(
         calls,
         mode=state["mode"],
         subagent=subagent,
+        gate=gate,
     )
     if error is not None or normalized is None:
         return _batch_validation_error(
@@ -163,6 +168,7 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
         return {}
 
     subagent = state.get("active_subagent", "orchestrator")
+    gate = tool_gate_from_state(state)
     messages = _messages_for_subagent(state)
     prompt = messages_to_prompt(
         messages,
@@ -170,6 +176,7 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
         state.get("daemon_context", ""),
         subagent=subagent,
         viewer_summary=state.get("viewer_summary", ""),
+        gate=gate,
     )
     chat_messages = messages_to_chat_messages(
         messages,
@@ -177,8 +184,9 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
         state.get("daemon_context", ""),
         subagent=subagent,
         viewer_summary=state.get("viewer_summary", ""),
+        gate=gate,
     )
-    tool_specs = tool_specs_for_subagent(subagent, state["mode"])
+    tool_specs = tool_specs_for_subagent(subagent, state["mode"], gate=gate)
 
     log_subagent_event(
         subagent=subagent,
@@ -269,7 +277,9 @@ def llm_node(state: AgentState, *, inference_fn: Any) -> dict:
                 HumanMessage(content=parsed.message, id=str(uuid.uuid4())),
             ],
         }
-        if errors >= MAX_PARSE_RETRIES or not tools_for_mode(state["mode"]):
+        if errors >= MAX_PARSE_RETRIES or not tools_for_mode(
+        state["mode"], gate=tool_gate_from_state(state)
+    ):
             updates["done"] = True
             updates["final_answer"] = parsed.message
             updates["stream_parts"] = state["stream_parts"] + [parsed.message]

@@ -13,7 +13,8 @@
 2. **`BrokerWebSearch`:** New unary `rex.v1` RPC; provider configured in JSON under `$REX_ROOT` (`search.enabled`, `search.provider`, `search.api_key_path`).
 3. **Access policy:** `web.search` allowed in `ask` when search is enabled; denied in `plan` / `agent` for v1.
 4. **Cache:** L1 exact-match skipped when any broker tool ran in the turn.
-5. **Step budget:** `agent.max_tool_steps_ask` (default 5).
+5. **Step budget:** `agent.max_tool_steps_ask` (default **12**). Sidecar bills only productive broker rounds; policy/config denials do not consume the cap ([ADR 0013](0013-access-policy-broker-completion.md)).
+6. **Workspace-first:** `web.search` is advertised only when `search.enabled` and the turn has explored workspace files (`fs.read` / `fs.list` success) or the prompt signals explicit web intent; read/list and search are not batched together.
 
 ## Consequences
 

@@ -16,6 +16,7 @@ from rex_agent.broker import (
 )
 from rex_agent.tools import (
     ParsedModelOutput,
+    ToolGateContext,
     parse_model_output,
     system_prompt_for_tools,
 )
@@ -31,6 +32,7 @@ def messages_to_prompt(
     *,
     subagent: str = "orchestrator",
     viewer_summary: str = "",
+    gate: ToolGateContext | None = None,
 ) -> str:
     """Static prefix first (system + daemon context), volatile suffix last."""
     tool_mode = mode
@@ -40,7 +42,7 @@ def messages_to_prompt(
         tool_mode = "agent"
 
     parts: list[str] = [
-        f"[system]\n{system_prompt_for_tools(tool_mode, subagent=subagent)}"
+        f"[system]\n{system_prompt_for_tools(tool_mode, subagent=subagent, gate=gate)}"
     ]
     if viewer_summary and subagent == "editor":
         parts.append(f"[system]\nExploration summary:\n{viewer_summary}")
@@ -83,6 +85,7 @@ def messages_to_chat_messages(
     *,
     subagent: str = "orchestrator",
     viewer_summary: str = "",
+    gate: ToolGateContext | None = None,
 ) -> list[Any]:
     """Structured chat history for native BrokerInference (R038)."""
     try:
@@ -101,7 +104,7 @@ def messages_to_chat_messages(
     chat: list[Any] = [
         rex_pb2.ChatMessage(
             role="system",
-            content=system_prompt_for_tools(tool_mode, subagent=subagent),
+            content=system_prompt_for_tools(tool_mode, subagent=subagent, gate=gate),
         )
     ]
     if viewer_summary and subagent == "editor":
