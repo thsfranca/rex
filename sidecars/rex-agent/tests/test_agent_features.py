@@ -30,10 +30,10 @@ def test_read_dedup_returns_cached_summary() -> None:
     client.read_file.return_value = (True, "first read body")
     cache = ReadCache()
     call = ToolCall(tool=TOOL_READ, args={"path": "src/foo.py"})
-    ok1, _, _ = execute_tool(client, call, "plan", read_cache=cache)
-    ok2, r2, _ = execute_tool(client, call, "plan", read_cache=cache)
-    assert ok1 and ok2
-    assert "[cached read" in r2
+    ok1, _, _, _ = execute_tool(client, call, "plan", read_cache=cache)
+    ok2, r2, _, dup = execute_tool(client, call, "plan", read_cache=cache)
+    assert ok1 and ok2 and dup
+    assert "[cached fs.read result]" in r2
     client.read_file.assert_called_once()
 
 
@@ -116,7 +116,7 @@ def test_execute_tool_pruning_when_enabled(monkeypatch: pytest.MonkeyPatch) -> N
     )
     monkeypatch.setattr("rex_agent.tools.read_pruning_enabled", lambda: True)
     call = ToolCall(tool=TOOL_READ, args={"path": "big.py"})
-    ok, result, _ = execute_tool(client, call, "agent", goal_hint="token line 42")
+    ok, result, _, _ = execute_tool(client, call, "agent", goal_hint="token line 42")
     assert ok
     assert "[pruned read:" in result
 
@@ -132,7 +132,7 @@ def test_execute_tool_skips_pruning_when_disabled(
     )
     monkeypatch.setattr("rex_agent.tools.read_pruning_enabled", lambda: False)
     call = ToolCall(tool=TOOL_READ, args={"path": "big.py"})
-    ok, result, _ = execute_tool(client, call, "agent", goal_hint="token line 42")
+    ok, result, _, _ = execute_tool(client, call, "agent", goal_hint="token line 42")
     assert ok
     assert "[pruned read:" not in result
     assert "token line 42" in result
@@ -164,6 +164,6 @@ def test_diff_write_patch_failure_message() -> None:
     call = ToolCall(
         tool="fs.write", args={"path": "x.txt", "diff": "@@ invalid @@\n-bad\n+good\n"}
     )
-    ok, msg, _ = execute_tool(client, call, "agent")
+    ok, msg, _, _ = execute_tool(client, call, "agent")
     assert not ok
     assert "Patch failed" in msg

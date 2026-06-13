@@ -102,6 +102,7 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
     trunc_events = list(state.get("truncation_events") or [])
     workspace_explored = bool(state.get("workspace_explored"))
     batch_results: list[tuple[bool, str]] = []
+    duplicate_hits = 0
     log_step = current_steps + 1
 
     for index, call in enumerate(calls):
@@ -114,14 +115,16 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
             detail=detail,
             tool_call_id=tool_call_id,
         )
-        ok, result, truncated = execute_tool(
+        ok, result, truncated, exact_duplicate = execute_tool(
             client,
             call,
             state["mode"],
             read_cache=read_cache,
             goal_hint=state.get("goal_hint", ""),
         )
-        batch_results.append((ok, result))
+        if exact_duplicate:
+            duplicate_hits += 1
+        batch_results.append((ok and not exact_duplicate, result))
         status_line = format_tool_status(call, ok, result)
         result_detail = cap_detail(result if ok else status_line)
         events = append_tool(
@@ -159,6 +162,8 @@ def tools_node(state: AgentState, *, client: BrokerClient) -> dict:
     error_count = state.get("tool_error_count", 0)
     if bill_step:
         error_count = 0
+    elif duplicate_hits:
+        error_count += duplicate_hits
     elif batch_results and all(
         not ok and is_policy_config_failure(result) for ok, result in batch_results
     ):
