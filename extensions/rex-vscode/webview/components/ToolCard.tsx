@@ -13,7 +13,7 @@ export interface ToolCardProps extends ExecutionLabelInput {
 
 export function ToolCard(props: ToolCardProps): React.ReactElement {
   const label = formatExecutionLabel(props);
-  const showDetail = shouldShowExecutionDetail(props.summary, props.detail);
+  const showDetail = shouldShowExecutionDetail(props.summary, props.detail, props.target);
   const [open, setOpen] = React.useState(false);
 
   return (

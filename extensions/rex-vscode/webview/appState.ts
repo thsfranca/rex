@@ -14,7 +14,7 @@ import type {
 
 import type { RenderedMessage } from "./renderedMessage";
 import { MarkdownStream } from "./streaming/markdownStream";
-import { formatExecutionLabel } from "./timeline/executionLabel";
+import { formatExecutionLabel, resolveTimelineTarget } from "./timeline/executionLabel";
 
 export interface BannerState {
   readonly level: "info" | "warn" | "error";
@@ -43,6 +43,7 @@ export interface AppState {
     phase: string;
     kind?: string;
     detail?: string;
+    target?: string;
   }[];
   activityHint?: string;
   planArtifact?: PlanArtifactPayload;
@@ -260,15 +261,6 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
         pendingApprovals: [...state.pendingApprovals, message.payload],
       };
     case "executionStep": {
-      const entry = {
-        id: message.payload.id,
-        streamId: message.payload.streamId,
-        toolCallId: message.payload.toolCallId,
-        phase: message.payload.phase,
-        summary: message.payload.summary,
-        kind: message.payload.kind,
-        detail: message.payload.detail,
-      };
       const scoped =
         message.payload.streamId === undefined
           ? state.timeline
@@ -281,6 +273,24 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
             item.toolCallId === message.payload.toolCallId) ||
           (message.payload.toolCallId === undefined && item.id === message.payload.id),
       );
+      const previous = existingIndex >= 0 ? scoped[existingIndex] : undefined;
+      const target = resolveTimelineTarget(
+        message.payload.summary,
+        message.payload.phase,
+        message.payload.kind,
+        message.payload.detail,
+        previous?.target ?? previous?.detail,
+      );
+      const entry = {
+        id: message.payload.id,
+        streamId: message.payload.streamId,
+        toolCallId: message.payload.toolCallId,
+        phase: message.payload.phase,
+        summary: message.payload.summary,
+        kind: message.payload.kind,
+        detail: message.payload.detail,
+        target,
+      };
       const nextTimeline =
         existingIndex >= 0
           ? scoped.map((item, index) => (index === existingIndex ? { ...item, ...entry } : item))
@@ -288,7 +298,7 @@ function handleHostMessage(state: AppState, message: ExtensionToWebview): AppSta
       const activityHint =
         (message.payload.kind === "tool" || message.payload.kind === "activity") &&
         message.payload.phase === "running"
-          ? formatExecutionLabel(message.payload)
+          ? formatExecutionLabel({ ...message.payload, target })
           : state.activityHint;
       return {
         ...state,
