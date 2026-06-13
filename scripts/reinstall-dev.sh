@@ -41,7 +41,7 @@ Extension flags (pass after -- or as trailing args):
   --editor auto|cursor|vscode
   --verify            Run extension lint, typecheck, and tests before packaging.
   --no-reload         Skip Developer: Reload Window after VSIX install.
-  --only-install      Reinstall an existing rex-vscode.vsix without rebuilding it.
+  --only-install      Reinstall an existing rex-vscode.vsix (rebuilds first if webview sources are newer than dist).
 
 Examples:
   ./scripts/reinstall-dev.sh

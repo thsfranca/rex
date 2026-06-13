@@ -34,7 +34,7 @@ Options:
   --verify                      Run lint, typecheck, and tests before packaging.
   --ci                          Use npm ci instead of npm install (stricter).
   --no-reload                   Skip workbench.action.reloadWindow after install.
-  --only-install                Skip npm/build; install an existing VSIX only.
+  --only-install                Install an existing VSIX only (skipped when webview sources are newer than dist).
   -h, --help                    Show this help.
 
 Environment:
@@ -189,6 +189,19 @@ EOF
 
 EDITOR_CLI="$(resolve_editor_cli)"
 
+webview_bundle_stale() {
+  local dist="${EXT_DIR}/dist/webview.js"
+  if [[ ! -f "${dist}" ]]; then
+    return 0
+  fi
+  local newer
+  newer="$(
+    find "${EXT_DIR}/webview" -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.css' \) \
+      -newer "${dist}" -print -quit 2>/dev/null || true
+  )"
+  [[ -n "${newer}" ]]
+}
+
 LIB_DIR="${ROOT_DIR}/scripts/lib"
 # shellcheck source=lib/editor_cli.sh
 source "${LIB_DIR}/editor_cli.sh"
@@ -197,7 +210,16 @@ if ! extension_engine_preflight "${EDITOR_CLI}" "${PACKAGE_JSON}"; then
   exit 1
 fi
 
-if [[ "${ONLY_INSTALL}" != "true" ]]; then
+SHOULD_BUILD=true
+if [[ "${ONLY_INSTALL}" == "true" ]]; then
+  SHOULD_BUILD=false
+  if webview_bundle_stale; then
+    echo "Webview sources are newer than dist/webview.js; rebuilding before install (--only-install ignored)." >&2
+    SHOULD_BUILD=true
+  fi
+fi
+
+if [[ "${SHOULD_BUILD}" == "true" ]]; then
   echo "Using editor CLI: ${EDITOR_CLI}"
   echo "Installing dependencies in ${EXT_DIR}"
   cd "${EXT_DIR}"

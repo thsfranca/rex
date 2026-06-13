@@ -16,7 +16,7 @@ Open **http://127.0.0.1:3456/** in the Cursor integrated browser:
 2. Navigate to **http://127.0.0.1:3456/**
 3. **Design Mode** — `Cmd+Shift+P` → “Design Mode” (do not rely on `Cmd+Shift+D` in IDE layout)
 4. Click or multi-select elements; ask the agent to edit `webview/components/*.tsx` and `webview/theme/themeVars.css`
-5. After changes, verify in the real extension with `npm run watch:webview` and reload the window
+5. After changes, run `./scripts/reinstall-dev.sh --extension-only` (or `npm run watch:webview` + reload the window). `install-extension.sh` rebuilds automatically when webview sources are newer than `dist/webview.js`.
 
 ## Controls
 
