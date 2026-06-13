@@ -1,0 +1,87 @@
+# Changelog
+
+## [0.2.0](https://github.com/thsfranca/rex/compare/rex-vscode-v0.1.0...rex-vscode-v0.2.0) (2026-06-13)
+
+
+### Added
+
+* add extension foundations, context-efficiency, and path-aware CI gates ([#109](https://github.com/thsfranca/rex/issues/109)) ([f834bec](https://github.com/thsfranca/rex/commit/f834bec6078146d1a9483e71879db46a91183aeb))
+* add extension foundations, context-efficiency, and path-aware CI gates ([#109](https://github.com/thsfranca/rex/issues/109)) ([c32052b](https://github.com/thsfranca/rex/commit/c32052b08029bef7982fa24a2bfe59bbd5d6f4be))
+* add operation feedback during daemon execution ([#299](https://github.com/thsfranca/rex/issues/299)) ([998be8c](https://github.com/thsfranca/rex/commit/998be8ceebf53021283df2cafa68b3eff06feac9))
+* brokered HTTP inference adapter and extension --mode ([#161](https://github.com/thsfranca/rex/issues/161)) ([0c7ab06](https://github.com/thsfranca/rex/commit/0c7ab06d1fad980db15c842a91e8362e38ae6b6e))
+* **cli:** unified rex binary (R014) ([#191](https://github.com/thsfranca/rex/issues/191)) ([b3566ff](https://github.com/thsfranca/rex/commit/b3566ffc717caea0cb33bb6387a05559768e2686))
+* close MVP v1.0 Must RC-* (sidecar broker, policy, observability) ([#183](https://github.com/thsfranca/rex/issues/183)) ([c2e002a](https://github.com/thsfranca/rex/commit/c2e002a9c0fd0d590c7602b4866bdb0d0dd0aadf))
+* **daemon:** broker exec.shell allowlist ([#180](https://github.com/thsfranca/rex/issues/180)) ([4eaa497](https://github.com/thsfranca/rex/commit/4eaa4978883a036045b361e2268878feaa6ecc41))
+* **extension,scripts:** install script, daemon reliability, and stream hardening ([#113](https://github.com/thsfranca/rex/issues/113)) ([965f761](https://github.com/thsfranca/rex/commit/965f761579f884c70370e7a0fe8cbc56220637bd))
+* **extension,scripts:** install script, daemon reliability, and stream hardening ([#113](https://github.com/thsfranca/rex/issues/113)) ([54a4bde](https://github.com/thsfranca/rex/commit/54a4bdefd93b113c79390dacccbabb9da7d33f90))
+* **extension:** @-style context picker (E-UX06) ([#221](https://github.com/thsfranca/rex/issues/221)) ([87bbcb3](https://github.com/thsfranca/rex/commit/87bbcb3ff0c43c079df75737de6e7358cdcd7aa2))
+* **extension/docs:** mode-gated chat flow and agnostic adapter design docs ([#117](https://github.com/thsfranca/rex/issues/117)) ([196c762](https://github.com/thsfranca/rex/commit/196c7626e6482e2a91929f4d5a40a5be470f89fd))
+* **extension/docs:** mode-gated chat flow and agnostic adapter design docs ([#117](https://github.com/thsfranca/rex/issues/117)) ([ebaf146](https://github.com/thsfranca/rex/commit/ebaf1465d9ca2278934857bc26b065e76454f1d7))
+* **extension:** add built-in Get Started walkthrough for REX ([#136](https://github.com/thsfranca/rex/issues/136)) ([27e9da5](https://github.com/thsfranca/rex/commit/27e9da57db32e33ffe7cbf1bc9c551b8ff669e83))
+* **extension:** add built-in Get Started walkthrough for REX ([#136](https://github.com/thsfranca/rex/issues/136)) ([4e60bf3](https://github.com/thsfranca/rex/commit/4e60bf3bfdec590c1ddb69cbcb515f2cbe7fc4dc))
+* **extension:** add rex.modelId setting for complete --model ([#167](https://github.com/thsfranca/rex/issues/167)) ([a060ffd](https://github.com/thsfranca/rex/commit/a060ffd2572f78a22020a6ec7d432dbf9e34aee5))
+* **extension:** chat keybindings and walkthrough (E-UX04) ([#213](https://github.com/thsfranca/rex/issues/213)) ([980b1d0](https://github.com/thsfranca/rex/commit/980b1d01531d1dddf299d712cadc898d0f60cdd2))
+* **extension:** composer slash commands (E-UX07) ([#222](https://github.com/thsfranca/rex/issues/222)) ([ca917b0](https://github.com/thsfranca/rex/commit/ca917b049d84da7564033953d61a19750c9e3b06))
+* **extension:** default productAgentConfig for rex-agent auto-start ([#230](https://github.com/thsfranca/rex/issues/230)) ([38f1b54](https://github.com/thsfranca/rex/commit/38f1b54cbad3888b9989b6b2cf745b906fcdc3fe))
+* **extension:** deliver chat UX PR2 and core lifecycle hardening ([#110](https://github.com/thsfranca/rex/issues/110)) ([cf394a8](https://github.com/thsfranca/rex/commit/cf394a8327829e5bb2074abff109fdfd46b27d01))
+* **extension:** deliver chat UX PR2 and core lifecycle hardening ([#110](https://github.com/thsfranca/rex/issues/110)) ([998af63](https://github.com/thsfranca/rex/commit/998af638f26240d7673efaf57748b162380896dc))
+* **extension:** document sidecar and HTTP setup in Get Started ([#166](https://github.com/thsfranca/rex/issues/166)) ([153090f](https://github.com/thsfranca/rex/commit/153090fe9dbdf967683cdfa47c346f66046c0b1e))
+* **extension:** inline edit on selection (E-UX10) ([#226](https://github.com/thsfranca/rex/issues/226)) ([89b4c6c](https://github.com/thsfranca/rex/commit/89b4c6c9a06e3e014c5fc6fad79bccc300e9bc35))
+* **extension:** multi-file diff review batch (E-UX11) ([#227](https://github.com/thsfranca/rex/issues/227)) ([d2d7077](https://github.com/thsfranca/rex/commit/d2d70774a627c7ac9a544296c2514af856e74393))
+* **extension:** parse tool/step NDJSON and render E-UX09 tool cards ([#233](https://github.com/thsfranca/rex/issues/233)) ([4c6a196](https://github.com/thsfranca/rex/commit/4c6a19606fa29cfbdd59c7feaefe6b4dbd616ad2))
+* **extension:** persisted workspace chat sessions (E-UX05) ([#214](https://github.com/thsfranca/rex/issues/214)) ([9d6c79b](https://github.com/thsfranca/rex/commit/9d6c79b42fd0843c281585b230accf792d7143eb))
+* **extension:** plan review card, Save, and Build handoff (R037 PR3) ([#256](https://github.com/thsfranca/rex/issues/256)) ([4260a27](https://github.com/thsfranca/rex/commit/4260a27cf28ee87dae5ba2ac04c5e094d11df062))
+* **extension:** PR 3 reliability, tag-driven release pipeline, and docs ([#112](https://github.com/thsfranca/rex/issues/112)) ([c36200b](https://github.com/thsfranca/rex/commit/c36200b6ddc1cf58f5cd78041529325ac7338f37))
+* **extension:** PR 3 reliability, tag-driven release pipeline, and docs ([#112](https://github.com/thsfranca/rex/issues/112)) ([691bee9](https://github.com/thsfranca/rex/commit/691bee9f5d440aa32e5db809a2e5c86f1a940574))
+* **extension:** RC-S2 cancel-to-idle tests and hardening ([#207](https://github.com/thsfranca/rex/issues/207)) ([2cbd674](https://github.com/thsfranca/rex/commit/2cbd674c6529262752f943e95ed230f215c88808))
+* **extension:** terminal selection to chat (E-UX08) ([#223](https://github.com/thsfranca/rex/issues/223)) ([6858ed5](https://github.com/thsfranca/rex/commit/6858ed52d8a3044a6414769f826be49337c05667))
+* **extension:** tool and step cards in chat (E-UX09) ([#225](https://github.com/thsfranca/rex/issues/225)) ([c22ad6a](https://github.com/thsfranca/rex/commit/c22ad6a7cdd2d0e835115eb0978a7d18a3e3a0ab))
+* **extension:** webview a11y and narrow-width layout (E-UX03) ([#212](https://github.com/thsfranca/rex/issues/212)) ([17d1982](https://github.com/thsfranca/rex/commit/17d198259f4b5e6f8038a25ae5d665d28faeb885))
+* harden extension stream contract and trace observability ([#115](https://github.com/thsfranca/rex/issues/115)) ([08a9092](https://github.com/thsfranca/rex/commit/08a9092f8849d1628c87ad3ad44078143895b3c9))
+* harden extension stream contract and trace observability ([#115](https://github.com/thsfranca/rex/issues/115)) ([116f52b](https://github.com/thsfranca/rex/commit/116f52b454d4e07fc1e3281d163e292f4e54da14))
+* JSON configuration via REX_ROOT and rex-config (R015) ([c621213](https://github.com/thsfranca/rex/commit/c621213a90d8f5c4a74cfa34efb9979660b6a357))
+* JSON configuration via REX_ROOT and rex-config (R015) ([4002870](https://github.com/thsfranca/rex/commit/4002870321ba086b6bcc7a3d9232c1f49714dab4))
+* Phase 1 sidecar MVP with brokered tools and approval context ([9b62da1](https://github.com/thsfranca/rex/commit/9b62da1cd90726a762ae272ba631bd42bf4685db))
+* Phase 1 sidecar MVP with brokered tools and approval context ([9afaf90](https://github.com/thsfranca/rex/commit/9afaf90d7efcd87c3d0ae54a2b641e3e9cbb8b02))
+* **rex-vscode:** refresh chat webview layout and approvals ([#304](https://github.com/thsfranca/rex/issues/304)) ([5261206](https://github.com/thsfranca/rex/commit/526120673cc08dd943cc94e200a4bb3a87b9905e))
+* workspace binding and extension client hints (R022, R019) ([#204](https://github.com/thsfranca/rex/issues/204)) ([2df28ef](https://github.com/thsfranca/rex/commit/2df28ef6f731c4da38c442e5eee2b59653755988))
+
+
+### Fixed
+
+* **extension:** actionable warning for daemon/spawn/timeout stream failures ([#137](https://github.com/thsfranca/rex/issues/137)) ([aa0c796](https://github.com/thsfranca/rex/commit/aa0c796cd1d8e59b6d0185ec4947f023ab78a9d1))
+* **extension:** actionable warning for daemon/spawn/timeout stream failures ([#137](https://github.com/thsfranca/rex/issues/137)) ([c12edbc](https://github.com/thsfranca/rex/commit/c12edbc8a6dfd21e40fb26c1e4c605b52095b170))
+* **extension:** align deps bump with ESLint 10 and marked ESM ([f1798b1](https://github.com/thsfranca/rex/commit/f1798b1bf59000866ed84c56a3ce8e6b75ccefb0))
+* **extension:** cap rex-cli stderr capture in streamClient ([#128](https://github.com/thsfranca/rex/issues/128)) ([adc840c](https://github.com/thsfranca/rex/commit/adc840ce5f5daf6eb3c7124bc16ae8b5bd86b5cb))
+* **extension:** cap rex-cli stderr capture in streamClient ([#128](https://github.com/thsfranca/rex/issues/128)) ([fa58766](https://github.com/thsfranca/rex/commit/fa58766ae7bc96764e2ce82378b019007732a602))
+* **extension:** elide long daemon-unavailable text in status tooltip ([#129](https://github.com/thsfranca/rex/issues/129)) ([7e3d199](https://github.com/thsfranca/rex/commit/7e3d199c02e66367267f2f5a5d67e7691e70e9df))
+* **extension:** elide long daemon-unavailable text in status tooltip ([#129](https://github.com/thsfranca/rex/issues/129)) ([8b1dc08](https://github.com/thsfranca/rex/commit/8b1dc08968266e3834ec7acf99ebdcac5c82614c))
+* **extension:** NDJSON fixture path for CI typecheck (no import.meta) ([9cceca2](https://github.com/thsfranca/rex/commit/9cceca2b1da90cffd2e76767d68ef0e5ac0eb9c2))
+* **extension:** NDJSON fixture path for CI typecheck (no import.meta) ([390c3d6](https://github.com/thsfranca/rex/commit/390c3d6c16fad980f6ab214b81e9855d5f48743c))
+* **extension:** point operator hints at JSON config and rex-agent ([#229](https://github.com/thsfranca/rex/issues/229)) ([e6f20b0](https://github.com/thsfranca/rex/commit/e6f20b0ee601b213a456910591a7bd69be9385b9))
+* **extension:** rebuild stale webview before extension install ([#305](https://github.com/thsfranca/rex/issues/305)) ([a40ea58](https://github.com/thsfranca/rex/commit/a40ea58daa383cf6a20ed78abe129f3128353ccc))
+* **install:** auto PATH, agent init defaults, and extension cli discovery ([#298](https://github.com/thsfranca/rex/issues/298)) ([af695ac](https://github.com/thsfranca/rex/commit/af695ac50a23d8bc3911febce4e56a564e53f335))
+* **install:** streamline operator install path and preflight checks ([#302](https://github.com/thsfranca/rex/issues/302)) ([a744d1e](https://github.com/thsfranca/rex/commit/a744d1e5d015cae5c62bd0b4b324d11076a0622f))
+
+
+### Documentation
+
+* **extension:** sync agent-mode policy UX and operator guidance ([#234](https://github.com/thsfranca/rex/issues/234)) ([989aee1](https://github.com/thsfranca/rex/commit/989aee1771f23094721bda8d1bd0e36a9dbe2979))
+* long-term memory hub and feature-area documentation policy ([52a334c](https://github.com/thsfranca/rex/commit/52a334c1d8c7e8b4818621a6fe17506cc098ece9))
+* long-term memory hub and feature-area documentation policy ([9b092a6](https://github.com/thsfranca/rex/commit/9b092a6440558b27db1fd2e33a034773e2c15836))
+* LTM hub, feature-area hubs, tracked ADRs ([87f8664](https://github.com/thsfranca/rex/commit/87f866451310dc37eacbd9ce710dda4c183b7a35))
+* LTM hub, feature-area hubs, tracked ADRs ([a43b0b3](https://github.com/thsfranca/rex/commit/a43b0b3d2bb76d5fbbfa885cbe80898e0bbce03f))
+* sync roadmaps and ADR 0009 with shipped MVP state ([#170](https://github.com/thsfranca/rex/issues/170)) ([097e871](https://github.com/thsfranca/rex/commit/097e87105c85f001b539690229e20690a8364d77))
+
+
+### Other
+
+* **deps:** bump the vscode-deps group ([aebedf8](https://github.com/thsfranca/rex/commit/aebedf848d89aae7cb2746040cb013b3f9d32b0b))
+* **deps:** bump the vscode-deps group ([#292](https://github.com/thsfranca/rex/issues/292)) ([be120f3](https://github.com/thsfranca/rex/commit/be120f34bfdefe22fcd7cc81c8f3e8f96de4fce5))
+* **deps:** bump the vscode-deps group in /extensions/rex-vscode with 18 updates ([302dfde](https://github.com/thsfranca/rex/commit/302dfde2984c7dbac5bc03dc2b35b24761d2a626))
+* **extension:** v0.1.0; MVP manual checklist preflight; changelog ([#142](https://github.com/thsfranca/rex/issues/142)) ([f5f8b9e](https://github.com/thsfranca/rex/commit/f5f8b9e4bce4d14989da13ed3fcad9e6beee75f5))
+* **extension:** v0.1.0; MVP manual checklist preflight; changelog ([#142](https://github.com/thsfranca/rex/issues/142)) ([ab1e200](https://github.com/thsfranca/rex/commit/ab1e200faa9a1657be9a4eb7e770606667f13862))
+* maximize Rust and extension workflow speed ([516289d](https://github.com/thsfranca/rex/commit/516289d8876a1e36e4733e32127b4228a088b79f))
+* maximize Rust and extension workflow speed ([0b8c050](https://github.com/thsfranca/rex/commit/0b8c050f14a511369b9dd9798ea129c136950585))
+* maximize Rust and extension workflow speed ([de66093](https://github.com/thsfranca/rex/commit/de66093f69b8ee4bff03194a2e162e0011a3dca9))
+* maximize Rust and extension workflow speed ([4022c6d](https://github.com/thsfranca/rex/commit/4022c6d06f3d1e7c660ea6d8ff319aa372cb8fb7))
