@@ -139,7 +139,7 @@ export function App(): React.ReactElement {
   };
 
   return (
-    <>
+    <div className="rex-shell">
       {state.banner !== undefined ? (
         <div
           className={`rex-status-banner rex-status-banner--${state.banner.level}`}
@@ -208,6 +208,6 @@ export function App(): React.ReactElement {
           });
         }}
       />
-    </>
+    </div>
   );
 }

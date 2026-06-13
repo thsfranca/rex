@@ -17,7 +17,7 @@ export function ToolCard(props: ToolCardProps): React.ReactElement {
     >
       <summary className="rex-tool-card__summary">
         <span className="rex-tool-card__phase">{props.phase}</span>
-        <span>{props.summary}</span>
+        <span className="rex-tool-card__label">{props.summary}</span>
       </summary>
       {props.detail !== undefined && props.detail.length > 0 ? (
         <pre className="rex-tool-card__detail">{props.detail}</pre>

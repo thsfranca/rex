@@ -10,11 +10,21 @@ import type {
   ThemeKind,
 } from "../../src/shared/messages";
 
-import type { PlanArtifactPayload } from "../../src/shared/messages";
+import type { ApprovalRequestPayload, PlanArtifactPayload } from "../../src/shared/messages";
 
+import { ApprovalSection } from "./ApprovalSection";
+import { SendIcon, StopIcon } from "./icons";
 import { Message, type RenderedMessage } from "./Message";
 import { PlanCard } from "./PlanCard";
 import { ToolCard } from "./ToolCard";
+
+const MODES: ReadonlyArray<{ value: InteractionMode; label: string }> = [
+  { value: "ask", label: "Ask" },
+  { value: "plan", label: "Plan" },
+  { value: "agent", label: "Agent" },
+];
+
+type MainView = "chat" | "plan";
 
 export interface ChatProps {
   readonly messages: ReadonlyArray<RenderedMessage>;
@@ -36,7 +46,7 @@ export interface ChatProps {
   }>;
   readonly activityHint?: string;
   readonly planArtifact?: PlanArtifactPayload;
-  readonly pendingApprovals: ReadonlyArray<{ id: string; title: string; detail: string }>;
+  readonly pendingApprovals: ReadonlyArray<ApprovalRequestPayload>;
   readonly prompt: string;
   readonly onPromptChange: (value: string) => void;
   readonly onAttachContextChange: (value: boolean) => void;
@@ -63,25 +73,79 @@ export interface ChatProps {
   readonly onPlanBuild: () => void;
 }
 
+function composerPlaceholder(mode: InteractionMode): string {
+  switch (mode) {
+    case "plan":
+      return "Describe what you want to plan…";
+    case "agent":
+      return "Ask the agent to help with your code…";
+    default:
+      return "Ask a question…";
+  }
+}
+
+function composerStatusHint(args: {
+  streaming: boolean;
+  activityHint?: string;
+  canSend: boolean;
+  daemonReady: boolean;
+}): string {
+  if (args.streaming) {
+    return args.activityHint !== undefined ? `Running ${args.activityHint}…` : "Generating…";
+  }
+  if (!args.daemonReady) {
+    return "Daemon unavailable";
+  }
+  if (args.canSend) {
+    return "Enter to send";
+  }
+  return "Type a prompt";
+}
+
+function planTabLabel(artifact: PlanArtifactPayload): string {
+  const title = artifact.title.trim();
+  if (title.length === 0) {
+    return "Plan";
+  }
+  return title.length > 28 ? `${title.slice(0, 28)}…` : title;
+}
+
 export function Chat(props: ChatProps): React.ReactElement {
   const listRef = React.useRef<HTMLDivElement | null>(null);
+  const [mainView, setMainView] = React.useState<MainView>("chat");
+  const seenPlanStreamId = React.useRef<string | undefined>(undefined);
+
   React.useEffect(() => {
     const el = listRef.current;
-    if (el === null) {
+    if (el === null || mainView !== "chat") {
       return;
     }
     el.scrollTop = el.scrollHeight;
-  }, [props.messages]);
+  }, [props.messages, mainView]);
+
+  React.useEffect(() => {
+    if (props.planArtifact === undefined) {
+      seenPlanStreamId.current = undefined;
+      setMainView("chat");
+      return;
+    }
+    if (props.planArtifact.streamId !== seenPlanStreamId.current) {
+      seenPlanStreamId.current = props.planArtifact.streamId;
+      setMainView("plan");
+    }
+  }, [props.planArtifact]);
 
   const canSend = props.prompt.trim().length > 0 && !props.streaming && props.daemonReady;
   const canMutateFiles = props.modePolicy.canMutateFiles;
+  const hasPlan = props.planArtifact !== undefined;
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
-    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+    if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       if (canSend) {
         props.onSubmit();
       }
+      return;
     }
     if (event.key === "@" && props.prompt.length === 0) {
       event.preventDefault();
@@ -92,33 +156,23 @@ export function Chat(props: ChatProps): React.ReactElement {
   return (
     <div className="rex-app" role="region" aria-label="REX Chat">
       <header className="rex-header">
-        <div className="rex-header__status-wrap">
-          <span className="rex-header__status" aria-live="polite">
-            <span
-              className={`rex-status-dot ${
-                props.daemonReady ? "rex-status-dot--ready" : "rex-status-dot--unavailable"
-              }`}
-            />
-            {props.daemonReady ? "Daemon ready" : "Daemon unavailable"}
-          </span>
-          <label className="rex-mode-select">
-            Mode
-            <select
-              value={props.modePolicy.mode}
-              onChange={(event) => props.onModeChange(event.target.value as InteractionMode)}
-              aria-label="Interaction mode"
-            >
-              <option value="ask">Ask</option>
-              <option value="plan">Plan</option>
-              <option value="agent">Agent</option>
-            </select>
-          </label>
-        </div>
+        <span className="rex-header__brand" aria-live="polite">
+          <span
+            className={`rex-status-dot ${
+              props.daemonReady ? "rex-status-dot--ready" : "rex-status-dot--unavailable"
+            }`}
+            title={props.daemonReady ? "Daemon ready" : "Daemon unavailable"}
+          />
+          <span className="rex-header__title">REX</span>
+          {!props.daemonReady ? (
+            <span className="rex-header__status-text">Unavailable</span>
+          ) : null}
+        </span>
         <span className="rex-header__actions">
-          <button type="button" onClick={props.onCreateSession} aria-label="New chat session">
+          <button type="button" className="rex-header__action" onClick={props.onCreateSession} aria-label="New chat session">
             New
           </button>
-          <button type="button" onClick={props.onClear} aria-label="Clear chat">
+          <button type="button" className="rex-header__action" onClick={props.onClear} aria-label="Clear chat">
             Clear
           </button>
         </span>
@@ -139,150 +193,208 @@ export function Chat(props: ChatProps): React.ReactElement {
           ))}
         </div>
       ) : null}
-      <div className="rex-policy-note">{props.modePolicy.summary}</div>
-      {props.pendingApprovals.map((approval) => (
-        <div key={approval.id} className="rex-approval-card" role="alert">
-          <div className="rex-approval-card__title">{approval.title}</div>
-          <div className="rex-approval-card__detail">{approval.detail}</div>
-          <div className="rex-approval-card__actions">
-            <button type="button" onClick={() => props.onApprovalDecision(approval.id, true)}>
-              Approve
-            </button>
-            <button type="button" onClick={() => props.onApprovalDecision(approval.id, false)}>
-              Deny
-            </button>
-          </div>
+      {hasPlan ? (
+        <div className="rex-view-tabs" role="tablist" aria-label="Chat views">
+          <button
+            type="button"
+            role="tab"
+            id="rex-view-tab-chat"
+            aria-selected={mainView === "chat"}
+            aria-controls="rex-view-panel-chat"
+            className={mainView === "chat" ? "rex-view-tab rex-view-tab--active" : "rex-view-tab"}
+            onClick={() => setMainView("chat")}
+          >
+            Chat
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="rex-view-tab-plan"
+            aria-selected={mainView === "plan"}
+            aria-controls="rex-view-panel-plan"
+            className={mainView === "plan" ? "rex-view-tab rex-view-tab--active" : "rex-view-tab"}
+            onClick={() => setMainView("plan")}
+          >
+            {planTabLabel(props.planArtifact!)}
+          </button>
         </div>
-      ))}
-      <div ref={listRef} className="rex-messages" role="log" aria-live="polite">
-        {props.messages.length === 0 ? (
-          <div className="rex-hint">
-            Ask something about your code. Use editor commands to prefill a prompt, or type @ to attach
-            context.
-          </div>
-        ) : (
-          props.messages.map((message) => (
-            <Message
-              key={message.id}
-              message={message}
-              theme={props.theme}
-              canMutateFiles={canMutateFiles}
-              onCopy={props.onCopy}
-              onInsert={props.onInsert}
-              onApply={props.onApply}
-            />
-          ))
-        )}
-      </div>
-      {props.planArtifact !== undefined ? (
-        <PlanCard
-          artifact={props.planArtifact}
-          onContentChange={props.onPlanContentChange}
-          onSavePathChange={props.onPlanSavePathChange}
-          onSave={props.onPlanSave}
-          onBuild={props.onPlanBuild}
-        />
       ) : null}
-      <div className="rex-composer">
-        {props.context !== null ? (
-          <div className="rex-context-chip" role="group" aria-label="Editor context">
-            <label style={{ display: "inline-flex", gap: 4, alignItems: "center" }}>
-              <input
-                type="checkbox"
-                checked={props.attachContext}
-                onChange={(event) => props.onAttachContextChange(event.target.checked)}
-                aria-label="Attach editor context"
-              />
-              Attach
-            </label>
-            <div className="rex-context-chip__meta">
-              <span className="rex-context-chip__path" title={props.context.filePath}>
-                {props.context.filePath}
-              </span>
-              {props.context.selectionText !== undefined ? (
-                <span className="rex-context-chip__selection">
-                  Selection: {props.context.selectionText.slice(0, 60)}
-                  {props.context.selectionText.length > 60 ? "…" : ""}
-                </span>
+      <div className="rex-main">
+        <ApprovalSection approvals={props.pendingApprovals} onDecision={props.onApprovalDecision} />
+        {mainView === "chat" || !hasPlan ? (
+          <>
+            <div
+              ref={listRef}
+              id="rex-view-panel-chat"
+              role="tabpanel"
+              aria-labelledby={hasPlan ? "rex-view-tab-chat" : undefined}
+              className="rex-messages"
+              aria-live="polite"
+            >
+              {props.messages.length === 0 ? (
+                <div className="rex-empty">
+                  <p className="rex-empty__title">How can I help?</p>
+                  <p className="rex-hint">
+                    Ask about your code, use @ to attach context, or run editor commands to prefill a prompt.
+                  </p>
+                </div>
               ) : (
-                <span className="rex-context-chip__selection">No selection</span>
+                props.messages.map((message) => (
+                  <Message
+                    key={message.id}
+                    message={message}
+                    theme={props.theme}
+                    canMutateFiles={canMutateFiles}
+                    onCopy={props.onCopy}
+                    onInsert={props.onInsert}
+                    onApply={props.onApply}
+                  />
+                ))
               )}
             </div>
+            <div className="rex-composer-area">
+              {props.context !== null ? (
+                <div className="rex-context-chip" role="group" aria-label="Editor context">
+                  <label className="rex-context-chip__attach">
+                    <input
+                      type="checkbox"
+                      checked={props.attachContext}
+                      onChange={(event) => props.onAttachContextChange(event.target.checked)}
+                      aria-label="Attach editor context"
+                    />
+                    Attach
+                  </label>
+                  <div className="rex-context-chip__meta">
+                    <span className="rex-context-chip__path" title={props.context.filePath}>
+                      {props.context.filePath}
+                    </span>
+                    {props.context.selectionText !== undefined ? (
+                      <span className="rex-context-chip__selection">
+                        Selection: {props.context.selectionText.slice(0, 60)}
+                        {props.context.selectionText.length > 60 ? "…" : ""}
+                      </span>
+                    ) : (
+                      <span className="rex-context-chip__selection">No selection</span>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+              {props.attachments.length > 0 ? (
+                <div className="rex-attachment-list" aria-label="Attached context">
+                  {props.attachments.map((attachment) => (
+                    <span key={attachment.id} className="rex-attachment-chip">
+                      @{attachment.label}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${attachment.label}`}
+                        onClick={() => props.onRemoveAttachment(attachment.id)}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {props.timeline.length > 0 ? (
+                <div className="rex-timeline" role="status" aria-live="polite">
+                  {props.timeline.map((entry) => (
+                    <ToolCard
+                      key={entry.toolCallId ?? `${entry.id}-${entry.phase}-${entry.summary}`}
+                      phase={entry.phase}
+                      summary={entry.summary}
+                      kind={entry.kind}
+                      detail={entry.detail}
+                    />
+                  ))}
+                </div>
+              ) : null}
+              <div className="rex-composer-shell">
+                <textarea
+                  className="rex-composer__input"
+                  value={props.prompt}
+                  onChange={(event) => props.onPromptChange(event.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={composerPlaceholder(props.modePolicy.mode)}
+                  aria-label="Prompt"
+                  rows={3}
+                />
+                <div className="rex-composer__toolbar">
+                  <div className="rex-mode-pills" role="group" aria-label="Interaction mode">
+                    {MODES.map((mode) => (
+                      <button
+                        key={mode.value}
+                        type="button"
+                        className={
+                          props.modePolicy.mode === mode.value
+                            ? "rex-mode-pill rex-mode-pill--active"
+                            : "rex-mode-pill"
+                        }
+                        aria-pressed={props.modePolicy.mode === mode.value}
+                        onClick={() => props.onModeChange(mode.value)}
+                      >
+                        {mode.label}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="rex-composer__hint" title={props.modePolicy.summary}>
+                    {composerStatusHint({
+                      streaming: props.streaming,
+                      activityHint: props.activityHint,
+                      canSend,
+                      daemonReady: props.daemonReady,
+                    })}
+                  </span>
+                  <span className="rex-composer__actions">
+                    <button
+                      type="button"
+                      className="rex-icon-button"
+                      onClick={props.onRequestContextPicker}
+                      aria-label="Attach context"
+                    >
+                      @
+                    </button>
+                    {props.streaming ? (
+                      <button
+                        type="button"
+                        className="rex-icon-button rex-icon-button--stop"
+                        onClick={props.onCancel}
+                        aria-label="Stop generation"
+                      >
+                        <StopIcon />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="rex-icon-button rex-icon-button--send"
+                        onClick={props.onSubmit}
+                        disabled={!canSend}
+                        aria-label="Send prompt"
+                      >
+                        <SendIcon />
+                      </button>
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div
+            id="rex-view-panel-plan"
+            role="tabpanel"
+            aria-labelledby="rex-view-tab-plan"
+            className="rex-plan-panel"
+          >
+            <PlanCard
+              panel
+              artifact={props.planArtifact!}
+              onContentChange={props.onPlanContentChange}
+              onSavePathChange={props.onPlanSavePathChange}
+              onSave={props.onPlanSave}
+              onBuild={props.onPlanBuild}
+            />
           </div>
-        ) : null}
-        {props.attachments.length > 0 ? (
-          <div className="rex-attachment-list" aria-label="Attached context">
-            {props.attachments.map((attachment) => (
-              <span key={attachment.id} className="rex-attachment-chip">
-                @{attachment.label}
-                <button
-                  type="button"
-                  aria-label={`Remove ${attachment.label}`}
-                  onClick={() => props.onRemoveAttachment(attachment.id)}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-          </div>
-        ) : null}
-        <textarea
-          value={props.prompt}
-          onChange={(event) => props.onPromptChange(event.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={`${props.modePolicy.mode.toUpperCase()} mode: Cmd/Ctrl+Enter to send; @ for context`}
-          aria-label="Prompt"
-        />
-        {props.timeline.length > 0 ? (
-          <div className="rex-timeline" role="status" aria-live="polite">
-            {props.timeline.map((entry) => (
-              <ToolCard
-                key={entry.toolCallId ?? `${entry.id}-${entry.phase}-${entry.summary}`}
-                phase={entry.phase}
-                summary={entry.summary}
-                kind={entry.kind}
-                detail={entry.detail}
-              />
-            ))}
-          </div>
-        ) : null}
-        <div className="rex-composer__row">
-          <span className="rex-hint">
-            {props.streaming
-              ? props.activityHint
-                ? `Running ${props.activityHint}…`
-                : "Streaming…"
-              : canSend
-                ? "Ready"
-                : props.daemonReady
-                  ? "Type a prompt"
-                  : "Daemon unavailable"}
-          </span>
-          <span style={{ display: "inline-flex", gap: 6 }}>
-            <button type="button" onClick={props.onRequestContextPicker} aria-label="Attach context">
-              @
-            </button>
-            {props.streaming ? (
-              <button
-                type="button"
-                className="rex-composer__cancel"
-                onClick={props.onCancel}
-                aria-label="Stop generation"
-              >
-                Stop
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className="rex-composer__send"
-              onClick={props.onSubmit}
-              disabled={!canSend}
-              aria-label="Send prompt"
-            >
-              Send
-            </button>
-          </span>
-        </div>
+        )}
       </div>
     </div>
   );

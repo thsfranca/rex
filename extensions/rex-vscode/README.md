@@ -80,6 +80,20 @@ npm run package
 
 `npm run package` produces `rex-vscode.vsix`.
 
+## Design Mode preview
+
+Preview the chat webview in Cursor’s integrated browser (mock host APIs + VS Code theme tokens). See [`dev/README.md`](./dev/README.md) for details.
+
+```bash
+cd extensions/rex-vscode
+npm run dev:webview
+```
+
+1. Open **Agents Window** (`Cmd+Shift+P` → “Agents Window”).
+2. Go to **http://127.0.0.1:3456/**
+3. Run **Design Mode** from the command palette (`Cmd+Shift+P` → “Design Mode”).
+4. Edit `webview/components/*.tsx` and `webview/theme/themeVars.css`; keep `npm run watch:webview` running and reload the extension window to verify in the real webview.
+
 ## Settings
 
 | Key | Default | Purpose |

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 
-import type { ApplyGranularity, ApplyResultPayload } from "../shared/messages";
+import type { ApplyGranularity, ApplyResultPayload, FileEditPreview } from "../shared/messages";
 import type { RexProposalProvider } from "../editor/virtualDocs";
 
 export interface ApplyEditRequest {
@@ -86,6 +86,25 @@ export async function applyEditToActiveFile(
     return { outcome: "error", detail: "VS Code refused the edit." };
   }
   return { outcome: "applied", detail: baseTitle };
+}
+
+/** Build a compact before/after preview for in-webview approval UI. */
+export function buildApplyEditPreview(
+  request: ApplyEditRequest,
+  editor: vscode.TextEditor | undefined,
+): FileEditPreview | undefined {
+  if (editor === undefined) {
+    return undefined;
+  }
+  const document = editor.document;
+  const targetRange = resolveTargetRange(document, editor.selection, request.granularity);
+  const before = document.getText(targetRange);
+  return {
+    filePath: vscode.workspace.asRelativePath(document.uri),
+    languageId: document.languageId,
+    before,
+    after: request.code,
+  };
 }
 
 function resolveTargetRange(

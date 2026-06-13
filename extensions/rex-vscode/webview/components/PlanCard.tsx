@@ -6,6 +6,7 @@ import { parseClarifyQuestions } from "../../src/runtime/planContent";
 
 export interface PlanCardProps {
   readonly artifact: PlanArtifactPayload;
+  readonly panel?: boolean;
   readonly onContentChange: (content: string) => void;
   readonly onSavePathChange: (path: string) => void;
   readonly onSave: () => void;
@@ -18,7 +19,10 @@ export function PlanCard(props: PlanCardProps): React.ReactElement {
   const canHandoff = props.artifact.phase === "ready";
 
   return (
-    <section className="rex-plan-card" aria-label="Plan review">
+    <section
+      className={props.panel === true ? "rex-plan-card rex-plan-card--panel" : "rex-plan-card"}
+      aria-label="Plan review"
+    >
       <header className="rex-plan-card__header">
         <span className="rex-plan-card__phase">{props.artifact.phase}</span>
         <h3 className="rex-plan-card__title">{props.artifact.title}</h3>

@@ -74,6 +74,15 @@ export interface ApprovalRequestPayload {
   readonly scope: ApprovalScope;
   readonly title: string;
   readonly detail: string;
+  /** Optional before/after snippets for in-webview diff preview. */
+  readonly edits?: ReadonlyArray<FileEditPreview>;
+}
+
+export interface FileEditPreview {
+  readonly filePath: string;
+  readonly languageId?: string;
+  readonly before: string;
+  readonly after: string;
 }
 
 export interface ApprovalDecisionPayload {

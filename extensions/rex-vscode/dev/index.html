@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" data-rex-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>REX chat — Design Mode preview</title>
+    <link rel="stylesheet" href="/dev/themeVars.css" />
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+        margin: 0;
+      }
+
+      .rex-dev-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+        padding: 4px 10px;
+        font: 11px/1.4 var(--vscode-font-family, sans-serif);
+        color: var(--vscode-foreground, #ccc);
+        background: var(--vscode-sideBar-background, #252526);
+        border-bottom: 1px solid var(--vscode-panel-border, #454545);
+      }
+
+      .rex-dev-toolbar button {
+        font: inherit;
+        padding: 2px 8px;
+        border-radius: 2px;
+        border: 1px solid var(--vscode-panel-border, #454545);
+        background: var(--vscode-button-secondaryBackground, #3a3d41);
+        color: var(--vscode-button-secondaryForeground, #ccc);
+        cursor: pointer;
+      }
+
+      .rex-dev-toolbar button:hover {
+        background: var(--vscode-button-secondaryHoverBackground, #45494e);
+      }
+
+      .rex-dev-toolbar__hint {
+        opacity: 0.75;
+        margin-left: auto;
+      }
+
+      #rex-root {
+        flex: 1;
+        min-height: 0;
+        height: auto;
+      }
+    </style>
+    <!-- Mock acquireVsCodeApi before the webview bundle loads -->
+    <script src="/dev/mock-host.js"></script>
+  </head>
+  <body>
+    <div class="rex-dev-toolbar" aria-label="REX dev harness controls">
+      <button type="button" id="rex-dev-toggle-theme">Toggle light/dark theme</button>
+      <button type="button" id="rex-dev-reseed">Reseed UI state</button>
+      <span class="rex-dev-toolbar__hint">Design Mode: Cmd+Shift+P → “Design Mode”</span>
+    </div>
+    <div id="rex-root"></div>
+    <script src="/dist/webview.js"></script>
+    <script>
+      document.getElementById("rex-dev-toggle-theme")?.addEventListener("click", () => {
+        window.__REX_DEV__?.toggleTheme();
+      });
+      document.getElementById("rex-dev-reseed")?.addEventListener("click", () => {
+        window.__REX_DEV__?.reseed();
+      });
+    </script>
+  </body>
+</html>

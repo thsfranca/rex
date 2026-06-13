@@ -3,6 +3,9 @@ import * as React from "react";
 import type { ApplyGranularity, ApplyResultPayload, ThemeKind } from "../../src/shared/messages";
 import { highlight } from "../streaming/highlight";
 
+/** Lines above this show collapsed preview + expand control (Open WebUI / EUI pattern). */
+const COLLAPSE_LINE_THRESHOLD = 14;
+
 export interface CodeBlockProps {
   readonly id: string;
   readonly language: string;
@@ -27,14 +30,27 @@ const STATUS_LABEL: Record<string, string> = {
   error: "Error",
 };
 
+function countLines(code: string): number {
+  if (code.length === 0) {
+    return 0;
+  }
+  return code.split("\n").length;
+}
+
 export function CodeBlock(props: CodeBlockProps): React.ReactElement {
   const { id, language, code, theme, applyResult, onCopy, onInsert, onApply, canMutateFiles } = props;
   const [highlighted, setHighlighted] = React.useState<string | undefined>(undefined);
   const [copied, setCopied] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
+
+  const lineCount = countLines(code);
+  const isCollapsible = lineCount > COLLAPSE_LINE_THRESHOLD;
+  const isCollapsed = isCollapsible && !expanded;
+  const langLabel = language || "text";
 
   React.useEffect(() => {
     let cancelled = false;
-    void highlight(code, language || "text", theme).then((html) => {
+    void highlight(code, langLabel, theme).then((html) => {
       if (!cancelled) {
         setHighlighted(html);
       }
@@ -42,7 +58,11 @@ export function CodeBlock(props: CodeBlockProps): React.ReactElement {
     return () => {
       cancelled = true;
     };
-  }, [code, language, theme]);
+  }, [code, langLabel, theme]);
+
+  React.useEffect(() => {
+    setExpanded(false);
+  }, [code]);
 
   const handleCopy = (): void => {
     onCopy(code);
@@ -50,11 +70,27 @@ export function CodeBlock(props: CodeBlockProps): React.ReactElement {
     window.setTimeout(() => setCopied(false), 1500);
   };
 
+  const scrollClassName = isCollapsed
+    ? "rex-codeblock__scroll rex-codeblock__scroll--collapsed"
+    : isCollapsible
+      ? "rex-codeblock__scroll rex-codeblock__scroll--expanded"
+      : "rex-codeblock__scroll";
+
   return (
-    <div className="rex-codeblock" role="group" aria-label={`Code block (${language || "text"})`}>
+    <div className="rex-codeblock" role="group" aria-label={`Code block (${langLabel})`}>
       <div className="rex-codeblock__header">
-        <span className="rex-codeblock__lang">{language || "text"}</span>
+        <span className="rex-codeblock__lang">{langLabel}</span>
         <div className="rex-codeblock__actions">
+          {isCollapsible ? (
+            <button
+              type="button"
+              onClick={() => setExpanded((value) => !value)}
+              aria-expanded={!isCollapsed}
+              aria-label={isCollapsed ? `Show all ${lineCount} lines` : "Collapse code block"}
+            >
+              {isCollapsed ? `Show all (${lineCount})` : "Collapse"}
+            </button>
+          ) : null}
           <button type="button" onClick={handleCopy} aria-label="Copy code">
             {copied ? "Copied" : "Copy"}
           </button>
@@ -73,15 +109,30 @@ export function CodeBlock(props: CodeBlockProps): React.ReactElement {
           </button>
         </div>
       </div>
-      <div className="rex-codeblock__body">
+      <div
+        className={scrollClassName}
+        tabIndex={0}
+        role="region"
+        aria-label={`${langLabel} code, scroll horizontally for long lines`}
+      >
         {highlighted !== undefined ? (
-          <div dangerouslySetInnerHTML={{ __html: highlighted }} />
+          <div className="rex-codeblock__highlight" dangerouslySetInnerHTML={{ __html: highlighted }} />
         ) : (
           <pre>
             <code>{code}</code>
           </pre>
         )}
       </div>
+      {isCollapsed ? (
+        <button
+          type="button"
+          className="rex-codeblock__expand-bar"
+          onClick={() => setExpanded(true)}
+          aria-label={`Show all ${lineCount} lines of code`}
+        >
+          {lineCount - COLLAPSE_LINE_THRESHOLD} more lines — expand
+        </button>
+      ) : null}
       {applyResult !== undefined ? (
         <div
           className={`rex-codeblock__status rex-codeblock__status--${applyResult.outcome}`}

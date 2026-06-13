@@ -28,7 +28,7 @@
           "id": "rex",
           "title": "REX",
           "icon": "media/rex-activity.svg",
-          "when": "rex.useActivityBarChat"
+          "when": "rex.chatSidebar == left"
         }
       ],
       "secondarySidebar": [
@@ -36,7 +36,7 @@
           "id": "rex-secondary",
           "title": "REX",
           "icon": "media/rex-activity.svg",
-          "when": "!rex.useActivityBarChat"
+          "when": "rex.chatSidebar == right"
         }
       ]
     },
@@ -199,6 +199,44 @@
           "default": "",
           "description": "Optional REX_ROOT path passed to the daemon child when auto-start is enabled. Leave empty to use the default layout (~/.rex or $REX_ROOT from the environment).",
           "scope": "machine-overridable"
+        },
+        "rex.chatLocation": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "right",
+            "left",
+            "editor"
+          ],
+          "enumDescriptions": [
+            "Right secondary sidebar when the editor supports it (VS Code 1.106+); otherwise left activity bar.",
+            "Right secondary sidebar (falls back to left activity bar on older editors).",
+            "Left activity bar.",
+            "Editor tab panel (use **REX: Open Chat** or **REX: Open Chat in Editor**)."
+          ],
+          "description": "Default placement for REX chat. Changing this may require a window reload for the sidebar container to move.",
+          "scope": "application"
+        },
+        "rex.editorChatColumn": {
+          "type": "string",
+          "default": "beside",
+          "enum": [
+            "beside",
+            "active",
+            "one",
+            "two",
+            "three"
+          ],
+          "enumDescriptions": [
+            "Open beside the active editor (typical right-side editor split).",
+            "Replace the active editor tab.",
+            "First editor column.",
+            "Second editor column.",
+            "Third editor column."
+          ],
+          "description": "Editor column when chat opens as an editor tab (`rex.chatLocation`: editor, or **REX: Open Chat in Editor**).",
+          "scope": "application"
         }
       }
     },
@@ -247,7 +285,7 @@
           {
             "id": "rex.getStarted.chat",
             "title": "Open REX chat and send a prompt",
-            "description": "When the status bar is **REX ready**, open chat beside the editor (secondary sidebar on recent VS Code hosts) or from the activity bar on older hosts. Use **REX: Open Chat in Editor** for a full tab. Shortcuts: focus chat (Cmd/Ctrl+Shift+L), stop generation (Escape while streaming), clear chat (Cmd/Ctrl+Shift+K).\n\n[REX: Open Chat](command:rex.focusChat)",
+            "description": "When the status bar is **REX ready**, open chat with **REX: Open Chat** (Cmd/Ctrl+Shift+L). Default placement is the right secondary sidebar on recent VS Code hosts; set **REX › Chat: Location** to choose left sidebar, right sidebar, or an editor tab. Use **REX: Open Chat in Editor** for a dedicated tab beside your code. Shortcuts: stop generation (Escape while streaming), clear chat (Cmd/Ctrl+Shift+K).\n\n[REX: Open Chat](command:rex.focusChat)",
             "media": {
               "path": "media/rex-activity.svg",
               "altText": "REX"
@@ -267,6 +305,10 @@
     "build": "npm run build:extension && npm run build:webview",
     "watch:extension": "node esbuild.extension.mjs --watch",
     "watch:webview": "node esbuild.webview.mjs --watch",
+    "build:harness": "node esbuild.dev.mjs",
+    "watch:harness": "node esbuild.dev.mjs --watch",
+    "serve:harness": "node dev/serve.mjs",
+    "dev:webview": "node dev/serve.mjs",
     "lint": "eslint \"src/**/*.ts\" \"webview/**/*.{ts,tsx}\"",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.webview.json --noEmit",
     "test": "vitest run --coverage",
