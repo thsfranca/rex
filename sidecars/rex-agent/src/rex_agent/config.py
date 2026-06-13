@@ -10,7 +10,8 @@ from typing import Any, Optional
 DEFAULT_DAEMON_SOCKET = "/tmp/rex.sock"
 DEFAULT_SIDECAR_SOCKET = "/tmp/rex-sidecar.sock"
 DEFAULT_MAX_TOOL_STEPS = 12
-DEFAULT_MAX_TOOL_STEPS_ASK = 5
+DEFAULT_MAX_TOOL_STEPS_ASK = 8
+DEFAULT_MAX_TOOL_STEPS_PLAN = 20
 DEFAULT_MAX_TOOLS_PER_STEP = 8
 DEFAULT_MAX_TOOL_RESULT_BYTES = 8192
 DEFAULT_COMPACTION_SUFFIX_FRACTION = 0.25
@@ -76,11 +77,18 @@ def max_tool_steps_for_mode(mode: str) -> int:
             if isinstance(steps, int) and steps > 0:
                 return steps
             return DEFAULT_MAX_TOOL_STEPS_ASK
+        if normalized == "plan":
+            steps = agent.get("max_tool_steps_plan")
+            if isinstance(steps, int) and steps > 0:
+                return steps
+            return DEFAULT_MAX_TOOL_STEPS_PLAN
         steps = agent.get("max_tool_steps")
         if isinstance(steps, int) and steps > 0:
             return steps
     if normalized == "ask":
         return DEFAULT_MAX_TOOL_STEPS_ASK
+    if normalized == "plan":
+        return DEFAULT_MAX_TOOL_STEPS_PLAN
     return DEFAULT_MAX_TOOL_STEPS
 
 

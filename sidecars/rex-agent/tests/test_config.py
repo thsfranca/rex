@@ -96,6 +96,33 @@ def test_ask_tool_steps_from_config_override(
     assert config.max_tool_steps_for_mode("agent") == 12
 
 
+def test_plan_tool_steps_do_not_inherit_agent_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "rex"
+    root.mkdir()
+    (root / "config.json").write_text(
+        json.dumps({"agent": {"max_tool_steps": 12}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
+    assert config.max_tool_steps_for_mode("plan") == config.DEFAULT_MAX_TOOL_STEPS_PLAN
+    assert config.max_tool_steps_for_mode("agent") == 12
+
+
+def test_plan_tool_steps_from_config_override(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "rex"
+    root.mkdir()
+    (root / "config.json").write_text(
+        json.dumps({"agent": {"max_tool_steps_plan": 15}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
+    assert config.max_tool_steps_for_mode("plan") == 15
+
+
 def test_agent_limits_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
     assert config.max_tool_steps() == config.DEFAULT_MAX_TOOL_STEPS

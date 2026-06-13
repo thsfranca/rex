@@ -26,6 +26,8 @@ def _limit_key_for_mode(mode: str) -> str:
     normalized = (mode or "ask").strip().lower() or "ask"
     if normalized == "ask":
         return "agent.max_tool_steps_ask"
+    if normalized == "plan":
+        return "agent.max_tool_steps_plan"
     return "agent.max_tool_steps"
 
 

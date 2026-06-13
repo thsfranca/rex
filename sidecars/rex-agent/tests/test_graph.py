@@ -79,7 +79,7 @@ def test_tool_step_limit_stops_loop() -> None:
         graph.set_inference_fn(None)
         _reset_graphs()
 
-    assert "agent.max_tool_steps" in answer
+    assert "agent.max_tool_steps_plan" in answer
 
 
 def test_plan_mode_batches_three_reads_one_step() -> None:

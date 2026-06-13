@@ -307,6 +307,9 @@ fn merge_agent(base: &mut crate::model::AgentConfig, overlay: crate::model::Agen
     if overlay.max_tool_steps_ask != 0 {
         base.max_tool_steps_ask = overlay.max_tool_steps_ask;
     }
+    if overlay.max_tool_steps_plan != 0 {
+        base.max_tool_steps_plan = overlay.max_tool_steps_plan;
+    }
     if overlay.max_tools_per_step != 0 {
         base.max_tools_per_step = overlay.max_tools_per_step;
     }
