@@ -225,7 +225,7 @@ Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. 
 | **R062** | Prefix-safe compaction config | **Done** |
 | **R063** | Soft cap Continue UX | **Done** |
 | **R064** | Loop observability + golden prompts | **Done** |
-| **R065** | Injected files manifest | Open — **after R064** |
+| **R065** | Injected files manifest | **Done** |
 | R016 | Multi-active broadcast | **Could** — rank **18** |
 | **R036** | TRON static schema compression | **Could** — rank **16** |
 | **R033** | MCP gRPC client | **Could** — rank **17** |

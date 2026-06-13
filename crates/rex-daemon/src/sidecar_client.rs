@@ -44,6 +44,7 @@ fn run_turn_request(
     mode: &str,
     model: &str,
     correlation: &TurnCorrelation,
+    injected_files: Vec<String>,
 ) -> RunTurnRequest {
     RunTurnRequest {
         prompt: prompt.to_string(),
@@ -51,6 +52,7 @@ fn run_turn_request(
         model: model.to_string(),
         turn_id: correlation.turn_id.clone(),
         context_revision: correlation.context_revision.clone(),
+        injected_files,
     }
 }
 
@@ -77,8 +79,9 @@ pub async fn run_turn_collect(
     mode: &str,
     model: &str,
     correlation: &TurnCorrelation,
+    injected_files: Vec<String>,
 ) -> Result<Vec<RunTurnChunk>, tonic::Status> {
-    let request = run_turn_request(prompt, mode, model, correlation);
+    let request = run_turn_request(prompt, mode, model, correlation, injected_files);
     let mut grpc_stream = client.run_turn(request).await?.into_inner();
     let mut chunks = Vec::new();
     while let Some(chunk) = grpc_stream.message().await? {
@@ -113,8 +116,9 @@ pub async fn run_turn_stream(
     mode: &str,
     model: &str,
     correlation: &TurnCorrelation,
+    injected_files: Vec<String>,
 ) -> Result<RunTurnInferenceStream, tonic::Status> {
-    let request = run_turn_request(prompt, mode, model, correlation);
+    let request = run_turn_request(prompt, mode, model, correlation, injected_files);
     let mut grpc_stream = client.run_turn(request).await?.into_inner();
     Ok(Box::pin(stream! {
         while let Some(chunk) = grpc_stream.message().await? {
@@ -139,10 +143,24 @@ mod tests {
     use crate::turn_correlation::build_turn_correlation;
 
     #[test]
+    fn run_turn_request_populates_injected_files() {
+        let correlation =
+            build_turn_correlation(3, "ctx-body", "ran", "extractive_query", 1, false);
+        let request = run_turn_request(
+            "hello",
+            "ask",
+            "model-a",
+            &correlation,
+            vec!["README.md".to_string()],
+        );
+        assert_eq!(request.injected_files, vec!["README.md"]);
+    }
+
+    #[test]
     fn run_turn_request_populates_correlation_fields() {
         let correlation =
             build_turn_correlation(3, "ctx-body", "ran", "extractive_query", 1, false);
-        let request = run_turn_request("hello", "ask", "model-a", &correlation);
+        let request = run_turn_request("hello", "ask", "model-a", &correlation, Vec::new());
         assert_eq!(request.turn_id, "turn-3");
         assert!(request.context_revision.starts_with("ctx-"));
     }

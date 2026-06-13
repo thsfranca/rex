@@ -117,6 +117,7 @@ Daemon-assembled snapshot at turn start. Not yet a separate proto message in Pha
 |-------|-------------|
 | **1** | `RunTurnRequest.prompt` = serialized effective turn (user + layered prefix + `[context]` suffix) |
 | **1b** | Add optional `turn_id`, `context_revision` on [sidecar.proto](../proto/rex/sidecar/v1/sidecar.proto) |
+| **R065** | Add optional `injected_files[]` on `RunTurnRequest` — paths already embedded in daemon `[context]`; sidecar skips redundant `fs.read` during deterministic init and adds a system note for the LLM |
 
 ### Non-goals
 

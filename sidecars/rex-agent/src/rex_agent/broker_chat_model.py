@@ -17,6 +17,7 @@ from rex_agent.broker import (
 from rex_agent.tools import (
     ParsedModelOutput,
     ToolGateContext,
+    injected_files_system_note,
     parse_model_output,
     system_prompt_for_tools,
 )
@@ -33,6 +34,7 @@ def messages_to_prompt(
     subagent: str = "orchestrator",
     viewer_summary: str = "",
     gate: ToolGateContext | None = None,
+    injected_files: list[str] | None = None,
 ) -> str:
     """Static prefix first (system + daemon context), volatile suffix last."""
     tool_mode = mode
@@ -44,6 +46,9 @@ def messages_to_prompt(
     parts: list[str] = [
         f"[system]\n{system_prompt_for_tools(tool_mode, subagent=subagent, gate=gate)}"
     ]
+    manifest_note = injected_files_system_note(list(injected_files or []))
+    if manifest_note:
+        parts.append(f"[system]\n{manifest_note}")
     if viewer_summary and subagent == "editor":
         parts.append(f"[system]\nExploration summary:\n{viewer_summary}")
 
@@ -86,6 +91,7 @@ def messages_to_chat_messages(
     subagent: str = "orchestrator",
     viewer_summary: str = "",
     gate: ToolGateContext | None = None,
+    injected_files: list[str] | None = None,
 ) -> list[Any]:
     """Structured chat history for native BrokerInference (R038)."""
     try:
@@ -107,6 +113,9 @@ def messages_to_chat_messages(
             content=system_prompt_for_tools(tool_mode, subagent=subagent, gate=gate),
         )
     ]
+    manifest_note = injected_files_system_note(list(injected_files or []))
+    if manifest_note:
+        chat.append(rex_pb2.ChatMessage(role="system", content=manifest_note))
     if viewer_summary and subagent == "editor":
         chat.append(
             rex_pb2.ChatMessage(

@@ -33,3 +33,4 @@ class AgentState(TypedDict):
     goal_hint: str
     workspace_explored: bool
     soft_cap_continued: bool
+    injected_files: list[str]

@@ -195,6 +195,7 @@ async fn stub_sidecar_run_turn_broker_error_without_daemon() {
                 turn_id: String::new(),
                 context_revision: String::new(),
             },
+            Vec::new(),
         )
         .await
         .expect("run turn")

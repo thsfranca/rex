@@ -320,6 +320,7 @@ async fn agent_sidecar_health_and_broker_error_without_daemon() {
                 turn_id: "turn-agent-smoke".to_string(),
                 context_revision: String::new(),
             },
+            Vec::new(),
         )
         .await
         .expect("run turn")

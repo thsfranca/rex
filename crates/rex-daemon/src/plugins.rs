@@ -92,6 +92,24 @@ pub struct PipelineResult {
     pub metrics: PipelineMetrics,
 }
 
+/// Paths already embedded in daemon context for sidecar skip logic (R065).
+pub fn build_injected_files_manifest(
+    active_file_path: Option<&str>,
+    injected_context: &str,
+) -> Vec<String> {
+    let mut paths: Vec<String> = Vec::new();
+    if let Some(path) = active_file_path.map(str::trim).filter(|value| !value.is_empty()) {
+        paths.push(path.to_string());
+    }
+    let lower = injected_context.to_ascii_lowercase();
+    if lower.contains("readme") || lower.contains("<<tool_result:fs.read>>") {
+        paths.push("README.md".to_string());
+    }
+    paths.sort();
+    paths.dedup();
+    paths
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ContextChunk {
     pub source: String,
@@ -599,8 +617,9 @@ fn score_terms(query_terms: &[String], doc_terms: &[String]) -> usize {
 #[cfg(test)]
 mod tests {
     use super::{
-        stable_prefix_key, BehaviorSnapshot, CacheStatus, ContextChunk, ContextPipeline,
-        ContextRequest, ExtractiveContextCompressor, LexicalWorkspaceIndexer, TokenBudget,
+        build_injected_files_manifest, stable_prefix_key, BehaviorSnapshot, CacheStatus,
+        ContextChunk, ContextPipeline, ContextRequest, ExtractiveContextCompressor,
+        LexicalWorkspaceIndexer, TokenBudget,
     };
     use crate::adapters::{AdapterCapabilities, RuntimeKind};
     use std::fs;
@@ -629,6 +648,15 @@ mod tests {
         let budget = TokenBudget::from_config();
         assert_eq!(budget.max_prompt_tokens, 64);
         crate::settings::reset_for_test();
+    }
+
+    #[test]
+    fn build_injected_files_manifest_includes_active_file_and_readme() {
+        let manifest = build_injected_files_manifest(
+            Some("src/main.rs"),
+            "[context]\n<<tool_result:fs.read>> README.md\n# rex",
+        );
+        assert_eq!(manifest, vec!["README.md".to_string(), "src/main.rs".to_string()]);
     }
 
     #[test]

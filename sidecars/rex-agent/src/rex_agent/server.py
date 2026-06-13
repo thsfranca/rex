@@ -106,8 +106,15 @@ class AgentServicer(sidecar_pb2_grpc.SidecarServiceServicer):
         )
 
     def RunTurn(self, request, context) -> Iterator[sidecar_pb2.RunTurnChunk]:  # noqa: N802
+        injected = list(getattr(request, "injected_files", None) or [])
         yield from self._stream_events(
-            stream_turn(request.prompt, (request.mode or "").strip() or "ask", request.model or "", getattr(request, "turn_id", "") or ""),
+            stream_turn(
+                request.prompt,
+                (request.mode or "").strip() or "ask",
+                request.model or "",
+                getattr(request, "turn_id", "") or "",
+                injected,
+            ),
             getattr(request, "turn_id", "") or "",
         )
 

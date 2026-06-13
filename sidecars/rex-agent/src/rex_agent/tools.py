@@ -23,6 +23,25 @@ TOOL_EXEC = "exec.shell"
 TOOL_PLAN_SAVE = "plan.save"
 TOOL_WEB_SEARCH = "web.search"
 
+
+def injected_files_system_note(injected_files: list[str]) -> str:
+    paths = sorted(
+        {
+            path.strip().lstrip("./").lower()
+            for path in injected_files
+            if path.strip()
+        }
+    )
+    if not paths:
+        return ""
+    joined = ", ".join(paths)
+    return (
+        "The daemon already embedded file contents in context for: "
+        f"{joined}. Do not call fs.read on these paths unless the user "
+        "asks for updated content."
+    )
+
+
 MAX_CLARIFY_QUESTIONS = 3
 PLAN_PROMPT_SLICE = (
     "Plan mode: explore with fs.read/fs.list only; no patches or shell. "
