@@ -27,6 +27,7 @@
   "include": [
     "webview/**/*.ts",
     "webview/**/*.tsx",
+    "dev/**/*.ts",
     "src/shared/**/*.ts"
   ],
   "exclude": [

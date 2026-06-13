@@ -3,10 +3,11 @@ import * as vscode from "vscode";
 import { readSettings, onSettingsChanged, type RexSettings } from "./config/settings";
 import { snapshotActiveEditor } from "./editor/context";
 import { activateCursorAdapter } from "./platform/cursorAdapter";
-import { configureChatLayoutContext } from "./platform/editorLayout";
+import { applyChatLayoutContext, resolveEditorViewColumn } from "./platform/editorLayout";
 import { DaemonLifecycle, type DaemonLifecycleState } from "./runtime/daemonLifecycle";
 import { streamFailureWantsSetupHint } from "./runtime/userActionableFailure";
-import { ChatPanelProvider, CHAT_VIEW_ID, CHAT_VIEW_SECONDARY_ID } from "./ui/chatPanel";
+import { ChatPanelProvider } from "./ui/chatPanel";
+import { focusRexChat } from "./ui/focusChat";
 import { openEditorChatPanel } from "./ui/editorChatPanel";
 import { runInlineEditOnSelection } from "./ui/inlineEdit";
 import { createStatusBar, type StatusBar } from "./ui/statusBar";
@@ -29,13 +30,12 @@ interface ActivationResources {
 let resources: ActivationResources | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  await configureChatLayoutContext();
+  const settings = readSettings();
+  await applyChatLayoutContext(settings.chatLocation);
   const output = vscode.window.createOutputChannel("REX");
   context.subscriptions.push(output);
   const statusBar = createStatusBar();
   context.subscriptions.push({ dispose: () => statusBar.dispose() });
-
-  const settings = readSettings();
   output.appendLine(`[activate] settings: ${summarizeSettings(settings)}`);
 
   const chatPanel = new ChatPanelProvider({
@@ -151,18 +151,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   context.subscriptions.push(
     vscode.commands.registerCommand("rex.focusChat", async () => {
-      const secondary = `${CHAT_VIEW_SECONDARY_ID}.focus`;
-      try {
-        await vscode.commands.executeCommand(secondary);
-      } catch {
-        await vscode.commands.executeCommand(`${CHAT_VIEW_ID}.focus`);
-      }
+      const current = resources?.settings ?? readSettings();
+      await focusRexChat(context, current, (raw) => chatPanel.handleExternalMessage(raw));
     }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("rex.openChatInEditor", () => {
-      openEditorChatPanel(context, (raw) => chatPanel.handleExternalMessage(raw));
+      const current = resources?.settings ?? readSettings();
+      openEditorChatPanel(
+        context,
+        (raw) => chatPanel.handleExternalMessage(raw),
+        resolveEditorViewColumn(current.editorChatColumn),
+      );
     }),
   );
 
@@ -229,10 +230,25 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
-    onSettingsChanged((updated) => {
+    onSettingsChanged(async (updated, event) => {
       output.appendLine(`[settings] changed -> ${summarizeSettings(updated)}`);
       if (resources === undefined) {
         return;
+      }
+      const chatLocationChanged =
+        event === undefined || event.affectsConfiguration("rex.chatLocation");
+      if (chatLocationChanged) {
+        await applyChatLayoutContext(updated.chatLocation);
+        void vscode.window
+          .showInformationMessage(
+            "REX chat location changed. Reload the window for the sidebar container to move.",
+            "Reload Window",
+          )
+          .then((choice) => {
+            if (choice === "Reload Window") {
+              void vscode.commands.executeCommand("workbench.action.reloadWindow");
+            }
+          });
       }
       const previousLifecycle = resources.lifecycle;
       resources.settings = updated;
@@ -278,7 +294,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         ? `${template}\n\nSelection:\n\`\`\`${snapshot.languageId}\n${snapshot.selectionText}\n\`\`\``
         : template;
     chatPanel.prefillPrompt({ prompt, context: snapshot });
-    await vscode.commands.executeCommand(`${CHAT_VIEW_ID}.focus`);
+    await focusRexChat(context, resources?.settings ?? readSettings(), (raw) =>
+      chatPanel.handleExternalMessage(raw),
+    );
   }
 }
 

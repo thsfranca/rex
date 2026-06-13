@@ -17,6 +17,7 @@ import type {
   ContextAttachment,
   ExecutionStepPayload,
   ExtensionToWebview,
+  FileEditPreview,
   InteractionMode,
   ModePolicy,
   PromptPrefillPayload,
@@ -25,7 +26,7 @@ import type {
 } from "../shared/messages";
 
 import { postToEditorPanel } from "./editorChatPanel";
-import { applyEditToActiveFile } from "./applyEdit";
+import { applyEditToActiveFile, buildApplyEditPreview } from "./applyEdit";
 import {
   reviewMultiFileProposals,
   type FileProposal,
@@ -613,11 +614,24 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       return;
     }
     if (policy.requiresMutationApproval) {
+      const editor = vscode.window.activeTextEditor;
+      const preview = buildApplyEditPreview(
+        {
+          id: message.id,
+          code: message.code,
+          language: message.language,
+          granularity: message.granularity,
+        },
+        editor,
+      );
       const approved = await this.requestApproval(
         `apr-mut-${message.id}`,
         "mutation",
         "Approve file mutation",
-        "Apply this code block to the active editor?",
+        preview !== undefined
+          ? `Changes to ${preview.filePath}`
+          : "Apply this code block to the active editor?",
+        preview !== undefined ? [preview] : undefined,
       );
       if (!approved) {
         this.postMessage({
@@ -653,11 +667,26 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       return;
     }
     if (policy.requiresMutationApproval) {
+      const editor = vscode.window.activeTextEditor;
+      const insertPreview =
+        editor !== undefined
+          ? {
+              filePath: vscode.workspace.asRelativePath(editor.document.uri),
+              languageId: editor.document.languageId,
+              before: editor.selection.isEmpty
+                ? ""
+                : editor.document.getText(editor.selection),
+              after: message.code,
+            }
+          : undefined;
       const approved = await this.requestApproval(
         `apr-ins-${Date.now()}`,
         "mutation",
         "Approve insertion",
-        "Insert this code block in the active editor?",
+        insertPreview !== undefined
+          ? `Insert into ${insertPreview.filePath}`
+          : "Insert this code block in the active editor?",
+        insertPreview !== undefined ? [insertPreview] : undefined,
       );
       if (!approved) {
         this.postMessage({
@@ -723,11 +752,18 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
     scope: ApprovalScope,
     title: string,
     detail: string,
+    edits?: ReadonlyArray<FileEditPreview>,
   ): Promise<boolean> {
     this.emitExecutionStep(id, "awaiting_approval", `${title}: ${detail}`, "step");
     this.postMessage({
       type: "approvalRequested",
-      payload: { id, scope, title, detail },
+      payload: {
+        id,
+        scope,
+        title,
+        detail,
+        ...(edits !== undefined && edits.length > 0 ? { edits } : {}),
+      },
     });
     return await new Promise<boolean>((resolve) => {
       this.pendingApprovals.set(id, { resolve, scope });

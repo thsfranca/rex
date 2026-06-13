@@ -9,16 +9,17 @@ let activePanel: vscode.WebviewPanel | undefined;
 export function openEditorChatPanel(
   context: vscode.ExtensionContext,
   onMessage: (message: unknown) => void | Promise<void>,
+  viewColumn: vscode.ViewColumn = vscode.ViewColumn.Beside,
 ): void {
   if (activePanel !== undefined) {
-    activePanel.reveal(vscode.ViewColumn.Beside, true);
+    activePanel.reveal(viewColumn, true);
     return;
   }
 
   const panel = vscode.window.createWebviewPanel(
     EDITOR_CHAT_PANEL_TYPE,
     "REX Chat",
-    vscode.ViewColumn.Beside,
+    viewColumn,
     { enableScripts: true, retainContextWhenHidden: true },
   );
   activePanel = panel;

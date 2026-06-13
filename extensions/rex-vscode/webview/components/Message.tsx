@@ -29,7 +29,6 @@ export function Message(props: MessageProps): React.ReactElement {
   if (message.role === "user") {
     return (
       <div className="rex-message rex-message--user" aria-label="You said">
-        <div className="rex-message__role">You</div>
         <div className="rex-message__body">{message.buffer}</div>
       </div>
     );
@@ -38,7 +37,6 @@ export function Message(props: MessageProps): React.ReactElement {
   const segments = splitByCodeBlocks(message.buffer);
   return (
     <div className="rex-message rex-message--assistant" aria-label="Assistant reply">
-      <div className="rex-message__role">REX</div>
       <div className="rex-message__body">
         {segments.map((segment, index) => {
           if (segment.kind === "markdown") {

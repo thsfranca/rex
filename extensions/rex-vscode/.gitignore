@@ -6,3 +6,5 @@ coverage/
 *.vsix
 .vscode-test/
 .vitest-tmp/
+dev/mock-host.js
+dev/mock-host.js.map
