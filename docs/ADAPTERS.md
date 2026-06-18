@@ -66,17 +66,19 @@ Runtime id remains **`http-openai-compat`** (`REX_INFERENCE_RUNTIME`). Config ke
 | Timeouts | `REX_OPENAI_COMPAT_TIMEOUT_SECS` (default 120s) |
 | Custom headers | `inference.openai_compat.headers` — optional map forwarded on every `POST …/chat/completions`; `api_key` adds `Authorization: Bearer` only when `Authorization` is not already set — [CONFIGURATION.md](CONFIGURATION.md#inferenceopenai_compat-keys) |
 
-### Operator profiles (examples)
+### External server defaults (not Rex APIs)
 
-| Backend | Typical `REX_OPENAI_COMPAT_BASE_URL` | Notes |
-|---------|--------------------------------------|-------|
-| **oMLX (Mac local MLX)** | `http://127.0.0.1:8000/v1` (managed or external) | **Primary Mac local** long-context path — [OMLX_INFERENCE.md](OMLX_INFERENCE.md), profile `omlx` |
-| **LiteLLM (multi-provider)** | `http://127.0.0.1:4000/v1` (managed or external) | **Default API** for Anthropic + OpenAI + Ollama via gateway — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
-| Ollama (local) | `http://127.0.0.1:11434/v1` | Local OSS; native-tools E2E reference — profile `ollama` |
-| LM Studio | `http://127.0.0.1:1234/v1` | Local OSS |
-| OpenAI API (direct) | `https://api.openai.com/v1` (+ `REX_OPENAI_COMPAT_API_KEY`) | Secondary — same adapter, direct vendor URL |
+Rex has **one** broker wire (`http_openai_compat`). Operators point `inference.openai_compat.base_url` at an external OpenAI-compat server, or enable a **managed child** (oMLX or gateway) that injects that URL.
 
-Provider presets: [fixtures/guidelines/inference_provider_profiles.yaml](../fixtures/guidelines/inference_provider_profiles.yaml) (design intent).
+| External server | Typical `base_url` | Rex integration |
+|-----------------|-------------------|-----------------|
+| **oMLX (Mac local MLX)** | `http://127.0.0.1:8000/v1` | Managed lifecycle injects URL — [OMLX_INFERENCE.md](OMLX_INFERENCE.md) |
+| **LiteLLM (multi-provider)** | `http://127.0.0.1:4000/v1` | Managed lifecycle injects URL — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
+| Ollama (local) | `http://127.0.0.1:11434/v1` | Direct `base_url`; native-tools E2E reference |
+| LM Studio | `http://127.0.0.1:1234/v1` | Direct `base_url` |
+| OpenAI API (direct) | `https://api.openai.com/v1` (+ `REX_OPENAI_COMPAT_API_KEY`) | Direct `base_url` |
+
+Optional operator cheat sheet (not a broker API selector): [fixtures/guidelines/inference_provider_profiles.yaml](../fixtures/guidelines/inference_provider_profiles.yaml).
 
 ### Verification
 
@@ -236,7 +238,7 @@ Same contract may run out-of-process per [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) 
 
 ### Purpose
 
-Optional **oMLX** on Apple Silicon as the **primary Mac local** broker backend: long-context development-agent workloads via existing `http_openai_compat`, with daemon lifecycle when `inference.omlx.mode: managed`.
+Optional **oMLX** on Apple Silicon as the **primary Mac local** managed child: long-context development-agent workloads via existing `http_openai_compat` (OpenAI Chat Completions only), with daemon lifecycle when `inference.omlx.mode: managed` injecting `openai_compat.base_url`. See [Single broker API](OMLX_INFERENCE.md#single-broker-api) in the hub.
 
 Hub: [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
 

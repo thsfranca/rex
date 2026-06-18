@@ -112,6 +112,12 @@ Control uses **`inference.gateway.mode`** only (`disabled` | `external` | `manag
 
 **CI defaults:** `inference.runtime: mock`, `gateway.mode: disabled` — no Python on implicit daemon start.
 
+### Managed oMLX (orthogonal)
+
+[oMLX](OMLX_INFERENCE.md) is a separate **managed child** for Mac local MLX. Like the gateway, it **injects** `inference.openai_compat.base_url` when `inference.omlx.mode: managed` — Rex still calls OpenAI Chat Completions only.
+
+**Mutual exclusion:** `inference.gateway.mode: managed` and `inference.omlx.mode: managed` cannot both be set. Unified resolver: [CONFIGURATION.md](CONFIGURATION.md#effective-openai_compatbase_url).
+
 Env mirrors (intent): see [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
 
 ## Lifecycle (`managed`)
