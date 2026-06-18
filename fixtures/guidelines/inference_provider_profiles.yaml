@@ -1,8 +1,12 @@
-# Inference provider profiles (design intent)
+# Inference provider profiles — optional operator cheat sheet (NOT a Rex broker API)
 #
-# Declarative presets for OpenAI-compat backends. Rex uses one http_openai_compat
-# adapter; profiles supply defaults and capability hints. No Rust consumer until
-# implementation slice PR 3 — keep in sync with docs/OMLX_INFERENCE.md and ADAPTERS.md.
+# Rex has one inference wire: OpenAI Chat Completions via http_openai_compat.
+# Operators set inference.openai_compat.base_url directly, or enable a managed
+# child (inference.omlx.* or inference.gateway.*) that injects that URL.
+#
+# This file lists common external-server defaults for documentation only.
+# No Rust consumer until a future optional DX slice — not part of oMLX PR 2–3.
+# Keep in sync with docs/OMLX_INFERENCE.md and docs/ADAPTERS.md.
 #
 # Schema version: 1
 
@@ -10,7 +14,7 @@ schema_version: 1
 
 profiles:
   omlx:
-    description: oMLX on Apple Silicon — managed or external OpenAI-compat server
+    description: oMLX on Apple Silicon — typical loopback URL when managed or external
     base_url_default: "http://127.0.0.1:8000/v1"
     native_tools_default: true
     native_tools_probe: none
@@ -45,10 +49,10 @@ profiles:
     managed_config_block: null
     reference_hub: docs/ADAPTERS.md
 
-# Probe identifiers (implementation intent):
+# Probe identifiers (optional future DX — not broker contract):
 #   ollama_api_show — POST {root}/api/show, capabilities contains "tools"
 #   none — rely on native_tools_default or operator override
 
-# tool_name_encoding values (implementation intent):
+# tool_name_encoding values (optional future DX):
 #   openai — pass tool names as declared in sidecar schemas
 #   underscore — encode dots as underscores on wire (some providers)

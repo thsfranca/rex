@@ -189,7 +189,7 @@ Example HTTP backend (Ollama) in `$REX_ROOT/config.json`:
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `base_url` | (none) | OpenAI-compat API root (for example `http://127.0.0.1:11434/v1`). Required when `runtime` is `http-openai-compat` unless managed gateway injects URL. |
+| `base_url` | (none) | OpenAI-compat API root (for example `http://127.0.0.1:11434/v1`). Required when `runtime` is `http-openai-compat` unless a managed child (gateway or oMLX) injects URL — see [Effective `openai_compat.base_url`](#effective-openai_compatbase_url). |
 | `api_key` | (none) | Optional `Authorization: Bearer` token when `headers` does not already set `Authorization`. |
 | `model` | `gpt-4o-mini` | Default model id on chat/completions requests. |
 | `timeout_secs` | `120` | Upper bound for a single HTTP completion request. |
@@ -238,6 +238,66 @@ Opt-in **`inference.gateway.mode: managed`** so `rex-daemon` spawns and controls
 ```
 
 Effective `openai_compat.base_url` becomes `http://127.0.0.1:4000/v1` when managed (unless override allowed). Secrets: `$REX_ROOT/gateway/.env` (gitignored). See hub for full field table and Ollama discovery template.
+
+## Inference oMLX (design)
+
+**Status:** `planned` — [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [ADR 0033](architecture/decisions/0033-omlx-managed-local-inference.md). Future: `rex omlx init|doctor`.
+
+### Purpose
+
+Opt-in **`inference.omlx.mode: managed`** so `rex-daemon` spawns and controls a local oMLX server on Apple Silicon; **`external`** keeps an operator-run URL; **`disabled`** leaves oMLX lifecycle off (direct `openai_compat.base_url` or `mock`).
+
+Managed oMLX uses the **same broker API** as every other OpenAI-compat backend: Rex injects `inference.openai_compat.base_url` and calls `POST …/chat/completions` only. oMLX’s Anthropic Messages and other upstream APIs are **not** Rex surfaces.
+
+### Example (`managed` — design intent)
+
+```json
+{
+  "inference": {
+    "runtime": "http-openai-compat",
+    "omlx": {
+      "mode": "managed",
+      "port": 8000,
+      "model": "qwen2.5-coder-32b"
+    },
+    "openai_compat": {
+      "native_tools": "auto"
+    }
+  }
+}
+```
+
+### `inference.omlx` keys (intent)
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `mode` | `disabled` | `disabled` \| `external` \| `managed` |
+| `port` | `8000` | Loopback port when `managed` |
+| `command` | `omlx` on PATH | Spawn command override |
+| `model_dir` | (none) | MLX weights directory |
+| `model` | (none) | Default model id when `openai_compat.model` unset |
+| `health_path` | `/v1/models` | Readiness probe path |
+| `discovery_on_ready` | `true` | Optional `GET /v1/models` after health |
+| `startup_timeout_secs` | `30` | Health wait budget |
+| `required` | `true` when `managed` | Daemon ready blocked if child fails |
+| `allow_url_override` | `false` | Allow non-empty `openai_compat.base_url` to override injection |
+
+Hub: [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
+
+## Effective `openai_compat.base_url`
+
+Rex resolves **one** broker URL for `http_openai_compat`. Managed gateway and managed oMLX are **lifecycle helpers** that inject into `openai_compat.base_url` — not separate Rex APIs.
+
+| Priority | Condition | Effective URL |
+|----------|-----------|---------------|
+| 1 | Non-empty `openai_compat.base_url` and managed `allow_url_override` on active managed child | Configured URL |
+| 2 | `inference.omlx.mode: managed` | `http://127.0.0.1:{omlx.port}/v1` |
+| 3 | `inference.gateway.mode: managed` | `http://127.0.0.1:{gateway.port}/v1` |
+| 4 | Otherwise | Configured `openai_compat.base_url` or broker error at request time |
+
+**Mutual exclusion:** `rex config validate` **fails** if both `inference.omlx.mode: managed` and `inference.gateway.mode: managed`. Enable at most one managed injector.
+
+Canonical table: [OMLX_INFERENCE.md](OMLX_INFERENCE.md#effective-openai_compatbase_url).
 
 ## Operator profile: LiteLLM (Anthropic and other providers)
 

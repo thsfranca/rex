@@ -216,7 +216,7 @@ Fixture workspace: [`fixtures/native_tools_e2e/workspace/`](../fixtures/native_t
 
 ### 8b) Automated native tool loop on oMLX (planned; opt-in)
 
-**Status:** `planned` — implementation slice after [OMLX_INFERENCE.md](OMLX_INFERENCE.md) PR 5. Mirror §8a for **managed or direct oMLX** at `http://127.0.0.1:8000/v1` with `inference.provider_profile: omlx` and a tool-capable MLX model. Script name TBD (for example `./scripts/verify_omlx_native_tools_live.sh`). Not run in PR CI (**RC-10**).
+**Status:** `planned` — implementation slice after [OMLX_INFERENCE.md](OMLX_INFERENCE.md) PR 5. Mirror §8a for **managed or direct oMLX** at `http://127.0.0.1:8000/v1` (`inference.omlx.mode: managed` or explicit `inference.openai_compat.base_url`) with a tool-capable MLX model. Script name TBD (for example `./scripts/verify_omlx_native_tools_live.sh`). Not run in PR CI (**RC-10**).
 
 Prerequisites for §8 and §8a: HTTP server running (example: `ollama serve`), JSON from step 3 on the **same** daemon process with **direct Ollama** `inference.openai_compat.base_url` `http://127.0.0.1:11434/v1` (gateway opt-in only for multi-provider), workspace folder open in the editor with `rex.daemonAutoStart: true` (or manual `rex daemon` started from that project directory).
 
