@@ -96,7 +96,7 @@ Use these as short confidence cues when ranking optimization proposals:
 | 14 | **R055** — web search (SearXNG capability) | **Could** | **30** | — | daemon + sidecar | **After R056** |
 | 15 | **R016** — multi-active host broadcast | **Could** | **20** | — | daemon | Deferred — see **R056** |
 
-**Deferred (Later / Won't now):** L2 semantic cache, Apple MLX, self-hosted LangFuse on Mac, LTM, agent knowledge — see [ROADMAP.md](ROADMAP.md).
+**Deferred (Later / Won't now):** L2 semantic cache, oMLX managed local inference (Mac), in-daemon MLX, self-hosted LangFuse on Mac, LTM, agent knowledge — see [ROADMAP.md](ROADMAP.md).
 
 **Domain roadmaps:** [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md).
 
