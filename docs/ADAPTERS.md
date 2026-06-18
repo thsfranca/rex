@@ -70,10 +70,13 @@ Runtime id remains **`http-openai-compat`** (`REX_INFERENCE_RUNTIME`). Config ke
 
 | Backend | Typical `REX_OPENAI_COMPAT_BASE_URL` | Notes |
 |---------|--------------------------------------|-------|
+| **oMLX (Mac local MLX)** | `http://127.0.0.1:8000/v1` (managed or external) | **Primary Mac local** long-context path — [OMLX_INFERENCE.md](OMLX_INFERENCE.md), profile `omlx` |
 | **LiteLLM (multi-provider)** | `http://127.0.0.1:4000/v1` (managed or external) | **Default API** for Anthropic + OpenAI + Ollama via gateway — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
-| Ollama (local) | `http://127.0.0.1:11434/v1` | Local OSS |
+| Ollama (local) | `http://127.0.0.1:11434/v1` | Local OSS; native-tools E2E reference — profile `ollama` |
 | LM Studio | `http://127.0.0.1:1234/v1` | Local OSS |
 | OpenAI API (direct) | `https://api.openai.com/v1` (+ `REX_OPENAI_COMPAT_API_KEY`) | Secondary — same adapter, direct vendor URL |
+
+Provider presets: [fixtures/guidelines/inference_provider_profiles.yaml](../fixtures/guidelines/inference_provider_profiles.yaml) (design intent).
 
 ### Verification
 
@@ -227,13 +230,23 @@ Same contract may run out-of-process per [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) 
 4. Add profile subsection here.
 5. Update [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) if placement shifts.
 
-## Local MLX path (planned)
+## oMLX local inference (planned)
 
-**Status:** `planned` — not shipped. Roadmap: [ROADMAP.md](ROADMAP.md) (**Could**, Later horizon).
+**Status:** `planned` — [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [ADR 0033](architecture/decisions/0033-omlx-managed-local-inference.md). **Preferred Mac local path** — managed daemon-supervised oMLX over **OpenAI-compat HTTP** (no `omlx` runtime id).
 
 ### Purpose
 
-Optional **Apple MLX** (or similar local runtime) as an `InferenceRuntime` broker backend for on-device inference, increasing local-first leverage without embedding ML stacks in the daemon core.
+Optional **oMLX** on Apple Silicon as the **primary Mac local** broker backend: long-context development-agent workloads via existing `http_openai_compat`, with daemon lifecycle when `inference.omlx.mode: managed`.
+
+Hub: [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
+
+## In-daemon MLX path (deferred)
+
+**Status:** `planned` — deferred on Mac in favor of oMLX HTTP. Roadmap: [ROADMAP.md](ROADMAP.md) (**Could**, Later horizon).
+
+### Purpose
+
+Optional **in-process Apple MLX** as an `InferenceRuntime` broker backend for on-device inference when HTTP serving is undesirable — **not** the Mac product default once oMLX managed path ships.
 
 ### Scope
 

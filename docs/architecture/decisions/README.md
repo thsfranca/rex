@@ -37,6 +37,7 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0029](0029-web-search-via-capability-sidecar.md) | Web search via capability sidecar (SearXNG) | Accepted |
 | [0030](0030-incremental-run-turn-streaming.md) | Incremental `RunTurn` streaming (live sidecar flush) | Accepted |
 | [0031](0031-ask-mode-research-broker.md) | Ask-mode research tools (`web.search` broker) | Accepted |
+| [0033](0033-omlx-managed-local-inference.md) | oMLX managed local inference (Mac, OpenAI-compat) | Accepted (design) |
 
 ## How to use
 
