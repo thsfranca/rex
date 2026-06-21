@@ -202,6 +202,16 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
       });
       return;
     }
+    if (state.kind === "idle") {
+      this.postMessage({
+        type: "daemonState",
+        payload: {
+          state: "idle",
+          detail: `${state.status.idleSeconds}s idle`,
+        },
+      });
+      return;
+    }
     if (state.kind === "starting") {
       this.postMessage({ type: "daemonState", payload: { state: "starting" } });
       return;
@@ -463,7 +473,7 @@ export class ChatPanelProvider implements vscode.WebviewViewProvider, vscode.Dis
 
       if (this.deps.getDaemonAutoStart()) {
         const daemonState = await this.deps.ensureDaemonReady(controller.signal);
-        if (daemonState.kind !== "ready") {
+        if (daemonState.kind !== "ready" && daemonState.kind !== "idle") {
           const detail =
             daemonState.kind === "unavailable"
               ? daemonState.reason

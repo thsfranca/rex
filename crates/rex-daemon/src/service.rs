@@ -20,6 +20,7 @@ use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
 use tonic::{Request, Response, Status};
 
+use crate::activity::ActivityTracker;
 use crate::adapters::InferenceRuntime;
 #[cfg(test)]
 use crate::adapters::MockInferenceRuntime;
@@ -59,6 +60,7 @@ pub struct RexDaemonService {
     policy: PolicyEngine,
     approval_gate: Arc<dyn ApprovalGate>,
     sidecar: SharedSupervisor,
+    activity: Arc<ActivityTracker>,
     pub(crate) observability: Option<Arc<crate::observability::ObservabilityRuntime>>,
 }
 
@@ -74,6 +76,7 @@ impl RexDaemonService {
         policy: PolicyEngine,
         approval_gate: Arc<dyn ApprovalGate>,
         sidecar: SharedSupervisor,
+        activity: Arc<ActivityTracker>,
     ) -> Self {
         Self {
             started_at,
@@ -83,6 +86,7 @@ impl RexDaemonService {
             policy,
             approval_gate,
             sidecar,
+            activity,
             observability: observability_from_settings(),
         }
     }
@@ -144,6 +148,7 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerWebSearchRequest>,
     ) -> Result<Response<BrokerWebSearchResponse>, Status> {
+        let _work = self.activity.track_work();
         let inner = request.into_inner();
         let mode = normalize_mode(&inner.mode);
         let query = inner.query;
@@ -179,6 +184,7 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerWorkspaceSearchRequest>,
     ) -> Result<Response<BrokerWorkspaceSearchResponse>, Status> {
+        let _work = self.activity.track_work();
         let inner = request.into_inner();
         let mode = normalize_mode(&inner.mode);
         let kind = match inner.kind() {
@@ -215,6 +221,7 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerExecShellRequest>,
     ) -> Result<Response<BrokerExecShellResponse>, Status> {
+        let _work = self.activity.track_work();
         let inner = request.into_inner();
         let mode = normalize_mode(&inner.mode);
         let command = inner.command;
@@ -247,6 +254,7 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerSavePlanRequest>,
     ) -> Result<Response<BrokerSavePlanResponse>, Status> {
+        let _work = self.activity.track_work();
         let inner = request.into_inner();
         let mode = normalize_mode(&inner.mode);
         let path = inner.path;
@@ -273,6 +281,7 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerWriteFileRequest>,
     ) -> Result<Response<BrokerWriteFileResponse>, Status> {
+        let _work = self.activity.track_work();
         let inner = request.into_inner();
         let mode = normalize_mode(&inner.mode);
         let path = inner.path;
@@ -299,6 +308,7 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerListDirRequest>,
     ) -> Result<Response<BrokerListDirResponse>, Status> {
+        let _work = self.activity.track_work();
         let inner = request.into_inner();
         let mode = normalize_mode(&inner.mode);
         let path = inner.path;
@@ -333,6 +343,7 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerReadFileRequest>,
     ) -> Result<Response<BrokerReadFileResponse>, Status> {
+        let _work = self.activity.track_work();
         let inner = request.into_inner();
         let mode = normalize_mode(&inner.mode);
         let path = inner.path;
@@ -361,6 +372,7 @@ impl RexService for RexDaemonService {
         &self,
         request: Request<BrokerInferenceRequest>,
     ) -> Result<Response<BrokerInferenceResponse>, Status> {
+        let _work = self.activity.track_work();
         let turn_id = extract_turn_id(request.metadata());
         let inner = request.into_inner();
         let mode = normalize_mode(&inner.mode);
@@ -403,6 +415,8 @@ impl RexService for RexDaemonService {
         &self,
         _request: Request<GetSystemStatusRequest>,
     ) -> Result<Response<GetSystemStatusResponse>, Status> {
+        self.activity.record_client_contact();
+        let idle_shutdown_secs = settings::get().daemon_idle_shutdown_secs();
         Ok(Response::new(GetSystemStatusResponse {
             daemon_version: DAEMON_VERSION.to_string(),
             uptime_seconds: self.started_at.elapsed().as_secs(),
@@ -411,6 +425,9 @@ impl RexService for RexDaemonService {
                 .resolve_workspace_root()
                 .map(|path| path.display().to_string())
                 .unwrap_or_default(),
+            lifecycle_state: self.activity.lifecycle_state().to_string(),
+            idle_seconds: self.activity.idle_seconds(),
+            seconds_until_shutdown: self.activity.seconds_until_shutdown(idle_shutdown_secs),
         }))
     }
 
@@ -653,6 +670,7 @@ impl RexService for RexDaemonService {
         let turn_id_for_stream = correlation.turn_id.clone();
         let injected_files_for_sidecar = injected_files.clone();
         let observability = self.observability.clone();
+        let activity_for_stream = self.activity.clone();
         let economics_draft = observability.as_ref().map(|obs| StreamEconomicsDraft {
             snapshot_id: obs.snapshot_id().to_string(),
             request_id,
@@ -669,6 +687,7 @@ impl RexService for RexDaemonService {
             agent_loop_terminal: None,
         });
         let output = stream! {
+            let _work = activity_for_stream.track_work();
             let mut chunk_count: u64 = 0;
             let mut done_seen = false;
             let mut ttft_ms: Option<u64> = None;
@@ -1034,6 +1053,7 @@ mod tests {
         extract_trace_id, extract_turn_id, format_approval_decision, format_behavior_decision,
         format_cache_status, resolve_route_label_for, PromptDirectives, RexDaemonService,
     };
+    use crate::activity::ActivityTracker;
     use crate::adapters::{MissingDoneMockRuntime, MockInferenceRuntime};
     use crate::sidecar_config::{SidecarFleetConfig, SidecarProcessConfig};
     use crate::supervisor::{SharedSupervisor, SidecarSupervisor};
@@ -1064,6 +1084,10 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use std::time::Instant;
     use tonic::Request;
+
+    fn test_activity() -> Arc<ActivityTracker> {
+        Arc::new(ActivityTracker::new(Instant::now()))
+    }
 
     fn init_stream_test_settings() {
         settings::reset_for_test();
@@ -1206,6 +1230,7 @@ mod tests {
             PolicyEngine::with_default_layers(),
             Arc::new(crate::approvals::AlwaysAllow),
             disabled_sidecar(),
+            test_activity(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "hello".to_string(),
@@ -1234,6 +1259,7 @@ mod tests {
             PolicyEngine::with_default_layers(),
             Arc::new(crate::approvals::AlwaysAllow),
             disabled_sidecar(),
+            test_activity(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "x".to_string(),
@@ -1298,6 +1324,7 @@ mod tests {
             PolicyEngine::new(cache.clone()),
             Arc::new(crate::approvals::AlwaysAllow),
             disabled_sidecar(),
+            test_activity(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "skip-me".to_string(),
@@ -1327,6 +1354,7 @@ mod tests {
             PolicyEngine::new(cache.clone()),
             Arc::new(crate::approvals::AlwaysAllow),
             disabled_sidecar(),
+            test_activity(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "[[cache:bypass]]\nhello".to_string(),
@@ -1383,6 +1411,7 @@ mod tests {
             PolicyEngine::with_default_layers(),
             gate.clone(),
             disabled_sidecar(),
+            test_activity(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "ask path".to_string(),
@@ -1412,6 +1441,7 @@ mod tests {
             PolicyEngine::with_default_layers(),
             gate.clone(),
             disabled_sidecar(),
+            test_activity(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "agent path".to_string(),
@@ -1446,6 +1476,7 @@ mod tests {
             PolicyEngine::with_default_layers(),
             gate,
             disabled_sidecar(),
+            test_activity(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "agent path".to_string(),
@@ -1477,6 +1508,7 @@ mod tests {
             PolicyEngine::with_default_layers(),
             gate,
             disabled_sidecar(),
+            test_activity(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "agent path".to_string(),
@@ -1504,6 +1536,7 @@ mod tests {
             PolicyEngine::new(cache.clone()),
             Arc::new(crate::approvals::AlwaysAllow),
             disabled_sidecar(),
+            test_activity(),
         );
         let req = Request::new(StreamInferenceRequest {
             prompt: "hello cache".to_string(),

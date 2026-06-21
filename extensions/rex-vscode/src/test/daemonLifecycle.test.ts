@@ -24,6 +24,10 @@ async function makeWorkspaceTmp(): Promise<string> {
   return fs.mkdtemp(path.join(base, "daemon-lifecycle-"));
 }
 
+function isReachableKind(kind: DaemonLifecycleState["kind"]): boolean {
+  return kind === "ready" || kind === "idle";
+}
+
 function makeLifecycle(
   overrides: Partial<DaemonLifecycleOptions>,
   transitions?: DaemonLifecycleState[],
@@ -68,11 +72,11 @@ describe("DaemonLifecycle.ensureRunning", () => {
       const first = await lifecycle.probe();
       expect(first.kind).toBe("unavailable");
       const second = await lifecycle.probe();
-      expect(second.kind).toBe("ready");
-      if (second.kind === "ready") {
+      expect(isReachableKind(second.kind)).toBe(true);
+      if (second.kind === "ready" || second.kind === "idle") {
         expect(second.status.activeModelId).toBe("recovered");
       }
-      expect(kinds).toEqual(["unavailable", "ready"]);
+      expect(kinds).toEqual(["unavailable", "idle"]);
     } finally {
       await lifecycle.shutdown();
       await fs.rm(tmpDir, { recursive: true, force: true });
@@ -95,10 +99,11 @@ describe("DaemonLifecycle.ensureRunning", () => {
     });
     try {
       const first = await lifecycle.probe();
-      expect(first.kind).toBe("ready");
+      expect(isReachableKind(first.kind)).toBe(true);
       const second = await lifecycle.probe();
       expect(second.kind).toBe("unavailable");
-      expect(kinds).toEqual(["ready", "unavailable"]);
+      expect(kinds[0]).toBe("idle");
+      expect(kinds).toEqual(["idle", "unavailable"]);
     } finally {
       await lifecycle.shutdown();
       await fs.rm(tmpDir, { recursive: true, force: true });
@@ -115,12 +120,12 @@ describe("DaemonLifecycle.ensureRunning", () => {
 
     const state = await lifecycle.ensureRunning();
 
-    expect(state.kind).toBe("ready");
-    if (state.kind === "ready") {
+    expect(isReachableKind(state.kind)).toBe(true);
+    if (state.kind === "ready" || state.kind === "idle") {
       expect(state.status.daemonVersion).toBe("0.1.0-test");
       expect(state.status.activeModelId).toBe("test-model");
     }
-    expect(transitions.map((t) => t.kind)).toEqual(["ready"]);
+    expect(transitions.map((t) => t.kind)).toEqual(["idle"]);
   });
 
   it("includes onboarding hint when rex daemon executable is missing", async () => {
@@ -204,12 +209,12 @@ describe("DaemonLifecycle.ensureRunning single-flight", () => {
     });
     try {
       const state = await lifecycle.ensureRunning();
-      expect(state.kind).toBe("ready");
-      if (state.kind === "ready") {
+      expect(isReachableKind(state.kind)).toBe(true);
+      if (state.kind === "ready" || state.kind === "idle") {
         expect(state.status.daemonVersion).toBe("1.0.0-flaky");
       }
       expect(kinds.filter((k) => k === "starting").length).toBe(1);
-      expect(kinds[kinds.length - 1]).toBe("ready");
+      expect(kinds[kinds.length - 1]).toBe("idle");
     } finally {
       await lifecycle.shutdown();
       await fs.rm(tmpDir, { recursive: true, force: true });
@@ -235,8 +240,8 @@ describe("DaemonLifecycle.ensureRunning single-flight", () => {
     });
     try {
       const [a, b] = await Promise.all([lifecycle.ensureRunning(), lifecycle.ensureRunning()]);
-      expect(a.kind).toBe("ready");
-      expect(b.kind).toBe("ready");
+      expect(isReachableKind(a.kind)).toBe(true);
+      expect(isReachableKind(b.kind)).toBe(true);
       expect(kinds.filter((k) => k === "starting").length).toBe(1);
     } finally {
       await lifecycle.shutdown();

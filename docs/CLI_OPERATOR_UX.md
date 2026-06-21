@@ -25,7 +25,7 @@ Operators working in a terminal should use Rex as a single command—not as a tw
 
 **In:**
 
-- Extension-compatible daemon **ensure** semantics (probe → spawn → poll → ready / unavailable).
+- Extension-compatible daemon **ensure** semantics (probe → spawn → poll → ready / idle / unavailable).
 - Detached daemon spawn with logs redirected (not the operator’s interactive terminal).
 - Full TUI for interactive sessions on a TTY.
 - Structured operator messaging catalog (lifecycle + stream events).
@@ -45,7 +45,7 @@ Operators working in a terminal should use Rex as a single command—not as a tw
 | Capability | Rex today | Target |
 |------------|-----------|--------|
 | Daemon start | Manual `rex daemon` in a stuck terminal | Opt-in auto-start; logs to file |
-| Lifecycle feedback | `daemon_unavailable` error | Header: unavailable → starting → ready |
+| Lifecycle feedback | `daemon_unavailable` error | Header: unavailable → starting → ready / idle |
 | Stream progress | `--verbose` stderr lines; NDJSON pipe | TUI activity pane + messaging layer |
 | Interactive session | `rex complete` plain text on TTY | **`rex tui`** + TTY-delegating **`complete`** |
 | Extension parity | Extension auto-start only | Shared states + JSON **`daemon.auto_start`**; per-workspace sockets (**R075**) |
@@ -92,7 +92,7 @@ flowchart TB
 
 | Concern | Extension today | CLI design (aligned) |
 |---------|-----------------|----------------------|
-| Lifecycle states | `unavailable` → `starting` → `ready` | Same three states in TUI header |
+| Lifecycle states | `unavailable` → `starting` → `ready` \| `idle` | Same states in TUI header |
 | Spawn command | `rex daemon` via **`rex.daemonBinaryPath`** | Same binary + subcommand |
 | Readiness probe | `rex status` / unary status | Same RPC; default **10s** timeout (configurable) |
 | Workspace | Writes **`.rex/config.json`** **`workspace.root`** on auto-start | Merged config; cwd / project rules — [CONFIGURATION.md](CONFIGURATION.md) |
@@ -213,6 +213,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 |-----|---------|---------|
 | **`daemon.auto_start`** | **`true`** | CLI ensures daemon before client RPCs |
 | **`daemon.ready_timeout_secs`** | `10` | Readiness poll budget |
+| **`daemon.idle_shutdown_secs`** | **`300`** | Shutdown after seconds without work and without status contact; **`0`** disables |
 | **`daemon.log_path`** | `~/.rex/daemon.log` | Detached daemon stdout/stderr |
 | **`cli.ui.enabled`** | `"auto"` | `auto` \| `true` \| `false` — TUI on TTY |
 | **`cli.ui.narrator`** | `false` | Optional LLM summaries (**R074**) |
@@ -232,7 +233,7 @@ Extension setting **`rex.daemonAutoStart`** should read/write the same effective
 
 - When **`daemon.auto_start`** is true and socket is missing, CLI spawns detached **`rex daemon`** and polls **`GetSystemStatus`** until ready or timeout.
 - Single-flight: concurrent CLI invocations do not spawn duplicate daemons.
-- CLI-spawned daemon survives CLI exit; manual **`rex daemon`** in foreground still supported for debugging.
+- CLI-spawned daemon survives CLI exit until idle shutdown budget elapses without clients or work; manual **`rex daemon`** in foreground still supported for debugging.
 - Error messages reference **`daemon.log_path`** on spawn/timeout failures.
 
 ### R072 — Structured operator messaging

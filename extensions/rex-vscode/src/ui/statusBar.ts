@@ -62,6 +62,22 @@ function renderState(
       item.backgroundColor = undefined;
       return;
     }
+    case "idle": {
+      if (streamingHint !== undefined && streamingHint.length > 0) {
+        item.text = "$(sync~spin) REX running";
+        item.tooltip = `rex: ${streamingHint}`;
+        item.backgroundColor = new vscode.ThemeColor("statusBarItem.prominentBackground");
+        return;
+      }
+      const shutdownHint =
+        state.status.secondsUntilShutdown > 0
+          ? `; shutdown in ${state.status.secondsUntilShutdown}s without activity`
+          : "";
+      item.text = "$(watch) REX idle";
+      item.tooltip = `rex daemon idle ${state.status.idleSeconds}s${shutdownHint}`;
+      item.backgroundColor = undefined;
+      return;
+    }
     case "starting": {
       item.text = "$(sync~spin) REX starting";
       item.tooltip = "Waiting for rex daemon to become ready.";

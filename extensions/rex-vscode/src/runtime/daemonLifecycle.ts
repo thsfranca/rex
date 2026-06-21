@@ -10,7 +10,8 @@ type DaemonChildProcess = ChildProcessByStdio<null, Readable, Readable>;
 export type DaemonLifecycleState =
   | { readonly kind: "unavailable"; readonly reason: string }
   | { readonly kind: "starting" }
-  | { readonly kind: "ready"; readonly status: StatusSnapshot };
+  | { readonly kind: "ready"; readonly status: StatusSnapshot }
+  | { readonly kind: "idle"; readonly status: StatusSnapshot };
 
 export interface DaemonLifecycleOptions {
   readonly cli: CliBridgeOptions;
@@ -58,7 +59,7 @@ export class DaemonLifecycle {
   async probe(signal?: AbortSignal): Promise<DaemonLifecycleState> {
     try {
       const status = await fetchStatus(this.options.cli, signal);
-      this.transition({ kind: "ready", status });
+      this.transition(lifecycleStateFromStatus(status));
     } catch (err) {
       this.transition({
         kind: "unavailable",
@@ -92,7 +93,7 @@ export class DaemonLifecycle {
 
   private async ensureRunningUnserialized(signal?: AbortSignal): Promise<DaemonLifecycleState> {
     const probeState = await this.probe(signal);
-    if (probeState.kind === "ready") {
+    if (probeState.kind === "ready" || probeState.kind === "idle") {
       return probeState;
     }
     if (this.ownedChild !== undefined && !this.ownedChild.killed) {
@@ -189,7 +190,7 @@ export class DaemonLifecycle {
       }
       try {
         const status = await fetchStatus(this.options.cli, signal);
-        this.transition({ kind: "ready", status });
+        this.transition(lifecycleStateFromStatus(status));
         return this.lastState;
       } catch {
         await delay(pollMs);
@@ -213,4 +214,11 @@ function toErrorMessage(err: unknown): string {
     return err.message;
   }
   return String(err);
+}
+
+function lifecycleStateFromStatus(status: StatusSnapshot): DaemonLifecycleState {
+  if (status.lifecycleState === "ready") {
+    return { kind: "ready", status };
+  }
+  return { kind: "idle", status };
 }

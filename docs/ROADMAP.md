@@ -148,6 +148,7 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 | **Could** | Vendor KV / prompt cache hints | [CACHING.md](CACHING.md#vendor-kv-and-prompt-cache-hints-planned) | Depends on outbound API |
 | **Could** | **LF-F02–LF-F07** LangFuse features | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) | After **LF-F01** |
 | **Should** | **R071** — CLI daemon auto-start (extension-compatible) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md) | **Done** |
+| **Should** | **R071b** — daemon idle lifecycle + auto-shutdown | [ADR 0037](architecture/decisions/0037-daemon-idle-shutdown.md) | **Done** |
 | **Must** | **R075** — per-workspace daemon routing | [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), [CONFIGURATION.md](CONFIGURATION.md) | **Done** (PR1); extension folder-switch **PR2** |
 | **Must** (program) | **R072** — structured CLI operator messaging | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | After **R071** |
 | **Should** | **R073** — full terminal UI (`rex tui`, TTY `complete`) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | After **R071**, **R072** |

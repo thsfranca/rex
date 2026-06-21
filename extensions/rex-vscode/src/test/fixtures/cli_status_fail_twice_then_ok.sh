@@ -16,4 +16,7 @@ fi
 printf 'daemon_version: 1.0.0-flaky\n'
 printf 'uptime_seconds: 0\n'
 printf 'active_model_id: mock\n'
+printf 'lifecycle_state: idle\n'
+printf 'idle_seconds: 0\n'
+printf 'seconds_until_shutdown: 300\n'
 exit 0

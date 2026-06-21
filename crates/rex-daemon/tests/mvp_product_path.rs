@@ -30,6 +30,9 @@ use support::openai_compat_sse::{
 #[path = "../src/access_policy.rs"]
 mod access_policy;
 #[allow(dead_code)]
+#[path = "../src/activity.rs"]
+mod activity;
+#[allow(dead_code)]
 #[path = "../src/adapters.rs"]
 mod adapters;
 #[allow(dead_code)]

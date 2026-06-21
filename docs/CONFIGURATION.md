@@ -35,7 +35,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 
 | Section | Keys | Purpose |
 |---------|------|---------|
-| `daemon` | `socket`, `socket_scope`, `auto_start`, `ready_timeout_secs`, `log_path` | Daemon UDS path; **`socket_scope`** (`per_workspace` default, or `global` for legacy single socket); **auto-start on by default** (**R071**); readiness poll budget; detached daemon log file. Per-workspace scope derives `$REX_ROOT/sockets/ws-<hash>.sock` from `workspace.root` — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md). |
+| `daemon` | `socket`, `socket_scope`, `auto_start`, `ready_timeout_secs`, `idle_shutdown_secs`, `log_path` | Daemon UDS path; **`socket_scope`** (`per_workspace` default, or `global` for legacy single socket); **auto-start on by default** (**R071**); readiness poll budget; idle auto-shutdown (**default 300s**, **`0`** disables); detached daemon log file. Per-workspace scope derives `$REX_ROOT/sockets/ws-<hash>.sock` from `workspace.root` — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), idle shutdown — [ADR 0037](architecture/decisions/0037-daemon-idle-shutdown.md). |
 | `sidecars` | `active`, `host`, `required`, `harness`, `list[]`, `capabilities[]` | Host sidecar (`list[]` entry named by `host` or `active`); optional capability fleet (`capabilities[]` with `provides`, `socket`, `binary`); `harness: "direct"` skips spawn (CI/tests). |
 | `inference` | `runtime`, `openai_compat`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. |
 | `workspace` | `root`, `indexer`, `allow_cwd_fallback` | Broker root and lexical indexer (`workspace` or `seeded`). Product path requires non-empty `root` (not `"."`). Harness/CI: `allow_cwd_fallback: true` or `REX_ALLOW_CWD_WORKSPACE=1`. |
@@ -157,6 +157,7 @@ Design hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](archi
 |-----|---------|---------|
 | `daemon.auto_start` | **`true`** | CLI spawns detached `rex daemon` when socket is missing |
 | `daemon.ready_timeout_secs` | `10` | Readiness poll budget after spawn |
+| `daemon.idle_shutdown_secs` | **`300`** | Shutdown after this many seconds without work and without status contact; **`0`** disables |
 | `daemon.log_path` | `$REX_ROOT/daemon.log` | Detached daemon stdout/stderr |
 
 Opt out: `"auto_start": false` in merged JSON or **`--no-daemon-autostart`**. Extension **`rex.daemonAutoStart`** defaults **on** — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md).
