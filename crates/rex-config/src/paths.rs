@@ -35,3 +35,11 @@ pub fn gateway_dir() -> PathBuf {
 pub fn gateway_env_path() -> PathBuf {
     gateway_dir().join(".env")
 }
+
+pub fn omlx_dir() -> PathBuf {
+    rex_root().join("omlx")
+}
+
+pub fn omlx_env_path() -> PathBuf {
+    omlx_dir().join(".env")
+}

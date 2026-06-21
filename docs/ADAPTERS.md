@@ -232,9 +232,9 @@ Same contract may run out-of-process per [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) 
 4. Add profile subsection here.
 5. Update [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) if placement shifts.
 
-## oMLX local inference (planned)
+## oMLX local inference (implemented)
 
-**Status:** `planned` — [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [ADR 0033](architecture/decisions/0033-omlx-managed-local-inference.md). **Preferred Mac local path** — managed daemon-supervised oMLX over **OpenAI-compat HTTP** (no `omlx` runtime id).
+**Status:** **implemented** — managed supervisor, native tools path, `rex omlx init|doctor`, opt-in live E2E — [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [ADR 0033](architecture/decisions/0033-omlx-managed-local-inference.md). **Preferred Mac local path** — managed daemon-supervised oMLX over **OpenAI-compat HTTP** (no `omlx` runtime id).
 
 ### Purpose
 

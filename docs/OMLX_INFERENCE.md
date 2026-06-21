@@ -1,6 +1,6 @@
 # oMLX local inference
 
-**Status:** `planned` — [ADR 0033](architecture/decisions/0033-omlx-managed-local-inference.md). Future: daemon supervisor + `rex omlx init|doctor` + `$REX_ROOT/omlx/` templates.
+**Status:** **implemented** — managed supervisor, R071 autostart chain, `rex omlx init|doctor`, opt-in live E2E — [ADR 0033](architecture/decisions/0033-omlx-managed-local-inference.md).
 
 Canonical design for Rex’s **managed, daemon-controlled** [oMLX](https://github.com/jundot/omlx) server on **Apple Silicon** — OpenAI Chat Completions wire only. Related: [ADAPTERS.md](ADAPTERS.md), [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) (multi-provider cloud), [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) (agent sidecar — separate feature).
 
@@ -125,6 +125,19 @@ Rex resolves the **single** broker URL in this order. Rows 2 and 3 are **mutuall
 
 **Agent tool-loop guidance:** prefer **managed or direct oMLX** over gateway + oMLX hop — same lesson as direct Ollama in [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md).
 
+## Daemon autostart (R071)
+
+When **`daemon.auto_start`** is enabled (default), CLI and extension auto-spawn **`rex daemon`**. Managed oMLX starts **inside daemon boot** before the UDS socket binds — same invariant as managed gateway. There is **no** separate oMLX autostart flag.
+
+| Event | Outcome |
+|-------|---------|
+| Autostart + `inference.omlx.mode: managed` | Daemon spawns `omlx serve`, health-gates, then binds socket |
+| `inference.omlx.required: true` (default when managed) | oMLX failure blocks daemon ready → autostart poll times out |
+| Idle shutdown / daemon stop | oMLX child stopped with daemon |
+| Next autostart | oMLX respawned on fresh daemon boot |
+
+**Timeout tuning:** raise **`daemon.ready_timeout_secs`** when oMLX cold start exceeds the default **10s** budget; align with **`inference.omlx.startup_timeout_secs`** (default **30s**) — [CONFIGURATION.md](CONFIGURATION.md#cli-daemon-auto-start-r071--implemented).
+
 ## Interfaces (intent)
 
 ### Config block `inference.omlx`
@@ -209,15 +222,15 @@ When `omlx.mode` is `managed`, Rex injects `openai_compat.base_url` → `http://
 | **Should** (Mac local inference) | After v1.0 observability Must (**RC-LF1**) | [V1_0.md](V1_0.md) excludes MLX from v1.0 promise; high value for Mac dogfood |
 | MoSCoW pointer | [PRIORITIZATION.md](PRIORITIZATION.md) | Long-context dev agent on Apple Silicon |
 
-## Implementation slices (planning only)
+## Implementation slices
 
-| Slice | Concern | Unlocks |
-|-------|---------|---------|
-| **PR 1** | Hub + ADR 0033 + roadmap/docs (single-API correction) | This document |
-| PR 2 | `inference.omlx` config schema + supervisor + extend `resolve_effective_openai_compat_base_url` + mutual-exclusion validate | Managed spawn |
-| PR 3 | oMLX `native_tools` defaults under `openai_compat` (no profile registry) | Mac dogfood tools |
-| PR 4 | `rex omlx init\|doctor` + `$REX_ROOT/omlx/` templates | Operator DX |
-| PR 5 | Opt-in live E2E script + [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §8b | Dogfood proof |
+| Slice | Concern | Status |
+|-------|---------|--------|
+| **PR 1** | Hub + ADR 0033 + roadmap/docs (single-API correction) | **Done** |
+| PR 2 | `inference.omlx` config schema + supervisor + extend `resolve_effective_openai_compat_base_url` + mutual-exclusion validate | **Done** |
+| PR 3 | oMLX `native_tools` defaults under `openai_compat` (no profile registry) | **Done** |
+| PR 4 | `rex omlx init\|doctor` + `$REX_ROOT/omlx/` templates | **Done** |
+| PR 5 | Opt-in live E2E script + [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §8b | **Done** |
 
 ## Cross-links
 

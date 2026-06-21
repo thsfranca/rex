@@ -71,7 +71,34 @@ The Phase 1 product path requires a **supervised sidecar** for assistant modes �
 
 Legacy `REX_OPENAI_COMPAT_*` / `REX_SIDECAR_ENABLED` env vars are **ignored with warning** — [CONFIGURATION.md](CONFIGURATION.md).
 
-**Managed gateway (`inference.gateway.mode: managed`):** `rex gateway init`, set keys in `$REX_ROOT/gateway/.env`, `rex gateway doctor`, then `rex daemon` — [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
+**Managed gateway (`inference.gateway.mode: managed`):** `rex gateway init`, set keys in `$REX_ROOT/gateway/.env`, `rex gateway doctor`, then `rex status` — [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
+
+### Mac local MLX via managed oMLX
+
+**Opt-in managed:** set `inference.omlx.mode: managed` on Apple Silicon so Rex starts oMLX during daemon boot (including R071 autostart). Hub: [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
+
+```json
+{
+  "inference": {
+    "runtime": "http-openai-compat",
+    "omlx": {
+      "mode": "managed",
+      "port": 8000,
+      "model": "your-mlx-model-id"
+    },
+    "openai_compat": {
+      "native_tools": "auto"
+    }
+  },
+  "daemon": {
+    "auto_start": true,
+    "ready_timeout_secs": 45
+  },
+  "sidecars": { "active": "agent", "required": true }
+}
+```
+
+**Operator path:** install oMLX → `rex omlx init` → `rex omlx doctor` → `rex status` → `rex complete "hello" --format ndjson --mode agent`.
 
 **Observability:** set `observability.enabled: true` and configure OTLP toward **LangFuse Cloud** when **LF-F01** lands — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [CONFIGURATION.md](CONFIGURATION.md#observability). Rex-owned store and `rex obs` were **removed** (**LF-R01**). Only **`REX_ROOT`** is a bootstrap env var for layout.
 

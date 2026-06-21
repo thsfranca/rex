@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "inference": {
+    "runtime": "http-openai-compat",
+    "omlx": {
+      "mode": "managed",
+      "port": 8000,
+      "model": "qwen2.5-coder-32b",
+      "startup_timeout_secs": 60
+    },
+    "openai_compat": {
+      "native_tools": "auto"
+    }
+  },
+  "daemon": {
+    "auto_start": true,
+    "ready_timeout_secs": 90
+  },
+  "sidecars": {
+    "active": "agent",
+    "required": true,
+    "list": [
+      {
+        "name": "agent",
+        "binary": "rex-agent",
+        "enabled": true,
+        "socket": "/tmp/rex-sidecar.sock"
+      }
+    ]
+  },
+  "workspace": {
+    "root": "/path/to/workspace"
+  }
+}

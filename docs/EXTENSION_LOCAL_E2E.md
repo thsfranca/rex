@@ -214,13 +214,32 @@ Requires Ollama at `http://127.0.0.1:11434/v1` with a tool-capable model (defaul
 
 Fixture workspace: [`fixtures/native_tools_e2e/workspace/`](../fixtures/native_tools_e2e/workspace/).
 
-### 8b) Automated native tool loop on oMLX (planned; opt-in)
+### 8b) Automated native tool loop on oMLX (R038; opt-in)
 
-**Status:** `planned` — implementation slice after [OMLX_INFERENCE.md](OMLX_INFERENCE.md) PR 5. Mirror §8a for **managed or direct oMLX** at `http://127.0.0.1:8000/v1` (`inference.omlx.mode: managed` or explicit `inference.openai_compat.base_url`) with a tool-capable MLX model. Script name TBD (for example `./scripts/verify_omlx_native_tools_live.sh`). Not run in PR CI (**RC-10**).
+After MVP preflight and with oMLX serving a **tool-capable** MLX model (default `qwen2.5-coder-32b`):
+
+```bash
+pip install -e sidecars/rex-agent
+rex proto install
+./scripts/verify_omlx_native_tools_live.sh
+```
+
+Requires oMLX at `http://127.0.0.1:8000/v1` with a tool-capable model (default in script: `qwen2.5-coder-32b`). Set `OMLX_MANAGED=1` to exercise `inference.omlx.mode: managed`; set `OMLX_USE_AUTOSTART=1` to use `rex status` (R071 autostart chain). Not run in PR CI (**RC-10**).
+
+**What it automates vs §8 checklist below:**
+
+| Check | `verify_omlx_native_tools_live.sh` | Manual §8 |
+|-------|-------------------------------------|-----------|
+| Plan-mode read via native `tools[]` / `tool_calls` | Yes — fixture marker in NDJSON chunks; daemon log `protocol=1` (native), no `protocol=3` on plan turn | Optional |
+| Agent allowed read + `.env` deny | No (plan turn only; mirror §8a scope) | Optional |
+| Extension UI, cancel, client hints, multi-turn | No | Yes |
+| ask mode live turn | No (**R039**) | Yes |
+
+Fixture workspace: [`fixtures/native_tools_e2e/workspace/`](../fixtures/native_tools_e2e/workspace/). Managed config sample: [`fixtures/omlx_managed_e2e/config.json`](../fixtures/omlx_managed_e2e/config.json).
 
 Prerequisites for §8 and §8a: HTTP server running (example: `ollama serve`), JSON from step 3 on the **same** daemon process with **direct Ollama** `inference.openai_compat.base_url` `http://127.0.0.1:11434/v1` (gateway opt-in only for multi-provider), workspace folder open in the editor with `rex.daemonAutoStart: true` (or manual `rex daemon` started from that project directory).
 
-**oMLX path (when implemented):** prefer `inference.omlx.mode: managed` or direct `http://127.0.0.1:8000/v1`; see [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
+**oMLX path:** prefer `inference.omlx.mode: managed` or direct `http://127.0.0.1:8000/v1`; see [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
 
 - [ ] Daemon listen log includes `workspace.root=<absolute path>` (not `workspace.error=not_configured`).
 - [ ] Extension output shows project `.rex/config.json` merge when auto-start runs; multi-root logs `workspace.warning=multi_root` when applicable.

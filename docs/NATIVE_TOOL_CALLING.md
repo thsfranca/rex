@@ -103,7 +103,7 @@ On each `BrokerInference`, the **provider** chooses (native: structured `tool_ca
 
 `mock` / `cursor-cli` runtimes: **always interim** regardless of config (**RC-10**).
 
-**Direct Ollama in `auto`:** capability probe and R038 E2E use `base_url` pointing at Ollama (`127.0.0.1:11434`). Non-Ollama `base_url` in `auto`: skip `/api/show` probe → try native once → interim fallback on failure.
+**Direct Ollama in `auto`:** capability probe and R038 E2E use `base_url` pointing at Ollama (`127.0.0.1:11434`). **oMLX loopback** (`127.0.0.1:8000` or managed `inference.omlx.port`): forward tools without `/api/show` probe. Other non-Ollama `base_url` in `auto`: skip probe → try native once → interim fallback on failure.
 
 #### Dynamic gate (`auto`) — daemon-owned, cached per model
 

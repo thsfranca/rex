@@ -1408,10 +1408,12 @@ dependencies = [
 name = "rex"
 version = "1.0.0"
 dependencies = [
+ "assert_cmd",
  "rex-cli",
  "rex-config",
  "rex-daemon",
  "serde_json",
+ "serial_test",
  "tempfile",
  "tokio",
 ]

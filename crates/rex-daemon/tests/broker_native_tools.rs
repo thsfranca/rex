@@ -104,6 +104,48 @@ async fn native_tool_calls_returned_when_enabled() {
 
 #[tokio::test]
 #[serial]
+async fn omlx_loopback_forwards_tools_in_auto_without_probe() {
+    let addr = spawn_loopback_openai_compat_tool_calls_fixture().await;
+    let port = addr.port();
+    settings::reset_for_test();
+    let mut cfg = RexConfig::defaults();
+    cfg.inference.runtime = "http-openai-compat".to_string();
+    cfg.inference.openai_compat.base_url = format!("http://127.0.0.1:{port}/v1");
+    cfg.inference.openai_compat.native_tools = Some(NativeToolsMode::Auto);
+    cfg.inference.omlx.mode = "managed".to_string();
+    cfg.inference.omlx.port = port;
+    settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
+        std::path::PathBuf::from("/tmp/rex-broker-omlx-test"),
+        cfg,
+    )));
+
+    let response = broker_inference::run_broker_inference(&BrokerInferenceRequest {
+        prompt: String::new(),
+        mode: "plan".to_string(),
+        model: String::new(),
+        messages: vec![rex_proto::rex::v1::ChatMessage {
+            role: "user".to_string(),
+            content: "read README".to_string(),
+        }],
+        tools: vec![ToolSpec {
+            name: "fs.read".to_string(),
+            description: "Read a file".to_string(),
+            parameters_json: r#"{"type":"object","properties":{"path":{"type":"string"}}}"#
+                .to_string(),
+        }],
+    })
+    .await
+    .expect("broker inference");
+
+    assert!(response.ok, "{}", response.error);
+    assert_eq!(response.protocol, InferenceProtocol::Native as i32);
+    assert_eq!(response.tool_calls.len(), 1);
+
+    settings::reset_for_test();
+}
+
+#[tokio::test]
+#[serial]
 async fn mock_runtime_strips_tools_and_uses_interim() {
     let addr = spawn_loopback_openai_compat_sse_fixture().await;
     settings::reset_for_test();

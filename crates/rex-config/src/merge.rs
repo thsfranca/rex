@@ -290,6 +290,40 @@ fn merge_inference(
         base.cursor_cli.timeout_secs = overlay.cursor_cli.timeout_secs;
     }
     merge_gateway(&mut base.gateway, overlay.gateway);
+    merge_omlx(&mut base.omlx, overlay.omlx);
+}
+
+fn merge_omlx(base: &mut crate::model::OmlxConfig, overlay: crate::model::OmlxConfig) {
+    if !overlay.mode.is_empty() {
+        base.mode = overlay.mode;
+    }
+    if overlay.port != 0 {
+        base.port = overlay.port;
+    }
+    if !overlay.command.is_empty() {
+        base.command = overlay.command;
+    }
+    if !overlay.model_dir.is_empty() {
+        base.model_dir = overlay.model_dir;
+    }
+    if !overlay.model.is_empty() {
+        base.model = overlay.model;
+    }
+    if !overlay.health_path.is_empty() {
+        base.health_path = overlay.health_path;
+    }
+    if overlay.discovery_on_ready.is_some() {
+        base.discovery_on_ready = overlay.discovery_on_ready;
+    }
+    if overlay.startup_timeout_secs != 0 {
+        base.startup_timeout_secs = overlay.startup_timeout_secs;
+    }
+    if overlay.required.is_some() {
+        base.required = overlay.required;
+    }
+    if overlay.allow_url_override.is_some() {
+        base.allow_url_override = overlay.allow_url_override;
+    }
 }
 
 fn merge_gateway(base: &mut crate::model::GatewayConfig, overlay: crate::model::GatewayConfig) {

@@ -52,6 +52,16 @@ Use this table before `./scripts/reinstall-dev.sh` or the step-by-step path in [
 - Reachable **chat/completions** endpoint for brokered inference (Ollama, LM Studio, vLLM, OpenAI API, or compatible proxy).
 - Configure inference via `$REX_ROOT/config.json` — [CONFIGURATION.md](CONFIGURATION.md).
 
+### oMLX (Mac local MLX — optional)
+
+| Dependency | Why | Notes |
+|---|---|---|
+| [oMLX](https://github.com/jundot/omlx) | Apple Silicon OpenAI-compat inference server | **Not** required for CI; opt-in via `inference.omlx.mode: managed` |
+| Apple Silicon Mac | MLX inference target | oMLX is not supported on Linux CI runners |
+| Python (oMLX install) | oMLX ships as a Python package / Homebrew formula | Install per upstream docs; verify with `rex omlx doctor` |
+
+Operator path: `rex omlx init` → configure `$REX_ROOT/omlx/.env` → set `inference.omlx.mode: managed` in config → `rex status` (R071 autostart). Hub: [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
+
 ### Python sidecar (`rex-agent`)
 
 | Dependency | Why | Notes |

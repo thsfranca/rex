@@ -52,6 +52,9 @@ mod economics_record;
 #[path = "../src/gateway_supervisor.rs"]
 mod gateway_supervisor;
 #[allow(dead_code)]
+#[path = "../src/omlx_supervisor.rs"]
+mod omlx_supervisor;
+#[allow(dead_code)]
 #[path = "../src/http_openai_compat.rs"]
 mod http_openai_compat;
 #[path = "../src/l1_cache.rs"]

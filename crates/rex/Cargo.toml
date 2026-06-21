@@ -16,3 +16,8 @@ rex-daemon = { path = "../rex-daemon" }
 serde_json = "1"
 tempfile = "3"
 tokio.workspace = true
+
+[dev-dependencies]
+assert_cmd = "2"
+serial_test = "3"
+tempfile = "3"

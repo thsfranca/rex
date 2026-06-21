@@ -13,6 +13,7 @@ mod http_openai_compat;
 mod l1_cache;
 mod observability;
 mod ollama_capability;
+mod omlx_supervisor;
 mod otlp_metrics;
 mod plugins;
 mod policy;

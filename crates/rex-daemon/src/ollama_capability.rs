@@ -35,6 +35,21 @@ pub fn derive_show_url(base_url: &str) -> Option<String> {
     Some(format!("{trimmed}/api/show"))
 }
 
+/// Heuristic: oMLX OpenAI-compat loopback (default :8000 or configured managed port).
+pub fn is_omlx_like_base_url(base_url: &str, omlx_port: Option<u16>) -> bool {
+    let lower = base_url.trim().to_ascii_lowercase();
+    if lower.contains("127.0.0.1:8000") || lower.contains("localhost:8000") {
+        return true;
+    }
+    if let Some(port) = omlx_port {
+        if port != 8000 {
+            return lower.contains(&format!("127.0.0.1:{port}"))
+                || lower.contains(&format!("localhost:{port}"));
+        }
+    }
+    false
+}
+
 /// Heuristic: direct Ollama OpenAI-compat surface (localhost:11434 or explicit /v1 on 11434).
 pub fn is_ollama_like_base_url(base_url: &str) -> bool {
     let lower = base_url.trim().to_ascii_lowercase();
@@ -122,5 +137,12 @@ mod tests {
     fn ollama_like_host_heuristic() {
         assert!(is_ollama_like_base_url("http://127.0.0.1:11434/v1"));
         assert!(!is_ollama_like_base_url("http://127.0.0.1:4000/v1"));
+    }
+
+    #[test]
+    fn omlx_like_host_heuristic() {
+        assert!(is_omlx_like_base_url("http://127.0.0.1:8000/v1", None));
+        assert!(is_omlx_like_base_url("http://127.0.0.1:9000/v1", Some(9000)));
+        assert!(!is_omlx_like_base_url("http://127.0.0.1:11434/v1", None));
     }
 }

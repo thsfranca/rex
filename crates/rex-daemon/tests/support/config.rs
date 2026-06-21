@@ -151,3 +151,19 @@ pub fn managed_gateway_config(port: u16, gateway_stub_command: &str) -> RexConfi
     }
     cfg
 }
+
+pub fn managed_omlx_config(port: u16, omlx_stub_command: &str) -> RexConfig {
+    let mut cfg = RexConfig::defaults();
+    cfg.inference.runtime = "http-openai-compat".to_string();
+    cfg.inference.omlx.mode = "managed".to_string();
+    cfg.inference.omlx.port = port;
+    cfg.inference.omlx.command = omlx_stub_command.to_string();
+    cfg.inference.omlx.startup_timeout_secs = 5;
+    cfg.inference.omlx.required = Some(true);
+    cfg.sidecars.harness = Some("direct".to_string());
+    cfg.sidecars.required = Some(false);
+    if let Some(entry) = cfg.sidecars.list.first_mut() {
+        entry.enabled = false;
+    }
+    cfg
+}

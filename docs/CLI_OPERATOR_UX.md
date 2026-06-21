@@ -232,6 +232,7 @@ Extension setting **`rex.daemonAutoStart`** should read/write the same effective
 ### R071 — CLI daemon auto-start
 
 - When **`daemon.auto_start`** is true and socket is missing, CLI spawns detached **`rex daemon`** and polls **`GetSystemStatus`** until ready or timeout.
+- Managed inference children (**`inference.omlx.mode: managed`** or **`inference.gateway.mode: managed`**) start during daemon boot before the socket binds; autostart success implies the managed child passed health when **`required`** is true.
 - Single-flight: concurrent CLI invocations do not spawn duplicate daemons.
 - CLI-spawned daemon survives CLI exit until idle shutdown budget elapses without clients or work; manual **`rex daemon`** in foreground still supported for debugging.
 - Error messages reference **`daemon.log_path`** on spawn/timeout failures.

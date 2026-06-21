@@ -103,6 +103,7 @@ impl RexConfig {
                     headers: BTreeMap::new(),
                 },
                 gateway: GatewayConfig::default(),
+                omlx: OmlxConfig::default(),
                 cursor_cli: CursorCliConfig {
                     path: "cursor-agent".to_string(),
                     command: None,
@@ -209,6 +210,7 @@ impl RexConfig {
         }
         crate::gateway::validate_gateway(&self.inference.gateway)
             .map_err(ConfigError::Validation)?;
+        crate::omlx::validate_omlx(&self.inference).map_err(ConfigError::Validation)?;
         if matches!(
             runtime.as_str(),
             "http-openai-compat" | "openai-compat" | "http"
@@ -219,7 +221,7 @@ impl RexConfig {
             );
             if effective_url.trim().is_empty() {
                 return Err(ConfigError::Validation(
-                    "inference.openai_compat.base_url is required when runtime is http-openai-compat (or set inference.gateway.mode to managed)"
+                    "inference.openai_compat.base_url is required when runtime is http-openai-compat (or set inference.omlx.mode or inference.gateway.mode to managed)"
                         .to_string(),
                 ));
             }
@@ -351,7 +353,58 @@ pub struct InferenceConfig {
     #[serde(default)]
     pub gateway: GatewayConfig,
     #[serde(default)]
+    pub omlx: OmlxConfig,
+    #[serde(default)]
     pub cursor_cli: CursorCliConfig,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct OmlxConfig {
+    #[serde(default = "default_omlx_mode")]
+    pub mode: String,
+    #[serde(default)]
+    pub port: u16,
+    #[serde(default = "default_omlx_command")]
+    pub command: String,
+    #[serde(default)]
+    pub model_dir: String,
+    #[serde(default)]
+    pub model: String,
+    #[serde(default)]
+    pub health_path: String,
+    #[serde(default)]
+    pub discovery_on_ready: Option<bool>,
+    #[serde(default)]
+    pub startup_timeout_secs: u64,
+    #[serde(default)]
+    pub required: Option<bool>,
+    #[serde(default)]
+    pub allow_url_override: Option<bool>,
+}
+
+fn default_omlx_mode() -> String {
+    "disabled".to_string()
+}
+
+fn default_omlx_command() -> String {
+    crate::omlx::DEFAULT_OMLX_COMMAND.to_string()
+}
+
+impl Default for OmlxConfig {
+    fn default() -> Self {
+        Self {
+            mode: default_omlx_mode(),
+            port: crate::omlx::DEFAULT_OMLX_PORT,
+            command: default_omlx_command(),
+            model_dir: String::new(),
+            model: String::new(),
+            health_path: String::new(),
+            discovery_on_ready: None,
+            startup_timeout_secs: crate::omlx::DEFAULT_OMLX_STARTUP_TIMEOUT_SECS,
+            required: None,
+            allow_url_override: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]

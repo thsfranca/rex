@@ -53,20 +53,26 @@ pub fn resolve_gateway_config_path(cfg: &GatewayConfig, rex_root: &Path) -> Path
     }
 }
 
-/// Effective OpenAI-compat base URL after gateway mode rules.
+/// Effective OpenAI-compat base URL after managed oMLX/gateway injection rules.
 pub fn resolve_effective_openai_compat_base_url(
     inference: &InferenceConfig,
     rex_root: &Path,
 ) -> String {
     let _ = rex_root;
     let configured = inference.openai_compat.base_url.trim();
+    let omlx = &inference.omlx;
+    if crate::omlx::is_managed_omlx(omlx) {
+        if crate::omlx::omlx_allow_url_override(omlx) && !configured.is_empty() {
+            return configured.to_string();
+        }
+        return crate::omlx::managed_omlx_base_url(crate::omlx::effective_omlx_port(omlx));
+    }
     let gateway = &inference.gateway;
     if normalize_gateway_mode(&gateway.mode) == GATEWAY_MODE_MANAGED {
-        let port = effective_gateway_port(gateway);
         if gateway_allow_url_override(gateway) && !configured.is_empty() {
             return configured.to_string();
         }
-        return managed_gateway_base_url(port);
+        return managed_gateway_base_url(effective_gateway_port(gateway));
     }
     configured.to_string()
 }
