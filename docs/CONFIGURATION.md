@@ -149,6 +149,20 @@ The tables below document **former** env-based tuning. **Do not use** for new se
 
 The CLI reads `daemon.socket` from merged JSON for UDS transport (`rex_config::load_merged`).
 
+### CLI operator UX (planned)
+
+Design hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md). Keys below are **not** in the schema until **R071–R073** land.
+
+| Key | Default (design) | Purpose |
+|-----|------------------|---------|
+| `daemon.auto_start` | `false` | CLI spawns detached `rex daemon` when socket is missing |
+| `daemon.ready_timeout_secs` | `10` | Readiness poll budget after spawn |
+| `daemon.log_path` | `~/.rex/daemon.log` | Detached daemon log destination |
+| `cli.ui.enabled` | `"auto"` | TUI on TTY: `auto` \| `true` \| `false` |
+| `cli.ui.narrator` | `false` | Optional post-turn LLM summary (**R074**) |
+
+CLI flags (planned): `--no-daemon-autostart`, `--no-ui`. Extension **`rex.daemonAutoStart`** should align with **`daemon.auto_start`** — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md).
+
 ### Related project scripts
 
 | Variable | Where it matters |

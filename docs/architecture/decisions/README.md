@@ -40,6 +40,7 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0032](0032-soft-cap-continue-turn.md) | Soft cap pause and ContinueTurn | Superseded by [0034](0034-remove-tool-step-caps.md) |
 | [0033](0033-omlx-managed-local-inference.md) | oMLX managed local inference (Mac, OpenAI-compat) | Accepted (design) |
 | [0034](0034-remove-tool-step-caps.md) | Remove tool step caps | Accepted |
+| [0035](0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md) | CLI operator UX — daemon lifecycle parity and terminal UI | Accepted (design) |
 
 ## How to use
 
