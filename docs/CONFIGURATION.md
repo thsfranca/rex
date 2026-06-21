@@ -276,6 +276,8 @@ Opt-in **`inference.omlx.mode: managed`** so `rex-daemon` spawns and controls a 
 
 Managed oMLX uses the **same broker API** as every other OpenAI-compat backend: Rex injects `inference.openai_compat.base_url` and calls `POST …/chat/completions` only. oMLX’s Anthropic Messages and other upstream APIs are **not** Rex surfaces.
 
+When `mode: managed`, the daemon supervisor spawns `omlx serve --port {port}` and optional `--model-dir {model_dir}` from **`inference.omlx.*` in JSON** — Rex does not configure oMLX via `OMLX_*` environment variables.
+
 ### Example (`managed` — design intent)
 
 ```json

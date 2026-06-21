@@ -98,7 +98,7 @@ Legacy `REX_OPENAI_COMPAT_*` / `REX_SIDECAR_ENABLED` env vars are **ignored with
 }
 ```
 
-**Operator path:** install oMLX → `rex omlx init` → `rex omlx doctor` → `rex status` → `rex complete "hello" --format ndjson --mode agent`.
+**Operator path:** install oMLX → `rex omlx init` (merge `$REX_ROOT/omlx/config.snippet.json` into config) → `rex omlx doctor` → `rex status` → `rex complete "hello" --format ndjson --mode agent`.
 
 **Observability:** set `observability.enabled: true` and configure OTLP toward **LangFuse Cloud** when **LF-F01** lands — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [CONFIGURATION.md](CONFIGURATION.md#observability). Rex-owned store and `rex obs` were **removed** (**LF-R01**). Only **`REX_ROOT`** is a bootstrap env var for layout.
 

@@ -22,7 +22,7 @@ pub fn run_omlx(mut args: impl Iterator<Item = String>) -> ExitCode {
 fn run_init() -> ExitCode {
     match ensure_omlx_layout() {
         Ok(result) => {
-            if result.created_dir || result.created_env_example || result.created_readme {
+            if result.created_dir || result.created_config_snippet || result.created_readme {
                 println!("oMLX layout ready under {}", omlx_dir().display());
             } else {
                 println!("oMLX layout already present");

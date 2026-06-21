@@ -60,7 +60,7 @@ Use this table before `./scripts/reinstall-dev.sh` or the step-by-step path in [
 | Apple Silicon Mac | MLX inference target | oMLX is not supported on Linux CI runners |
 | Python (oMLX install) | oMLX ships as a Python package / Homebrew formula | Install per upstream docs; verify with `rex omlx doctor` |
 
-Operator path: `rex omlx init` → configure `$REX_ROOT/omlx/.env` → set `inference.omlx.mode: managed` in config → `rex status` (R071 autostart). Hub: [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
+Operator path: `rex omlx init` → merge `$REX_ROOT/omlx/config.snippet.json` into `$REX_ROOT/config.json` (`inference.omlx.*`) → `rex omlx doctor` → `rex status` (R071 autostart). Hub: [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
 
 ### Python sidecar (`rex-agent`)
 

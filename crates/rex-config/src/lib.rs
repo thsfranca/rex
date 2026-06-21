@@ -45,7 +45,7 @@ pub use observability::{
     DEFAULT_OBS_SERVICE_NAME, DEFAULT_OTLP_PROTOCOL,
 };
 pub use paths::{
-    gateway_dir, gateway_env_path, global_config_path, omlx_dir, omlx_env_path, proto_gen_path,
+    gateway_dir, gateway_env_path, global_config_path, omlx_dir, proto_gen_path,
     proto_src_path, rex_root, REX_ROOT_ENV,
 };
 pub use project::ensure_project_workspace_root;

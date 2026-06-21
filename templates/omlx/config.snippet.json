@@ -1,0 +1,15 @@
+{
+  "inference": {
+    "runtime": "http-openai-compat",
+    "omlx": {
+      "mode": "managed",
+      "port": 8000,
+      "model_dir": "",
+      "model": "qwen2.5-coder-32b",
+      "startup_timeout_secs": 60
+    },
+    "openai_compat": {
+      "native_tools": "auto"
+    }
+  }
+}
