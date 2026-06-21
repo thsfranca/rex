@@ -11,9 +11,10 @@ use rex_proto::rex::v1::{
     BrokerExecShellRequest, BrokerExecShellResponse, BrokerInferenceRequest,
     BrokerInferenceResponse, BrokerListDirRequest, BrokerListDirResponse, BrokerReadFileRequest,
     BrokerReadFileResponse, BrokerSavePlanRequest, BrokerSavePlanResponse, BrokerWebSearchRequest,
-    BrokerWebSearchResponse, BrokerWriteFileRequest, BrokerWriteFileResponse,
-    GetSystemStatusRequest, GetSystemStatusResponse, StreamInferenceRequest,
-    StreamInferenceResponse, WebSearchResult,
+    BrokerWebSearchResponse, BrokerWorkspaceSearchRequest, BrokerWorkspaceSearchResponse,
+    BrokerWriteFileRequest, BrokerWriteFileResponse, GetSystemStatusRequest,
+    GetSystemStatusResponse, StreamInferenceRequest, StreamInferenceResponse, WebSearchResult,
+    WorkspaceSearchKind as ProtoWorkspaceSearchKind,
 };
 use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
@@ -26,7 +27,7 @@ use crate::adapters::{active_model_id_from_config, AdapterCapabilities};
 use crate::approvals::{ApprovalContext, ApprovalDecision, ApprovalGate};
 use crate::broker::{
     broker_exec_shell, broker_list_dir, broker_read_file, broker_save_plan, broker_web_search,
-    broker_write_file, BrokerError,
+    broker_workspace_search, broker_write_file, BrokerError, WorkspaceSearchKind,
 };
 use crate::broker_inference::run_broker_inference;
 use crate::domain::{StreamLifecycle, ACTIVE_MODEL_ID, DAEMON_VERSION};
@@ -41,7 +42,8 @@ use crate::policy::{CacheDecision, CacheDecisionState, PolicyEngine, PolicyReque
 use crate::routing::decide_route;
 use crate::settings;
 use crate::sidecar_client::{
-    connect_sidecar, continue_turn_stream, map_sidecar_to_inference_chunks, run_turn_collect, run_turn_stream,
+    connect_sidecar, continue_turn_stream, map_sidecar_to_inference_chunks, run_turn_collect,
+    run_turn_stream,
 };
 use crate::sidecar_config::parse_harness_only;
 use crate::supervisor::{SharedSupervisor, SupervisorError};
@@ -167,6 +169,42 @@ impl RexService for RexDaemonService {
                 Ok(Response::new(BrokerWebSearchResponse {
                     ok: false,
                     results: vec![],
+                    error: err.to_string(),
+                }))
+            }
+        }
+    }
+
+    async fn broker_workspace_search(
+        &self,
+        request: Request<BrokerWorkspaceSearchRequest>,
+    ) -> Result<Response<BrokerWorkspaceSearchResponse>, Status> {
+        let inner = request.into_inner();
+        let mode = normalize_mode(&inner.mode);
+        let kind = match inner.kind() {
+            ProtoWorkspaceSearchKind::Basename => WorkspaceSearchKind::Basename,
+            ProtoWorkspaceSearchKind::Content => WorkspaceSearchKind::Content,
+            _ => WorkspaceSearchKind::Basename,
+        };
+        let query = inner.query;
+        let max_results = inner.max_results as usize;
+        println!(
+            "broker.access_policy=evaluate capability=workspace.search mode={mode} query={query}"
+        );
+        match broker_workspace_search(&query, kind, &mode, max_results) {
+            Ok(results) => {
+                println!("broker.access_policy=allow capability=workspace.search mode={mode}");
+                Ok(Response::new(BrokerWorkspaceSearchResponse {
+                    ok: true,
+                    results,
+                    error: String::new(),
+                }))
+            }
+            Err(err) => {
+                log_broker_access_policy_deny("workspace.search", &mode, &query, &err);
+                Ok(Response::new(BrokerWorkspaceSearchResponse {
+                    ok: false,
+                    results: String::new(),
                     error: err.to_string(),
                 }))
             }
@@ -915,10 +953,7 @@ fn terminal_otlp_ctx(
     }
 }
 
-fn observe_agent_loop_terminal(
-    terminal: &mut Option<String>,
-    chunk: &StreamInferenceResponse,
-) {
+fn observe_agent_loop_terminal(terminal: &mut Option<String>, chunk: &StreamInferenceResponse) {
     if chunk.event == "activity" && chunk.phase == "awaiting_continue" {
         *terminal = Some("cap_soft_paused".to_string());
         return;

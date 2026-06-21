@@ -6,7 +6,9 @@ use std::time::Duration;
 use async_stream::stream;
 use hyper_util::rt::TokioIo;
 use rex_proto::rex::sidecar::v1::sidecar_service_client::SidecarServiceClient;
-use rex_proto::rex::sidecar::v1::{ContinueTurnRequest, HealthRequest, RunTurnChunk, RunTurnRequest};
+use rex_proto::rex::sidecar::v1::{
+    ContinueTurnRequest, HealthRequest, RunTurnChunk, RunTurnRequest,
+};
 use rex_proto::rex::v1::StreamInferenceResponse;
 use tokio::net::UnixStream;
 use tokio_stream::Stream;

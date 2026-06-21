@@ -7,6 +7,10 @@ import uuid
 
 from langchain_core.messages import HumanMessage
 
+from rex_agent.advisory_intent import (
+    daemon_context_has_priority_markers,
+    matches_advisory_intent,
+)
 from rex_agent.broker import BrokerClient
 from rex_agent.config import deterministic_init_enabled
 from rex_agent.graph.compaction import truncation_note
@@ -72,6 +76,10 @@ def should_run_deterministic_init(state: AgentState) -> bool:
     if prompt_has_explicit_file_reference(goal_hint):
         return False
     if prompt_already_has_readme_context(state.get("daemon_context") or ""):
+        return False
+    if matches_advisory_intent(goal_hint):
+        return False
+    if daemon_context_has_priority_markers(state.get("daemon_context") or ""):
         return False
     return True
 

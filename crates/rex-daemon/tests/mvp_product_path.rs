@@ -33,6 +33,9 @@ mod access_policy;
 #[path = "../src/adapters.rs"]
 mod adapters;
 #[allow(dead_code)]
+#[path = "../src/advisory_intent.rs"]
+mod advisory_intent;
+#[allow(dead_code)]
 #[path = "../src/approvals.rs"]
 mod approvals;
 #[allow(dead_code)]

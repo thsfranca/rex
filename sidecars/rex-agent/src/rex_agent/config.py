@@ -119,28 +119,9 @@ def max_tool_steps() -> int:
 
 
 def max_tool_steps_for_mode(mode: str) -> int:
-    normalized = (mode or "ask").strip().lower() or "ask"
-    cfg = _load_config_json()
-    if cfg:
-        agent = cfg.get("agent") or {}
-        if normalized == "ask":
-            steps = agent.get("max_tool_steps_ask")
-            if isinstance(steps, int) and steps > 0:
-                return steps
-            return DEFAULT_MAX_TOOL_STEPS_ASK
-        if normalized == "plan":
-            steps = agent.get("max_tool_steps_plan")
-            if isinstance(steps, int) and steps > 0:
-                return steps
-            return DEFAULT_MAX_TOOL_STEPS_PLAN
-        steps = agent.get("max_tool_steps")
-        if isinstance(steps, int) and steps > 0:
-            return steps
-    if normalized == "ask":
-        return DEFAULT_MAX_TOOL_STEPS_ASK
-    if normalized == "plan":
-        return DEFAULT_MAX_TOOL_STEPS_PLAN
-    return DEFAULT_MAX_TOOL_STEPS
+    """Deprecated (R069): step caps removed; returns 0 (unbounded for metrics)."""
+    _ = mode
+    return 0
 
 
 def max_tools_per_step() -> int:

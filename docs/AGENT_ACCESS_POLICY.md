@@ -108,6 +108,74 @@ Daemon enforces before host execution (**R020** Done):
 
 Sidecar graphs must not be the only enforcement layer once **`rex-agent`** ships.
 
+## Workspace search broker (**R059**)
+
+**Status:** Open — **Should**
+
+### Purpose
+
+Bounded basename glob and content search under `REX_WORKSPACE_ROOT` — OpenCode `grep` / `glob` analogue. Reduces `fs.list` + `fs.read` rounds when the agent needs to locate files by name or snippet.
+
+### Scope
+
+**In:**
+
+- Daemon-owned search execution (walk + optional ripgrep-class matching)
+- Sidecar tool `workspace.search` on viewer subagent
+- Batchable with `fs.read` / `fs.list` per R057 (ask/plan/agent)
+
+**Out:**
+
+- Unbounded recursive search without caps
+- Network search — [WEB_SEARCH.md](WEB_SEARCH.md)
+
+### Interfaces (intent)
+
+**Proto (`rex.v1`):**
+
+```text
+BrokerWorkspaceSearchRequest {
+  query: string
+  mode: string
+  kind: basename | content   // basename = glob-style name match; content = line/snippet match
+  max_results: uint32          // default bounded (e.g. 8)
+}
+BrokerWorkspaceSearchResponse {
+  ok: bool
+  results: string            // delimited paths or path:line snippets
+  error: string
+}
+```
+
+**Sidecar tool:** `workspace.search` with args `{ "query": "...", "kind": "basename|content" }`.
+
+### Policy
+
+| Mode | Allowed |
+|------|---------|
+| `ask` | Yes (read-only) |
+| `plan` | Yes |
+| `agent` | Yes (viewer path) |
+
+Same protected-path rules as `fs.read`. Result size capped at `broker.max_tool_result_bytes`.
+
+### Implementation notes
+
+- Reuse basename walk logic from sidecar `find_paths_by_basename` — move execution to daemon for policy enforcement.
+- Log `broker.access_policy=evaluate capability=workspace.search`.
+
+### Acceptance
+
+- Agent locates `ROADMAP.md` by basename query in one tool step.
+- Content search returns capped snippets with relative paths.
+- Denied paths never appear in results.
+
+### Cross-links
+
+- [ROADMAP.md](ROADMAP.md) — **R059**
+- [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — viewer tools
+- [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md) — broker completion
+
 ## Related
 
 - [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) — spawn, API, transport.

@@ -12,8 +12,9 @@ mod settings;
 mod support;
 
 use support::openai_compat_sse::{
-    spawn_loopback_openai_compat_sse_fixture, spawn_loopback_openai_compat_tool_calls_fixture,
+    spawn_loopback_openai_compat_sse_fixture,
     spawn_loopback_openai_compat_tool_calls_capture_fixture,
+    spawn_loopback_openai_compat_tool_calls_fixture,
     spawn_loopback_openai_compat_tool_reject_fixture,
 };
 
@@ -204,10 +205,7 @@ async fn provider_4xx_with_tools_returns_interim_fallback() {
     .expect("broker inference");
 
     assert!(!response.ok);
-    assert_eq!(
-        response.protocol,
-        InferenceProtocol::InterimFallback as i32
-    );
+    assert_eq!(response.protocol, InferenceProtocol::InterimFallback as i32);
     assert!(
         response.error.contains("native_tools_unsupported"),
         "expected native_tools_unsupported, got: {}",

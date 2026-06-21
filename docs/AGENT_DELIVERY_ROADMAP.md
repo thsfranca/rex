@@ -219,13 +219,18 @@ Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. 
 | **R044** | Operation feedback (live stream, ask research, CLI approval parity) | **Done** — [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md) |
 | **R057** | Parallel read-only tool batching (cross-mode) | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) |
 | **R058** | Per-mode step caps + generic mode prompts | **Done** |
-| **R059** | `workspace.search` broker tool | Open |
-| **R060** | Deterministic ask init + loop circuit breaker | **Open** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) |
+| **R059** | `workspace.search` broker tool | Open — [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md#workspace-search-broker-r059) |
+| **R060** | Deterministic ask init + loop circuit breaker | **Done** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) |
 | **R061** | Exact-match tool cache | **Done** |
 | **R062** | Prefix-safe compaction config | **Done** |
-| **R063** | Soft cap Continue UX | **Done** |
+| **R063** | Soft cap Continue UX | **Superseded** — **R069** / [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) |
 | **R064** | Loop observability + golden prompts | **Done** |
 | **R065** | Injected files manifest | **Done** |
+| **R066** | Project context path pre-injection | **Could** — design deferred — [PROJECT_CONTEXT_PATHS.md](PROJECT_CONTEXT_PATHS.md) |
+| **R067** | Intent-aware retrieval for short prompts | **Should** — [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) |
+| **R068** | Ask answer-first prompt policy | **Should** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) |
+| **R069** | Remove tool step caps | **Should** — [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) |
+| **R070** | Deterministic init intent gating | **Should** — [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) |
 | R016 | Multi-active broadcast | **Could** — rank **18** |
 | **R036** | TRON static schema compression | **Could** — rank **16** |
 | **R033** | MCP gRPC client | **Could** — rank **17** |

@@ -23,6 +23,7 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 |-----------|-------------------|---------------|--------------------|--------|
 | Model routing / escalation cascade | Daemon chooses backend + model hint before adapter | `routing::decide_route` (env today); logs `route=` | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | **partial** (env hook) |
 | Adaptive retrieval gate | Skip indexer for short prompts, `[[retrieve:off]]`, or focused-behavior snapshot; log `retrieval=ran\|skipped` | `plugins::should_skip_retrieval` | [CONFIGURATION.md](CONFIGURATION.md) prompt directives | **implemented** (heuristic) |
+| Advisory intent retrieval (**R067**) | Force retrieval or fixed priority doc bundle when prompt matches advisory patterns (bypasses ≤48 char skip) | `plugins::advisory_intent` + `ContextPipeline` | This doc — [Advisory intent retrieval](#advisory-intent-retrieval-r067) | **planned** |
 | Context compaction — verbatim-safe packing | Query-ranked extractive line packing (`compression_strategy=extractive_query`) | `ExtractiveContextCompressor` in `plugins.rs` | Responsibility map below | **implemented** (extractive) |
 | Context compaction — learned / small-model | Optional compressor stage or sidecar ML | Context pipeline compressor hooks | Evidence-informed defaults | **planned** |
 | Layered response cache — L1 exact | In-process LRU keyed by adapter, model, mode, schema, workspace | L1 cache + policy engine — [CACHING.md](CACHING.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | implemented (ask) |
@@ -149,7 +150,42 @@ Extend the stream-start line when stages ship ([OBSERVABILITY_AND_ECONOMICS.md](
 | `prompts=` | Layered assembly bytes / revision |
 | `knowledge=` | Bundle revision, hit/miss, drift |
 | `memory=` | LTM retrieval hit/miss |
-| `retrieval=` | `ran` \| `skipped` (existing) |
+| `retrieval=` | `ran` \| `skipped` \| `advisory_bundle` (R067) |
+
+## Advisory intent retrieval (R067)
+
+**Status:** planned — **Should**
+
+### Problem
+
+[`should_skip_retrieval`](../../crates/rex-daemon/src/plugins.rs) skips lexical retrieval when the prompt is ≤48 characters. Short advisory prompts such as “What should we do next?” (26 chars) receive empty `[context]` even when `docs/ROADMAP.md` and `docs/PRIORITIZATION.md` would answer the question.
+
+### Decision
+
+Add an **advisory intent** bypass before the length heuristic:
+
+1. **Classifier:** `AdvisoryIntent` in `rex-daemon` (Rust source of truth). Sidecar mirrors patterns for R070 init gating only.
+2. **Patterns (initial, case-insensitive):** `what should we do next`, `what's next`, `what to work on`, `priorities`, `roadmap`, `next step`.
+3. **When matched:** force `retrieval=ran` via indexer **or** inject a **fixed priority bundle** (`docs/ROADMAP.md`, `docs/PRIORITIZATION.md`, `README.md`) within existing `context.max_context_tokens`.
+4. **Config:** `context.advisory_intent_enabled` (default `true`) — see [CONFIGURATION.md](CONFIGURATION.md).
+
+### Boundaries
+
+| Layer | Owns |
+|-------|------|
+| Daemon | Intent match, bundle read, `[context]` assembly |
+| Sidecar | Consumes enriched prompt; no duplicate retrieval |
+
+### Acceptance
+
+- Prompt “What should we do next?” yields non-empty context with roadmap/priority signals.
+- Stream log includes `retrieval=ran` or `retrieval=advisory_bundle`.
+- Non-advisory short prompts still skip retrieval (unchanged heuristic).
+
+### Cross-links
+
+- [PROJECT_CONTEXT_PATHS.md](PROJECT_CONTEXT_PATHS.md) — **R066** long-term pre-injection
+- [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) — **R068**, **R070**
 
 ## Configuration examples
 

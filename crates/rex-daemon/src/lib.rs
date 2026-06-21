@@ -1,5 +1,6 @@
 mod access_policy;
 mod adapters;
+mod advisory_intent;
 mod approvals;
 mod broker;
 mod broker_inference;

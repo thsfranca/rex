@@ -9,6 +9,7 @@ from rex_agent.tools import (
     TOOL_LIST,
     TOOL_READ,
     TOOL_WEB_SEARCH,
+    TOOL_WORKSPACE_SEARCH,
     TOOL_WRITE,
     tool_gate_from_state,
     tools_for_mode,
@@ -16,7 +17,7 @@ from rex_agent.tools import (
 
 
 def classify_subagent_for_tool(tool: str) -> str:
-    if tool in (TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH):
+    if tool in (TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH, TOOL_WORKSPACE_SEARCH):
         return "viewer"
     if tool in (TOOL_WRITE, TOOL_EXEC):
         return "editor"

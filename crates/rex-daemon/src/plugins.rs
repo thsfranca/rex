@@ -52,6 +52,7 @@ pub enum BehaviorDecision {
 pub enum RetrievalDecision {
     Ran,
     Skipped,
+    AdvisoryBundle,
 }
 
 pub struct ContextRequest {
@@ -98,7 +99,10 @@ pub fn build_injected_files_manifest(
     injected_context: &str,
 ) -> Vec<String> {
     let mut paths: Vec<String> = Vec::new();
-    if let Some(path) = active_file_path.map(str::trim).filter(|value| !value.is_empty()) {
+    if let Some(path) = active_file_path
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
         paths.push(path.to_string());
     }
     let lower = injected_context.to_ascii_lowercase();
@@ -221,9 +225,14 @@ pub struct ExtractiveContextCompressor;
 
 const RETRIEVAL_SKIP_MAX_PROMPT_CHARS: usize = 48;
 
+const ADVISORY_BUNDLE_PATHS: &[&str] = &["docs/ROADMAP.md", "docs/PRIORITIZATION.md", "README.md"];
+
 pub fn should_skip_retrieval(request: &ContextRequest) -> bool {
     if request.retrieve_off {
         return true;
+    }
+    if crate::advisory_intent::matches_advisory_intent(&request.prompt) {
+        return false;
     }
     if request.prompt.chars().count() <= RETRIEVAL_SKIP_MAX_PROMPT_CHARS {
         return true;
@@ -232,6 +241,41 @@ pub fn should_skip_retrieval(request: &ContextRequest) -> bool {
         BehavioralPrefilter::evaluate(request.behavior_snapshot),
         BehaviorDecision::Suppress { .. }
     )
+}
+
+fn load_advisory_bundle(budget_tokens: usize) -> (String, usize, bool) {
+    let root = match crate::settings::get().resolve_workspace_root() {
+        Ok(path) => path,
+        Err(_) => return (String::new(), 0, false),
+    };
+    let mut lines: Vec<String> = Vec::new();
+    for rel in ADVISORY_BUNDLE_PATHS {
+        let path = root.join(rel);
+        let Ok(text) = fs::read_to_string(&path) else {
+            continue;
+        };
+        let snippet: String = text.chars().take(4096).collect();
+        lines.push(format!("[{rel}] {snippet}"));
+    }
+    if lines.is_empty() {
+        return (String::new(), 0, false);
+    }
+    let mut out = String::new();
+    let mut used = 0usize;
+    let mut truncated = false;
+    for line in lines {
+        let line_tokens = estimate_tokens(&line);
+        if used + line_tokens > budget_tokens {
+            truncated = true;
+            break;
+        }
+        if !out.is_empty() {
+            out.push('\n');
+        }
+        out.push_str(&line);
+        used += line_tokens;
+    }
+    (out, used, truncated)
 }
 
 impl ExtractiveContextCompressor {
@@ -434,6 +478,10 @@ impl ContextPipeline {
 
         let retrieval = if should_skip_retrieval(request) {
             RetrievalDecision::Skipped
+        } else if crate::advisory_intent::matches_advisory_intent(&bounded_prompt)
+            && bounded_prompt.chars().count() <= RETRIEVAL_SKIP_MAX_PROMPT_CHARS
+        {
+            RetrievalDecision::AdvisoryBundle
         } else {
             RetrievalDecision::Ran
         };
@@ -442,23 +490,34 @@ impl ContextPipeline {
             query.push(' ');
             query.push_str(diagnostics);
         }
-        let mut candidates = if retrieval == RetrievalDecision::Ran {
-            self.indexer.search(&query, 5)
-        } else {
-            Vec::new()
-        };
-        if let Some(active) = &request.active_file_path {
-            boost_active_file_candidate(&mut candidates, active);
-        }
-        let candidate_count = candidates.len();
-        let (context, selected_tokens, truncated) =
-            self.compressor
-                .compress(&query, &candidates, self.budget.max_context_tokens);
-        let compression_strategy = if candidates.is_empty() {
-            "none"
-        } else {
-            "extractive_query"
-        };
+        let (context, selected_tokens, truncated, candidate_count, compression_strategy) =
+            if retrieval == RetrievalDecision::AdvisoryBundle {
+                let (bundle, tokens, trunc) = load_advisory_bundle(self.budget.max_context_tokens);
+                (
+                    bundle,
+                    tokens,
+                    trunc,
+                    ADVISORY_BUNDLE_PATHS.len(),
+                    "advisory_bundle",
+                )
+            } else if retrieval == RetrievalDecision::Ran {
+                let mut candidates = self.indexer.search(&query, 5);
+                if let Some(active) = &request.active_file_path {
+                    boost_active_file_candidate(&mut candidates, active);
+                }
+                let candidate_count = candidates.len();
+                let (ctx, tokens, trunc) =
+                    self.compressor
+                        .compress(&query, &candidates, self.budget.max_context_tokens);
+                let strategy = if candidates.is_empty() {
+                    "none"
+                } else {
+                    "extractive_query"
+                };
+                (ctx, tokens, trunc, candidate_count, strategy)
+            } else {
+                (String::new(), 0, false, 0, "none")
+            };
         if !request.cache_bypass {
             self.cache.put(cache_key, context.clone());
         }
@@ -494,6 +553,7 @@ impl RetrievalDecision {
         match self {
             Self::Ran => "ran",
             Self::Skipped => "skipped",
+            Self::AdvisoryBundle => "advisory_bundle",
         }
     }
 }
@@ -622,6 +682,7 @@ mod tests {
         LexicalWorkspaceIndexer, TokenBudget,
     };
     use crate::adapters::{AdapterCapabilities, RuntimeKind};
+    use super::should_skip_retrieval;
     use std::fs;
     use std::sync::Arc;
 
@@ -656,7 +717,10 @@ mod tests {
             Some("src/main.rs"),
             "[context]\n<<tool_result:fs.read>> README.md\n# rex",
         );
-        assert_eq!(manifest, vec!["README.md".to_string(), "src/main.rs".to_string()]);
+        assert_eq!(
+            manifest,
+            vec!["README.md".to_string(), "src/main.rs".to_string()]
+        );
     }
 
     #[test]
@@ -735,6 +799,19 @@ mod tests {
             ordered_sources,
             vec!["a.rs".to_string(), "b.rs".to_string()]
         );
+    }
+
+    #[test]
+    fn should_skip_retrieval_false_for_short_advisory_prompt() {
+        let request = ContextRequest {
+            prompt: "What should we do next?".to_string(),
+            diagnostics_hint: None,
+            cache_bypass: false,
+            behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
+            active_file_path: None,
+        };
+        assert!(!should_skip_retrieval(&request));
     }
 
     #[test]

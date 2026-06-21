@@ -10,8 +10,7 @@ from langgraph.graph import END, StateGraph
 
 from rex_agent.broker import BrokerClient, InferenceResult, legacy_inference_result
 from rex_agent.broker_chat_model import stream_visible_text
-from rex_agent.config import compaction_enabled, max_tool_steps_for_mode, soft_cap_step_extension
-from rex_agent.graph.checkpoints import consume_soft_cap_checkpoint
+from rex_agent.config import compaction_enabled
 from rex_agent.graph.compaction import compact_state
 from rex_agent.graph.nodes.init import init_workspace_node
 from rex_agent.graph.nodes.llm import llm_node
@@ -199,7 +198,7 @@ def _initial_state(
         viewer_summary="",
         tool_steps=0,
         tool_error_count=0,
-        max_steps=max_tool_steps_for_mode(normalized),
+        max_steps=0,
         truncation_events=[],
         stream_parts=[],
         stream_events=[],
@@ -233,7 +232,7 @@ def _run_graph_stream(
         for partial in update.values():
             if isinstance(partial, dict):
                 current = {**current, **partial}
-        if current.get("soft_cap_paused"):
+        if current.get("done"):
             break
     yield from _yield_visible_events(sink.drain())
     final_box[0] = current
@@ -304,24 +303,14 @@ def stream_turn(
     yield from _stream_agent_state(state, turn_id)
 
 
-def stream_continue_turn(continue_token: str, turn_id: str = "") -> Iterator[StreamEvent]:
-    checkpoint = consume_soft_cap_checkpoint(continue_token)
-    if checkpoint is None:
-        yield ActivityStreamEvent(
-            phase="failed",
-            summary="Invalid or expired continue token",
-            detail="continue_token",
-        )
-        return
-    resumed = {
-        **checkpoint,
-        "max_steps": checkpoint["max_steps"] + soft_cap_step_extension(),
-        "soft_cap_continued": True,
-        "done": False,
-        "soft_cap_paused": False,
-        "turn_id": turn_id or checkpoint.get("turn_id", ""),
-    }
-    yield from _stream_agent_state(resumed, resumed["turn_id"])
+def stream_continue_turn(
+    continue_token: str, turn_id: str = ""
+) -> Iterator[StreamEvent]:
+    yield ActivityStreamEvent(
+        phase="failed",
+        summary="ContinueTurn is deprecated (R069)",
+        detail="continue_token",
+    )
 
 
 def _stream_agent_state(state: AgentState, turn_id: str) -> Iterator[StreamEvent]:

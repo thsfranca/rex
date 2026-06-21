@@ -87,11 +87,11 @@ def test_agent_limits_from_config(
         encoding="utf-8",
     )
     monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
-    assert config.max_tool_steps() == 3
+    assert config.max_tool_steps() == 0
     assert config.max_tool_result_bytes() == 1024
 
 
-def test_ask_tool_steps_do_not_inherit_agent_limit(
+def test_ask_tool_steps_deprecated_r069(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = tmp_path / "rex"
@@ -101,11 +101,11 @@ def test_ask_tool_steps_do_not_inherit_agent_limit(
         encoding="utf-8",
     )
     monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
-    assert config.max_tool_steps_for_mode("ask") == config.DEFAULT_MAX_TOOL_STEPS_ASK
-    assert config.max_tool_steps_for_mode("agent") == 12
+    assert config.max_tool_steps_for_mode("ask") == 0
+    assert config.max_tool_steps_for_mode("agent") == 0
 
 
-def test_ask_tool_steps_from_config_override(
+def test_ask_tool_steps_config_ignored_r069(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = tmp_path / "rex"
@@ -115,11 +115,11 @@ def test_ask_tool_steps_from_config_override(
         encoding="utf-8",
     )
     monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
-    assert config.max_tool_steps_for_mode("ask") == 2
-    assert config.max_tool_steps_for_mode("agent") == 12
+    assert config.max_tool_steps_for_mode("ask") == 0
+    assert config.max_tool_steps_for_mode("agent") == 0
 
 
-def test_plan_tool_steps_do_not_inherit_agent_limit(
+def test_plan_tool_steps_deprecated_r069(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = tmp_path / "rex"
@@ -129,11 +129,11 @@ def test_plan_tool_steps_do_not_inherit_agent_limit(
         encoding="utf-8",
     )
     monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
-    assert config.max_tool_steps_for_mode("plan") == config.DEFAULT_MAX_TOOL_STEPS_PLAN
-    assert config.max_tool_steps_for_mode("agent") == 12
+    assert config.max_tool_steps_for_mode("plan") == 0
+    assert config.max_tool_steps_for_mode("agent") == 0
 
 
-def test_plan_tool_steps_from_config_override(
+def test_plan_tool_steps_config_ignored_r069(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = tmp_path / "rex"
@@ -143,12 +143,12 @@ def test_plan_tool_steps_from_config_override(
         encoding="utf-8",
     )
     monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
-    assert config.max_tool_steps_for_mode("plan") == 15
+    assert config.max_tool_steps_for_mode("plan") == 0
 
 
 def test_agent_limits_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
-    assert config.max_tool_steps() == config.DEFAULT_MAX_TOOL_STEPS
+    assert config.max_tool_steps() == 0
     assert config.max_tool_result_bytes() == config.DEFAULT_MAX_TOOL_RESULT_BYTES
 
 
@@ -213,10 +213,9 @@ def test_search_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.search_enabled() is False
 
 
-def test_ask_default_step_cap_is_fifteen(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_ask_step_cap_removed_r069(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
-    assert config.DEFAULT_MAX_TOOL_STEPS_ASK == 15
-    assert config.max_tool_steps_for_mode("ask") == 15
+    assert config.max_tool_steps_for_mode("ask") == 0
 
 
 def test_deterministic_init_enabled_default(monkeypatch: pytest.MonkeyPatch) -> None:

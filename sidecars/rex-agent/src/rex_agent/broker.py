@@ -294,6 +294,31 @@ class BrokerClient:
         body = "\n".join(lines) if lines else "(no results)"
         return True, truncate_tool_result(body)
 
+    def workspace_search(
+        self, query: str, kind: str, mode: str | None = None
+    ) -> tuple[bool, str]:
+        normalized_kind = (kind or "basename").strip().lower()
+        if normalized_kind == "content":
+            proto_kind = rex_pb2.WORKSPACE_SEARCH_KIND_CONTENT
+        else:
+            proto_kind = rex_pb2.WORKSPACE_SEARCH_KIND_BASENAME
+        request = rex_pb2.BrokerWorkspaceSearchRequest(
+            query=query,
+            mode=mode or self._mode,
+            kind=proto_kind,
+        )
+        try:
+            response = self._stub.BrokerWorkspaceSearch(
+                request,
+                timeout=broker_timeout_secs(),
+                metadata=_metadata(self._turn_id),
+            )
+        except grpc.RpcError as err:
+            return False, format_grpc_error(err)
+        if not response.ok:
+            return False, response.error or "broker workspace_search failed"
+        return True, truncate_tool_result(response.results or "(no matches)")
+
     def exec_shell(self, command: str, mode: str | None = None) -> tuple[bool, str]:
         request = rex_pb2.BrokerExecShellRequest(
             command=command,

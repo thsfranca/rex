@@ -13,6 +13,8 @@ service RexService {
   rpc BrokerExecShell(BrokerExecShellRequest) returns (BrokerExecShellResponse);
   // Sidecar broker: web search (ask-mode research; provider configured in JSON).
   rpc BrokerWebSearch(BrokerWebSearchRequest) returns (BrokerWebSearchResponse);
+  // Sidecar broker: bounded workspace basename/content search (R059).
+  rpc BrokerWorkspaceSearch(BrokerWorkspaceSearchRequest) returns (BrokerWorkspaceSearchResponse);
   // Sidecar broker: OpenAI-compatible HTTP inference (daemon executes backend).
   rpc BrokerInference(BrokerInferenceRequest) returns (BrokerInferenceResponse);
 }
@@ -126,6 +128,25 @@ message WebSearchResult {
 message BrokerWebSearchResponse {
   bool ok = 1;
   repeated WebSearchResult results = 2;
+  string error = 3;
+}
+
+enum WorkspaceSearchKind {
+  WORKSPACE_SEARCH_KIND_UNSPECIFIED = 0;
+  WORKSPACE_SEARCH_KIND_BASENAME = 1;
+  WORKSPACE_SEARCH_KIND_CONTENT = 2;
+}
+
+message BrokerWorkspaceSearchRequest {
+  string query = 1;
+  string mode = 2;
+  WorkspaceSearchKind kind = 3;
+  uint32 max_results = 4;
+}
+
+message BrokerWorkspaceSearchResponse {
+  bool ok = 1;
+  string results = 2;
   string error = 3;
 }
 
