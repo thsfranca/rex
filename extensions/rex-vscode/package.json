@@ -184,8 +184,8 @@
         },
         "rex.daemonAutoStart": {
           "type": "boolean",
-          "default": false,
-          "description": "Spawn rex daemon automatically if it is not running. Disabled by default.",
+          "default": true,
+          "description": "Spawn rex daemon automatically if it is not running. Enabled by default; set false to manage the daemon manually.",
           "scope": "machine-overridable"
         },
         "rex.modelId": {
@@ -261,7 +261,7 @@
           {
             "id": "rex.getStarted.daemon",
             "title": "Start rex daemon (or enable auto-start)",
-            "description": "**User-managed (default):** run `rex daemon` in a terminal so it listens on `/tmp/rex.sock`.\n\n**Extension-managed:** set **rex.daemonAutoStart** to `true` and, if needed, set **REX: Daemon Binary Path** to the absolute `rex` binary.\n\n[How to start the daemon](command:rex.howToStartDaemon)\n[Show daemon status](command:rex.showStatus)",
+            "description": "**Extension-managed (default):** **rex.daemonAutoStart** is on — the extension spawns `rex daemon` when needed. Set **REX: Daemon Binary Path** if `rex` is not on the editor PATH.\n\n**User-managed:** set **rex.daemonAutoStart** to `false` and run `rex daemon` in a terminal.\n\n[How to start the daemon](command:rex.howToStartDaemon)\n[Show daemon status](command:rex.showStatus)",
             "media": {
               "path": "media/rex-activity.svg",
               "altText": "REX"

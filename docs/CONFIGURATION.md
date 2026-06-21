@@ -21,7 +21,7 @@ This document is the **canonical** policy for how REX settings work: merged **JS
 | Built-in defaults | Used when a JSON field is unset. |
 | `$REX_ROOT/config.json` | User defaults: daemon socket, sidecars, inference, workspace, broker, agent. |
 | `.rex/config.json` | Optional project overrides (walked from cwd upward). |
-| CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--yes`, `--verbose`, `--trace-id`, `--active-file`, `--language-id`, `--selection-text` per invocation. |
+| CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--yes`, `--verbose`, `--trace-id`, `--active-file`, `--language-id`, `--selection-text` per invocation. `rex status` and `rex complete` accept **`--no-daemon-autostart`**. |
 
 **Layout root:** `$REX_ROOT` defaults to `~/.rex` when unset. Run `rex config init` to create the layout and operator template `config.json` (**`sidecars.active: agent`**, **`rex-agent`** enabled, **`search.enabled: true`** with **`search.provider: mock`**). Operators typically edit only **`inference.openai_compat`** for a live backend. CI and harness tests use explicit stub configs or `RexConfig::defaults()` in code — not the init template.
 
@@ -35,7 +35,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 
 | Section | Keys | Purpose |
 |---------|------|---------|
-| `daemon` | `socket` | Daemon UDS path (default `/tmp/rex.sock`). |
+| `daemon` | `socket`, `auto_start`, `ready_timeout_secs`, `log_path` | Daemon UDS path (default `/tmp/rex.sock`); **auto-start on by default** (**R071**); readiness poll budget; detached daemon log file. |
 | `sidecars` | `active`, `host`, `required`, `harness`, `list[]`, `capabilities[]` | Host sidecar (`list[]` entry named by `host` or `active`); optional capability fleet (`capabilities[]` with `provides`, `socket`, `binary`); `harness: "direct"` skips spawn (CI/tests). |
 | `inference` | `runtime`, `openai_compat`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. |
 | `workspace` | `root`, `indexer`, `allow_cwd_fallback` | Broker root and lexical indexer (`workspace` or `seeded`). Product path requires non-empty `root` (not `"."`). Harness/CI: `allow_cwd_fallback: true` or `REX_ALLOW_CWD_WORKSPACE=1`. |
@@ -145,23 +145,30 @@ The tables below document **former** env-based tuning. **Do not use** for new se
 |----------|--------------------|---------|
 | `REX_ROOT` | `~/.rex` | Layout root for `config.json`, proto paths, and daemon auto-start from the extension. |
 
-**CLI flags:** `rex complete` accepts `--format`, `--model <id>`, `--mode <ask|plan|agent>`, `--approval-id <id>`, and `--trace-id <id>`. Trace correlation uses **`--trace-id`** (not `REX_TRACE_ID`). Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
+**CLI flags:** `rex complete` accepts `--format`, `--model <id>`, `--mode <ask|plan|agent>`, `--approval-id <id>`, and `--trace-id <id>`. `rex status` and `rex complete` accept **`--no-daemon-autostart`**. Trace correlation uses **`--trace-id`** (not `REX_TRACE_ID`). Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
 
-The CLI reads `daemon.socket` from merged JSON for UDS transport (`rex_config::load_merged`).
+The CLI reads merged JSON for UDS transport and daemon lifecycle (`rex_config::load_merged`).
 
-### CLI operator UX (planned)
+### CLI daemon auto-start (**R071** — implemented)
 
-Design hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md). Keys below are **not** in the schema until **R071–R073** land.
+Design hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md).
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `daemon.auto_start` | **`true`** | CLI spawns detached `rex daemon` when socket is missing |
+| `daemon.ready_timeout_secs` | `10` | Readiness poll budget after spawn |
+| `daemon.log_path` | `$REX_ROOT/daemon.log` | Detached daemon stdout/stderr |
+
+Opt out: `"auto_start": false` in merged JSON or **`--no-daemon-autostart`**. Extension **`rex.daemonAutoStart`** defaults **on** — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md).
+
+### CLI operator UX (planned — R072–R074)
 
 | Key | Default (design) | Purpose |
 |-----|------------------|---------|
-| `daemon.auto_start` | `false` | CLI spawns detached `rex daemon` when socket is missing |
-| `daemon.ready_timeout_secs` | `10` | Readiness poll budget after spawn |
-| `daemon.log_path` | `~/.rex/daemon.log` | Detached daemon log destination |
 | `cli.ui.enabled` | `"auto"` | TUI on TTY: `auto` \| `true` \| `false` |
 | `cli.ui.narrator` | `false` | Optional post-turn LLM summary (**R074**) |
 
-CLI flags (planned): `--no-daemon-autostart`, `--no-ui`. Extension **`rex.daemonAutoStart`** should align with **`daemon.auto_start`** — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md).
+CLI flag (planned): `--no-ui`.
 
 ### Related project scripts
 
@@ -174,14 +181,16 @@ CLI flags (planned): `--no-daemon-autostart`, `--no-ui`. Extension **`rex.daemon
 
 ## Operator quick start (daemon + brokered HTTP)
 
-The product path requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Bootstrap JSON, then start the daemon:
+The product path requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Bootstrap JSON; **`rex status`** / **`rex complete`** auto-start the daemon by default (**R071**):
 
 ```bash
 rex config init
 # Edit $REX_ROOT/config.json — set inference.openai_compat.base_url and model; enable sidecars.list[].enabled
 rex config validate
-rex daemon
+rex status   # starts detached daemon when needed
 ```
+
+Foreground **`rex daemon`** remains for debugging. Opt out with **`daemon.auto_start: false`** or **`--no-daemon-autostart`**.
 
 For **Anthropic, OpenAI, and local Ollama** via one broker URL, use the [Inference Gateway](#inference-gateway-design) (`managed` or `external`) or the [LiteLLM operator profile](#operator-profile-litellm-anthropic-and-other-providers) below.
 

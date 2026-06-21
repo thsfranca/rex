@@ -9,6 +9,7 @@ use tokio::time::{sleep, timeout};
 use tonic::Code;
 
 use crate::command::{parse_command, print_usage, CliCommand, CompleteOutputFormat};
+use crate::daemon_lifecycle::{ensure_daemon_ready, EnsureOptions};
 use crate::domain::{
     stream_request_timeout_seconds, StreamLifecycle, REQUEST_TIMEOUT_SECONDS,
     STREAM_ITEM_TIMEOUT_SECONDS, STREAM_START_RETRY_ATTEMPTS, STREAM_START_RETRY_DELAY_MS,
@@ -47,7 +48,14 @@ pub async fn run_cli(args: impl Iterator<Item = String>) -> ExitCode {
 
 async fn execute(command: CliCommand) -> Result<(), CliError> {
     match command {
-        CliCommand::Status => run_status().await,
+        CliCommand::Status {
+            no_daemon_autostart,
+        } => {
+            run_status(EnsureOptions {
+                no_autostart: no_daemon_autostart,
+            })
+            .await
+        }
         CliCommand::Complete {
             prompt,
             model,
@@ -61,6 +69,7 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
             format,
             yes,
             verbose,
+            no_daemon_autostart,
         } => {
             run_complete(
                 prompt,
@@ -75,13 +84,17 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
                 format,
                 yes,
                 verbose,
+                EnsureOptions {
+                    no_autostart: no_daemon_autostart,
+                },
             )
             .await
         }
     }
 }
 
-async fn run_status() -> Result<(), CliError> {
+async fn run_status(ensure_opts: EnsureOptions) -> Result<(), CliError> {
+    ensure_daemon_ready(ensure_opts).await?;
     let mut client = connect_client(None).await?;
     let mut request = tonic::Request::new(GetSystemStatusRequest {});
     request.set_timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS));
@@ -108,11 +121,13 @@ async fn run_complete(
     format: CompleteOutputFormat,
     yes: bool,
     verbose: bool,
+    ensure_opts: EnsureOptions,
 ) -> Result<(), CliError> {
     let approval_id = resolve_approval_id(&mode, &approval_id, yes, format)?;
     let stream_idle_timeout_secs = stream_idle_timeout_for_mode(&mode);
     let trace_id = resolve_trace_id(trace_id);
     eprintln!("trace_id={trace_id} phase=start operation=complete");
+    ensure_daemon_ready(ensure_opts).await?;
     let mut attempt: u32 = 0;
     loop {
         let mut client = match connect_client(Some(&trace_id)).await {
@@ -184,10 +199,17 @@ async fn run_complete(
 fn map_status_error(status: tonic::Status) -> CliError {
     match status.code() {
         Code::Unavailable => CliError::DaemonUnavailable {
-            socket_path: crate::domain::SOCKET_PATH.to_string(),
+            socket_path: resolved_daemon_socket(),
+            suffix: "; run `rex daemon` or remove --no-daemon-autostart to auto-start".to_string(),
         },
         _ => CliError::Status(status),
     }
+}
+
+fn resolved_daemon_socket() -> String {
+    rex_config::load_merged()
+        .map(|loaded| loaded.daemon_socket().to_string())
+        .unwrap_or_else(|_| crate::domain::SOCKET_PATH.to_string())
 }
 
 fn map_stream_status_error(status: tonic::Status) -> CliError {
@@ -520,7 +542,7 @@ impl CliCommand {
     fn output_format(&self) -> Option<CompleteOutputFormat> {
         match self {
             CliCommand::Complete { format, .. } => Some(*format),
-            CliCommand::Status => None,
+            CliCommand::Status { .. } => None,
         }
     }
 }
@@ -562,6 +584,7 @@ mod tests {
     fn retry_policy_only_retries_daemon_unavailable_within_budget() {
         let unavailable = CliError::DaemonUnavailable {
             socket_path: "/tmp/rex.sock".to_string(),
+            suffix: String::new(),
         };
         assert!(should_retry_stream_start(&unavailable, 0));
         assert!(!should_retry_stream_start(
@@ -632,7 +655,8 @@ mod tests {
         );
         assert_eq!(
             ndjson_error_code(&CliError::DaemonUnavailable {
-                socket_path: "/tmp/rex.sock".to_string()
+                socket_path: "/tmp/rex.sock".to_string(),
+                suffix: String::new(),
             }),
             "daemon_unavailable"
         );

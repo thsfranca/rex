@@ -7,7 +7,7 @@ This document records the phased delivery of the REX editor extension for both V
 - Keep one hybrid VS Code and Cursor extension on the **`rex` NDJSON** contract summarized in **[EXTENSION.md](EXTENSION.md)**; optional unary **`rex.v1`** over UDS is allowed per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)** when maintainers choose it.
 - Deliver **integrated editor+agent UX** per **[EXTENSION_UX.md](EXTENSION_UX.md)** (webview-first; stable CLI boundary).
 - Keep Cursor-specific features optional behind runtime capability detection so the same VSIX installs cleanly in plain VS Code.
-- Keep daemon lifecycle user-managed by default; opt-in auto-start remains behind `rex.daemonAutoStart` (default off). CLI program **R071–R074** ([CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md)) adds JSON **`daemon.auto_start`** with the same semantics; extension setting should mirror merged JSON (extension override for editor-only sessions when both are set).
+- Daemon auto-start defaults **on** for CLI and extension; opt-in manual lifecycle via **`daemon.auto_start: false`**, **`--no-daemon-autostart`**, or **`rex.daemonAutoStart: false`**. CLI program **R072–R074** ([CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md)) adds messaging and TUI; extension setting should mirror merged JSON when both are set (extension override for editor-only sessions).
 
 ## Scope principles
 

@@ -41,7 +41,7 @@ Linear recipe from a clone to **REX** chat in the editor (requires **HTTP backen
 1. **Build** the Rust workspace: `cargo build --workspace` — or one shot: `chmod +x ./scripts/dev-rex-extension.sh && ./scripts/dev-rex-extension.sh`.
 2. **Put** `rex` where the **editor** can find it — [`scripts/install-cli.sh`](scripts/install-cli.sh) (same binary for CLI and daemon auto-start).
 3. **Configure** brokered HTTP in `$REX_ROOT/config.json` — run `rex config init` (rex-agent + mock web search by default), then edit `inference.openai_compat` — [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md).
-4. **Run** `rex daemon` (supervisor spawns the sidecar when enabled in config). Socket defaults to `/tmp/rex.sock` unless overridden in JSON. **Planned:** CLI auto-start and terminal UI — [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md) (**R071–R073**); extension opt-in: **`rex.daemonAutoStart`**.
+4. **Run** `rex status` or `rex complete` — the CLI auto-starts a detached daemon when needed (**R071**, default on). Socket defaults to `/tmp/rex.sock` unless overridden in JSON. Opt out: **`daemon.auto_start: false`**, **`--no-daemon-autostart`**, or extension **`rex.daemonAutoStart: false`**. Terminal UI (**R073**) — [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md).
 5. **Install** the extension — [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md).
 6. **In the editor:** **REX: Open Chat**, try **agent** mode, send a prompt, cancel once, and apply a code block with approval. Verify sidecar health in daemon logs and brokered `fs.read` via a prompt containing `__rex_read:<path>`.
 

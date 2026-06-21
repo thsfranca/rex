@@ -19,7 +19,7 @@ Constraints:
 
 ## Decision
 
-1. **CLI daemon ensure:** When merged JSON **`daemon.auto_start`** is **`true`** (default **`false`**), the CLI may spawn a **detached** **`rex daemon`** before client RPCs, poll **`GetSystemStatus`** until ready or timeout, and serialize concurrent ensure calls (single-flight). CLI-spawned daemons **remain running** after the CLI exits; the extension may still kill only the child it owns on deactivate.
+1. **CLI daemon ensure:** When merged JSON **`daemon.auto_start`** is **`true`** (default **`true`**), the CLI may spawn a **detached** **`rex daemon`** before client RPCs, poll **`GetSystemStatus`** until ready or timeout, and serialize concurrent ensure calls (single-flight). CLI-spawned daemons **remain running** after the CLI exits; the extension may still kill only the child it owns on deactivate. Opt out: **`daemon.auto_start: false`** or **`--no-daemon-autostart`**.
 
 2. **Extension alignment:** CLI and extension share lifecycle states **`unavailable` → `starting` → `ready`**, the same spawn command (**`rex daemon`**), and the same readiness probe. JSON **`daemon.auto_start`** is the canonical config key; **`rex.daemonAutoStart`** mirrors it for editor sessions.
 

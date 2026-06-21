@@ -18,3 +18,10 @@ rex-config = { path = "../rex-config" }
 rex-proto = { path = "../rex-proto" }
 thiserror = "2"
 serde_json = "1"
+
+[dev-dependencies]
+assert_cmd = "2"
+rex-config = { path = "../rex-config" }
+serial_test = "3"
+tempfile = "3"
+tokio.workspace = true

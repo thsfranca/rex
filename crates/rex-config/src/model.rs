@@ -4,6 +4,11 @@ use crate::error::ConfigError;
 
 pub const DEFAULT_DAEMON_SOCKET: &str = "/tmp/rex.sock";
 pub const DEFAULT_SIDECAR_SOCKET: &str = "/tmp/rex-sidecar.sock";
+pub const DEFAULT_DAEMON_READY_TIMEOUT_SECS: u64 = 10;
+
+fn default_daemon_ready_timeout_secs() -> u64 {
+    DEFAULT_DAEMON_READY_TIMEOUT_SECS
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Default)]
 pub struct RexConfig {
@@ -38,7 +43,10 @@ impl RexConfig {
         Self {
             version: 1,
             daemon: DaemonConfig {
-                socket: DEFAULT_DAEMON_SOCKET.to_string(),
+                socket: Some(DEFAULT_DAEMON_SOCKET.to_string()),
+                auto_start: Some(true),
+                ready_timeout_secs: DEFAULT_DAEMON_READY_TIMEOUT_SECS,
+                log_path: String::new(),
             },
             sidecars: SidecarsConfig {
                 active: "stub".to_string(),
@@ -192,9 +200,42 @@ impl RexConfig {
     }
 }
 
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct DaemonConfig {
-    pub socket: String,
+    #[serde(default)]
+    pub socket: Option<String>,
+    /// When `None`, effective default is **true** (auto-start on).
+    #[serde(default)]
+    pub auto_start: Option<bool>,
+    #[serde(default = "default_daemon_ready_timeout_secs")]
+    pub ready_timeout_secs: u64,
+    /// Empty → `$REX_ROOT/daemon.log` at load time.
+    #[serde(default)]
+    pub log_path: String,
+}
+
+impl Default for DaemonConfig {
+    fn default() -> Self {
+        Self {
+            socket: None,
+            auto_start: None,
+            ready_timeout_secs: DEFAULT_DAEMON_READY_TIMEOUT_SECS,
+            log_path: String::new(),
+        }
+    }
+}
+
+impl DaemonConfig {
+    pub fn auto_start_enabled(&self) -> bool {
+        self.auto_start.unwrap_or(true)
+    }
+
+    pub fn resolved_socket(&self) -> &str {
+        self.socket
+            .as_deref()
+            .filter(|value| !value.is_empty())
+            .unwrap_or(DEFAULT_DAEMON_SOCKET)
+    }
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]

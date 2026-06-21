@@ -13,7 +13,29 @@ pub struct LoadedConfig {
 
 impl LoadedConfig {
     pub fn daemon_socket(&self) -> &str {
-        &self.effective.daemon.socket
+        self.effective.daemon.resolved_socket()
+    }
+
+    pub fn daemon_auto_start(&self) -> bool {
+        self.effective.daemon.auto_start_enabled()
+    }
+
+    pub fn daemon_ready_timeout_secs(&self) -> u64 {
+        let secs = self.effective.daemon.ready_timeout_secs;
+        if secs == 0 {
+            crate::model::DEFAULT_DAEMON_READY_TIMEOUT_SECS
+        } else {
+            secs
+        }
+    }
+
+    pub fn daemon_log_path(&self) -> std::path::PathBuf {
+        let raw = self.effective.daemon.log_path.trim();
+        if raw.is_empty() {
+            self.rex_root.join("daemon.log")
+        } else {
+            std::path::PathBuf::from(raw)
+        }
     }
 
     pub fn sidecar_harness_direct(&self) -> bool {
@@ -152,8 +174,19 @@ pub fn merge_config(base: &mut RexConfig, overlay: RexConfig) {
 }
 
 fn merge_daemon(base: &mut crate::model::DaemonConfig, overlay: crate::model::DaemonConfig) {
-    if !overlay.socket.is_empty() {
-        base.socket = overlay.socket;
+    if let Some(socket) = overlay.socket {
+        if !socket.is_empty() {
+            base.socket = Some(socket);
+        }
+    }
+    if overlay.auto_start.is_some() {
+        base.auto_start = overlay.auto_start;
+    }
+    if overlay.ready_timeout_secs != 0 {
+        base.ready_timeout_secs = overlay.ready_timeout_secs;
+    }
+    if !overlay.log_path.is_empty() {
+        base.log_path = overlay.log_path;
     }
 }
 
