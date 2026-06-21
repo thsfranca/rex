@@ -1,7 +1,7 @@
 # ADR 0032: Soft cap pause and ContinueTurn
 
 - **Date:** 2026-06-13
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0034](0034-remove-tool-step-caps.md)
 
 ## Context
 

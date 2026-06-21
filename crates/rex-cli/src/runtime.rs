@@ -10,8 +10,8 @@ use tonic::Code;
 
 use crate::command::{parse_command, print_usage, CliCommand, CompleteOutputFormat};
 use crate::domain::{
-    StreamLifecycle, REQUEST_TIMEOUT_SECONDS, STREAM_ITEM_TIMEOUT_SECONDS,
-    STREAM_START_RETRY_ATTEMPTS, STREAM_START_RETRY_DELAY_MS, stream_request_timeout_seconds,
+    stream_request_timeout_seconds, StreamLifecycle, REQUEST_TIMEOUT_SECONDS,
+    STREAM_ITEM_TIMEOUT_SECONDS, STREAM_START_RETRY_ATTEMPTS, STREAM_START_RETRY_DELAY_MS,
 };
 use crate::error::CliError;
 use crate::transport::connect_client;

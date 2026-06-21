@@ -209,7 +209,8 @@ impl HttpOpenAiCompatRuntime {
             InferenceProtocol::Interim
         };
 
-        let tool_calls = decode_tool_calls_from_provider(assembler.finish_tool_calls(), &tool_name_map);
+        let tool_calls =
+            decode_tool_calls_from_provider(assembler.finish_tool_calls(), &tool_name_map);
         Ok(BrokerCompletionResult {
             content: assembler.content,
             tool_calls,
@@ -469,9 +470,7 @@ fn build_tool_name_map(tools: &[HttpToolSpec]) -> HashMap<String, String> {
 }
 
 fn decode_tool_name_from_provider(wire: &str, map: &HashMap<String, String>) -> String {
-    map.get(wire)
-        .cloned()
-        .unwrap_or_else(|| wire.to_string())
+    map.get(wire).cloned().unwrap_or_else(|| wire.to_string())
 }
 
 fn decode_tool_calls_from_provider(
@@ -515,10 +514,7 @@ mod tests {
         let map = build_tool_name_map(&tools);
         assert_eq!(encode_tool_name_for_provider("fs.read"), "fs_read");
         assert_eq!(encode_tool_name_for_provider("exec.shell"), "exec_shell");
-        assert_eq!(
-            decode_tool_name_from_provider("fs_read", &map),
-            "fs.read"
-        );
+        assert_eq!(decode_tool_name_from_provider("fs_read", &map), "fs.read");
         assert_eq!(
             decode_tool_name_from_provider("web_search", &map),
             "web.search"

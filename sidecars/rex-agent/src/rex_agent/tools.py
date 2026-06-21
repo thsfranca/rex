@@ -9,7 +9,11 @@ from pathlib import Path
 from typing import Any
 
 from rex_agent.broker import BrokerClient, strip_tool_result_delimiters
-from rex_agent.config import max_tool_result_bytes, max_tools_per_step, read_pruning_enabled
+from rex_agent.config import (
+    max_tool_result_bytes,
+    max_tools_per_step,
+    read_pruning_enabled,
+)
 from rex_agent.diff import (
     apply_unified_diff,
     editor_write_prompt_suffix,
@@ -22,6 +26,7 @@ TOOL_WRITE = "fs.write"
 TOOL_EXEC = "exec.shell"
 TOOL_PLAN_SAVE = "plan.save"
 TOOL_WEB_SEARCH = "web.search"
+TOOL_WORKSPACE_SEARCH = "workspace.search"
 
 
 def injected_files_system_note(injected_files: list[str]) -> str:
@@ -51,10 +56,11 @@ PLAN_PROMPT_SLICE = (
     "or plan.save to .rex/plans/<name>.md when the user should persist the plan."
 )
 ASK_PROMPT_SLICE = (
-    "Ask mode: read-only research. Explore the workspace first (README.md, docs/, "
-    "root listing) with batched fs.read/fs.list. Use web.search only after local "
-    "docs are insufficient or the user explicitly asked for web lookup. "
-    "Minimize tool rounds; cite sources in your final answer."
+    "Ask mode: read-only research. If the user asks a question that does not require "
+    "file changes, answer from injected context first. Use fs.read, fs.list, or "
+    "workspace.search only when context is insufficient or the user names paths. "
+    "Use web.search only after local docs are insufficient or the user explicitly "
+    "asked for web lookup. Minimize tool rounds; cite sources in your final answer."
 )
 AGENT_PROMPT_SLICE = (
     "Agent mode: batch viewer reads before editing. Use exactly one fs.write or "
@@ -62,15 +68,19 @@ AGENT_PROMPT_SLICE = (
 )
 
 TOOLS_BY_MODE: dict[str, frozenset[str]] = {
-    "ask": frozenset({TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH}),
-    "plan": frozenset({TOOL_READ, TOOL_LIST, TOOL_PLAN_SAVE}),
-    "agent": frozenset({TOOL_READ, TOOL_LIST, TOOL_WRITE, TOOL_EXEC}),
+    "ask": frozenset({TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH, TOOL_WORKSPACE_SEARCH}),
+    "plan": frozenset({TOOL_READ, TOOL_LIST, TOOL_PLAN_SAVE, TOOL_WORKSPACE_SEARCH}),
+    "agent": frozenset(
+        {TOOL_READ, TOOL_LIST, TOOL_WRITE, TOOL_EXEC, TOOL_WORKSPACE_SEARCH}
+    ),
 }
 
-VIEWER_TOOLS = frozenset({TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH})
+VIEWER_TOOLS = frozenset(
+    {TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH, TOOL_WORKSPACE_SEARCH}
+)
 EDITOR_TOOLS = frozenset({TOOL_READ, TOOL_WRITE, TOOL_EXEC})
 
-BATCHABLE_READ_TOOLS = frozenset({TOOL_READ, TOOL_LIST})
+BATCHABLE_READ_TOOLS = frozenset({TOOL_READ, TOOL_LIST, TOOL_WORKSPACE_SEARCH})
 
 FIND_MAX_DEPTH = 12
 FIND_MAX_DIRS = 96
@@ -125,6 +135,7 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     TOOL_EXEC: "Run an allowlisted shell command in the workspace",
     TOOL_PLAN_SAVE: "Save a markdown plan under .rex/plans/",
     TOOL_WEB_SEARCH: "Search the web for up-to-date information",
+    TOOL_WORKSPACE_SEARCH: "Search workspace paths by basename or file content",
 }
 
 TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
@@ -175,6 +186,18 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
         "type": "object",
         "properties": {
             "query": {"type": "string", "description": "Search query"},
+        },
+        "required": ["query"],
+    },
+    TOOL_WORKSPACE_SEARCH: {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "Search terms"},
+            "kind": {
+                "type": "string",
+                "description": "basename or content",
+                "enum": ["basename", "content"],
+            },
         },
         "required": ["query"],
     },
@@ -300,6 +323,9 @@ def validate_tool_call(call: ToolCall) -> str | None:
     elif call.tool == TOOL_WEB_SEARCH:
         if not _non_empty_str(args.get("query")):
             return "web.search requires a non-empty query argument."
+    elif call.tool == TOOL_WORKSPACE_SEARCH:
+        if not _non_empty_str(args.get("query")):
+            return "workspace.search requires a non-empty query argument."
     elif call.tool == TOOL_EXEC:
         if not _non_empty_str(args.get("command")):
             return "exec.shell requires a non-empty command argument."
@@ -568,6 +594,11 @@ def system_prompt_for_tools(
         )
     if TOOL_WEB_SEARCH in allowed:
         tool_docs.append(f'- "{TOOL_WEB_SEARCH}": args {{"query": "<search terms>"}}')
+    if TOOL_WORKSPACE_SEARCH in allowed:
+        tool_docs.append(
+            f'- "{TOOL_WORKSPACE_SEARCH}": args {{"query": "<terms>", '
+            '"kind": "basename|content"}}'
+        )
     if subagent == "editor":
         tool_policy = (
             "You are a development agent. Use exactly one fs.write or exec.shell "
@@ -832,6 +863,16 @@ def execute_tool(
         if not query:
             return False, "web.search requires query", False, False
         ok, result = client.web_search(query, mode)
+        if ok and read_cache is not None:
+            read_cache.put_call(tool, args, ok, result)
+        return ok, result, False, False
+
+    if tool == TOOL_WORKSPACE_SEARCH:
+        query = str(args.get("query", "")).strip()
+        if not query:
+            return False, "workspace.search requires query", False, False
+        kind = str(args.get("kind", "basename")).strip().lower() or "basename"
+        ok, result = client.workspace_search(query, kind, mode)
         if ok and read_cache is not None:
             read_cache.put_call(tool, args, ok, result)
         return ok, result, False, False

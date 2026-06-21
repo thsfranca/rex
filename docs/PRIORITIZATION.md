@@ -76,6 +76,8 @@ Use these as short confidence cues when ranking optimization proposals:
 
 **Context:** Streaming/agent Must **RC-01–RC-10** are **Met** ([V1_0.md](V1_0.md)). **v1.0 not Met** — observability Must **RC-LF1** (**Not met**) blocks the **`1.0.0` git tag**. Product agent program (**R013–R038**) is **Done**. Rex-owned observability (**R043–R054**) **cancelled**.
 
+**Advisory ask efficiency (2026-06-18):** **R069** → **R067** → **R068** → **R070** → **R059** — short-prompt failures (OpenCode comparison). **R066** (context paths) deferred. Hubs: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md).
+
 **Ordering method:** MoSCoW bucket first; **R-ICE** (Impact × Confidence × Ease, 1–5) for **Should** ties; [tie-breakers](#tie-breakers-rex-specific) for blast radius and CI cost.
 
 | Rank | ID / theme | MoSCoW | R-ICE | RC-* | Blast | Rationale |
@@ -85,7 +87,9 @@ Use these as short confidence cues when ranking optimization proposals:
 | 3 | **LF-D09** — v1.0 **RC-LF1** validation | **Must** | **50** | RC-LF1 | docs | Honest tag gate |
 | 4 | **LF-R01** — remove Rex observability dead code | **Must** | **55** | — | crates + CI | **After docs pivot merge** |
 | 5 | **LF-F01** — daemon OTLP → LangFuse Cloud | **Must** | **60** | RC-LF1 | daemon | **After LF-D01–D02** |
-| 6 | **LF-D03–LF-D08** — parallel discovery | **Should** | **40** avg | — | spikes | Features **LF-F02–F07** |
+| 6 | **R069** — remove tool step caps | **Should** | **55** | — | sidecar | Unblocks advisory ask loops — [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) |
+| 7 | **R067** — advisory intent retrieval | **Should** | **50** | — | daemon | Short-prompt context — [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
+| 8 | **LF-D03–LF-D08** — parallel discovery | **Should** | **40** avg | — | spikes | Features **LF-F02–F07** |
 | 7 | **R040** — nightly live-smoke workflow | **Should** | **60** | RC-S6 | CI only | Informational tier |
 | 8 | **R042** — economics manifest (LangFuse datasets) | **Could** | **35** | — | harness | **LF-D05** |
 | 9 | **R041** — gateway-path live smoke | **Could** | **30** | — | harness | Same as R039 via gateway |

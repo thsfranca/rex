@@ -26,6 +26,7 @@ pub enum BrokerCapability {
     PlanSave,
     ExecShell,
     WebSearch,
+    WorkspaceSearch,
 }
 
 impl BrokerCapability {
@@ -37,6 +38,7 @@ impl BrokerCapability {
             Self::PlanSave => "plan.save",
             Self::ExecShell => "exec.shell",
             Self::WebSearch => "web.search",
+            Self::WorkspaceSearch => "workspace.search",
         }
     }
 }
@@ -93,12 +95,15 @@ pub fn evaluate_broker(
         BrokerCapability::PlanSave => evaluate_plan_save_path(relative_path.unwrap_or("")),
         BrokerCapability::ExecShell => AccessDecision::Allow,
         BrokerCapability::WebSearch => AccessDecision::Allow,
+        BrokerCapability::WorkspaceSearch => AccessDecision::Allow,
     }
 }
 
 fn capability_allowed_in_mode(capability: BrokerCapability, mode: &str) -> bool {
     match capability {
-        BrokerCapability::FsRead | BrokerCapability::FsList => true,
+        BrokerCapability::FsRead | BrokerCapability::FsList | BrokerCapability::WorkspaceSearch => {
+            true
+        }
         BrokerCapability::FsWrite | BrokerCapability::ExecShell => mode == "agent",
         BrokerCapability::PlanSave => mode == "plan",
         BrokerCapability::WebSearch => mode == "ask" && crate::settings::get().search_enabled(),
@@ -172,6 +177,10 @@ pub fn evaluate_exec_shell(mode: &str) -> AccessDecision {
 /// Evaluate `plan.save` before host execution.
 pub fn evaluate_plan_save(relative_path: &str, mode: &str) -> AccessDecision {
     evaluate_broker(BrokerCapability::PlanSave, mode, Some(relative_path))
+}
+
+pub fn evaluate_workspace_search(mode: &str) -> AccessDecision {
+    evaluate_broker(BrokerCapability::WorkspaceSearch, mode, None)
 }
 
 fn is_protected_path(relative_path: &str) -> bool {

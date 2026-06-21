@@ -118,7 +118,48 @@ def test_ask_research_read_then_final_answer() -> None:
     assert MARKER in combined or TOOL_READ in combined
 
 
-def test_ask_step_limit_returns_terminal_message() -> None:
+def test_ask_answer_first_with_injected_context() -> None:
+    """R068: advisory prompt with context should finish without tools."""
+    llm_calls: list[int] = []
+
+    def fake_inference(
+        prompt: str, mode: str, model: str, **kwargs: object
+    ) -> InferenceResult:
+        llm_calls.append(1)
+        return legacy_inference_result(
+            True,
+            '{"type":"final","answer":"Next: LangFuse export (RC-LF1)"}',
+        )
+
+    mock_client = MagicMock()
+    graph.set_inference_fn(fake_inference)
+    try:
+        with patch(
+            "rex_agent.graph.nodes.init.deterministic_init_enabled", return_value=False
+        ):
+            with patch("rex_agent.graph.BrokerClient") as broker_cls:
+                broker_cls.return_value.__enter__.return_value = mock_client
+                broker_cls.return_value.__exit__.return_value = None
+                _reset_graphs()
+                answer, _ = graph.run_turn(
+                    "[context]\n[docs/ROADMAP.md] Next: LangFuse export\n\n"
+                    "What should we do next?",
+                    "ask",
+                    "",
+                    "golden-advisory",
+                )
+    finally:
+        graph.set_inference_fn(None)
+        _reset_graphs()
+
+    assert len(llm_calls) == 1
+    assert "LangFuse" in answer
+    mock_client.read_file.assert_not_called()
+    mock_client.list_dir.assert_not_called()
+
+
+def test_ask_no_step_cap_terminal_message() -> None:
+    """R069: tool loop is not capped at max_tool_steps_ask."""
     step = {"n": 0}
 
     def fake_inference(
@@ -126,14 +167,14 @@ def test_ask_step_limit_returns_terminal_message() -> None:
     ) -> InferenceResult:
         tools = kwargs.get("tools") or []
         step["n"] += 1
-        if tools:
+        if tools and step["n"] <= 3:
             return InferenceResult(
                 ok=True,
                 tool_calls=[BrokerToolCall(tool="fs.list", args={"path": ""})],
             )
         return legacy_inference_result(
             True,
-            '{"type":"final","answer":"should not reach"}',
+            '{"type":"final","answer":"completed after multiple tool rounds"}',
         )
 
     mock_client = MagicMock()
@@ -144,17 +185,18 @@ def test_ask_step_limit_returns_terminal_message() -> None:
         with patch(
             "rex_agent.graph.nodes.init.deterministic_init_enabled", return_value=False
         ):
-            with patch("rex_agent.graph.max_tool_steps_for_mode", return_value=1):
-                with patch("rex_agent.graph.BrokerClient") as broker_cls:
-                    broker_cls.return_value.__enter__.return_value = mock_client
-                    broker_cls.return_value.__exit__.return_value = None
-                    _reset_graphs()
-                    answer, _ = graph.run_turn("list forever", "ask", "", "")
+            with patch("rex_agent.graph.BrokerClient") as broker_cls:
+                broker_cls.return_value.__enter__.return_value = mock_client
+                broker_cls.return_value.__exit__.return_value = None
+                _reset_graphs()
+                answer, _ = graph.run_turn("list forever", "ask", "", "")
     finally:
         graph.set_inference_fn(None)
         _reset_graphs()
 
-    assert "agent.max_tool_steps_ask" in answer
+    assert "agent.max_tool_steps_ask" not in answer
+    assert "completed after multiple tool rounds" in answer
+    assert step["n"] >= 3
 
 
 def test_ask_mode_batches_two_reads_one_step() -> None:
@@ -238,17 +280,16 @@ def test_ask_cap_regression_denied_web_search_does_not_exhaust_cap() -> None:
             "rex_agent.graph.nodes.init.deterministic_init_enabled", return_value=False
         ):
             with patch("rex_agent.config.search_enabled", return_value=True):
-                with patch("rex_agent.graph.max_tool_steps_for_mode", return_value=5):
-                    with patch("rex_agent.graph.BrokerClient") as broker_cls:
-                        broker_cls.return_value.__enter__.return_value = mock_client
-                        broker_cls.return_value.__exit__.return_value = None
-                        _reset_graphs()
-                        answer, _ = graph.run_turn(
-                            "search the web for what rex is",
-                            "ask",
-                            "",
-                            "cap-regression",
-                        )
+                with patch("rex_agent.graph.BrokerClient") as broker_cls:
+                    broker_cls.return_value.__enter__.return_value = mock_client
+                    broker_cls.return_value.__exit__.return_value = None
+                    _reset_graphs()
+                    answer, _ = graph.run_turn(
+                        "search the web for what rex is",
+                        "ask",
+                        "",
+                        "cap-regression",
+                    )
     finally:
         graph.set_inference_fn(None)
         _reset_graphs()

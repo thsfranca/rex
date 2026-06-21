@@ -60,16 +60,32 @@ def test_plan_mode_executes_one_tool() -> None:
     assert "file contents" in combined or TOOL_READ in combined
 
 
-def test_tool_step_limit_stops_loop() -> None:
-    def always_tool(prompt: str, mode: str, model: str) -> tuple[bool, str]:
-        return True, '{"type":"tool","tool":"fs.list","args":{"path":""}}'
+def test_tool_step_limit_no_longer_stops_loop() -> None:
+    step = {"n": 0}
+
+    def fake_inference(
+        prompt: str, mode: str, model: str, **kwargs: object
+    ) -> InferenceResult:
+        tools = kwargs.get("tools") or []
+        step["n"] += 1
+        if tools and step["n"] <= 2:
+            return InferenceResult(
+                ok=True,
+                tool_calls=[BrokerToolCall(tool="fs.list", args={"path": ""})],
+            )
+        return legacy_inference_result(
+            True,
+            '{"type":"final","answer":"plan completed"}',
+        )
 
     mock_client = MagicMock()
     mock_client.list_dir.return_value = (True, "a.txt")
 
-    graph.set_inference_fn(always_tool)
+    graph.set_inference_fn(fake_inference)
     try:
-        with patch("rex_agent.graph.max_tool_steps_for_mode", return_value=1):
+        with patch(
+            "rex_agent.graph.nodes.init.deterministic_init_enabled", return_value=False
+        ):
             with patch("rex_agent.graph.BrokerClient") as broker_cls:
                 broker_cls.return_value.__enter__.return_value = mock_client
                 broker_cls.return_value.__exit__.return_value = None
@@ -79,7 +95,8 @@ def test_tool_step_limit_stops_loop() -> None:
         graph.set_inference_fn(None)
         _reset_graphs()
 
-    assert "agent.max_tool_steps_plan" in answer
+    assert "agent.max_tool_steps_plan" not in answer
+    assert "plan completed" in answer
 
 
 def test_plan_mode_batches_three_reads_one_step() -> None:
@@ -233,12 +250,11 @@ def test_agent_denied_exec_does_not_bill_step() -> None:
 
     graph.set_inference_fn(fake_inference)
     try:
-        with patch("rex_agent.graph.max_tool_steps_for_mode", return_value=1):
-            with patch("rex_agent.graph.BrokerClient") as broker_cls:
-                broker_cls.return_value.__enter__.return_value = mock_client
-                broker_cls.return_value.__exit__.return_value = None
-                _reset_graphs()
-                answer, _ = graph.run_turn("write env", "agent", "", "")
+        with patch("rex_agent.graph.BrokerClient") as broker_cls:
+            broker_cls.return_value.__enter__.return_value = mock_client
+            broker_cls.return_value.__exit__.return_value = None
+            _reset_graphs()
+            answer, _ = graph.run_turn("write env", "agent", "", "")
     finally:
         graph.set_inference_fn(None)
         _reset_graphs()

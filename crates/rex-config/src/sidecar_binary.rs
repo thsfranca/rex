@@ -32,16 +32,20 @@ pub fn rex_agent_doctor_checks(rex_root: &Path, proto_gen: &Path) -> Result<(), 
         ));
     }
     let version_out = Command::new(&venv_python)
-        .args(["-c", "import sys; print(f\"{sys.version_info.major}.{sys.version_info.minor}\")"])
+        .args([
+            "-c",
+            "import sys; print(f\"{sys.version_info.major}.{sys.version_info.minor}\")",
+        ])
         .output()
         .map_err(|err| format!("rex-agent venv python failed to run: {err}"))?;
     if !version_out.status.success() {
         return Err("rex-agent venv python is not runnable".to_string());
     }
-    let version = String::from_utf8_lossy(&version_out.stdout).trim().to_string();
-    let (major, minor) = parse_python_version(&version).ok_or_else(|| {
-        format!("could not parse rex-agent venv python version: {version}")
-    })?;
+    let version = String::from_utf8_lossy(&version_out.stdout)
+        .trim()
+        .to_string();
+    let (major, minor) = parse_python_version(&version)
+        .ok_or_else(|| format!("could not parse rex-agent venv python version: {version}"))?;
     if major < REX_AGENT_MIN_PYTHON_MAJOR
         || (major == REX_AGENT_MIN_PYTHON_MAJOR && minor < REX_AGENT_MIN_PYTHON_MINOR)
     {

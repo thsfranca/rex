@@ -202,9 +202,40 @@ Follow-on program after **R057–R058** to reduce cap-terminal failures and impr
 | **R060** | Deterministic ask init + hybrid circuit breaker | **Done** | Pre-LLM `fs.read`/`fs.list`; `agent_loop_stuck` at 3 policy-deny rounds; `agent.deterministic_init_enabled` (default true) |
 | **R061** | Exact-match tool result cache | **Done** | `(tool, args)` hash; duplicate intercept → no bill + error_count |
 | **R062** | Prefix-safe compaction defaults | **Done** | `agent.compaction_enabled` default false; typed Rust config fields |
-| **R063** | Soft cap Continue UX | **Done** | NDJSON `awaiting_continue`; `ContinueTurn` RPC; caps 15/25/25 |
+| **R063** | Soft cap Continue UX | **Superseded** | Superseded by **R069** / [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) |
 | **R064** | Loop observability + golden prompts | **Done** | `cap_terminal` metrics; golden pytest suite |
 | **R065** | `injected_files` manifest on `RunTurn` | **Done** | Daemon emits paths; sidecar skips redundant reads |
+
+### Advisory ask efficiency (R067–R070)
+
+Follow-on after R060–R065 to fix short advisory prompts (for example “What should we do next?”) without cap-terminal failures.
+
+| ID | Theme | Status | Notes |
+|----|-------|--------|-------|
+| **R067** | Intent-aware retrieval for short prompts | **Open** | Advisory intent bypasses ≤48 char retrieval skip — [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) |
+| **R068** | Ask answer-first prompt policy | **Open** | Answer from injected context before tool exploration |
+| **R069** | Remove tool step caps | **Open** | Unbounded loop until final or `agent_loop_stuck` — [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) |
+| **R070** | Deterministic init intent gating | **Open** | Skip README+list init for advisory prompts when context sufficient |
+
+**R068 — Ask answer-first prompt policy**
+
+- Replace explore-first default in `ASK_PROMPT_SLICE` with OpenCode-style guidance:
+  - Questions that do not require file changes → answer from injected context first.
+  - Use `fs.read` / `fs.list` / `workspace.search` only when context is insufficient or the user names paths.
+  - Minimize tool rounds; cite sources in the final answer.
+- Operator overlay: [fixtures/prompts/mode/ask.md](../fixtures/prompts/mode/ask.md).
+- **Acceptance:** Golden prompt “What should we do next?” with roadmap in context → final answer without tool calls.
+
+**R070 — Deterministic init intent gating**
+
+- Extend `should_run_deterministic_init`: skip when advisory intent matches (same patterns as R067) or `daemon_context` contains roadmap/priority markers.
+- Keep init for cold-start identity questions (“What is rex?”).
+- **Acceptance:** Advisory prompt with sufficient context → no pre-LLM init step; identity questions still init when enabled.
+
+**R069 — Remove tool step caps**
+
+- Supersedes R063 soft-cap UX — see [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md).
+- **Safety retained:** `agent_loop_stuck` (3 policy failures), `max_tools_per_step`, duplicate cache, approvals.
 
 ### Hybrid billing (R060+)
 

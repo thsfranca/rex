@@ -29,6 +29,7 @@ Before adding or materially editing a doc under `docs/`:
 | [DOCUMENTATION.md](DOCUMENTATION.md) | Writing checklist + doc-type norms |
 | [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) | How to contribute and gate quality |
 | [PRIORITIZATION.md](PRIORITIZATION.md) | MoSCoW + quick R-ICE |
+| [PROJECT_CONTEXT_PATHS.md](PROJECT_CONTEXT_PATHS.md) | OpenCode-style context path pre-injection (**R066** planned) |
 | [V1_0.md](V1_0.md) | v1.0 release criteria (SMART), SemVer meaning, tagging gate |
 | [ROADMAP.md](ROADMAP.md) | v1.0 closure queue (**RC-LF1** Must), LangFuse discovery, engineering backlog IDs |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | SAD + C4-style views + links to ADRs |
@@ -104,6 +105,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Token-efficient agent graph (design accepted) | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md), [ADR 0022](architecture/decisions/0022-viewer-editor-subagent-topology.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md), [ROADMAP.md](ROADMAP.md) R027–R038 |
 | CI quality and security gates (**R023** Done) | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md), [ROADMAP.md](ROADMAP.md) R024–R026 |
 | Development assistance capabilities (daemon-owned context, turn contract) | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md), [ADRs 0011–0017](architecture/decisions/README.md) |
+| Project context path pre-injection (**R066** planned) | [PROJECT_CONTEXT_PATHS.md](PROJECT_CONTEXT_PATHS.md) |
 | Plan mode planning tools | [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [ADR 0024](architecture/decisions/0024-plan-mode-artifacts-and-plan-save-broker.md) |
 
 ## Scripts (related)

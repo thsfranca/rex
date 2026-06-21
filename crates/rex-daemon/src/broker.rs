@@ -382,6 +382,189 @@ fn resolve_list_dir(root: &Path, relative_path: &str) -> Result<PathBuf, BrokerE
     resolve_under_workspace(root, trimmed)
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorkspaceSearchKind {
+    Basename,
+    Content,
+}
+
+const WORKSPACE_SEARCH_MAX_DEPTH: usize = 12;
+const WORKSPACE_SEARCH_MAX_DIRS: usize = 96;
+const WORKSPACE_SEARCH_MAX_MATCHES: usize = 8;
+const WORKSPACE_SEARCH_SKIP_DIRS: &[&str] = &[
+    ".git",
+    "node_modules",
+    "target",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "dist",
+    "build",
+];
+
+pub fn broker_workspace_search(
+    query: &str,
+    kind: WorkspaceSearchKind,
+    mode: &str,
+    max_results: usize,
+) -> Result<String, BrokerError> {
+    match crate::access_policy::evaluate_workspace_search(mode) {
+        AccessDecision::Allow => {}
+        AccessDecision::Deny(deny) => return Err(deny.into()),
+    }
+    let trimmed = query.trim();
+    if trimmed.is_empty() {
+        return Err(BrokerError::Io("query must not be empty".to_string()));
+    }
+    let limit = max_results.clamp(1, WORKSPACE_SEARCH_MAX_MATCHES);
+    let root = workspace_root_from_config()?;
+    let matches = match kind {
+        WorkspaceSearchKind::Basename => search_paths_by_basename(&root, trimmed, limit)?,
+        WorkspaceSearchKind::Content => search_paths_by_content(&root, trimmed, limit)?,
+    };
+    let body = if matches.is_empty() {
+        "no matches".to_string()
+    } else {
+        matches.join("\n")
+    };
+    Ok(format_delimited_tool_result("workspace.search", &body))
+}
+
+fn search_paths_by_basename(
+    root: &Path,
+    query: &str,
+    limit: usize,
+) -> Result<Vec<String>, BrokerError> {
+    let needle = query.to_ascii_lowercase();
+    let mut matches = Vec::new();
+    let mut queue = vec![(String::new(), 0usize)];
+    let mut visited = 0usize;
+    while let Some((dir_path, depth)) = queue.pop() {
+        if visited >= WORKSPACE_SEARCH_MAX_DIRS || matches.len() >= limit {
+            break;
+        }
+        visited += 1;
+        let resolved = if dir_path.is_empty() {
+            root.to_path_buf()
+        } else {
+            resolve_under_workspace(root, &dir_path)?
+        };
+        for entry in fs::read_dir(&resolved).map_err(|e| BrokerError::Io(e.to_string()))? {
+            if matches.len() >= limit {
+                break;
+            }
+            let entry = entry.map_err(|e| BrokerError::Io(e.to_string()))?;
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with('.') && name != ".rex" {
+                continue;
+            }
+            let rel = if dir_path.is_empty() {
+                name.clone()
+            } else {
+                format!("{dir_path}/{name}")
+            };
+            let file_type = entry
+                .file_type()
+                .map_err(|e| BrokerError::Io(e.to_string()))?;
+            if file_type.is_dir() {
+                if WORKSPACE_SEARCH_SKIP_DIRS.contains(&name.as_str())
+                    || depth >= WORKSPACE_SEARCH_MAX_DEPTH
+                {
+                    continue;
+                }
+                queue.push((rel, depth + 1));
+                continue;
+            }
+            if name.to_ascii_lowercase().contains(&needle)
+                || rel.to_ascii_lowercase().contains(&needle)
+            {
+                matches.push(rel);
+            }
+        }
+    }
+    Ok(matches)
+}
+
+fn search_paths_by_content(
+    root: &Path,
+    query: &str,
+    limit: usize,
+) -> Result<Vec<String>, BrokerError> {
+    let needle = query.to_ascii_lowercase();
+    let mut matches = Vec::new();
+    let mut queue = vec![(String::new(), 0usize)];
+    let mut visited = 0usize;
+    while let Some((dir_path, depth)) = queue.pop() {
+        if visited >= WORKSPACE_SEARCH_MAX_DIRS || matches.len() >= limit {
+            break;
+        }
+        visited += 1;
+        let resolved = if dir_path.is_empty() {
+            root.to_path_buf()
+        } else {
+            resolve_under_workspace(root, &dir_path)?
+        };
+        for entry in fs::read_dir(&resolved).map_err(|e| BrokerError::Io(e.to_string()))? {
+            if matches.len() >= limit {
+                break;
+            }
+            let entry = entry.map_err(|e| BrokerError::Io(e.to_string()))?;
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with('.') && name != ".rex" {
+                continue;
+            }
+            let rel = if dir_path.is_empty() {
+                name.clone()
+            } else {
+                format!("{dir_path}/{name}")
+            };
+            let file_type = entry
+                .file_type()
+                .map_err(|e| BrokerError::Io(e.to_string()))?;
+            if file_type.is_dir() {
+                if WORKSPACE_SEARCH_SKIP_DIRS.contains(&name.as_str())
+                    || depth >= WORKSPACE_SEARCH_MAX_DEPTH
+                {
+                    continue;
+                }
+                queue.push((rel, depth + 1));
+                continue;
+            }
+            if !is_searchable_extension(&rel) {
+                continue;
+            }
+            let full = resolve_under_workspace(root, &rel)?;
+            let Ok(text) = fs::read_to_string(&full) else {
+                continue;
+            };
+            for (line_no, line) in text.lines().enumerate() {
+                if line.to_ascii_lowercase().contains(&needle) {
+                    matches.push(format!("{rel}:{}", line_no + 1));
+                    break;
+                }
+            }
+        }
+    }
+    Ok(matches)
+}
+
+fn is_searchable_extension(path: &str) -> bool {
+    let lower = path.to_ascii_lowercase();
+    lower.ends_with(".rs")
+        || lower.ends_with(".py")
+        || lower.ends_with(".md")
+        || lower.ends_with(".toml")
+        || lower.ends_with(".json")
+        || lower.ends_with(".yaml")
+        || lower.ends_with(".yml")
+        || lower.ends_with(".tsx")
+        || lower.ends_with(".ts")
+        || lower.ends_with(".jsx")
+        || lower.ends_with(".js")
+        || lower.ends_with(".go")
+        || lower.ends_with(".sh")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -630,5 +813,18 @@ mod tests {
         assert!(out.contains("<<TOOL_RESULT:fs.read>>"));
         assert!(out.contains(TRUNCATION_MARKER) || !out.contains("second-line\nsecond-line"));
         crate::settings::reset_for_test();
+    }
+
+    #[test]
+    #[serial]
+    fn workspace_search_finds_basename_match() {
+        let dir = std::env::temp_dir().join(format!("rex-broker-search-{}", std::process::id()));
+        fs::create_dir_all(dir.join("docs")).expect("mkdir");
+        fs::write(dir.join("docs/ROADMAP.md"), "# roadmap").expect("write");
+        let _guard = init_workspace_root(&dir.display().to_string());
+        let results = broker_workspace_search("roadmap", WorkspaceSearchKind::Basename, "ask", 10)
+            .expect("search");
+        assert!(results.contains("docs/ROADMAP.md"));
+        let _ = fs::remove_dir_all(&dir);
     }
 }

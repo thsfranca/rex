@@ -40,9 +40,10 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `inference` | `runtime`, `openai_compat`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. |
 | `workspace` | `root`, `indexer`, `allow_cwd_fallback` | Broker root and lexical indexer (`workspace` or `seeded`). Product path requires non-empty `root` (not `"."`). Harness/CI: `allow_cwd_fallback: true` or `REX_ALLOW_CWD_WORKSPACE=1`. |
 | `context` | `max_prompt_tokens`, `max_context_tokens` | Context pipeline budgets. |
+| `context` | `advisory_intent_enabled` | **Planned (R067):** when true (default), short advisory prompts bypass the ≤48 char retrieval skip. |
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
-| `agent` | `approvals_enabled`, `max_tool_steps`, `max_tool_steps_ask`, `max_tool_steps_plan`, `max_tools_per_step`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gate; sidecar tool loop cap (default **12**); ask-mode research cap (default **12**); plan-mode cap (default **20**, **R058**); max batchable broker calls per LLM round (default **8**, **R057**); intra-turn compaction trigger as fraction of `broker.max_tool_result_bytes` (default **0.25**); goal-hint read pruning for payloads >100 lines (**R031** Done, default off). |
+| `agent` | `approvals_enabled`, `max_tools_per_step`, `compaction_suffix_fraction`, `read_pruning_enabled`, `deterministic_init_enabled` | Agent-mode approval gate; max batchable broker calls per LLM round (default **8**, **R057**); intra-turn compaction; goal-hint read pruning (**R031** Done, default off); pre-LLM ask init (**R060**). |
 | `cli` | `stream_idle_timeout_secs_agent`, `stream_idle_timeout_secs_ask` | Per-chunk idle timeout for `rex complete` streams (defaults **120** for all modes). |
 | `search` | `enabled`, `provider`, `max_results`, `api_key_path` | Ask-mode `web.search` broker (`provider: mock` for local demos). **R055** will migrate to capability sidecar — [WEB_SEARCH.md](WEB_SEARCH.md). |
 
@@ -381,15 +382,26 @@ Keys under `cli` and `search` control stream idle timeouts and ask-mode `web.sea
 | `search.enabled` | `false` (operator init: `true`) | Enables broker `web.search` (ask mode only) |
 | `search.provider` | — (operator init: `mock`) | `mock` for local demos |
 | `search.max_results` | `5` | Max hits returned per query |
-| `agent.max_tool_steps_ask` | `15` | Ask-mode research tool loop cap (productive steps only — see [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md)) |
-| `agent.max_tool_steps_plan` | `25` | Plan-mode tool loop cap (**R058**, **R063**) |
-| `agent.max_tool_steps` | `25` | Agent-mode tool loop cap (**R063**) |
 | `agent.max_tools_per_step` | `8` | Max batchable read/list/search broker calls per LLM round (**R057**) |
 | `agent.deterministic_init_enabled` | `true` | Pre-LLM ask init (`fs.read` README + `fs.list`) before first inference (**R060**) |
 | `agent.compaction_enabled` | `false` | Intra-turn suffix compaction node (**R029**, **R062** — off by default to preserve prefix cache) |
-| `agent.soft_cap_enabled` | `true` | Soft step-cap pause before hard limit (**R063**) |
-| `agent.soft_cap_fraction` | `0.667` | Fraction of mode step cap at which soft cap fires when enabled (**R063**) |
-| `agent.soft_cap_step_extension` | `10` | Productive steps added when operator continues after soft cap (**R063**) |
+
+### Deprecated (R069 — ignored after implementation)
+
+| Key | Former purpose |
+|-----|----------------|
+| `agent.max_tool_steps_ask` | Ask-mode tool loop hard cap |
+| `agent.max_tool_steps_plan` | Plan-mode tool loop hard cap |
+| `agent.max_tool_steps` | Agent-mode tool loop hard cap |
+| `agent.soft_cap_enabled` | Soft pause before hard cap (**R063**, superseded by [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md)) |
+| `agent.soft_cap_fraction` | Soft cap threshold fraction |
+| `agent.soft_cap_step_extension` | Steps added on Continue |
+
+### Planned (R067)
+
+| Key | Default | Purpose |
+|-----|---------|---------|
+| `context.advisory_intent_enabled` | `true` | Advisory intent bypass for short-prompt retrieval — [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) |
 
 CLI flags: `rex complete --verbose` (stderr status in text mode), `--yes` / `--approval-id` for agent approval automation.
 
