@@ -35,7 +35,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 
 | Section | Keys | Purpose |
 |---------|------|---------|
-| `daemon` | `socket`, `auto_start`, `ready_timeout_secs`, `log_path` | Daemon UDS path (default `/tmp/rex.sock`); **auto-start on by default** (**R071**); readiness poll budget; detached daemon log file. |
+| `daemon` | `socket`, `socket_scope`, `auto_start`, `ready_timeout_secs`, `log_path` | Daemon UDS path; **`socket_scope`** (`per_workspace` default, or `global` for legacy single socket); **auto-start on by default** (**R071**); readiness poll budget; detached daemon log file. Per-workspace scope derives `$REX_ROOT/sockets/ws-<hash>.sock` from `workspace.root` — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md). |
 | `sidecars` | `active`, `host`, `required`, `harness`, `list[]`, `capabilities[]` | Host sidecar (`list[]` entry named by `host` or `active`); optional capability fleet (`capabilities[]` with `provides`, `socket`, `binary`); `harness: "direct"` skips spawn (CI/tests). |
 | `inference` | `runtime`, `openai_compat`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. |
 | `workspace` | `root`, `indexer`, `allow_cwd_fallback` | Broker root and lexical indexer (`workspace` or `seeded`). Product path requires non-empty `root` (not `"."`). Harness/CI: `allow_cwd_fallback: true` or `REX_ALLOW_CWD_WORKSPACE=1`. |

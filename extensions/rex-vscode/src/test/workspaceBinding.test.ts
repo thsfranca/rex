@@ -21,8 +21,10 @@ describe("ensureProjectRexConfig", () => {
     const configPath = path.join(root, ".rex", "config.json");
     const parsed = JSON.parse(fs.readFileSync(configPath, "utf8")) as {
       workspace?: { root?: string };
+      daemon?: { socket_scope?: string };
     };
     expect(parsed.workspace?.root).toBe(root);
+    expect(parsed.daemon?.socket_scope).toBe("per_workspace");
   });
 
   it("preserves existing keys when merging workspace root", () => {

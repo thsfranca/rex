@@ -16,7 +16,20 @@ describe("parseStatusOutput", () => {
     expect(snapshot.daemonVersion).toBe("0.1.0");
     expect(snapshot.uptimeSeconds).toBe(42);
     expect(snapshot.activeModelId).toBe("mock");
+    expect(snapshot.workspaceRoot).toBe("");
     expect(snapshot.capturedAt).toBeTypeOf("number");
+  });
+
+  it("parses workspace_root when present", () => {
+    const snapshot = parseStatusOutput(
+      [
+        "daemon_version: 0.1.0",
+        "uptime_seconds: 42",
+        "active_model_id: mock",
+        "workspace_root: /tmp/project",
+      ].join("\n"),
+    );
+    expect(snapshot.workspaceRoot).toBe("/tmp/project");
   });
 
   it("tolerates trailing whitespace and CRLF endings", () => {

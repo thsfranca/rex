@@ -694,12 +694,10 @@ mod tests {
         crate::settings::reset_for_test();
         let mut cfg = rex_config::RexConfig::defaults();
         cfg.context.max_prompt_tokens = max_prompt_tokens;
-        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
-            rex_root: std::path::PathBuf::from("/tmp/rex-plugins-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }));
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
+            std::path::PathBuf::from("/tmp/rex-plugins-test"),
+            cfg,
+        )));
     }
 
     #[test]

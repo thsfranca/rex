@@ -19,6 +19,28 @@ mod sidecar_client;
 
 const READINESS_TIMEOUT: Duration = Duration::from_secs(8);
 const RUN_TIMEOUT: Duration = Duration::from_secs(5);
+const MISSING_DAEMON_SOCKET: &str = "/tmp/rex-sidecar-roundtrip-missing-daemon.sock";
+
+struct DaemonSocketEnvGuard {
+    previous: Option<String>,
+}
+
+impl DaemonSocketEnvGuard {
+    fn force_missing_daemon() -> Self {
+        let previous = std::env::var("REX_DAEMON_SOCKET").ok();
+        std::env::set_var("REX_DAEMON_SOCKET", MISSING_DAEMON_SOCKET);
+        Self { previous }
+    }
+}
+
+impl Drop for DaemonSocketEnvGuard {
+    fn drop(&mut self) {
+        match &self.previous {
+            Some(value) => std::env::set_var("REX_DAEMON_SOCKET", value),
+            None => std::env::remove_var("REX_DAEMON_SOCKET"),
+        }
+    }
+}
 
 fn test_socket_path() -> String {
     let mut path = std::env::temp_dir();
@@ -91,6 +113,7 @@ async fn sidecar_health_and_run_turn_roundtrip() {
         return;
     }
     let socket_path = test_socket_path();
+    let _daemon_env = DaemonSocketEnvGuard::force_missing_daemon();
     let _stub = StubServer::spawn(socket_path.clone());
     wait_ready(&socket_path).await;
 
@@ -137,6 +160,7 @@ async fn sidecar_run_turn_stream_yields_incremental_chunks() {
         return;
     }
     let socket_path = test_socket_path();
+    let _daemon_env = DaemonSocketEnvGuard::force_missing_daemon();
     let _stub = StubServer::spawn(socket_path.clone());
     wait_ready(&socket_path).await;
 

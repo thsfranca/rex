@@ -110,12 +110,15 @@ fn init_daemon_settings(cfg: rex_config::RexConfig) -> E2eInferenceEnv {
     settings::reset_for_test();
     let guard = install_rex_config(cfg.clone());
     let root = rex_root_path(&guard);
-    let loaded = Arc::new(rex_config::LoadedConfig {
-        rex_root: root.clone(),
-        global_path: Some(root.join("config.json")),
-        project_path: None,
-        effective: cfg,
-    });
+    let loaded = Arc::new(
+        rex_config::LoadedConfig::from_effective(
+            root.clone(),
+            Some(root.join("config.json")),
+            None,
+            cfg,
+        )
+        .expect("test loaded config"),
+    );
     settings::init_for_test(loaded);
     E2eInferenceEnv { _rex_root: guard }
 }

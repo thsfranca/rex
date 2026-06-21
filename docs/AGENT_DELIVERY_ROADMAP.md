@@ -112,6 +112,7 @@ Terminal operators should not need a dedicated foreground **`rex daemon`** sessi
 | ID | Theme | MoSCoW | Depends on |
 |----|-------|--------|------------|
 | **R071** | CLI daemon auto-start | Should | **Done** |
+| **R075** | Per-workspace daemon routing | Must | **Done** — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md) |
 | **R072** | Structured operator messaging | Must (program) | R071 |
 | **R073** | Full terminal UI | Should | R071, R072 |
 | **R074** | Optional LLM narrator | Could | R073 |

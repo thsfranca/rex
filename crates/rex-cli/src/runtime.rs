@@ -104,6 +104,7 @@ async fn run_status(ensure_opts: EnsureOptions) -> Result<(), CliError> {
     println!("daemon_version: {}", status.daemon_version);
     println!("uptime_seconds: {}", status.uptime_seconds);
     println!("active_model_id: {}", status.active_model_id);
+    println!("workspace_root: {}", status.workspace_root);
     Ok(())
 }
 
@@ -509,6 +510,8 @@ fn ndjson_error_code(err: &CliError) -> &'static str {
         CliError::Endpoint(_) | CliError::Status(_) => "unknown",
         CliError::Stdout(_) => "unknown",
         CliError::ApprovalRequired | CliError::ApprovalDenied => "approval_required",
+        CliError::WorkspaceNotConfigured => "workspace_not_configured",
+        CliError::WorkspaceMismatch { .. } => "workspace_mismatch",
     }
 }
 

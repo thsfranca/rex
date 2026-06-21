@@ -65,12 +65,9 @@ fn default_loaded_config() -> Arc<LoadedConfig> {
     };
     #[cfg(not(test))]
     let effective = rex_config::RexConfig::defaults();
-    Arc::new(LoadedConfig {
-        rex_root: std::path::PathBuf::from("/tmp/rex-test"),
-        global_path: None,
-        project_path: None,
-        effective,
-    })
+    Arc::new(
+        LoadedConfig::for_test(std::path::PathBuf::from("/tmp/rex-test"), effective),
+    )
 }
 
 #[cfg(test)]

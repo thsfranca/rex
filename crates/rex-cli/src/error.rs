@@ -34,6 +34,14 @@ pub enum CliError {
     ApprovalRequired,
     #[error("agent execution approval denied")]
     ApprovalDenied,
+    #[error("workspace root not configured; set workspace.root in .rex/config.json or enable harness cwd fallback")]
+    WorkspaceNotConfigured,
+    #[error("daemon at {socket_path} is bound to {reported}; expected {expected}; restart the daemon for this workspace")]
+    WorkspaceMismatch {
+        socket_path: String,
+        expected: String,
+        reported: String,
+    },
 }
 
 impl CliError {
@@ -61,6 +69,22 @@ impl CliError {
                 "; Rex did not become ready within {timeout_secs}s — see {}",
                 log_path.display()
             ),
+        }
+    }
+
+    pub fn workspace_not_configured() -> Self {
+        Self::WorkspaceNotConfigured
+    }
+
+    pub fn workspace_mismatch(
+        socket_path: &str,
+        expected: String,
+        reported: String,
+    ) -> Self {
+        Self::WorkspaceMismatch {
+            socket_path: socket_path.to_string(),
+            expected,
+            reported,
         }
     }
 }

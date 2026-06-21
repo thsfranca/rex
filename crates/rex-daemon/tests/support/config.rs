@@ -36,12 +36,15 @@ pub fn install_rex_config(cfg: RexConfig) -> RexRootGuard {
 }
 
 pub fn loaded_from_config(cfg: RexConfig, rex_root: &std::path::Path) -> Arc<LoadedConfig> {
-    Arc::new(LoadedConfig {
-        rex_root: rex_root.to_path_buf(),
-        global_path: Some(rex_root.join("config.json")),
-        project_path: None,
-        effective: cfg,
-    })
+    Arc::new(
+        LoadedConfig::from_effective(
+            rex_root.to_path_buf(),
+            Some(rex_root.join("config.json")),
+            None,
+            cfg,
+        )
+        .expect("test loaded config"),
+    )
 }
 
 pub fn mock_e2e_config() -> RexConfig {

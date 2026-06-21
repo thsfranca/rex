@@ -6,6 +6,14 @@ pub const DEFAULT_DAEMON_SOCKET: &str = "/tmp/rex.sock";
 pub const DEFAULT_SIDECAR_SOCKET: &str = "/tmp/rex-sidecar.sock";
 pub const DEFAULT_DAEMON_READY_TIMEOUT_SECS: u64 = 10;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DaemonSocketScope {
+    Global,
+    #[default]
+    PerWorkspace,
+}
+
 fn default_daemon_ready_timeout_secs() -> u64 {
     DEFAULT_DAEMON_READY_TIMEOUT_SECS
 }
@@ -44,6 +52,7 @@ impl RexConfig {
             version: 1,
             daemon: DaemonConfig {
                 socket: Some(DEFAULT_DAEMON_SOCKET.to_string()),
+                socket_scope: Some(DaemonSocketScope::Global),
                 auto_start: Some(true),
                 ready_timeout_secs: DEFAULT_DAEMON_READY_TIMEOUT_SECS,
                 log_path: String::new(),
@@ -152,6 +161,10 @@ impl RexConfig {
                 provider: "mock".to_string(),
                 ..SearchConfig::default()
             },
+            daemon: DaemonConfig {
+                socket_scope: Some(DaemonSocketScope::PerWorkspace),
+                ..Self::defaults().daemon
+            },
             ..Self::defaults()
         }
     }
@@ -204,6 +217,9 @@ impl RexConfig {
 pub struct DaemonConfig {
     #[serde(default)]
     pub socket: Option<String>,
+    /// When unset, effective default is [`DaemonSocketScope::PerWorkspace`].
+    #[serde(default)]
+    pub socket_scope: Option<DaemonSocketScope>,
     /// When `None`, effective default is **true** (auto-start on).
     #[serde(default)]
     pub auto_start: Option<bool>,
@@ -218,6 +234,7 @@ impl Default for DaemonConfig {
     fn default() -> Self {
         Self {
             socket: None,
+            socket_scope: None,
             auto_start: None,
             ready_timeout_secs: DEFAULT_DAEMON_READY_TIMEOUT_SECS,
             log_path: String::new(),
@@ -230,11 +247,25 @@ impl DaemonConfig {
         self.auto_start.unwrap_or(true)
     }
 
+    pub fn effective_socket_scope(&self) -> DaemonSocketScope {
+        self.socket_scope.unwrap_or(DaemonSocketScope::PerWorkspace)
+    }
+
     pub fn resolved_socket(&self) -> &str {
         self.socket
             .as_deref()
             .filter(|value| !value.is_empty())
             .unwrap_or(DEFAULT_DAEMON_SOCKET)
+    }
+}
+
+impl RexConfig {
+    pub fn host_sidecar_name(&self) -> &str {
+        self.sidecars
+            .host
+            .as_deref()
+            .filter(|name| !name.trim().is_empty())
+            .unwrap_or(self.sidecars.active.as_str())
     }
 }
 
