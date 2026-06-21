@@ -105,6 +105,9 @@ async fn run_status(ensure_opts: EnsureOptions) -> Result<(), CliError> {
     println!("uptime_seconds: {}", status.uptime_seconds);
     println!("active_model_id: {}", status.active_model_id);
     println!("workspace_root: {}", status.workspace_root);
+    println!("lifecycle_state: {}", status.lifecycle_state);
+    println!("idle_seconds: {}", status.idle_seconds);
+    println!("seconds_until_shutdown: {}", status.seconds_until_shutdown);
     Ok(())
 }
 

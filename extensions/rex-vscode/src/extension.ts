@@ -27,6 +27,7 @@ interface ActivationResources {
   probeTimer: NodeJS.Timeout | undefined;
   settings: RexSettings;
   boundWorkspaceRoot: string | undefined;
+  lastLifecycleState: DaemonLifecycleState | undefined;
 }
 
 let resources: ActivationResources | undefined;
@@ -61,7 +62,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
       return ensureDaemonWithWorkspaceBinding(r.lifecycle, r.output, signal);
     },
-    getDaemonState: () => lastLifecycleState,
+    getDaemonState: () => resources?.lastLifecycleState,
     log: (message) => output.appendLine(message),
     onStreamActivity: (hint) => statusBar.setStreamingActivity(hint),
     notifyStreamFailure: ({ code, message }) => {
@@ -88,8 +89,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   });
   context.subscriptions.push(chatPanel.register());
 
-  let lastLifecycleState: DaemonLifecycleState | undefined;
-
   const initialBinding = workspaceBindingState();
   let initialSpawnCwd: string | undefined;
   if (initialBinding.ok) {
@@ -105,7 +104,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   const lifecycle = buildLifecycle(settings, statusBar, output, initialSpawnCwd, (state) => {
-    lastLifecycleState = state;
+    if (resources !== undefined) {
+      resources.lastLifecycleState = state;
+    }
     chatPanel.broadcastDaemonState(state);
   });
   resources = {
@@ -116,6 +117,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     probeTimer: undefined,
     settings,
     boundWorkspaceRoot: initialSpawnCwd,
+    lastLifecycleState: undefined,
   };
 
   context.subscriptions.push(
@@ -131,6 +133,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (state?.kind === "ready") {
         void vscode.window.showInformationMessage(
           `REX ready (daemon ${state.status.daemonVersion}, uptime ${state.status.uptimeSeconds}s, model ${state.status.activeModelId || "unknown"}).`,
+        );
+      } else if (state?.kind === "idle") {
+        void vscode.window.showInformationMessage(
+          `REX idle (daemon ${state.status.daemonVersion}, idle ${state.status.idleSeconds}s, shutdown in ${state.status.secondsUntilShutdown}s without activity).`,
         );
       } else if (state?.kind === "starting") {
         void vscode.window.showInformationMessage("REX daemon is starting...");
@@ -261,8 +267,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
       const previousLifecycle = resources.lifecycle;
       resources.settings = updated;
+      const activeResources = resources;
       resources.lifecycle = buildLifecycle(updated, statusBar, output, undefined, (state) => {
-        lastLifecycleState = state;
+        activeResources.lastLifecycleState = state;
         chatPanel.broadcastDaemonState(state);
       });
       void previousLifecycle.shutdown().catch(() => undefined);
@@ -422,7 +429,7 @@ async function handleWorkspaceFoldersChanged(): Promise<void> {
     r.output,
     binding.workspaceRoot,
     (state) => {
-      lastLifecycleState = state;
+      r.lastLifecycleState = state;
       r.chatPanel.broadcastDaemonState(state);
     },
   );
@@ -446,6 +453,8 @@ function describeState(state: DaemonLifecycleState | undefined): string {
   switch (state.kind) {
     case "ready":
       return `ready (version=${state.status.daemonVersion}, uptime=${state.status.uptimeSeconds}s, workspace=${state.status.workspaceRoot || "unknown"})`;
+    case "idle":
+      return `idle (version=${state.status.daemonVersion}, idle=${state.status.idleSeconds}s, shutdown_in=${state.status.secondsUntilShutdown}s)`;
     case "starting":
       return "starting";
     case "unavailable":

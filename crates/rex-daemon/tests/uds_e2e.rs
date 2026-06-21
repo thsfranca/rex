@@ -23,6 +23,9 @@ use support::config::{
 #[path = "../src/access_policy.rs"]
 mod access_policy;
 #[allow(dead_code)]
+#[path = "../src/activity.rs"]
+mod activity;
+#[allow(dead_code)]
 #[path = "../src/adapters.rs"]
 mod adapters;
 #[allow(dead_code)]
@@ -205,6 +208,8 @@ async fn status_and_stream_inference_work_over_uds() {
         .into_inner();
     assert!(!status.daemon_version.trim().is_empty());
     assert_eq!(status.active_model_id, "mock-model-v0");
+    assert_eq!(status.lifecycle_state, "idle");
+    assert_eq!(status.idle_seconds, 0);
 
     let response = client
         .stream_inference(StreamInferenceRequest {
@@ -241,6 +246,90 @@ async fn status_and_stream_inference_work_over_uds() {
     cleanup_socket(&socket_path);
 
     restore_inference_runtime(prev_runtime);
+}
+
+#[tokio::test]
+#[serial]
+async fn status_probe_prevents_idle_shutdown() {
+    if !uds_bind_supported() {
+        eprintln!("Skipping UDS e2e: sandbox does not allow unix socket bind");
+        return;
+    }
+
+    let mut cfg = mock_e2e_config();
+    cfg.daemon.idle_shutdown_secs = Some(2);
+    let _runtime = init_daemon_settings(cfg);
+
+    let socket_path = test_socket_path();
+    cleanup_socket(&socket_path);
+    let daemon_socket = socket_path.clone();
+    let daemon = tokio::spawn(async move {
+        runtime::run_daemon_on_socket(&daemon_socket)
+            .await
+            .expect("daemon runtime should run without transport error");
+    });
+    wait_for_daemon_ready(&socket_path).await;
+
+    let mut client = connect_client(&socket_path)
+        .await
+        .expect("daemon should accept connections");
+    for _ in 0..4 {
+        client
+            .get_system_status(GetSystemStatusRequest {})
+            .await
+            .expect("status probe should succeed");
+        sleep(Duration::from_millis(700)).await;
+    }
+    assert!(
+        connect_client(&socket_path).await.is_ok(),
+        "daemon should remain up while status probes continue"
+    );
+
+    daemon.abort();
+    let _ = daemon.await;
+    cleanup_socket(&socket_path);
+    settings::reset_for_test();
+}
+
+#[tokio::test]
+#[serial]
+async fn daemon_shuts_down_after_idle_budget_without_contact() {
+    if !uds_bind_supported() {
+        eprintln!("Skipping UDS e2e: sandbox does not allow unix socket bind");
+        return;
+    }
+
+    let mut cfg = mock_e2e_config();
+    cfg.daemon.idle_shutdown_secs = Some(2);
+    let _runtime = init_daemon_settings(cfg);
+
+    let socket_path = test_socket_path();
+    cleanup_socket(&socket_path);
+    let daemon_socket = socket_path.clone();
+    let daemon = tokio::spawn(async move {
+        runtime::run_daemon_on_socket(&daemon_socket)
+            .await
+            .expect("daemon should exit cleanly after idle shutdown");
+    });
+    wait_for_daemon_ready(&socket_path).await;
+
+    sleep(Duration::from_secs(3)).await;
+
+    assert!(
+        connect_client(&socket_path).await.is_err(),
+        "daemon socket should be closed after idle shutdown budget"
+    );
+    assert!(
+        !std::path::Path::new(&socket_path).exists(),
+        "daemon should remove its socket on idle shutdown"
+    );
+
+    timeout(Duration::from_secs(2), daemon)
+        .await
+        .expect("daemon task should finish")
+        .expect("daemon join");
+    cleanup_socket(&socket_path);
+    settings::reset_for_test();
 }
 
 /// Covers the Cursor-CLI runtime with a **shell stub** (`REX_CURSOR_CLI_COMMAND`), not the real

@@ -5,6 +5,7 @@ use crate::error::ConfigError;
 pub const DEFAULT_DAEMON_SOCKET: &str = "/tmp/rex.sock";
 pub const DEFAULT_SIDECAR_SOCKET: &str = "/tmp/rex-sidecar.sock";
 pub const DEFAULT_DAEMON_READY_TIMEOUT_SECS: u64 = 10;
+pub const DEFAULT_DAEMON_IDLE_SHUTDOWN_SECS: u64 = 300;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -16,6 +17,26 @@ pub enum DaemonSocketScope {
 
 fn default_daemon_ready_timeout_secs() -> u64 {
     DEFAULT_DAEMON_READY_TIMEOUT_SECS
+}
+
+#[cfg(test)]
+mod daemon_config_tests {
+    use super::DaemonConfig;
+
+    #[test]
+    fn idle_shutdown_default_is_300_when_unset() {
+        let cfg = DaemonConfig::default();
+        assert_eq!(cfg.effective_idle_shutdown_secs(), 300);
+    }
+
+    #[test]
+    fn idle_shutdown_zero_disables() {
+        let cfg = DaemonConfig {
+            idle_shutdown_secs: Some(0),
+            ..DaemonConfig::default()
+        };
+        assert_eq!(cfg.effective_idle_shutdown_secs(), 0);
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Default)]
@@ -55,6 +76,7 @@ impl RexConfig {
                 socket_scope: Some(DaemonSocketScope::Global),
                 auto_start: Some(true),
                 ready_timeout_secs: DEFAULT_DAEMON_READY_TIMEOUT_SECS,
+                idle_shutdown_secs: None,
                 log_path: String::new(),
             },
             sidecars: SidecarsConfig {
@@ -225,6 +247,10 @@ pub struct DaemonConfig {
     pub auto_start: Option<bool>,
     #[serde(default = "default_daemon_ready_timeout_secs")]
     pub ready_timeout_secs: u64,
+    /// Shutdown after this many seconds without work and without status contact.
+    /// `None` → default **300**; **`Some(0)`** disables idle shutdown.
+    #[serde(default)]
+    pub idle_shutdown_secs: Option<u64>,
     /// Empty → `$REX_ROOT/daemon.log` at load time.
     #[serde(default)]
     pub log_path: String,
@@ -237,6 +263,7 @@ impl Default for DaemonConfig {
             socket_scope: None,
             auto_start: None,
             ready_timeout_secs: DEFAULT_DAEMON_READY_TIMEOUT_SECS,
+            idle_shutdown_secs: None,
             log_path: String::new(),
         }
     }
@@ -249,6 +276,11 @@ impl DaemonConfig {
 
     pub fn effective_socket_scope(&self) -> DaemonSocketScope {
         self.socket_scope.unwrap_or(DaemonSocketScope::PerWorkspace)
+    }
+
+    pub fn effective_idle_shutdown_secs(&self) -> u64 {
+        self.idle_shutdown_secs
+            .unwrap_or(DEFAULT_DAEMON_IDLE_SHUTDOWN_SECS)
     }
 
     pub fn resolved_socket(&self) -> &str {

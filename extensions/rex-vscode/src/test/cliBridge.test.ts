@@ -17,7 +17,25 @@ describe("parseStatusOutput", () => {
     expect(snapshot.uptimeSeconds).toBe(42);
     expect(snapshot.activeModelId).toBe("mock");
     expect(snapshot.workspaceRoot).toBe("");
+    expect(snapshot.lifecycleState).toBe("idle");
+    expect(snapshot.idleSeconds).toBe(0);
+    expect(snapshot.secondsUntilShutdown).toBe(0);
     expect(snapshot.capturedAt).toBeTypeOf("number");
+  });
+
+  it("parses lifecycle and idle fields when present", () => {
+    const snapshot = parseStatusOutput(
+      [
+        "daemon_version: 0.1.0",
+        "uptime_seconds: 42",
+        "active_model_id: mock",
+        "lifecycle_state: ready",
+        "idle_seconds: 0",
+        "seconds_until_shutdown: 120",
+      ].join("\n"),
+    );
+    expect(snapshot.lifecycleState).toBe("ready");
+    expect(snapshot.secondsUntilShutdown).toBe(120);
   });
 
   it("parses workspace_root when present", () => {

@@ -27,6 +27,12 @@ message GetSystemStatusResponse {
   string active_model_id = 3;
   // Canonical workspace root bound at daemon startup (R075).
   string workspace_root = 4;
+  // Operational lifecycle: "ready" (work in flight) or "idle" (no active work).
+  string lifecycle_state = 5;
+  // Seconds since last work ended; 0 while lifecycle_state is "ready".
+  uint64 idle_seconds = 6;
+  // Seconds until idle shutdown; 0 when disabled or activity/contact is fresh.
+  uint64 seconds_until_shutdown = 7;
 }
 
 message ClientHints {

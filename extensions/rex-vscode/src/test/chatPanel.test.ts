@@ -14,6 +14,10 @@ const TEST_STATUS: StatusSnapshot = {
   daemonVersion: "test",
   activeModelId: "test",
   uptimeSeconds: 1,
+  workspaceRoot: "",
+  lifecycleState: "idle",
+  idleSeconds: 0,
+  secondsUntilShutdown: 300,
   capturedAt: 1,
 };
 

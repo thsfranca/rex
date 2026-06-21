@@ -1,4 +1,5 @@
 mod access_policy;
+mod activity;
 mod adapters;
 mod advisory_intent;
 mod approvals;

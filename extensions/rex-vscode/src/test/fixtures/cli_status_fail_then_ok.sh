@@ -13,4 +13,5 @@ if [ "$phase" = "0" ]; then
   exit 1
 fi
 printf 'daemon_version: 0.1.0-recover\nuptime_seconds: 2\nactive_model_id: recovered\n'
+printf 'lifecycle_state: idle\nidle_seconds: 0\nseconds_until_shutdown: 300\n'
 exit 0

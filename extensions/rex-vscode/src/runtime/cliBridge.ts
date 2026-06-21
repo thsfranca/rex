@@ -9,6 +9,9 @@ export interface StatusSnapshot {
   readonly uptimeSeconds: number;
   readonly activeModelId: string;
   readonly workspaceRoot: string;
+  readonly lifecycleState: "ready" | "idle";
+  readonly idleSeconds: number;
+  readonly secondsUntilShutdown: number;
   readonly capturedAt: number;
 }
 
@@ -214,13 +217,40 @@ export function parseStatusOutput(raw: string): StatusSnapshot {
   if (!Number.isFinite(uptimeSeconds)) {
     throw new Error(`rex-cli status returned non-numeric uptime_seconds: ${uptimeRaw}`);
   }
+  const lifecycleRaw = fields.get("lifecycle_state") ?? "idle";
+  const lifecycleState = lifecycleRaw === "ready" ? "ready" : "idle";
+  const idleSeconds = parseOptionalNonNegativeInt(
+    fields.get("idle_seconds"),
+    "idle_seconds",
+  );
+  const secondsUntilShutdown = parseOptionalNonNegativeInt(
+    fields.get("seconds_until_shutdown"),
+    "seconds_until_shutdown",
+  );
   return {
     daemonVersion,
     uptimeSeconds,
     activeModelId,
     workspaceRoot: fields.get("workspace_root") ?? "",
+    lifecycleState,
+    idleSeconds,
+    secondsUntilShutdown,
     capturedAt: Date.now(),
   };
+}
+
+function parseOptionalNonNegativeInt(
+  raw: string | undefined,
+  fieldName: string,
+): number {
+  if (raw === undefined || raw.length === 0) {
+    return 0;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`rex-cli status returned invalid ${fieldName}: ${raw}`);
+  }
+  return parsed;
 }
 
 function buildEnv(

@@ -33,8 +33,8 @@ impl LoadedConfig {
 
     /// Unit-test helper when callers only need `effective` fields.
     pub fn for_test(rex_root: PathBuf, effective: RexConfig) -> Self {
-        Self::from_effective(rex_root.clone(), None, None, effective.clone()).unwrap_or_else(
-            |_| Self {
+        Self::from_effective(rex_root.clone(), None, None, effective.clone()).unwrap_or_else(|_| {
+            Self {
                 rex_root,
                 global_path: None,
                 project_path: None,
@@ -47,8 +47,8 @@ impl LoadedConfig {
                     .find(|entry| entry.name == effective.host_sidecar_name())
                     .map(|entry| entry.socket.clone())
                     .unwrap_or_else(|| crate::model::DEFAULT_SIDECAR_SOCKET.to_string()),
-            },
-        )
+            }
+        })
     }
 
     pub fn daemon_socket(&self) -> &str {
@@ -66,6 +66,10 @@ impl LoadedConfig {
         } else {
             secs
         }
+    }
+
+    pub fn daemon_idle_shutdown_secs(&self) -> u64 {
+        self.effective.daemon.effective_idle_shutdown_secs()
     }
 
     pub fn daemon_log_path(&self) -> std::path::PathBuf {
@@ -221,6 +225,9 @@ fn merge_daemon(base: &mut crate::model::DaemonConfig, overlay: crate::model::Da
     }
     if overlay.ready_timeout_secs != 0 {
         base.ready_timeout_secs = overlay.ready_timeout_secs;
+    }
+    if overlay.idle_shutdown_secs.is_some() {
+        base.idle_shutdown_secs = overlay.idle_shutdown_secs;
     }
     if !overlay.log_path.is_empty() {
         base.log_path = overlay.log_path;

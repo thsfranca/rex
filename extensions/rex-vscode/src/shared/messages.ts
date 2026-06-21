@@ -30,7 +30,7 @@ export interface PromptContextSnapshot {
   };
 }
 
-export type DaemonState = "ready" | "starting" | "unavailable";
+export type DaemonState = "ready" | "idle" | "starting" | "unavailable";
 
 export interface DaemonStatePayload {
   readonly state: DaemonState;
