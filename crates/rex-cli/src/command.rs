@@ -1,6 +1,8 @@
 #[derive(Debug, PartialEq, Eq)]
 pub enum CliCommand {
-    Status,
+    Status {
+        no_daemon_autostart: bool,
+    },
     Complete {
         prompt: String,
         model: String,
@@ -14,6 +16,7 @@ pub enum CliCommand {
         format: CompleteOutputFormat,
         yes: bool,
         verbose: bool,
+        no_daemon_autostart: bool,
     },
 }
 
@@ -25,7 +28,12 @@ pub enum CompleteOutputFormat {
 
 pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliCommand, String> {
     match args.next().as_deref() {
-        Some("status") => Ok(CliCommand::Status),
+        Some("status") => {
+            let no_daemon_autostart = parse_status_trailing(&mut args)?;
+            Ok(CliCommand::Status {
+                no_daemon_autostart,
+            })
+        }
         Some("complete") => {
             let prompt = args
                 .next()
@@ -45,6 +53,7 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
                 selection_text,
                 yes,
                 verbose,
+                no_daemon_autostart,
             ) = parse_complete_trailing(&mut args)?;
             Ok(CliCommand::Complete {
                 prompt,
@@ -59,6 +68,7 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
                 format,
                 yes,
                 verbose,
+                no_daemon_autostart,
             })
         }
         Some(other) => Err(format!("Unknown command: {other}")),
@@ -78,7 +88,19 @@ type CompleteTrailingArgs = (
     String,
     bool,
     bool,
+    bool,
 );
+
+fn parse_status_trailing(args: &mut impl Iterator<Item = String>) -> Result<bool, String> {
+    let mut no_daemon_autostart = false;
+    while let Some(flag) = args.next() {
+        match flag.as_str() {
+            "--no-daemon-autostart" => no_daemon_autostart = true,
+            other => return Err(format!("Unknown argument for `status`: {other}")),
+        }
+    }
+    Ok(no_daemon_autostart)
+}
 
 fn parse_complete_trailing(
     args: &mut impl Iterator<Item = String>,
@@ -94,8 +116,12 @@ fn parse_complete_trailing(
     let mut selection_text = String::new();
     let mut yes = false;
     let mut verbose = false;
+    let mut no_daemon_autostart = false;
     while let Some(flag) = args.next() {
         match flag.as_str() {
+            "--no-daemon-autostart" => {
+                no_daemon_autostart = true;
+            }
             "--yes" | "-y" => {
                 yes = true;
             }
@@ -171,15 +197,16 @@ fn parse_complete_trailing(
         selection_text,
         yes,
         verbose,
+        no_daemon_autostart,
     ))
 }
 
 pub fn print_usage() {
     eprintln!("Usage:");
-    eprintln!("  rex-cli status");
+    eprintln!("  rex-cli status [ --no-daemon-autostart ]");
     eprintln!("  rex-cli complete \"<prompt>\"");
     eprintln!(
-        "  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ] [ --yes ] [ --verbose ] [ --trace-id <id> ] [ --active-file <path> ] [ --language-id <id> ] [ --selection-text <text> ]"
+        "  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ] [ --yes ] [ --verbose ] [ --no-daemon-autostart ] [ --trace-id <id> ] [ --active-file <path> ] [ --language-id <id> ] [ --selection-text <text> ]"
     );
 }
 
@@ -191,7 +218,12 @@ mod tests {
     fn parses_status_command() {
         let cmd =
             parse_command(vec!["status".to_string()].into_iter()).expect("status should parse");
-        assert_eq!(cmd, CliCommand::Status);
+        assert_eq!(
+            cmd,
+            CliCommand::Status {
+                no_daemon_autostart: false,
+            }
+        );
     }
 
     #[test]
@@ -213,6 +245,7 @@ mod tests {
                 format: CompleteOutputFormat::Text,
                 yes: false,
                 verbose: false,
+                no_daemon_autostart: false,
             }
         );
     }
@@ -251,6 +284,7 @@ mod tests {
                 format: CompleteOutputFormat::Ndjson,
                 yes: false,
                 verbose: false,
+                no_daemon_autostart: false,
             }
         );
     }
@@ -303,6 +337,7 @@ mod tests {
                 format: CompleteOutputFormat::Ndjson,
                 yes: false,
                 verbose: false,
+                no_daemon_autostart: false,
             }
         );
     }
@@ -338,6 +373,7 @@ mod tests {
                 format: CompleteOutputFormat::Text,
                 yes: false,
                 verbose: false,
+                no_daemon_autostart: false,
             }
         );
     }

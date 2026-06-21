@@ -12,7 +12,7 @@ This extension is in early development. See [`docs/EXTENSION_ROADMAP.md`](../../
 
 ## Using the chat view
 
-1. Run `rex daemon` (user-managed by default) so the status bar reads `REX ready`.
+1. Open the `REX` view container — daemon auto-start is **on by default** (`rex.daemonAutoStart`); status bar should reach `REX ready` without a manual `rex daemon` session.
 2. Open the `REX` view container from the activity bar, or run `REX: Open Chat`.
 3. Type a prompt and send (`Cmd/Ctrl+Enter`); the assistant response streams with live markdown.
 4. Per code block you can `Copy`, `Insert at cursor`, or `Apply` (opens a diff and asks for confirmation before writing a `WorkspaceEdit`).
@@ -30,14 +30,14 @@ Stream reliability notes:
 ## Requirements
 
 - `rex` available on `PATH` (or set `rex.cliPath` to an absolute path if the editor was not started from a shell that configures `PATH`, which is common on macOS).
-- Daemon running locally on `/tmp/rex.sock` (user-managed: `rex daemon`; or set `rex.daemonAutoStart: true`). With auto-start, set `rex.daemonBinaryPath` to an absolute path if `rex` is not on the editor `PATH` (same binary as `rex.cliPath`).
+- Daemon reachable on `/tmp/rex.sock` (auto-start **on by default** via `rex.daemonAutoStart`; set `false` for manual `rex daemon`). Set `rex.daemonBinaryPath` to an absolute path if `rex` is not on the editor `PATH` (same binary as `rex.cliPath`).
 - VS Code `^1.90` or Cursor with a compatible VS Code engine.
 
 - For **plan/agent** modes with live models, configure JSON per [`docs/EXTENSION_LOCAL_E2E.md`](../../docs/EXTENSION_LOCAL_E2E.md) §3 (`rex-agent`, `inference.openai_compat`). Workspace bind merges the product sidecar into project `.rex/config.json`.
 
-## Daemon auto-start (opt-in)
+## Daemon auto-start
 
-Flip `"rex.daemonAutoStart": true` in settings to let the extension spawn `rex daemon` automatically when the view activates. The extension:
+**Default: on.** The extension spawns `rex daemon` when the daemon is not running. Set `"rex.daemonAutoStart": false` to manage the daemon manually. When enabled, the extension:
 
 1. Probes `rex status`; if the daemon is already running, nothing else happens.
 2. Otherwise, spawns `rex daemon` via `rex.daemonBinaryPath` and polls status until it is ready (default timeout 10s).
@@ -100,7 +100,7 @@ npm run dev:webview
 |---|---|---|
 | `rex.cliPath` | `rex` | Resolvable path or name for `rex` (`status` / `complete`). |
 | `rex.daemonBinaryPath` | `rex` | Same binary; spawned with `daemon` subcommand when auto-start is on. |
-| `rex.daemonAutoStart` | `false` | Opt-in extension-managed daemon lifecycle. |
+| `rex.daemonAutoStart` | **`true`** | Extension-managed daemon lifecycle (set `false` for manual `rex daemon`). |
 | `rex.modelId` | *(empty)* | When set, passed as `--model` on every `rex complete`. |
 
 ## License

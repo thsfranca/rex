@@ -1,6 +1,6 @@
 # CLI operator UX — design hub
 
-**Status:** `planned` (delivery tracked on [ROADMAP.md](ROADMAP.md) as **R071–R074**; decision [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md)).
+**Status:** `partial` — **R071** implemented; **R072–R074** planned ([ROADMAP.md](ROADMAP.md)).
 
 ## Purpose
 
@@ -99,7 +99,7 @@ flowchart TB
 | Process ownership | Kills **owned** child on deactivate | CLI-spawned daemon **stays running** after CLI exit |
 | Concurrent spawn | Serialized **`ensureRunningInFlight`** | Equivalent single-flight in CLI |
 | Transport | NDJSON subprocess | TUI consumes NDJSON internally; **`--format ndjson`** on pipes unchanged |
-| Auto-start default | **`rex.daemonAutoStart`** default **off** | JSON **`daemon.auto_start`** default **off**; extension setting mirrors JSON |
+| Auto-start default | **`rex.daemonAutoStart`** default **on** | JSON **`daemon.auto_start`** default **on**; extension setting mirrors JSON when both set |
 
 ## Terminal UI layout
 
@@ -197,7 +197,7 @@ Optional layer that summarizes a completed multi-tool turn in natural language.
 {
   "daemon": {
     "socket": "/tmp/rex.sock",
-    "auto_start": false,
+    "auto_start": true,
     "ready_timeout_secs": 10,
     "log_path": "~/.rex/daemon.log"
   },
@@ -211,7 +211,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| **`daemon.auto_start`** | `false` | CLI ensures daemon before client RPCs |
+| **`daemon.auto_start`** | **`true`** | CLI ensures daemon before client RPCs |
 | **`daemon.ready_timeout_secs`** | `10` | Readiness poll budget |
 | **`daemon.log_path`** | `~/.rex/daemon.log` | Detached daemon stdout/stderr |
 | **`cli.ui.enabled`** | `"auto"` | `auto` \| `true` \| `false` — TUI on TTY |
@@ -257,7 +257,7 @@ Extension setting **`rex.daemonAutoStart`** should read/write the same effective
 | Item | MoSCoW | Notes |
 |------|--------|-------|
 | Design hub + ADR | **Should** | This document |
-| R071 auto-start | **Should** | Mirrors extension pattern |
+| R071 auto-start | **Should** | **Done** — default on; mirrors extension pattern |
 | R072 messaging | **Must** (within program) | Required for “understand what Rex is doing” |
 | R073 TUI | **Should** | Depends on R071, R072 |
 | R074 narrator | **Could** | After TUI stable |

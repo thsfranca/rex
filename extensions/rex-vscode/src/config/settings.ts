@@ -47,7 +47,7 @@ export function readSettings(): RexSettings {
   return {
     cliPath: resolveRexExecutable(cliPathSetting),
     daemonBinaryPath: resolveRexExecutable(daemonBinaryPathSetting),
-    daemonAutoStart: config.get<boolean>("daemonAutoStart") ?? false,
+    daemonAutoStart: config.get<boolean>("daemonAutoStart") ?? true,
     modelId: (config.get<string>("modelId") ?? "").trim(),
     rexRoot: (config.get<string>("rexRoot") ?? "").trim(),
     chatLocation: parseChatLocation(config.get("chatLocation")),

@@ -24,6 +24,7 @@ pub use merge::LoadedConfig;
 pub use model::{
     AgentConfig, BrokerConfig, CacheConfig, CapabilitySidecarEntry, ContextConfig, CursorCliConfig,
     DaemonConfig, GatewayConfig, GatewayOllamaConfig, InferenceConfig, NativeToolsMode,
+    DEFAULT_DAEMON_READY_TIMEOUT_SECS,
     ObservabilityConfig, OpenAiCompatConfig, OtlpConfig, RexConfig, SidecarEntry, SidecarsConfig,
     WorkspaceConfig, DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
 };
@@ -314,5 +315,40 @@ mod tests {
         assert_eq!(base.agent.soft_cap_enabled, Some(true));
         assert_eq!(base.agent.soft_cap_fraction, Some(0.5));
         assert_eq!(base.agent.deterministic_init_enabled, Some(true));
+    }
+
+    #[test]
+    fn daemon_config_defaults_auto_start_on() {
+        let cfg = RexConfig::defaults();
+        assert!(cfg.daemon.auto_start_enabled());
+        assert_eq!(
+            cfg.daemon.ready_timeout_secs,
+            crate::model::DEFAULT_DAEMON_READY_TIMEOUT_SECS
+        );
+    }
+
+    #[test]
+    #[serial]
+    fn daemon_config_merge_and_log_path() {
+        use crate::merge::merge_config;
+
+        let tmp = tempfile::tempdir().unwrap();
+        with_rex_root(tmp.path(), || {
+            let mut base = RexConfig::defaults();
+            let mut overlay = RexConfig::default();
+            overlay.daemon.auto_start = Some(false);
+            overlay.daemon.ready_timeout_secs = 30;
+            overlay.daemon.log_path = "/tmp/custom-daemon.log".to_string();
+            merge_config(&mut base, overlay);
+            assert!(!base.daemon.auto_start_enabled());
+            assert_eq!(base.daemon.ready_timeout_secs, 30);
+            assert_eq!(base.daemon.log_path, "/tmp/custom-daemon.log");
+
+            let loaded = load_merged().expect("load");
+            assert_eq!(
+                loaded.daemon_log_path(),
+                tmp.path().join("daemon.log")
+            );
+        });
     }
 }

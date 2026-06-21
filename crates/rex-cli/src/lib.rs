@@ -1,4 +1,5 @@
 mod command;
+mod daemon_lifecycle;
 mod domain;
 mod error;
 mod runtime;
