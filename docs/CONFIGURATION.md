@@ -162,6 +162,8 @@ Design hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](archi
 
 Opt out: `"auto_start": false` in merged JSON or **`--no-daemon-autostart`**. Extension **`rex.daemonAutoStart`** defaults **on** — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md).
 
+When **`inference.omlx.mode: managed`** or **`inference.gateway.mode: managed`**, the autostarted daemon also starts and health-checks that managed inference child before binding the UDS socket. Raise **`daemon.ready_timeout_secs`** if the managed child startup budget (for example oMLX **`startup_timeout_secs`**, default 30) exceeds the default ready poll (**10s**).
+
 ### CLI operator UX (planned — R072–R074)
 
 | Key | Default (design) | Purpose |
@@ -264,9 +266,9 @@ Opt-in **`inference.gateway.mode: managed`** so `rex-daemon` spawns and controls
 
 Effective `openai_compat.base_url` becomes `http://127.0.0.1:4000/v1` when managed (unless override allowed). Secrets: `$REX_ROOT/gateway/.env` (gitignored). See hub for full field table and Ollama discovery template.
 
-## Inference oMLX (design)
+## Inference oMLX
 
-**Status:** `planned` — [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [ADR 0033](architecture/decisions/0033-omlx-managed-local-inference.md). Future: `rex omlx init|doctor`.
+**Status:** **implemented** — config schema, daemon supervisor, `rex omlx init|doctor`, opt-in live E2E — [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [ADR 0033](architecture/decisions/0033-omlx-managed-local-inference.md).
 
 ### Purpose
 

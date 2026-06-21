@@ -43,6 +43,10 @@ pub fn economics_snapshot_json(config: &RexConfig) -> serde_json::Value {
                 "mode": config.inference.gateway.mode,
                 "port": config.inference.gateway.port,
             },
+            "omlx": {
+                "mode": config.inference.omlx.mode,
+                "port": config.inference.omlx.port,
+            },
         },
         "context": config.context,
         "cache": config.cache,

@@ -1,7 +1,7 @@
 # ADR 0033: oMLX managed local inference
 
 - **Date:** 2026-06-17
-- **Status:** Accepted (design)
+- **Status:** Accepted (implemented)
 
 ## Context
 
@@ -55,7 +55,7 @@ Supersedes original decision bullets **#4–#5** (4-tier precedence where oMLX o
 - **Positive:** Clear separation: **oMLX** = Mac local MLX lifecycle; **gateway** = multi-provider cloud lifecycle.
 - **Negative:** Second supervised child process pattern (parallel to gateway) — implementation must share supervisor seams carefully.
 - **Negative:** Python/oMLX dependency when `managed` is enabled on Mac.
-- **Risks / follow-up:** Implement config schema, omlx supervisor, `rex omlx init|doctor`, extend `resolve_effective_openai_compat_base_url`, mutual-exclusion validation, opt-in live E2E — see [OMLX_INFERENCE.md](../../OMLX_INFERENCE.md#implementation-slices-planning-only).
+- **Risks / follow-up:** Live E2E requires operator oMLX + MLX model install; not in PR CI (**RC-10**). In-daemon MLX remains deferred — [ADAPTERS.md](../../ADAPTERS.md#in-daemon-mlx-path-deferred).
 
 ## Related
 

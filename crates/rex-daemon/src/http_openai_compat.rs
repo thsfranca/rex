@@ -13,7 +13,7 @@ use tonic::Status;
 
 use crate::adapters::{stream_chunks_with_done, RuntimeKind};
 use crate::domain::chunk_output;
-use crate::ollama_capability::{cached_model_supports_tools, is_ollama_like_base_url};
+use crate::ollama_capability::{cached_model_supports_tools, is_ollama_like_base_url, is_omlx_like_base_url};
 
 const TIMEOUT_SECS_DEFAULT: u64 = 120;
 const STREAM_CHUNK_MAX_CHARS: usize = 8;
@@ -74,8 +74,10 @@ impl HttpOpenAiCompatRuntime {
             .map(|v| v.trim().to_string())
             .filter(|v| !v.is_empty());
         let headers = cfg.headers.clone();
+        let inference = &crate::settings::get().effective.inference;
         let model = {
-            let m = cfg.model.trim();
+            let resolved = rex_config::resolve_effective_openai_compat_model(inference);
+            let m = resolved.trim();
             if m.is_empty() {
                 MODEL_DEFAULT.to_string()
             } else {
@@ -355,7 +357,18 @@ pub async fn broker_inference_http(
     let runtime_http = HttpOpenAiCompatRuntime::from_config().map_err(Status::unavailable)?;
 
     let mut attach_tools = forward_tools && !tools.is_empty();
-    if attach_tools && native_tools == NativeToolsMode::Auto && is_ollama_like_base_url(base_url) {
+    let omlx_port = if rex_config::is_managed_omlx(&crate::settings::get().effective.inference.omlx) {
+        Some(rex_config::effective_omlx_port(
+            &crate::settings::get().effective.inference.omlx,
+        ))
+    } else {
+        None
+    };
+    if attach_tools
+        && native_tools == NativeToolsMode::Auto
+        && is_ollama_like_base_url(base_url)
+        && !is_omlx_like_base_url(base_url, omlx_port)
+    {
         let effective_model = resolve_inference_model(model, &runtime_http.model);
         let supports = cached_model_supports_tools(
             runtime_http.client(),

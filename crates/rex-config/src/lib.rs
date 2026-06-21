@@ -5,6 +5,8 @@ mod layout;
 mod merge;
 mod model;
 mod observability;
+mod omlx;
+mod omlx_layout;
 mod openai_compat;
 mod paths;
 mod project;
@@ -20,23 +22,31 @@ pub use gateway::{
     DEFAULT_GATEWAY_COMMAND, DEFAULT_GATEWAY_PORT, DEFAULT_GATEWAY_STARTUP_TIMEOUT_SECS,
     GATEWAY_MODE_DISABLED, GATEWAY_MODE_EXTERNAL, GATEWAY_MODE_MANAGED,
 };
+pub use omlx::{
+    effective_omlx_health_path, effective_omlx_port, is_managed_omlx, managed_omlx_base_url,
+    normalize_omlx_mode, omlx_allow_url_override, omlx_required, resolve_effective_openai_compat_model,
+    validate_omlx, validate_omlx_config, DEFAULT_OMLX_COMMAND, DEFAULT_OMLX_HEALTH_PATH,
+    DEFAULT_OMLX_PORT, DEFAULT_OMLX_STARTUP_TIMEOUT_SECS, OMLX_MODE_DISABLED, OMLX_MODE_EXTERNAL,
+    OMLX_MODE_MANAGED,
+};
 pub use gateway_layout::{ensure_gateway_layout, GatewayLayoutResult};
+pub use omlx_layout::{ensure_omlx_layout, OmlxLayoutResult};
 pub use layout::{ensure_global_layout, EnsureResult};
 pub use merge::LoadedConfig;
 pub use model::{
     AgentConfig, BrokerConfig, CacheConfig, CapabilitySidecarEntry, ContextConfig, CursorCliConfig,
     DaemonConfig, DaemonSocketScope, GatewayConfig, GatewayOllamaConfig, InferenceConfig,
-    NativeToolsMode, DEFAULT_DAEMON_READY_TIMEOUT_SECS, ObservabilityConfig, OpenAiCompatConfig,
-    OtlpConfig, RexConfig, SidecarEntry, SidecarsConfig, WorkspaceConfig, DEFAULT_DAEMON_SOCKET,
-    DEFAULT_SIDECAR_SOCKET,
+    NativeToolsMode, OmlxConfig, DEFAULT_DAEMON_READY_TIMEOUT_SECS, ObservabilityConfig,
+    OpenAiCompatConfig, OtlpConfig, RexConfig, SidecarEntry, SidecarsConfig, WorkspaceConfig,
+    DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
 };
 pub use observability::{
     economics_snapshot_id, economics_snapshot_json, observability_enabled, validate_observability,
     DEFAULT_OBS_SERVICE_NAME, DEFAULT_OTLP_PROTOCOL,
 };
 pub use paths::{
-    gateway_dir, gateway_env_path, global_config_path, proto_gen_path, proto_src_path, rex_root,
-    REX_ROOT_ENV,
+    gateway_dir, gateway_env_path, global_config_path, omlx_dir, omlx_env_path, proto_gen_path,
+    proto_src_path, rex_root, REX_ROOT_ENV,
 };
 pub use project::ensure_project_workspace_root;
 pub use sidecar_binary::{

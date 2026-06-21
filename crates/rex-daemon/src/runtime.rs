@@ -17,6 +17,7 @@ use crate::adapters::{runtime_from_config, RuntimeKind};
 use crate::approvals::approval_gate_from_config;
 use crate::domain::DAEMON_VERSION;
 use crate::gateway_supervisor::{gateway_supervisor_from_config, GatewaySupervisorError};
+use crate::omlx_supervisor::{omlx_supervisor_from_config, OmlxSupervisorError};
 use crate::policy::PolicyEngine;
 use crate::service::RexDaemonService;
 use crate::settings;
@@ -39,6 +40,8 @@ pub enum DaemonRuntimeError {
     Sidecar(#[from] SupervisorError),
     #[error("inference gateway supervisor: {0}")]
     Gateway(#[from] GatewaySupervisorError),
+    #[error("inference oMLX supervisor: {0}")]
+    Omlx(#[from] OmlxSupervisorError),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,6 +58,15 @@ pub async fn run_daemon() -> Result<(), DaemonRuntimeError> {
 
 pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntimeError> {
     ensure_settings_loaded()?;
+    let omlx = omlx_supervisor_from_config();
+    if omlx.config().enabled {
+        if let Err(err) = omlx.ensure_running().await {
+            if omlx.config().required {
+                return Err(DaemonRuntimeError::Omlx(err));
+            }
+            eprintln!("rex-daemon oMLX optional start failed: {err}");
+        }
+    }
     let gateway = gateway_supervisor_from_config();
     if gateway.config().enabled {
         if let Err(err) = gateway.ensure_running().await {
@@ -138,6 +150,7 @@ pub async fn run_daemon_on_socket(socket_path: &str) -> Result<(), DaemonRuntime
         .serve_with_incoming_shutdown(incoming, shutdown_trigger(idle_rx, reason_for_shutdown))
         .await?;
     sidecar.stop().await;
+    omlx.stop().await;
     gateway.stop().await;
     remove_stale_socket(socket_path)?;
     let reason = *shutdown_reason
