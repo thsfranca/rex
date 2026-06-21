@@ -14,7 +14,7 @@ Operators using Rex (extension chat or `rex complete`) need **visible progress**
 |-------|------|
 | Sidecar | Tool/step/text/plan/activity events during `RunTurn`; live flush via stream sink |
 | Daemon | Policy, approvals, broker execution, stream passthrough, pre-stream step events |
-| CLI | NDJSON forwarding, TTY approval prompt, `--verbose` stderr status, idle timeout from JSON |
+| CLI | NDJSON forwarding, TTY approval prompt, `--verbose` stderr status, idle timeout from JSON; **planned:** TUI + operator messaging ([CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md)) |
 | Extension webview | Timeline, inline activity strip, ToolCard updates, approval cards |
 
 Configuration uses **`$REX_ROOT/config.json`** and `.rex/config.json` only ([CONFIGURATION.md](CONFIGURATION.md)). Bootstrap env is **`REX_ROOT`** only.
@@ -37,12 +37,14 @@ Unknown JSON keys are ignored by clients (additive contract).
 
 ## Client mapping
 
-| Concern | Extension | CLI `ndjson` | CLI `text --verbose` |
-|---------|-----------|--------------|----------------------|
-| Tool running | `executionStep` → ToolCard | Forward line | `[tool] name phase detail` on stderr |
-| Approval (agent) | Webview approval card | Interactive TTY or `--approval-id` / `--yes` | stderr prompt |
-| Idle timeout | Subprocess kill | Config `cli.stream_idle_timeout_secs` | Same |
-| Ask research tools | Tool cards, no approval | Forward `tool` events | stderr status lines |
+| Concern | Extension | CLI TUI (planned) | CLI `ndjson` | CLI `text --verbose` |
+|---------|-----------|-------------------|--------------|----------------------|
+| Tool running | `executionStep` → ToolCard | Activity pane + operator message | Forward line | `[tool] name phase detail` on stderr |
+| Activity heartbeat | Activity strip / status bar | Header + activity pane | Forward line | stderr status when verbose |
+| Approval (agent) | Webview approval card | TUI modal / TTY prompt | Interactive TTY or `--approval-id` / `--yes` | stderr prompt |
+| Idle timeout | Subprocess kill | Cancel stream + idle message | Config `cli.stream_idle_timeout_secs` | Same |
+| Ask research tools | Tool cards, no approval | Activity pane | Forward `tool` events | stderr status lines |
+| Daemon lifecycle | Status bar ready/starting/unavailable | Header strip ([CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md)) | N/A (connect-only today) | N/A |
 
 ## Approval parity (ADR 0009)
 
@@ -72,6 +74,7 @@ Sidecar `RunTurn` flushes events during graph execution via a **stream sink** an
 
 - [EXTENSION.md](EXTENSION.md) — NDJSON reference
 - [EXTENSION_UX.md](EXTENSION_UX.md) — presentation (timeline, activity strip)
+- [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) — terminal TUI and operator messaging (planned)
 - [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) — `web.search` mode matrix
 - [POLICY_ENGINE.md](POLICY_ENGINE.md) — approval gate
 - [fixtures/ndjson_contract/](../fixtures/ndjson_contract/) — golden NDJSON lines

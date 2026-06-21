@@ -41,10 +41,12 @@ rex config init
 # Edit $REX_ROOT/config.json — inference.openai_compat + sidecars.active=agent (binary rex-agent)
 rex config validate
 cargo build --workspace
-rex daemon
+rex daemon   # debug / foreground; planned: opt-in auto-start — docs/CLI_OPERATOR_UX.md
 rex status
 rex complete "hello from rex" --format ndjson --mode agent
 ```
+
+Terminal operator UX (auto-start, TUI, friendly status) is **planned** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Until **R071** ships, start **`rex daemon`** manually or enable extension **`rex.daemonAutoStart`** for editor sessions.
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Configure **`sidecars`** and **`inference.openai_compat`** in JSON ([CONFIGURATION.md](CONFIGURATION.md)); legacy `REX_*` tuning env vars are ignored. CI may use `sidecars.harness: "direct"` (harness only).
 

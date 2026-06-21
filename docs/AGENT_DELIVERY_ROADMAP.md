@@ -103,6 +103,19 @@ flowchart TB
 
 Extension defaults: **`rex`** + `["daemon"]` for auto-start. Compatibility shims **`rex-cli`** / **`rex-daemon`** delegate to the same libraries with deprecation hints.
 
+## CLI operator UX (R071–R074)
+
+**Status: planned.** Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md).
+
+Terminal operators should not need a dedicated foreground **`rex daemon`** session. Target: extension-compatible **ensure daemon** (**R071**), structured operator messaging (**R072**), full TUI (**R073**), optional LLM narrator (**R074**). **`rex complete --format ndjson`** remains the extension and CI contract ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)).
+
+| ID | Theme | MoSCoW | Depends on |
+|----|-------|--------|------------|
+| **R071** | CLI daemon auto-start | Should | Hub + ADR 0035 |
+| **R072** | Structured operator messaging | Must (program) | R071 |
+| **R073** | Full terminal UI | Should | R071, R072 |
+| **R074** | Optional LLM narrator | Could | R073 |
+
 ## JSON configuration (R015)
 
 **Status: implemented.** Precedence (low → high): defaults → `$REX_ROOT/config.json` → `.rex/config.json` → CLI flags on `rex complete`.
