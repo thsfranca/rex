@@ -221,10 +221,12 @@ After MVP preflight and with oMLX serving a **tool-capable** MLX model (default 
 ```bash
 pip install -e sidecars/rex-agent
 rex proto install
-./scripts/verify_omlx_native_tools_live.sh
+./scripts/verify_omlx_native_tools_live.sh          # direct openai_compat.base_url
+./scripts/verify_omlx_native_tools_live.sh managed  # inference.omlx.mode: managed
+./scripts/verify_omlx_native_tools_live.sh autostart # R071 + managed oMLX from config
 ```
 
-Requires oMLX at `http://127.0.0.1:8000/v1` with a tool-capable model (default in script: `qwen2.5-coder-32b`). Set `OMLX_MANAGED=1` to exercise `inference.omlx.mode: managed`; set `OMLX_USE_AUTOSTART=1` to use `rex status` (R071 autostart chain). Not run in PR CI (**RC-10**).
+Requires oMLX at `http://127.0.0.1:8000/v1` with a tool-capable model (default in fixture: `qwen2.5-coder-32b`). Pass a scenario argument to pick the Rex config fixture: `direct` (default), `managed`, or `autostart` (R071 chain via `daemon.auto_start` + `inference.omlx.mode: managed`). Only `REX_ROOT` is set by the harness. Not run in PR CI (**RC-10**).
 
 **What it automates vs §8 checklist below:**
 
@@ -235,7 +237,7 @@ Requires oMLX at `http://127.0.0.1:8000/v1` with a tool-capable model (default i
 | Extension UI, cancel, client hints, multi-turn | No | Yes |
 | ask mode live turn | No (**R039**) | Yes |
 
-Fixture workspace: [`fixtures/native_tools_e2e/workspace/`](../fixtures/native_tools_e2e/workspace/). Managed config sample: [`fixtures/omlx_managed_e2e/config.json`](../fixtures/omlx_managed_e2e/config.json).
+Fixture configs: [`fixtures/omlx_native_tools_e2e/`](../fixtures/omlx_native_tools_e2e/). Managed sample: [`fixtures/omlx_managed_e2e/config.json`](../fixtures/omlx_managed_e2e/config.json).
 
 Prerequisites for §8 and §8a: HTTP server running (example: `ollama serve`), JSON from step 3 on the **same** daemon process with **direct Ollama** `inference.openai_compat.base_url` `http://127.0.0.1:11434/v1` (gateway opt-in only for multi-provider), workspace folder open in the editor with `rex.daemonAutoStart: true` (or manual `rex daemon` started from that project directory).
 

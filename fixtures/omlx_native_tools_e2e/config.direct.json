@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "daemon": {
+    "socket": "__DAEMON_SOCKET__",
+    "ready_timeout_secs": 90,
+    "log_path": "daemon.log"
+  },
+  "sidecars": {
+    "active": "agent",
+    "required": true,
+    "list": [
+      {
+        "name": "agent",
+        "binary": "rex-agent",
+        "enabled": true,
+        "socket": "__SIDECAR_SOCKET__"
+      }
+    ]
+  },
+  "inference": {
+    "runtime": "http-openai-compat",
+    "openai_compat": {
+      "base_url": "http://127.0.0.1:8000/v1",
+      "model": "qwen2.5-coder-32b",
+      "native_tools": "auto"
+    }
+  },
+  "workspace": {
+    "root": "__WORKSPACE__"
+  }
+}

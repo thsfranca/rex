@@ -2,27 +2,41 @@
 # Operator E2E: R038 native broker tool calling on managed or direct oMLX.
 #
 # Invoke only when oMLX is running with a tool-capable MLX model. Not wired to PR CI (RC-10).
-# Defaults: http://127.0.0.1:8000/v1, model from OMLX_MODEL env.
+# Configuration comes from Rex fixture templates under fixtures/omlx_native_tools_e2e/
+# (only REX_ROOT is set for the isolated harness layout).
 #
-# Set OMLX_MANAGED=1 to use inference.omlx.mode: managed (daemon spawns oMLX stub path).
-# Set OMLX_USE_AUTOSTART=1 to use `rex status` instead of manual `rex daemon`.
+# Usage:
+#   ./scripts/verify_omlx_native_tools_live.sh [direct|managed|autostart]
+# Default scenario: direct (explicit openai_compat.base_url at http://127.0.0.1:8000/v1).
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-FIXTURE_DIR="${ROOT_DIR}/fixtures/native_tools_e2e"
+FIXTURE_DIR="${ROOT_DIR}/fixtures/omlx_native_tools_e2e"
+NATIVE_FIXTURE_DIR="${ROOT_DIR}/fixtures/native_tools_e2e"
 TARGET_DIR="${CARGO_TARGET_DIR:-${ROOT_DIR}/target}"
 REX_BIN="${TARGET_DIR}/debug/rex"
-AGENT_LAUNCHER="${ROOT_DIR}/sidecars/rex-agent/rex-agent"
+
+SCENARIO="${1:-direct}"
+case "${SCENARIO}" in
+  direct|managed|autostart) ;;
+  *)
+    echo "verify_omlx_native_tools_live: unknown scenario '${SCENARIO}' (use direct|managed|autostart)" >&2
+    exit 2
+    ;;
+esac
+
+FIXTURE_TEMPLATE="${FIXTURE_DIR}/config.${SCENARIO}.json"
+[[ -f "${FIXTURE_TEMPLATE}" ]] || {
+  echo "verify_omlx_native_tools_live: missing fixture ${FIXTURE_TEMPLATE}" >&2
+  exit 2
+}
 
 MARKER="rex-native-e2e-marker"
-OMLX_BASE="${OMLX_BASE:-http://127.0.0.1:8000/v1}"
-OMLX_HOST="${OMLX_HOST:-127.0.0.1:8000}"
-OMLX_MODEL="${OMLX_MODEL:-qwen2.5-coder-32b}"
-OMLX_MANAGED="${OMLX_MANAGED:-0}"
-OMLX_USE_AUTOSTART="${OMLX_USE_AUTOSTART:-0}"
-READINESS_TIMEOUT_SECS="${READINESS_TIMEOUT_SECS:-120}"
+OMLX_PROBE_URL="http://127.0.0.1:8000/v1/models"
+OMLX_MODEL="qwen2.5-coder-32b"
+READINESS_TIMEOUT_SECS=120
 TURN_TIMEOUT_SECS=120
 
 DAEMON_PID=""
@@ -122,9 +136,9 @@ info "Building rex CLI"
 cargo build -p rex --locked >/dev/null
 [[ -x "${REX_BIN}" ]] || fail "rex binary missing at ${REX_BIN}"
 
-info "Probing oMLX at ${OMLX_BASE}"
-if ! curl -sf "${OMLX_BASE%/}/models" >/dev/null; then
-  fail "oMLX not reachable at ${OMLX_BASE} (start oMLX or set inference.omlx.mode: managed)"
+info "Probing oMLX at ${OMLX_PROBE_URL}"
+if ! curl -sf "${OMLX_PROBE_URL}" >/dev/null; then
+  fail "oMLX not reachable at ${OMLX_PROBE_URL} (start oMLX or use scenario managed with inference.omlx.mode: managed)"
 fi
 
 PYTHON="python3"
@@ -138,57 +152,19 @@ SIDECAR_SOCKET="${WORKSPACE}/rex-sidecar.sock"
 DAEMON_LOG="${WORKSPACE}/daemon.log"
 
 mkdir -p "${WORKSPACE}/workspace"
-cp "${FIXTURE_DIR}/workspace/native_fixture.txt" "${WORKSPACE}/workspace/native_fixture.txt"
+cp "${NATIVE_FIXTURE_DIR}/workspace/native_fixture.txt" "${WORKSPACE}/workspace/native_fixture.txt"
 
-info "Writing ${REX_ROOT}/config.json"
-python3 - "${REX_ROOT}/config.json" "${WORKSPACE}/workspace" "${DAEMON_SOCKET}" "${SIDECAR_SOCKET}" "${OMLX_BASE}" "${OMLX_MODEL}" "${OMLX_MANAGED}" <<'PY'
+info "Writing ${REX_ROOT}/config.json from fixture scenario=${SCENARIO}"
+python3 - "${FIXTURE_TEMPLATE}" "${REX_ROOT}/config.json" "${WORKSPACE}/workspace" "${DAEMON_SOCKET}" "${SIDECAR_SOCKET}" <<'PY'
 import json
 import sys
 
-out_path, workspace, daemon_sock, sidecar_sock, base_url, model, managed = sys.argv[1:8]
-managed = managed == "1"
-inf = {
-    "runtime": "http-openai-compat",
-    "openai_compat": {"native_tools": "auto"},
-}
-if managed:
-    port = 8000
-    if ":8000" not in base_url:
-        try:
-            port = int(base_url.split(":")[2].split("/")[0])
-        except (IndexError, ValueError):
-            pass
-    inf["omlx"] = {
-        "mode": "managed",
-        "port": port,
-        "model": model,
-        "startup_timeout_secs": 60,
-    }
-else:
-    inf["openai_compat"]["base_url"] = base_url
-    inf["openai_compat"]["model"] = model
-cfg = {
-    "version": 1,
-    "daemon": {
-        "socket": daemon_sock,
-        "ready_timeout_secs": 90,
-        "log_path": "daemon.log",
-    },
-    "sidecars": {
-        "active": "agent",
-        "required": True,
-        "list": [
-            {
-                "name": "agent",
-                "binary": "rex-agent",
-                "enabled": True,
-                "socket": sidecar_sock,
-            }
-        ],
-    },
-    "inference": inf,
-    "workspace": {"root": workspace},
-}
+template_path, out_path, workspace, daemon_sock, sidecar_sock = sys.argv[1:6]
+raw = open(template_path, encoding="utf-8").read()
+raw = raw.replace("__WORKSPACE__", workspace)
+raw = raw.replace("__DAEMON_SOCKET__", daemon_sock)
+raw = raw.replace("__SIDECAR_SOCKET__", sidecar_sock)
+cfg = json.loads(raw)
 with open(out_path, "w", encoding="utf-8") as fh:
     json.dump(cfg, fh, indent=2)
     fh.write("\n")
@@ -196,8 +172,8 @@ PY
 
 env REX_ROOT="${REX_ROOT}" "${REX_BIN}" proto install || fail "rex proto install failed"
 
-if [[ "${OMLX_USE_AUTOSTART}" == "1" ]]; then
-  info "Autostart via rex status (R071 + managed oMLX)"
+if [[ "${SCENARIO}" == "autostart" ]]; then
+  info "Autostart via rex status (R071 + managed oMLX from config)"
   env REX_ROOT="${REX_ROOT}" "${REX_BIN}" status >/dev/null
   cp "${REX_ROOT}/daemon.log" "${DAEMON_LOG}" 2>/dev/null || true
 else
@@ -220,7 +196,7 @@ assert_plan_native_protocol "${log_slice_plan}"
 
 cat <<EOF
 
-==> verify_omlx_native_tools_live passed (oMLX operator E2E).
+==> verify_omlx_native_tools_live passed (oMLX operator E2E, scenario=${SCENARIO}).
 
 Plan native tool path exercised on oMLX (${OMLX_MODEL}).
 Daemon log: ${DAEMON_LOG}

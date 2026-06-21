@@ -1,9 +1,11 @@
 # oMLX operator layout
 
-Managed oMLX uses `$REX_ROOT/omlx/` for optional environment overrides (`.env`).
+Managed oMLX settings live in **`$REX_ROOT/config.json`** under `inference.omlx.*` — not environment variables.
 
-- Point `OMLX_MODEL_DIR` at MLX-format model weights (subdirectories per model).
-- Default listen port is **8000** (`OMLX_PORT`).
-- Hub: [OMLX_INFERENCE.md](../../docs/OMLX_INFERENCE.md)
+- `inference.omlx.port` — loopback listen port (default **8000**)
+- `inference.omlx.model_dir` — MLX-format model weights directory (optional; passed as `omlx serve --model-dir`)
+- `inference.omlx.model` — default model id when `openai_compat.model` is unset
 
-Run `rex omlx init` to materialize this directory; `rex omlx doctor` for preflight checks.
+Run `rex omlx init` to materialize this directory and seed `config.snippet.json`; merge the snippet into your Rex config. Run `rex omlx doctor` for preflight checks.
+
+Hub: [OMLX_INFERENCE.md](../../docs/OMLX_INFERENCE.md)

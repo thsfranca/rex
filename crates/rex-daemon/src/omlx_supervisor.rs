@@ -5,7 +5,7 @@ use std::time::Duration;
 use reqwest::Client;
 use rex_config::{
     effective_omlx_health_path, effective_omlx_port, is_managed_omlx, omlx_required,
-    omlx_env_path, DEFAULT_OMLX_STARTUP_TIMEOUT_SECS,
+    DEFAULT_OMLX_STARTUP_TIMEOUT_SECS,
 };
 use thiserror::Error;
 use tokio::process::{Child, Command};
@@ -120,13 +120,13 @@ impl OmlxSupervisor {
             self.config.command, self.config.port
         );
         let mut cmd = Command::new(&self.config.command);
-        cmd.arg("serve");
+        cmd.arg("serve")
+            .arg("--port")
+            .arg(self.config.port.to_string());
         if !self.config.model_dir.trim().is_empty() {
             cmd.arg("--model-dir").arg(&self.config.model_dir);
         }
-        cmd.env("OMLX_PORT", self.config.port.to_string());
         cmd.env("REX_ROOT", self.config.rex_root.display().to_string());
-        apply_omlx_env_file(&mut cmd, &omlx_env_path());
         cmd.stdout(std::process::Stdio::null())
             .stderr(std::process::Stdio::null());
         let child = cmd
@@ -225,22 +225,6 @@ fn omlx_command_resolvable(command: &str) -> bool {
         return std::path::Path::new(command).is_file();
     }
     rex_config::sidecar_binary_resolvable(command)
-}
-
-fn apply_omlx_env_file(cmd: &mut Command, path: &std::path::Path) {
-    let Ok(raw) = std::fs::read_to_string(path) else {
-        return;
-    };
-    for line in raw.lines() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-        let Some((key, value)) = line.split_once('=') else {
-            continue;
-        };
-        cmd.env(key.trim(), value.trim().trim_matches('"'));
-    }
 }
 
 #[cfg(test)]
