@@ -648,12 +648,10 @@ mod tests {
             .openai_compat
             .headers
             .insert("X-Api-Key".to_string(), "test-token".to_string());
-        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
-            rex_root: std::path::PathBuf::from("/tmp/rex-http-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }));
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
+            std::path::PathBuf::from("/tmp/rex-http-test"),
+            cfg,
+        )));
 
         let runtime = HttpOpenAiCompatRuntime::from_config().expect("runtime");
         let _chunks = runtime.build_chunks("ping").await;
@@ -698,12 +696,10 @@ mod tests {
         let mut cfg = RexConfig::defaults();
         cfg.inference.runtime = "http-openai-compat".to_string();
         cfg.inference.openai_compat.base_url = format!("http://{addr}");
-        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
-            rex_root: std::path::PathBuf::from("/tmp/rex-http-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }));
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
+            std::path::PathBuf::from("/tmp/rex-http-test"),
+            cfg,
+        )));
 
         let runtime = HttpOpenAiCompatRuntime::from_config().expect("runtime");
         let chunks = runtime.build_chunks("ping").await;

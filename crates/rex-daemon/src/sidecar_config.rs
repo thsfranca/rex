@@ -32,7 +32,7 @@ impl SidecarFleetConfig {
             enabled: entry.enabled,
             required: host_required,
             binary: PathBuf::from(&entry.binary),
-            socket_path: entry.socket.clone(),
+            socket_path: config.host_sidecar_socket().to_string(),
             is_capability: false,
         };
         let capabilities = config

@@ -584,12 +584,10 @@ mod tests {
         crate::settings::reset_for_test();
         let mut cfg = rex_config::RexConfig::defaults();
         cfg.workspace.root = root.to_string();
-        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
-            rex_root: std::path::PathBuf::from("/tmp/rex-broker-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }));
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
+            std::path::PathBuf::from("/tmp/rex-broker-test"),
+            cfg,
+        )));
         SettingsGuard
     }
 
@@ -599,12 +597,10 @@ mod tests {
         let _guard = {
             crate::settings::reset_for_test();
             let cfg = rex_config::RexConfig::defaults();
-            crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
-                rex_root: std::path::PathBuf::from("/tmp/rex-broker-test"),
-                global_path: None,
-                project_path: None,
-                effective: cfg,
-            }));
+            crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
+                std::path::PathBuf::from("/tmp/rex-broker-test"),
+                cfg,
+            )));
             SettingsGuard
         };
         let err = broker_read_file("README.md", "agent").unwrap_err();
@@ -773,12 +769,10 @@ mod tests {
         let mut cfg = rex_config::RexConfig::defaults();
         cfg.broker.max_tool_result_bytes = 64;
         crate::settings::reset_for_test();
-        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
-            rex_root: std::path::PathBuf::from("/tmp/rex-broker-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }));
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
+            std::path::PathBuf::from("/tmp/rex-broker-test"),
+            cfg,
+        )));
         let long = "line-one\nline-two\nline-three\nline-four";
         let out = format_delimited_tool_result("fs.read", long);
         assert!(out.contains("<<TOOL_RESULT:fs.read>>"));
@@ -801,12 +795,10 @@ mod tests {
         let mut cfg = rex_config::RexConfig::defaults();
         cfg.broker.max_tool_result_bytes = 96;
         crate::settings::reset_for_test();
-        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig {
-            rex_root: std::path::PathBuf::from("/tmp/rex-broker-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }));
+        crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
+            std::path::PathBuf::from("/tmp/rex-broker-test"),
+            cfg,
+        )));
         let body = format!("café\n{}", "second-line\n".repeat(8));
         let out = format_delimited_tool_result("fs.read", &body);
         assert!(out.len() <= 96);

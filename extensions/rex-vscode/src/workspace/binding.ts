@@ -53,6 +53,19 @@ function mergeWorkspaceRoot(config: RexConfigJson, workspaceRoot: string): RexCo
   return { ...config, version: config.version ?? 1, workspace };
 }
 
+function mergeDaemonSocketScope(config: RexConfigJson): RexConfigJson {
+  const daemon =
+    config.daemon !== undefined &&
+    typeof config.daemon === "object" &&
+    !Array.isArray(config.daemon)
+      ? { ...(config.daemon as Record<string, unknown>) }
+      : {};
+  if (daemon.socket_scope === undefined) {
+    daemon.socket_scope = "per_workspace";
+  }
+  return { ...config, daemon, version: config.version ?? 1 };
+}
+
 function applyProductAgentOverlay(config: RexConfigJson): RexConfigJson {
   const sidecars =
     config.sidecars !== undefined &&
@@ -114,6 +127,18 @@ export function ensureProjectRexConfig(workspaceRoot: string): void {
   fs.mkdirSync(rexDir, { recursive: true });
   let config = readJsonIfExists(configPath);
   config = mergeWorkspaceRoot(config, workspaceRoot);
+  config = mergeDaemonSocketScope(config);
   config = applyProductAgentOverlay(config);
   fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+}
+
+/** Ensure `.rex/config.json` exists for every open workspace folder (multi-root Phase 2). */
+export function ensureAllWorkspaceFolderConfigs(): void {
+  const folders = vscode.workspace.workspaceFolders;
+  if (folders === undefined) {
+    return;
+  }
+  for (const folder of folders) {
+    ensureProjectRexConfig(folder.uri.fsPath);
+  }
 }

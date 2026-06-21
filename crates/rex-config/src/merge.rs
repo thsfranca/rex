@@ -9,11 +9,50 @@ pub struct LoadedConfig {
     pub global_path: Option<PathBuf>,
     pub project_path: Option<PathBuf>,
     pub effective: RexConfig,
+    pub resolved_daemon_socket: String,
+    pub resolved_host_sidecar_socket: String,
 }
 
 impl LoadedConfig {
+    pub fn from_effective(
+        rex_root: PathBuf,
+        global_path: Option<PathBuf>,
+        project_path: Option<PathBuf>,
+        effective: RexConfig,
+    ) -> Result<Self, ConfigError> {
+        let resolved = crate::sockets::resolve_sockets(&effective, &rex_root)?;
+        Ok(Self {
+            rex_root,
+            global_path,
+            project_path,
+            effective,
+            resolved_daemon_socket: resolved.daemon_socket,
+            resolved_host_sidecar_socket: resolved.host_sidecar_socket,
+        })
+    }
+
+    /// Unit-test helper when callers only need `effective` fields.
+    pub fn for_test(rex_root: PathBuf, effective: RexConfig) -> Self {
+        Self::from_effective(rex_root.clone(), None, None, effective.clone()).unwrap_or_else(
+            |_| Self {
+                rex_root,
+                global_path: None,
+                project_path: None,
+                effective: effective.clone(),
+                resolved_daemon_socket: effective.daemon.resolved_socket().to_string(),
+                resolved_host_sidecar_socket: effective
+                    .sidecars
+                    .list
+                    .iter()
+                    .find(|entry| entry.name == effective.host_sidecar_name())
+                    .map(|entry| entry.socket.clone())
+                    .unwrap_or_else(|| crate::model::DEFAULT_SIDECAR_SOCKET.to_string()),
+            },
+        )
+    }
+
     pub fn daemon_socket(&self) -> &str {
-        self.effective.daemon.resolved_socket()
+        &self.resolved_daemon_socket
     }
 
     pub fn daemon_auto_start(&self) -> bool {
@@ -52,12 +91,7 @@ impl LoadedConfig {
     }
 
     pub fn host_sidecar_name(&self) -> &str {
-        self.effective
-            .sidecars
-            .host
-            .as_deref()
-            .filter(|name| !name.trim().is_empty())
-            .unwrap_or(self.effective.sidecars.active.as_str())
+        self.effective.host_sidecar_name()
     }
 
     pub fn active_sidecar(&self) -> Option<&crate::model::SidecarEntry> {
@@ -181,6 +215,9 @@ fn merge_daemon(base: &mut crate::model::DaemonConfig, overlay: crate::model::Da
     }
     if overlay.auto_start.is_some() {
         base.auto_start = overlay.auto_start;
+    }
+    if overlay.socket_scope.is_some() {
+        base.socket_scope = overlay.socket_scope;
     }
     if overlay.ready_timeout_secs != 0 {
         base.ready_timeout_secs = overlay.ready_timeout_secs;

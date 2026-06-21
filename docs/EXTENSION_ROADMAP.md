@@ -72,6 +72,7 @@ Canonical design: **[EXTENSION_UX.md](EXTENSION_UX.md)**. One PR slice per row w
 | **E-WS01** | P3 | Web search progress in stream (`web.search` invoke) | [WEB_SEARCH.md](WEB_SEARCH.md) | Open — **after R055** |
 | **E-PLAN01** | Should | Plan review card, Save, Build handoff | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Done — **R037 PR3** |
 | **E-UX12** | Should | Operation feedback (timeline, activity hint, status bar) | [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md), [EXTENSION_UX.md](EXTENSION_UX.md) §E-UX12 | Done — **R044** |
+| **E-WS02** | Must | Per-workspace daemon routing + folder switch | [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), [CONFIGURATION.md](CONFIGURATION.md) | Done — **R075** |
 
 ## Prioritization (2026-06-07)
 

@@ -8,6 +8,7 @@ export interface StatusSnapshot {
   readonly daemonVersion: string;
   readonly uptimeSeconds: number;
   readonly activeModelId: string;
+  readonly workspaceRoot: string;
   readonly capturedAt: number;
 }
 
@@ -217,6 +218,7 @@ export function parseStatusOutput(raw: string): StatusSnapshot {
     daemonVersion,
     uptimeSeconds,
     activeModelId,
+    workspaceRoot: fields.get("workspace_root") ?? "",
     capturedAt: Date.now(),
   };
 }

@@ -17,6 +17,7 @@ Broker RPCs, the lexical indexer, and L1 cache fingerprinting scope to a resolve
 4. **Phase 1 wire:** `RunTurnRequest.prompt` carries the enriched turn string. **Phase 1b:** additive optional `turn_id` and `context_revision` on `rex.sidecar.v1.RunTurnRequest`.
 5. **Initial context vs tool deltas:** Daemon injects lexical/knowledge/memory/prompt stages **once per turn start**. The sidecar may call broker `fs.*` / `exec.shell` for **deltas** (post-edit reads, exploration)—not to re-derive the same indexed chunks the daemon already injected.
 6. **Multi-root IDEs:** Phase 1 uses the **primary** workspace folder (`workspaceFolders[0]`). When multiple folders are open, log `workspace.warning=multi_root`. Multi-root lists are deferred.
+7. **Phase 2 (R075):** Each workspace folder receives its own `.rex/config.json` and may use a **per-folder daemon** (derived socket per [ADR 0036](0036-per-workspace-daemon-routing.md)); chat and broker scope remain on the **primary** folder until a multi-root UX slice assigns active scope explicitly.
 
 ## Consequences
 

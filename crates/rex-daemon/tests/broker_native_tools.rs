@@ -40,12 +40,10 @@ fn init_http_config(base_url: &str, native_tools: NativeToolsMode) {
     cfg.inference.runtime = "http-openai-compat".to_string();
     cfg.inference.openai_compat.base_url = base_url.to_string();
     cfg.inference.openai_compat.native_tools = Some(native_tools);
-    settings::init_for_test(Arc::new(rex_config::LoadedConfig {
-        rex_root: std::path::PathBuf::from("/tmp/rex-broker-native-test"),
-        global_path: None,
-        project_path: None,
-        effective: cfg,
-    }));
+    settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
+        std::path::PathBuf::from("/tmp/rex-broker-native-test"),
+        cfg,
+    )));
 }
 
 #[tokio::test]
@@ -113,12 +111,10 @@ async fn mock_runtime_strips_tools_and_uses_interim() {
     cfg.inference.runtime = "mock".to_string();
     cfg.inference.openai_compat.base_url = format!("http://{addr}/v1");
     cfg.inference.openai_compat.native_tools = Some(NativeToolsMode::True);
-    settings::init_for_test(Arc::new(rex_config::LoadedConfig {
-        rex_root: std::path::PathBuf::from("/tmp/rex-broker-mock-test"),
-        global_path: None,
-        project_path: None,
-        effective: cfg,
-    }));
+    settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
+        std::path::PathBuf::from("/tmp/rex-broker-mock-test"),
+        cfg,
+    )));
 
     let response = broker_inference::run_broker_inference(&BrokerInferenceRequest {
         prompt: "hello".to_string(),

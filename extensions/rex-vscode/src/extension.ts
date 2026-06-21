@@ -12,6 +12,7 @@ import { openEditorChatPanel } from "./ui/editorChatPanel";
 import { runInlineEditOnSelection } from "./ui/inlineEdit";
 import { createStatusBar, type StatusBar } from "./ui/statusBar";
 import {
+  ensureAllWorkspaceFolderConfigs,
   ensureProjectRexConfig,
   workspaceBindingState,
 } from "./workspace/binding";
@@ -25,6 +26,7 @@ interface ActivationResources {
   lifecycle: DaemonLifecycle;
   probeTimer: NodeJS.Timeout | undefined;
   settings: RexSettings;
+  boundWorkspaceRoot: string | undefined;
 }
 
 let resources: ActivationResources | undefined;
@@ -113,7 +115,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     lifecycle,
     probeTimer: undefined,
     settings,
+    boundWorkspaceRoot: initialSpawnCwd,
   };
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      void handleWorkspaceFoldersChanged();
+    }),
+  );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("rex.showStatus", async () => {
@@ -345,16 +354,89 @@ async function ensureDaemonWithWorkspaceBinding(
     return { kind: "unavailable", reason: binding.reason };
   }
   try {
-    ensureProjectRexConfig(binding.workspaceRoot);
+    ensureAllWorkspaceFolderConfigs();
     if (binding.multiRoot) {
-      output.appendLine("[lifecycle] workspace.warning=multi_root (binding primary folder only)");
+      output.appendLine("[lifecycle] workspace.warning=multi_root (primary folder daemon; configs written for all roots)");
     }
   } catch (err) {
     const reason = `failed to write project .rex/config.json: ${String(err)}`;
     output.appendLine(`[lifecycle] ${reason}`);
     return { kind: "unavailable", reason };
   }
-  return lifecycle.ensureRunning(signal);
+
+  if (
+    resources !== undefined &&
+    resources.boundWorkspaceRoot !== undefined &&
+    resources.boundWorkspaceRoot !== binding.workspaceRoot
+  ) {
+    output.appendLine(
+      `[lifecycle] workspace switch ${resources.boundWorkspaceRoot} -> ${binding.workspaceRoot}; restarting owned daemon`,
+    );
+    await lifecycle.shutdown(signal);
+  }
+
+  let state = await lifecycle.ensureRunning(signal);
+  if (state.kind === "ready") {
+    const reported = state.status.workspaceRoot.trim();
+    if (reported.length > 0 && !workspacePathsEqual(reported, binding.workspaceRoot)) {
+      output.appendLine(
+        `[lifecycle] workspace mismatch reported=${reported} expected=${binding.workspaceRoot}; restarting daemon`,
+      );
+      await lifecycle.shutdown(signal);
+      state = await lifecycle.ensureRunning(signal);
+    }
+  }
+
+  if (resources !== undefined) {
+    resources.boundWorkspaceRoot = binding.workspaceRoot;
+  }
+  return state;
+}
+
+async function handleWorkspaceFoldersChanged(): Promise<void> {
+  const r = resources;
+  if (r === undefined) {
+    return;
+  }
+  const binding = workspaceBindingState();
+  if (!binding.ok) {
+    r.output.appendLine(`[lifecycle] workspace folders changed; no folder open`);
+    return;
+  }
+  try {
+    ensureAllWorkspaceFolderConfigs();
+  } catch (err) {
+    r.output.appendLine(`[lifecycle] workspace folder config write failed: ${String(err)}`);
+    return;
+  }
+  if (r.boundWorkspaceRoot === binding.workspaceRoot) {
+    return;
+  }
+  r.output.appendLine(
+    `[lifecycle] primary workspace folder changed -> ${binding.workspaceRoot}`,
+  );
+  await r.lifecycle.shutdown();
+  r.lifecycle = buildLifecycle(
+    r.settings,
+    r.statusBar,
+    r.output,
+    binding.workspaceRoot,
+    (state) => {
+      lastLifecycleState = state;
+      r.chatPanel.broadcastDaemonState(state);
+    },
+  );
+  r.boundWorkspaceRoot = binding.workspaceRoot;
+  if (r.settings.daemonAutoStart) {
+    void ensureDaemonWithWorkspaceBinding(r.lifecycle, r.output);
+  } else {
+    void r.lifecycle.probe();
+  }
+}
+
+function workspacePathsEqual(left: string, right: string): boolean {
+  const normalize = (value: string) => value.replace(/\\/g, "/").replace(/\/+$/, "");
+  return normalize(left) === normalize(right);
 }
 
 function describeState(state: DaemonLifecycleState | undefined): string {
@@ -363,7 +445,7 @@ function describeState(state: DaemonLifecycleState | undefined): string {
   }
   switch (state.kind) {
     case "ready":
-      return `ready (version=${state.status.daemonVersion}, uptime=${state.status.uptimeSeconds}s)`;
+      return `ready (version=${state.status.daemonVersion}, uptime=${state.status.uptimeSeconds}s, workspace=${state.status.workspaceRoot || "unknown"})`;
     case "starting":
       return "starting";
     case "unavailable":

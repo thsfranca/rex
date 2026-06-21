@@ -5,13 +5,14 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use assert_cmd::cargo::cargo_bin;
-use rex_config::{RexConfig, REX_ROOT_ENV};
+use rex_config::{DaemonSocketScope, RexConfig, REX_ROOT_ENV};
 use serial_test::serial;
 use tempfile::TempDir;
 
 fn mock_autostart_config(socket_path: &str) -> RexConfig {
     let mut cfg = RexConfig::defaults();
     cfg.daemon.socket = Some(socket_path.to_string());
+    cfg.daemon.socket_scope = Some(DaemonSocketScope::Global);
     cfg.inference.runtime = "mock".to_string();
     cfg.sidecars.harness = Some("direct".to_string());
     cfg.sidecars.required = Some(false);

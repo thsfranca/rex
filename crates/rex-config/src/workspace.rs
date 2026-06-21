@@ -10,16 +10,7 @@ pub struct WorkspaceRootError;
 
 impl LoadedConfig {
     pub fn resolve_workspace_root(&self) -> Result<PathBuf, WorkspaceRootError> {
-        let raw = self.effective.workspace.root.trim();
-        if !raw.is_empty() && raw != "." {
-            return Ok(canonicalize_if_possible(PathBuf::from(raw)));
-        }
-        if cwd_fallback_allowed(self) {
-            return std::env::current_dir()
-                .map(canonicalize_if_possible)
-                .map_err(|_| WorkspaceRootError);
-        }
-        Err(WorkspaceRootError)
+        resolve_workspace_root_for_effective(&self.effective)
     }
 
     pub fn workspace_root(&self) -> PathBuf {
@@ -28,9 +19,23 @@ impl LoadedConfig {
     }
 }
 
-fn cwd_fallback_allowed(config: &LoadedConfig) -> bool {
+pub fn resolve_workspace_root_for_effective(
+    config: &crate::model::RexConfig,
+) -> Result<PathBuf, WorkspaceRootError> {
+    let raw = config.workspace.root.trim();
+    if !raw.is_empty() && raw != "." {
+        return Ok(canonicalize_if_possible(PathBuf::from(raw)));
+    }
+    if cwd_fallback_allowed_for_effective(config) {
+        return std::env::current_dir()
+            .map(canonicalize_if_possible)
+            .map_err(|_| WorkspaceRootError);
+    }
+    Err(WorkspaceRootError)
+}
+
+fn cwd_fallback_allowed_for_effective(config: &crate::model::RexConfig) -> bool {
     if config
-        .effective
         .workspace
         .allow_cwd_fallback
         .unwrap_or(false)
@@ -58,12 +63,10 @@ mod tests {
         let mut cfg = RexConfig::defaults();
         cfg.workspace.root = root.to_string();
         cfg.workspace.allow_cwd_fallback = allow_cwd;
-        LoadedConfig {
-            rex_root: PathBuf::from("/tmp/rex-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }
+        LoadedConfig::for_test(
+            PathBuf::from("/tmp/rex-test"),
+            cfg,
+        )
     }
 
     #[test]

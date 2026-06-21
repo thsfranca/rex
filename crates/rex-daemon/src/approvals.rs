@@ -145,12 +145,10 @@ mod tests {
     fn approval_gate_from_config_defaults_to_always_allow() {
         crate::settings::reset_for_test();
         let cfg = rex_config::RexConfig::defaults();
-        crate::settings::init_for_test(std::sync::Arc::new(rex_config::LoadedConfig {
-            rex_root: std::path::PathBuf::from("/tmp/rex-approvals-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }));
+        crate::settings::init_for_test(std::sync::Arc::new(rex_config::LoadedConfig::for_test(
+            std::path::PathBuf::from("/tmp/rex-approvals-test"),
+            cfg,
+        )));
 
         let gate = approval_gate_from_config();
         let runtime = tokio::runtime::Runtime::new().expect("runtime should build");
@@ -182,12 +180,10 @@ mod tests {
         crate::settings::reset_for_test();
         let mut cfg = rex_config::RexConfig::defaults();
         cfg.agent.approvals_enabled = Some(true);
-        crate::settings::init_for_test(std::sync::Arc::new(rex_config::LoadedConfig {
-            rex_root: std::path::PathBuf::from("/tmp/rex-approvals-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }));
+        crate::settings::init_for_test(std::sync::Arc::new(rex_config::LoadedConfig::for_test(
+            std::path::PathBuf::from("/tmp/rex-approvals-test"),
+            cfg,
+        )));
         let runtime = tokio::runtime::Runtime::new().expect("runtime should build");
         let gate = approval_gate_from_config();
         let decision = runtime.block_on(gate.check(&ApprovalContext {
@@ -210,12 +206,10 @@ mod tests {
         crate::settings::reset_for_test();
         let mut cfg = rex_config::RexConfig::defaults();
         cfg.agent.approvals_enabled = Some(false);
-        crate::settings::init_for_test(std::sync::Arc::new(rex_config::LoadedConfig {
-            rex_root: std::path::PathBuf::from("/tmp/rex-approvals-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }));
+        crate::settings::init_for_test(std::sync::Arc::new(rex_config::LoadedConfig::for_test(
+            std::path::PathBuf::from("/tmp/rex-approvals-test"),
+            cfg,
+        )));
         let runtime = tokio::runtime::Runtime::new().expect("runtime should build");
         let gate = approval_gate_from_config();
         let decision = runtime.block_on(gate.check(&ApprovalContext {

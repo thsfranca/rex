@@ -48,7 +48,7 @@ Operators working in a terminal should use Rex as a single command—not as a tw
 | Lifecycle feedback | `daemon_unavailable` error | Header: unavailable → starting → ready |
 | Stream progress | `--verbose` stderr lines; NDJSON pipe | TUI activity pane + messaging layer |
 | Interactive session | `rex complete` plain text on TTY | **`rex tui`** + TTY-delegating **`complete`** |
-| Extension parity | Extension auto-start only | Shared states + JSON **`daemon.auto_start`** |
+| Extension parity | Extension auto-start only | Shared states + JSON **`daemon.auto_start`**; per-workspace sockets (**R075**) |
 | Friendly status | Minimal | Structured copy (Must); optional narrator (Could) |
 
 ## Boundaries

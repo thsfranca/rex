@@ -7,7 +7,9 @@ mod model;
 mod observability;
 mod openai_compat;
 mod paths;
+mod project;
 mod sidecar_binary;
+mod sockets;
 mod workspace;
 
 pub use error::ConfigError;
@@ -23,10 +25,10 @@ pub use layout::{ensure_global_layout, EnsureResult};
 pub use merge::LoadedConfig;
 pub use model::{
     AgentConfig, BrokerConfig, CacheConfig, CapabilitySidecarEntry, ContextConfig, CursorCliConfig,
-    DaemonConfig, GatewayConfig, GatewayOllamaConfig, InferenceConfig, NativeToolsMode,
-    DEFAULT_DAEMON_READY_TIMEOUT_SECS,
-    ObservabilityConfig, OpenAiCompatConfig, OtlpConfig, RexConfig, SidecarEntry, SidecarsConfig,
-    WorkspaceConfig, DEFAULT_DAEMON_SOCKET, DEFAULT_SIDECAR_SOCKET,
+    DaemonConfig, DaemonSocketScope, GatewayConfig, GatewayOllamaConfig, InferenceConfig,
+    NativeToolsMode, DEFAULT_DAEMON_READY_TIMEOUT_SECS, ObservabilityConfig, OpenAiCompatConfig,
+    OtlpConfig, RexConfig, SidecarEntry, SidecarsConfig, WorkspaceConfig, DEFAULT_DAEMON_SOCKET,
+    DEFAULT_SIDECAR_SOCKET,
 };
 pub use observability::{
     economics_snapshot_id, economics_snapshot_json, observability_enabled, validate_observability,
@@ -36,11 +38,12 @@ pub use paths::{
     gateway_dir, gateway_env_path, global_config_path, proto_gen_path, proto_src_path, rex_root,
     REX_ROOT_ENV,
 };
+pub use project::ensure_project_workspace_root;
 pub use sidecar_binary::{
     rex_agent_doctor_applies, rex_agent_doctor_checks, sidecar_binary_resolvable,
     sidecar_install_hint,
 };
-pub use workspace::WorkspaceRootError;
+pub use workspace::{resolve_workspace_root_for_effective, WorkspaceRootError};
 
 use std::env;
 use std::path::PathBuf;
@@ -77,12 +80,7 @@ pub fn load_merged() -> Result<LoadedConfig, ConfigError> {
 
     effective.validate()?;
 
-    Ok(LoadedConfig {
-        rex_root: root,
-        global_path: global_loaded,
-        project_path,
-        effective,
-    })
+    LoadedConfig::from_effective(root, global_loaded, project_path, effective)
 }
 
 fn find_project_config(start: PathBuf) -> Option<PathBuf> {

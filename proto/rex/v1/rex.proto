@@ -25,6 +25,8 @@ message GetSystemStatusResponse {
   string daemon_version = 1;
   uint64 uptime_seconds = 2;
   string active_model_id = 3;
+  // Canonical workspace root bound at daemon startup (R075).
+  string workspace_root = 4;
 }
 
 message ClientHints {

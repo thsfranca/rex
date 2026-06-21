@@ -407,6 +407,10 @@ impl RexService for RexDaemonService {
             daemon_version: DAEMON_VERSION.to_string(),
             uptime_seconds: self.started_at.elapsed().as_secs(),
             active_model_id: active_model_id_from_config(),
+            workspace_root: crate::settings::get()
+                .resolve_workspace_root()
+                .map(|path| path.display().to_string())
+                .unwrap_or_default(),
         }))
     }
 
@@ -1070,12 +1074,10 @@ mod tests {
         if let Some(entry) = cfg.sidecars.list.first_mut() {
             entry.enabled = false;
         }
-        settings::init_for_test(Arc::new(LoadedConfig {
-            rex_root: std::path::PathBuf::from("/tmp/rex-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }));
+        settings::init_for_test(Arc::new(LoadedConfig::for_test(
+            std::path::PathBuf::from("/tmp/rex-test"),
+            cfg,
+        )));
     }
 
     fn init_unconfigured_workspace_settings() {
@@ -1089,12 +1091,10 @@ mod tests {
         if let Some(entry) = cfg.sidecars.list.first_mut() {
             entry.enabled = false;
         }
-        settings::init_for_test(Arc::new(LoadedConfig {
-            rex_root: std::path::PathBuf::from("/tmp/rex-test"),
-            global_path: None,
-            project_path: None,
-            effective: cfg,
-        }));
+        settings::init_for_test(Arc::new(LoadedConfig::for_test(
+            std::path::PathBuf::from("/tmp/rex-test"),
+            cfg,
+        )));
     }
 
     #[test]
