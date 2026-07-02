@@ -128,6 +128,7 @@ impl RexConfig {
             },
             agent: AgentConfig {
                 approvals_enabled: Some(false),
+                tool_approvals_enabled: Some(false),
                 max_tool_steps: 25,
                 max_tool_steps_ask: default_max_tool_steps_ask(),
                 max_tool_steps_plan: default_max_tool_steps_plan(),
@@ -170,6 +171,7 @@ impl RexConfig {
             },
             agent: AgentConfig {
                 approvals_enabled: Some(true),
+                tool_approvals_enabled: Some(false),
                 max_tool_steps: 25,
                 max_tool_steps_ask: default_max_tool_steps_ask(),
                 max_tool_steps_plan: default_max_tool_steps_plan(),
@@ -600,6 +602,8 @@ impl Default for BrokerConfig {
 pub struct AgentConfig {
     #[serde(default)]
     pub approvals_enabled: Option<bool>,
+    #[serde(default)]
+    pub tool_approvals_enabled: Option<bool>,
     #[serde(default = "default_max_tool_steps")]
     pub max_tool_steps: u32,
     #[serde(default = "default_max_tool_steps_ask")]
@@ -626,6 +630,7 @@ impl Default for AgentConfig {
     fn default() -> Self {
         Self {
             approvals_enabled: None,
+            tool_approvals_enabled: None,
             max_tool_steps: default_max_tool_steps(),
             max_tool_steps_ask: default_max_tool_steps_ask(),
             max_tool_steps_plan: default_max_tool_steps_plan(),

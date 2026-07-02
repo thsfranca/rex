@@ -119,6 +119,10 @@ impl LoadedConfig {
         self.effective.agent.approvals_enabled.unwrap_or(false)
     }
 
+    pub fn tool_approvals_enabled(&self) -> bool {
+        self.effective.agent.tool_approvals_enabled.unwrap_or(false)
+    }
+
     pub fn workspace_indexer_mode(&self) -> &str {
         self.effective.workspace.indexer.as_str()
     }
@@ -411,6 +415,9 @@ fn merge_broker(base: &mut crate::model::BrokerConfig, overlay: crate::model::Br
 fn merge_agent(base: &mut crate::model::AgentConfig, overlay: crate::model::AgentConfig) {
     if overlay.approvals_enabled.is_some() {
         base.approvals_enabled = overlay.approvals_enabled;
+    }
+    if overlay.tool_approvals_enabled.is_some() {
+        base.tool_approvals_enabled = overlay.tool_approvals_enabled;
     }
     if overlay.max_tool_steps != 0 {
         base.max_tool_steps = overlay.max_tool_steps;
