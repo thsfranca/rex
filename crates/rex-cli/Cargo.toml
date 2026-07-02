@@ -16,6 +16,8 @@ tower = "0.5"
 hyper-util = { version = "0.1", features = ["tokio"] }
 rex-config = { path = "../rex-config" }
 rex-proto = { path = "../rex-proto" }
+rex-stream-ui = { path = "../rex-stream-ui", features = ["grpc"] }
+mdstream = { version = "0.2", features = ["pulldown"] }
 thiserror = "2"
 serde_json = "1"
 
