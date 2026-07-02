@@ -72,35 +72,38 @@ Use these as short confidence cues when ranking optimization proposals:
 | VM/container as default Mac dev-agent envelope | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [ROADMAP.md](ROADMAP.md) parked table |
 | Always-on Colima/Docker/Firecracker for local agents | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) deferred catalog |
 
-## Current focus queue (audit 2026-06-09)
+## Current focus queue (audit 2026-07-01)
 
-**Context:** Streaming/agent Must **RC-01–RC-10** are **Met** ([V1_0.md](V1_0.md)). **v1.0 not Met** — observability Must **RC-LF1** (**Not met**) blocks the **`1.0.0` git tag**. Product agent program (**R013–R038**) is **Done**. Rex-owned observability (**R043–R054**) **cancelled**.
+**Context:** Streaming/agent Must **RC-01–RC-10** are **Met** ([V1_0.md](V1_0.md)). **v1.0 not Met** — observability Must **RC-LF1** (**Not met**) blocks the **`1.0.0` git tag**. Product agent program (**R013–R038**) is **Done**. In-repo extension removed ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)); terminal harness is the **primary operator surface**.
 
-**Advisory ask efficiency (2026-06-18):** **R069** → **R067** → **R068** → **R070** → **R059** — short-prompt failures (OpenCode comparison). **R066** (context paths) deferred. Hubs: [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md).
+**Focus pivot:** Terminal harness program **R072** → **R073** supersedes LangFuse discovery sequencing until harness MVP lands. Hubs: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
 **Ordering method:** MoSCoW bucket first; **R-ICE** (Impact × Confidence × Ease, 1–5) for **Should** ties; [tie-breakers](#tie-breakers-rex-specific) for blast radius and CI cost.
 
 | Rank | ID / theme | MoSCoW | R-ICE | RC-* | Blast | Rationale |
 |------|------------|--------|-------|------|-------|-----------|
-| 1 | **LF-D01** — LangFuse Cloud + OTLP ingest discovery | **Must** | **70** (5×5×2.8) | RC-LF1 | docs + config | Starts LangFuse program — [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) |
-| 2 | **LF-D02** — economics field mapping | **Must** | **65** | RC-LF1 | export contract | Freezes **LF-F01** attributes |
-| 3 | **LF-D09** — v1.0 **RC-LF1** validation | **Must** | **50** | RC-LF1 | docs | Honest tag gate |
-| 4 | **LF-R01** — remove Rex observability dead code | **Must** | **55** | — | crates + CI | **After docs pivot merge** |
-| 5 | **LF-F01** — daemon OTLP → LangFuse Cloud | **Must** | **60** | RC-LF1 | daemon | **After LF-D01–D02** |
-| 6 | **R069** — remove tool step caps | **Should** | **55** | — | sidecar | Unblocks advisory ask loops — [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) |
-| 7 | **R067** — advisory intent retrieval | **Should** | **50** | — | daemon | Short-prompt context — [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
-| 8 | **LF-D03–LF-D08** — parallel discovery | **Should** | **40** avg | — | spikes | Features **LF-F02–F07** |
+| 1 | Terminal harness design docs + **ADR 0039** | **Must** | **75** (5×5×3) | — | docs | Locks architecture before **R072** code |
+| 2 | **R072** — NDJSON core + messaging + **mdstream** | **Must** (program) | **70** | — | cli | Primary surface legibility — [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) |
+| 3 | **R073** — full TUI + approval modals | **Should** | **65** | — | cli | Terminal-first MVP after **R072** |
+| 4 | **R074** — optional LLM narrator | **Could** | **35** | — | cli | After TUI stable |
+| 5 | **R067** — advisory intent retrieval | **Should** | **50** | — | daemon | Short-prompt context — parallel when capacity allows |
+| 6 | **R069** — remove tool step caps | **Should** | **55** | — | sidecar | [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) |
 | 7 | **R040** — nightly live-smoke workflow | **Should** | **60** | RC-S6 | CI only | Informational tier |
-| 8 | **R042** — economics manifest (LangFuse datasets) | **Could** | **35** | — | harness | **LF-D05** |
-| 9 | **R041** — gateway-path live smoke | **Could** | **30** | — | harness | Same as R039 via gateway |
-| 10 | **R026** — optional Semgrep | **Could** | **25** | — | CI | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
-| 11 | **R036** — TRON schema compression | **Could** | **30** | — | daemon | Optional |
-| 12 | **R033** — MCP gRPC client | **Could** | **25** | — | sidecar | ADR 0016 |
-| 13 | **R056** — capability sidecar fleet | **Could** | **35** | — | daemon + proto | Unblocks **R055** |
-| 14 | **R055** — web search (SearXNG capability) | **Could** | **30** | — | daemon + sidecar | **After R056** |
-| 15 | **R016** — multi-active host broadcast | **Could** | **20** | — | daemon | Deferred — see **R056** |
 
-**Deferred (Later / Won't now):** L2 semantic cache, oMLX managed local inference (Mac), in-daemon MLX, self-hosted LangFuse on Mac, LTM, agent knowledge — see [ROADMAP.md](ROADMAP.md).
+**Deferred (until R072–R073 land):** **LF-D01** → **LF-D02** → **LF-R01** → **LF-F01** — LangFuse program; **RC-LF1** remains **Not met**. See [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md).
+
+**Later (harness v2):** **R076** LSP, **R077** git broker, **R078** MCP dynamic UI — [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
+
+**Deferred (Later / Won't now):** L2 semantic cache, in-daemon MLX, self-hosted LangFuse on Mac — see [ROADMAP.md](ROADMAP.md).
+
+## Prior focus queue (audit 2026-06-09) — superseded
+
+<details>
+<summary>LangFuse-primary queue (2026-06-09)</summary>
+
+**Advisory ask efficiency (2026-06-18):** **R069** → **R067** → **R068** → **R070** → **R059**. LangFuse **LF-D01** was rank 1. Superseded by terminal harness pivot 2026-07-01.
+
+</details>
 
 **Domain roadmaps:** [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [ROADMAP.md](ROADMAP.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md).
 

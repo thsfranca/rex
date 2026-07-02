@@ -40,29 +40,31 @@ flowchart LR
  core[CoreStreaming_RC01_RC07]
  side[Sidecar_RC03]
  broker[BrokeredHttpTool_RC04]
- ext[Extension_RC02_RC06]
+ cliClient[CLI_NDJSON_ADR0038]
  policyBroker[AccessPolicyBroker_RC05]
  agent[R013_R038_agent_Done]
+ terminalHarness[R072_R073_harness]
  langfuseDisc[LangFuse_discovery_LF-D]
  langfuseRm[LF-R01_dead_code_removal]
  langfuseImpl[LF-F01_export]
  v1[v1_0_RC_LF1_Met]
  core --> side
  side --> broker
- broker --> ext
+ broker --> cliClient
  side --> policyBroker
  core --> agent
- ext --> agent
- agent --> langfuseDisc
+ cliClient --> agent
+ agent --> terminalHarness
+ terminalHarness --> langfuseDisc
  langfuseDisc --> langfuseRm
  langfuseRm --> langfuseImpl
  policyBroker --> v1
- ext --> v1
+ cliClient --> v1
  agent --> v1
  langfuseImpl --> v1
 ```
 
-**Current focus:** LangFuse discovery — **LF-D01** next — [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md); [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md#current-focus-queue-audit-2026-06-09).
+**Current focus:** Terminal harness program — **R072** next → **R073** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md); [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
 
 ## Now — stable baseline
 
@@ -73,51 +75,30 @@ Streaming/agent Must **RC-01–RC-10** are **Met**. Observability Must **RC-LF1*
 | **Should** | Optional hardening | Stream/log polish beyond **RC-07** (Met); `cargo-deny`, Semgrep (**R026** Could) |
 | **Removed** | VS Code extension (in-repo) | Removed 2026-07 — CLI-only thin client; see [NDJSON_STREAM.md](NDJSON_STREAM.md), [ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md) |
 
-## Next — prioritized queue (audit 2026-06-09)
+## Next — prioritized queue (audit 2026-07-01)
 
-Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md#current-focus-queue-audit-2026-06-09). **One PR per row** where feasible; merge-wait between slices.
+Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01). **One PR per row** where feasible; merge-wait between slices.
 
 | Rank | ID / theme | MoSCoW | RC-* | Source(s) | Status |
 |------|------------|--------|------|-----------|--------|
-| 1 | **LF-D01** — LangFuse Cloud project + OTLP ingest discovery | **Must** | RC-LF1 | [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | Open |
-| 2 | **LF-D02** — economics field mapping | **Must** | RC-LF1 | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) | Open |
-| 3 | **LF-D09** — v1.0 RC validation (**RC-LF1**) | **Must** | RC-LF1 | [V1_0.md](V1_0.md) | Open |
-| 4 | **LF-R01** — remove Rex observability dead code | **Must** | — | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) | Open — **after docs pivot merged** |
-| 5 | **LF-D03–LF-D08** — parallel discovery spikes | **Should** | — | [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | Open — **after LF-D01** |
-| 6 | **LF-D10** — ADR supersession outline | **Should** | — | [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | Open |
-| 7 | **LF-F01** — daemon OTLP → LangFuse Cloud | **Must** | RC-LF1 | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) | Open — **after LF-D01, LF-D02; LF-R01 recommended** |
-| 8 | **R039** — opt-in Ollama live smoke | **Should** | RC-S6 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Met (harness shipped) |
+| 1 | Terminal harness design docs + **ADR 0039** | **Must** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | Open |
+| 2 | **R072** — NDJSON core + operator messaging + **mdstream** | **Must** (program) | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | Open — **after design docs** |
+| 3 | **R073** — full terminal UI + approval modals | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md) | Open — **after R072** |
+| 4 | **R074** — optional LLM status narrator | **Could** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Open — **after R073** |
+| 5 | **R067** — intent-aware retrieval for short prompts | **Should** | — | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) | Open |
+| 6 | **R068** — ask answer-first prompt policy | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
+| 7 | **R069** — remove tool step caps | **Should** | — | [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) | Open |
+| 8 | **R070** — deterministic init intent gating | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
 | 9 | **R040** — nightly live-smoke workflow | **Should** | RC-S6 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [CI.md](CI.md) | Open |
-| 10 | **R042** — economics run manifest (LangFuse datasets) | **Could** | — | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Open |
-| 11 | **R041** — gateway-path live smoke | **Could** | — | [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) | Open |
-| 12 | **R026** — Rex guidelines + optional Semgrep | **Could** | — | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | Open |
-| 13 | **R036** — TRON static schema compression | **Could** | — | [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) | Open |
-| 14 | **R033** — MCP gRPC client | **Could** | — | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) | Open |
-| 15 | **R056** — host + capability sidecar fleet | **Could** | — | [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md) | Open |
-| 16 | **R055** — `web.search` via SearXNG capability sidecar | **Could** | — | [WEB_SEARCH.md](WEB_SEARCH.md) | Open — **after R056** |
-| 17 | **R016** — multi-active sidecar broadcast | **Could** | — | [ADR 0017](architecture/decisions/0017-single-active-sidecar-phase-1.md) | Deferred — capability fleet is near-term multi-process path |
-| 18 | **R057** — parallel read-only tool batching | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | Done |
-| 19 | **R058** — per-mode step caps + mode prompts | **Should** | — | [PLANNING_TOOLS.md](PLANNING_TOOLS.md), [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md) | Done |
-| 20 | **R059** — `workspace.search` broker | **Should** | — | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md#workspace-search-broker-r059) | Open |
-| 21 | **R060** — deterministic ask init + loop circuit breaker | **Must** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | **Done** |
-| 22 | **R061** — exact-match tool cache | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | **Done** |
-| 23 | **R062** — prefix-safe compaction config | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | **Done** |
-| 24 | **R063** — soft cap Continue UX | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#loop-optimization-r060r065) | **Superseded** — **R069** / [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) |
-| 25 | **R064** — loop observability + golden prompts | **Should** | — | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | **Done** |
-| 26 | **R065** — injected files manifest | **Could** | — | [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) | **Done** |
-| 27 | **R066** — project context path pre-injection | **Could** | — | [PROJECT_CONTEXT_PATHS.md](PROJECT_CONTEXT_PATHS.md) | Open — design deferred |
-| 28 | **R067** — intent-aware retrieval for short prompts | **Should** | — | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) | Open |
-| 29 | **R068** — ask answer-first prompt policy | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
-| 30 | **R069** — remove tool step caps | **Should** | — | [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) | Open |
-| 31 | **R070** — deterministic init intent gating | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
+| 10 | **R059** — `workspace.search` broker | **Should** | — | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md#workspace-search-broker-r059) | Open |
 
-### LangFuse integration (RC-LF1)
+### LangFuse integration (RC-LF1) — deferred
 
-Hub: [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). Discovery: [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md). Economics validation: [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
+Hub: [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). Discovery: [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md). **Sequencing:** deferred until terminal harness **R072–R073** land ([PRIORITIZATION.md](PRIORITIZATION.md)). **RC-LF1** remains **Not met**; v1.0 tag blocked until LangFuse program resumes.
 
 | RC-* | Theme | Status |
 |------|-------|--------|
-| **RC-LF1** | LangFuse Cloud receives Rex daemon economics export (OTLP); operator can inspect traces in Cloud UI | **Not met** — discovery + **LF-F01** |
+| **RC-LF1** | LangFuse Cloud receives Rex daemon economics export (OTLP); operator can inspect traces in Cloud UI | **Not met** — deferred |
 | **RC-S6** | Live LLM smoke (**R039–R040**) | **Met** / **R040** open |
 
 ### Cancelled — Rex-owned observability (RC-S3–S5, R043–R054)
@@ -150,9 +131,13 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 | **Should** | **R071** — CLI daemon auto-start (extension-compatible) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md) | **Done** |
 | **Should** | **R071b** — daemon idle lifecycle + auto-shutdown | [ADR 0037](architecture/decisions/0037-daemon-idle-shutdown.md) | **Done** |
 | **Must** | **R075** — per-workspace daemon routing | [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), [CONFIGURATION.md](CONFIGURATION.md) | **Done** (PR1); extension folder-switch **PR2** |
-| **Must** (program) | **R072** — structured CLI operator messaging | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | After **R071** |
-| **Should** | **R073** — full terminal UI (`rex tui`, TTY `complete`) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | After **R071**, **R072** |
+| **Must** (program) | **R072** — NDJSON core + operator messaging + **mdstream** | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | **Next** — TurnState consumer; stdout path before TUI chrome |
+| **Should** | **R073** — full terminal UI + approval modals | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md) | After **R072** — **ratatui** + **mpsc** + **ApprovalGate** modals |
 | **Could** | **R074** — optional LLM status narrator | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | After **R073** |
+| **Should** | **R077** — brokered git dirty-state auto-commit | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | After **R073** — **`git.auto_commit_dirty`** |
+| **Could** | **R076** — daemon-owned LSP workspace diagnostics | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | After **R073** |
+| **Could** | **R078** — dynamic MCP approval schema UI | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) | After **R073**; may follow **R033** |
+| **Must** | **LF-D01–LF-F01** — LangFuse discovery + export | [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | **Deferred** until **R072–R073** — **RC-LF1** open |
 | **Won't (now)** | VM/container as **default Mac** sidecar envelope | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Process + broker instead |
 | **Won't (now)** | Self-hosted LangFuse on Mac | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) | Cloud default |
 
@@ -196,7 +181,7 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 | **Agent knowledge** | After R015 | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
 | **MCP in sidecar** | Deferred | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 | **Capability sidecar fleet + web search** | After **RC-LF1** headroom | [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md), [WEB_SEARCH.md](WEB_SEARCH.md) |
-| **LangFuse integration** | **Active** — discovery **LF-D01** | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) |
+| **LangFuse integration** | **Deferred** until **R072–R073** | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) |
 | ~~**Rex-owned observability suite**~~ | **Cancelled** — removal **LF-R01** | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) (superseded) |
 | ~~**CHCE mmap program**~~ | **Cancelled** | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
 
@@ -209,9 +194,9 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 3. **New product features:** hub first — [DOCUMENTATION.md](DOCUMENTATION.md#roadmap-and-new-features).
 4. Re-check [PRIORITIZATION.md](PRIORITIZATION.md) when moving rows.
 
-### Prioritization audit (2026-06-09)
+### Prioritization audit (2026-07-01)
 
-Pivot: Rex-owned observability (**R043–R054**, **RC-S3–S5**) **cancelled**; **LangFuse Cloud** primary ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)). **Next slice:** **LF-D01**. **v1.0 tag** blocked on **RC-LF1**. Prior audit: 2026-06-07.
+Pivot: **Terminal harness** becomes primary operator surface ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md)). **Next slice:** terminal harness design docs → **R072** → **R073**. **LangFuse discovery (LF-D01+)** deferred until harness MVP; **RC-LF1** remains **Not met**. Prior audit: 2026-06-09 (LangFuse-primary).
 
 ## Related
 

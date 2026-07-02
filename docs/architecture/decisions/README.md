@@ -42,6 +42,9 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0033](0033-omlx-managed-local-inference.md) | oMLX managed local inference (Mac, OpenAI-compat) | Accepted (design) |
 | [0034](0034-remove-tool-step-caps.md) | Remove tool step caps | Accepted |
 | [0035](0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md) | CLI operator UX — daemon lifecycle parity and terminal UI | Accepted (design) |
+| [0036](0036-per-workspace-daemon-routing.md) | Per-workspace daemon routing | Accepted |
+| [0037](0037-daemon-idle-shutdown.md) | Daemon idle lifecycle and auto-shutdown | Accepted |
+| [0039](0039-terminal-harness-presentation-and-daemon-intelligence.md) | Terminal harness — presentation layer and daemon intelligence | Accepted (design) |
 
 ## How to use
 

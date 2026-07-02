@@ -1,6 +1,6 @@
 # NDJSON stream contract
 
-Canonical reference for **`rex complete --format ndjson`**: modes, stream events, terminal invariant, and error codes. Consumers include the **CLI**, **scripts**, and **CI conformance tests**. System context: [`ARCHITECTURE.md`](ARCHITECTURE.md).
+Canonical reference for **`rex complete --format ndjson`**: modes, stream events, terminal invariant, and error codes. Consumers include the **CLI TUI** (internal consumer), **scripts**, and **CI conformance tests**. TUI parsing parity: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). System context: [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## Goals
 

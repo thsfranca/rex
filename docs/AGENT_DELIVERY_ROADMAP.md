@@ -1,8 +1,8 @@
 # Product agent delivery
 
-**Status: Should program complete — `rex-agent` shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)). **Could** follow-ups only: **R016**, **R033**, **R036**, **R056**, **R055** — see [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-06-09).
+**Status: Should program complete — `rex-agent` shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)). **Could** follow-ups only: **R016**, **R033**, **R036**, **R056**, **R055** — see [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
 
-**Current focus shifted** to LangFuse observability (**RC-LF1**, **RC-S6** Met) — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md).
+**Current focus:** Terminal harness program **R072** → **R073** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md). LangFuse (**RC-LF1**) deferred until harness MVP.
 
 ## Problem
 
@@ -103,19 +103,22 @@ flowchart TB
 
 Extension defaults: **`rex`** + `["daemon"]` for auto-start. Compatibility shims **`rex-cli`** / **`rex-daemon`** delegate to the same libraries with deprecation hints.
 
-## CLI operator UX (R071–R074)
+## CLI operator UX (R071–R078)
 
-**Status: partial (R071 Done).** Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md).
+**Status:** partial — **R071** / **R075** Done; design accepted for **R072–R073**. Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Architecture: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Decisions: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
-Terminal operators should not need a dedicated foreground **`rex daemon`** session. **R071** ships extension-compatible **ensure daemon** (default on). **R072–R074** add structured messaging, TUI, and optional narrator. **`rex complete --format ndjson`** remains the CLI and CI contract ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)).
+Terminal operators use Rex as the **primary surface** without a dedicated foreground **`rex daemon`** session. **`rex complete --format ndjson`** remains the automation and CI contract ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)).
 
-| ID | Theme | MoSCoW | Depends on |
-|----|-------|--------|------------|
-| **R071** | CLI daemon auto-start | Should | **Done** |
-| **R075** | Per-workspace daemon routing | Must | **Done** — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md) |
-| **R072** | Structured operator messaging | Must (program) | R071 |
-| **R073** | Full terminal UI | Should | R071, R072 |
-| **R074** | Optional LLM narrator | Could | R073 |
+| ID | Theme | MoSCoW | Depends on | Notes |
+|----|-------|--------|------------|-------|
+| **R071** | CLI daemon auto-start | Should | — | **Done** |
+| **R075** | Per-workspace daemon routing | Must | — | **Done** — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md) |
+| **R072** | NDJSON core + messaging + **mdstream** | Must (program) | R071 | **Next** — stdout path before TUI |
+| **R073** | Full terminal UI + approval modals | Should | R072 | **ratatui** + **mpsc** |
+| **R074** | Optional LLM narrator | Could | R073 | Off by default |
+| **R076** | Daemon-owned LSP diagnostics | Could | R073 | Later v2 |
+| **R077** | Brokered git dirty-state auto-commit | Should | R073 | **`git.auto_commit_dirty`** |
+| **R078** | Dynamic MCP approval schema UI | Could | R073 | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 
 ## JSON configuration (R015)
 
