@@ -1,6 +1,9 @@
 //! Interactive terminal UI entry (R073).
 
 mod app;
+mod state;
+mod stream_task;
+mod ui;
 
 use std::io::{self, IsTerminal, Write};
 use std::process::ExitCode;
@@ -30,7 +33,7 @@ pub async fn run_tui(no_daemon_autostart: bool) -> Result<(), CliError> {
     writeln!(io::stderr(), "{ready}").map_err(CliError::Stdout)?;
 
     crate::tui::app::run().await.map_err(|err| {
-        CliError::Status(tonic::Status::internal(err.to_string()))
+        CliError::Status(tonic::Status::internal(err))
     })
 }
 
