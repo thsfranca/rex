@@ -1,0 +1,19 @@
+[package]
+name = "rex-stream-ui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rex-proto = { path = "../rex-proto", optional = true }
+
+[features]
+default = []
+grpc = ["dep:rex-proto"]
+
+[dev-dependencies]
+rex-proto = { path = "../rex-proto" }
