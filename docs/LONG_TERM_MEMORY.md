@@ -11,7 +11,7 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention
 
 ## Positioning
 
-[`rex-daemon`](../crates/rex-daemon/) remains the economics and policy envelope for agent workloads ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). **Chat transcript** lives with the extension or client for UX; durable **project memory** sits on the Rex side per [ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md). Integrator hub: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md).
+[`rex-daemon`](../crates/rex-daemon/) remains the economics and policy envelope for agent workloads ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). **Chat transcript** lives with the client for UX; durable **project memory** sits on the Rex side per [ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md). Integrator hub: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md).
 
 ## Accepted decisions (ADR 0014)
 
@@ -23,6 +23,10 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention
 | Budget | 10% of context tokens default |
 | RPC / shipping | No `rex.v1` RPC until benchmark proves net token reduction |
 | Storage | `sqlite` or files — implementation bet |
+
+### Terminal harness alignment (2026-07)
+
+Daemon-owned SQLite FTS5 index under per-project **`.rex/`** aligns with workspace isolation ([ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md)). **`ProjectMemoryRetrieval`** injects bounded fragments (default 10% token budget); the TUI reflects retrieval via activity events only — [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Implementation row: **R076** (Later) on [ROADMAP.md](ROADMAP.md).
 
 Remaining rows in **Design bets — uncommitted** below are hypotheses until implementation scheduling.
 

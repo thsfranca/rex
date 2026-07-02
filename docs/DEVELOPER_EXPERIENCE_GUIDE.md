@@ -10,11 +10,11 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 
 REX provides a local AI runtime with one daemon as the **system authority** for **streaming contracts, adapter policy, caches, pipelines, and the agent/economics roadmap** ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). Isolated **agent runtime environments** (when implemented) remain **supervised and policy-bound** to the daemon—see [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). **Sidecar ↔ daemon** integration uses a **dedicated brokered API**, not **`rex.v1`** — [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
-The CLI client keeps **`rex complete` NDJSON** as the **primary** streaming path; optional unary **`rex.v1`** over UDS is allowed per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**.
+The CLI client keeps **`rex complete` NDJSON** as the **primary** streaming path for automation; interactive TUI consumes the same event contract internally per **[ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)** and **[ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md)**. Optional unary **`rex.v1`** over UDS supports control-plane calls.
 
 | Component | Responsibility |
 |---|---|
-| `rex` | Unified CLI: `daemon`, `status`, `complete` (NDJSON transport for editors). |
+| `rex` | Unified CLI: `daemon`, `status`, `complete`, `tui` (planned **R073**). |
 | `rex-daemon` | Model/agent **policy trajectory**, adapters, caches, **`StreamInference`** lifecycle, queues. |
 | `rex-proto` | `rex.v1` gRPC contract. |
 | `rex-config` | JSON config load/merge (`$REX_ROOT/config.json`). |
@@ -41,12 +41,13 @@ rex config init
 # Edit $REX_ROOT/config.json — inference.openai_compat + sidecars.active=agent (binary rex-agent)
 rex config validate
 cargo build --workspace
-rex daemon # debug / foreground; planned: opt-in auto-start — docs/CLI_OPERATOR_UX.md
+rex daemon # debug / foreground; auto-start default — docs/CLI_OPERATOR_UX.md
 rex status
 rex complete "hello from rex" --format ndjson --mode agent
+# rex tui  # planned R073 — interactive terminal harness
 ```
 
-Terminal operator UX (auto-start **R071** shipped, TUI **R073** planned) — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). **`rex status`** / **`rex complete`** auto-start the daemon by default; opt out with **`daemon.auto_start: false`**, **`--no-daemon-autostart`**, or extension **`rex.daemonAutoStart: false`**.
+**Current focus:** terminal harness program **R072** → **R073** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Auto-start **R071** shipped. **`rex status`** / **`rex complete`** auto-start the daemon by default; opt out with **`daemon.auto_start: false`** or **`--no-daemon-autostart`**.
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Configure **`sidecars`** and **`inference.openai_compat`** in JSON ([CONFIGURATION.md](CONFIGURATION.md)); legacy `REX_*` tuning env vars are ignored. CI may use `sidecars.harness: "direct"` (harness only).
 

@@ -6,7 +6,7 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 |------|----------------|
 | **Tutorials** (first success path) | [README.md](../README.md) quickstart, [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) |
 | **How-to** (task recipes) | [RELEASE.md](RELEASE.md), [CONFIGURATION.md](CONFIGURATION.md), [CI.md](CI.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
-| **Explanation** (design intent) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [V1_0.md](V1_0.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md), [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md), [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [MVP_SPEC.md](MVP_SPEC.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) |
+| **Explanation** (design intent) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [V1_0.md](V1_0.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md), [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md), [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [MVP_SPEC.md](MVP_SPEC.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) |
 | **Reference** (narrow facts) | [ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [NDJSON_STREAM.md](NDJSON_STREAM.md), [ERROR_HANDLING.md](ERROR_HANDLING.md), [OBS_READ_API.md](OBS_READ_API.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), `proto/rex/v1/rex.proto`, [DOCUMENTATION.md](DOCUMENTATION.md) |
 
 ## New documentation checklist
@@ -31,7 +31,7 @@ Before adding or materially editing a doc under `docs/`:
 | [PRIORITIZATION.md](PRIORITIZATION.md) | MoSCoW + quick R-ICE |
 | [PROJECT_CONTEXT_PATHS.md](PROJECT_CONTEXT_PATHS.md) | OpenCode-style context path pre-injection (**R066** planned) |
 | [V1_0.md](V1_0.md) | v1.0 release criteria (SMART), SemVer meaning, tagging gate |
-| [ROADMAP.md](ROADMAP.md) | v1.0 closure queue (**RC-LF1** Must), LangFuse discovery, engineering backlog IDs |
+| [ROADMAP.md](ROADMAP.md) | v1.0 closure queue (**RC-LF1** Must), terminal harness **R072–R073**, engineering backlog IDs |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | SAD + C4-style views + links to ADRs |
 | [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) | Architecture policies, ownership, documentation layering |
 | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Deferred VM/container transport catalog |
@@ -63,7 +63,8 @@ Before adding or materially editing a doc under `docs/`:
 | [NDJSON_STREAM.md](NDJSON_STREAM.md) | NDJSON stream contract for CLI and automation |
 | [ERROR_HANDLING.md](ERROR_HANDLING.md) | Error codes, human-readable messages, CI guidelines gate |
 | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Plan mode tools, stream contract, broker plan.save |
-| [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Terminal operator path and daemon lifecycle UX |
+| [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Terminal operator path and daemon lifecycle UX — **product hub** |
+| [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | Terminal harness technical architecture — **design spoke** (**R072–R073**) |
 | [RELEASE.md](RELEASE.md) | Core release automation |
 | [CI.md](CI.md) | Automation gates |
 | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | CI quality and security gates (**R023** Done; **R024–R026** planned) |
@@ -84,8 +85,8 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Daemon extensibility / sidecars | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Layered cache policy | [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | Routing / optional gateway stance | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), economics rows in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
-| CLI transport + NDJSON contract | [NDJSON_STREAM.md](NDJSON_STREAM.md), [ERROR_HANDLING.md](ERROR_HANDLING.md), [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
-| CLI operator UX (terminal TUI, auto-start) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md) |
+| CLI transport + NDJSON contract | [NDJSON_STREAM.md](NDJSON_STREAM.md), [ERROR_HANDLING.md](ERROR_HANDLING.md), [ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md) |
+| CLI operator UX (terminal TUI, auto-start) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md) |
 | Operation feedback (live stream) | [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md), [ADR 0030](architecture/decisions/0030-incremental-run-turn-streaming.md), [ADR 0031](architecture/decisions/0031-ask-mode-research-broker.md) |
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 | Agent knowledge for AI sessions (planned) | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |

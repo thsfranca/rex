@@ -170,8 +170,12 @@ When **`inference.omlx.mode: managed`** or **`inference.gateway.mode: managed`**
 |-----|------------------|---------|
 | `cli.ui.enabled` | `"auto"` | TUI on TTY: `auto` \| `true` \| `false` |
 | `cli.ui.narrator` | `false` | Optional post-turn LLM summary (**R074**) |
+| `cli.ui.sync_output` | `true` | Emit terminal `?2026` synchronized output when supported |
+| `git.auto_commit_dirty` | `true` | Daemon broker auto-commits dirty files before **`fs.write`** (**R077**) |
 
-CLI flag (planned): `--no-ui`.
+CLI flags (planned): `--no-ui`.
+
+Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
 **Module map:** Daemon: `settings`, `adapters`, `http_openai_compat`, `approvals`, `l1_cache`, stream service. CLI: `transport` (config socket), `runtime` (`--trace-id`).
 
