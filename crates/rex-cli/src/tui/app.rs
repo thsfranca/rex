@@ -1,7 +1,173 @@
-//! TUI application loop (expanded in R073b).
+//! Ratatui application loop.
+
+use std::io;
+use std::time::{Duration, SystemTime};
+
+use crossterm::event::{self, Event, KeyCode, KeyModifiers};
+use ratatui::backend::CrosstermBackend;
+use ratatui::Terminal;
+use rex_proto::rex::v1::GetSystemStatusRequest;
+use rex_stream_ui::UiEffect;
+use tokio::sync::mpsc::Receiver;
+use tokio::time::timeout;
+
+use crate::domain::REQUEST_TIMEOUT_SECONDS;
+use crate::error::CliError;
+use crate::transport::connect_client;
+
+use super::state::{AppState, SessionPhase};
+use super::stream_task::{spawn_stream_task, StreamUpdate};
+use super::ui;
 
 pub async fn run() -> Result<(), String> {
-    // Placeholder until ratatui shell lands in the next slice.
-    eprintln!("Rex TUI: use `rex tui` after the ratatui shell PR merges.");
+    let mut terminal = setup_terminal()?;
+    let result = run_app(&mut terminal).await;
+    teardown_terminal(&mut terminal)?;
+    result
+}
+
+fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>, String> {
+    crossterm::terminal::enable_raw_mode().map_err(|e| e.to_string())?;
+    crossterm::execute!(io::stdout(), crossterm::terminal::EnterAlternateScreen)
+        .map_err(|e| e.to_string())?;
+    let backend = CrosstermBackend::new(io::stdout());
+    Terminal::new(backend).map_err(|e| e.to_string())
+}
+
+fn teardown_terminal(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<(), String> {
+    crossterm::terminal::disable_raw_mode().map_err(|e| e.to_string())?;
+    crossterm::execute!(terminal.backend_mut(), crossterm::terminal::LeaveAlternateScreen)
+        .map_err(|e| e.to_string())?;
+    terminal.show_cursor().map_err(|e| e.to_string())
+}
+
+async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<(), String> {
+    let status = fetch_status().await.map_err(|e| e.to_string())?;
+    let mut app = AppState::new(
+        status.workspace_root,
+        status.active_model_id,
+        status.daemon_version,
+    );
+    let mut stream_rx: Option<Receiver<StreamUpdate>> = None;
+
+    loop {
+        terminal
+            .draw(|f| ui::draw(f, &app))
+            .map_err(|e| e.to_string())?;
+
+        if let Some(rx) = stream_rx.as_mut() {
+            while let Ok(update) = rx.try_recv() {
+                apply_stream_update(&mut app, update);
+            }
+        }
+
+        if event::poll(Duration::from_millis(100)).map_err(|e| e.to_string())? {
+            if let Event::Key(key) = event::read().map_err(|e| e.to_string())? {
+                match key.code {
+                    KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => break,
+                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        if app.ctrl_c_armed {
+                            break;
+                        }
+                        app.ctrl_c_armed = true;
+                        app.footer = "Press Ctrl+C again to exit".to_string();
+                        if app.session == SessionPhase::Streaming {
+                            stream_rx = None;
+                            app.session = SessionPhase::Idle;
+                            app.footer = "Turn canceled".to_string();
+                        }
+                    }
+                    KeyCode::Esc => {
+                        app.ctrl_c_armed = false;
+                        if app.session == SessionPhase::Streaming {
+                            stream_rx = None;
+                            app.session = SessionPhase::Idle;
+                            app.footer = "Turn canceled".to_string();
+                        }
+                    }
+                    KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
+                        app.cycle_mode();
+                    }
+                    KeyCode::Char('y') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                        app.bypass = !app.bypass;
+                        app.footer = format!("Bypass: {}", if app.bypass { "on" } else { "off" });
+                    }
+                    KeyCode::Enter if app.session == SessionPhase::Idle => {
+                        let prompt = app.composer.trim().to_string();
+                        if prompt.is_empty() {
+                            continue;
+                        }
+                        app.composer.clear();
+                        app.begin_stream();
+                        let trace_id = resolve_trace_id();
+                        match spawn_stream_task(prompt, app.mode.clone(), trace_id).await {
+                            Ok(rx) => stream_rx = Some(rx),
+                            Err(err) => app.end_stream_error(err.to_string()),
+                        }
+                    }
+                    KeyCode::Char(ch) if app.session == SessionPhase::Idle => {
+                        app.composer.push(ch);
+                    }
+                    KeyCode::Backspace if app.session == SessionPhase::Idle => {
+                        app.composer.pop();
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        if let Some(rx) = stream_rx.as_ref() {
+            if rx.is_closed() && app.session == SessionPhase::Streaming {
+                stream_rx = None;
+                app.end_stream_ok();
+            }
+        }
+    }
     Ok(())
+}
+
+fn apply_stream_update(app: &mut AppState, update: StreamUpdate) {
+    match update {
+        StreamUpdate::Effects(effects) => {
+            for effect in effects {
+                match effect {
+                    UiEffect::AppendChunk(text) => app.append_output(&text),
+                    UiEffect::OperatorMessage(msg) => app.push_activity(msg),
+                    UiEffect::ToolUpdated(card) => {
+                        app.push_activity(format!("{} [{}]", card.name, card.phase));
+                    }
+                    UiEffect::PhaseChanged(phase) => app.turn_phase = phase,
+                    UiEffect::Ignored => {}
+                    UiEffect::TerminalDone => app.end_stream_ok(),
+                    UiEffect::TerminalError { code, message } => {
+                        app.end_stream_error(format!("{code}: {message}"));
+                    }
+                }
+            }
+        }
+        StreamUpdate::Completed => app.end_stream_ok(),
+        StreamUpdate::Failed(msg) => app.end_stream_error(msg),
+    }
+}
+
+async fn fetch_status() -> Result<rex_proto::rex::v1::GetSystemStatusResponse, CliError> {
+    let mut client = connect_client(None).await?;
+    let mut request = tonic::Request::new(GetSystemStatusRequest {});
+    request.set_timeout(Duration::from_secs(REQUEST_TIMEOUT_SECONDS));
+    let response = timeout(
+        Duration::from_secs(REQUEST_TIMEOUT_SECONDS),
+        client.get_system_status(request),
+    )
+    .await
+    .map_err(|_| CliError::StreamTimeout { seconds: REQUEST_TIMEOUT_SECONDS })?
+    .map_err(CliError::Status)?;
+    Ok(response.into_inner())
+}
+
+fn resolve_trace_id() -> String {
+    let millis = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map(|v| v.as_millis())
+        .unwrap_or(0);
+    format!("rex-tui-{millis}-{}", std::process::id())
 }
