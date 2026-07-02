@@ -4,6 +4,7 @@ use std::process::ExitCode;
 use std::time::{Duration, SystemTime};
 
 use rex_proto::rex::v1::{GetSystemStatusRequest, StreamInferenceRequest};
+use rex_stream_ui::{StreamConsumer, UiEffect};
 use serde_json::json;
 use tokio::time::{sleep, timeout};
 use tonic::Code;
@@ -15,6 +16,7 @@ use crate::domain::{
     STREAM_ITEM_TIMEOUT_SECONDS, STREAM_START_RETRY_ATTEMPTS, STREAM_START_RETRY_DELAY_MS,
 };
 use crate::error::CliError;
+use crate::stream_render::MarkdownStreamRenderer;
 use crate::transport::connect_client;
 
 pub async fn run_cli(args: impl Iterator<Item = String>) -> ExitCode {
@@ -239,6 +241,17 @@ async fn consume_stream(
     verbose: bool,
     stream_idle_timeout_secs: u64,
 ) -> Result<StreamLifecycle, CliError> {
+    let mut stream_consumer = if verbose && matches!(format, CompleteOutputFormat::Text) {
+        Some(StreamConsumer::new())
+    } else {
+        None
+    };
+    let mut md_renderer = if verbose && matches!(format, CompleteOutputFormat::Text) {
+        Some(MarkdownStreamRenderer::new())
+    } else {
+        None
+    };
+
     loop {
         let next = timeout(
             Duration::from_secs(stream_idle_timeout_secs),
@@ -261,13 +274,36 @@ async fn consume_stream(
 
         if chunk.done {
             match format {
-                CompleteOutputFormat::Text => println!(),
+                CompleteOutputFormat::Text => {
+                    if let Some(renderer) = md_renderer.as_mut() {
+                        renderer
+                            .finalize(&mut io::stdout().lock())
+                            .map_err(CliError::Stdout)?;
+                    } else {
+                        println!();
+                    }
+                }
                 CompleteOutputFormat::Ndjson => {
                     let line = format_ndjson_done_event(chunk.index);
                     emit_ndjson_line_stdout(&line).map_err(CliError::Stdout)?;
                 }
             }
             return Ok(StreamLifecycle::Completed);
+        }
+
+        if verbose && matches!(format, CompleteOutputFormat::Text) {
+            if let Some(consumer) = stream_consumer.as_mut() {
+                let effects = consumer.feed_grpc_chunk(&chunk);
+                emit_verbose_effects(&effects)?;
+                if chunk.event.is_empty() || chunk.event == "chunk" {
+                    if let Some(renderer) = md_renderer.as_mut() {
+                        renderer
+                            .append_and_render(&chunk.text, &mut io::stdout().lock())
+                            .map_err(CliError::Stdout)?;
+                    }
+                }
+                continue;
+            }
         }
 
         if let Some(line) = format_ndjson_stream_event(&chunk) {
@@ -333,6 +369,15 @@ fn resolve_approval_id(
         return Ok(format!("apr-cli-{}", process::id()));
     }
     Err(CliError::ApprovalDenied)
+}
+
+fn emit_verbose_effects(effects: &[UiEffect]) -> Result<(), CliError> {
+    for effect in effects {
+        if let UiEffect::OperatorMessage(message) = effect {
+            writeln!(io::stderr(), "{message}").map_err(CliError::Stdout)?;
+        }
+    }
+    Ok(())
 }
 
 fn emit_verbose_status_line(chunk: &rex_proto::rex::v1::StreamInferenceResponse) -> io::Result<()> {
