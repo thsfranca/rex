@@ -5,6 +5,7 @@ mod error;
 mod runtime;
 mod stream_render;
 mod transport;
+mod tui;
 
 use std::process::ExitCode;
 

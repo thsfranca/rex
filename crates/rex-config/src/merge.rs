@@ -445,6 +445,19 @@ fn merge_cli(base: &mut crate::model::CliConfig, overlay: crate::model::CliConfi
     if overlay.stream_idle_timeout_secs_ask != 0 {
         base.stream_idle_timeout_secs_ask = overlay.stream_idle_timeout_secs_ask;
     }
+    merge_cli_ui(&mut base.ui, overlay.ui);
+}
+
+fn merge_cli_ui(base: &mut crate::model::CliUiConfig, overlay: crate::model::CliUiConfig) {
+    if !overlay.enabled.is_empty() {
+        base.enabled = overlay.enabled;
+    }
+    if overlay.narrator {
+        base.narrator = overlay.narrator;
+    }
+    if !overlay.sync_output {
+        base.sync_output = overlay.sync_output;
+    }
 }
 
 fn merge_search(base: &mut crate::model::SearchConfig, overlay: crate::model::SearchConfig) {

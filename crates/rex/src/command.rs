@@ -24,6 +24,11 @@ pub fn parse_top_level(mut args: impl Iterator<Item = String>) -> Result<TopLeve
             rest.extend(args);
             Ok(TopLevelCommand::Cli(rest))
         }
+        Some("tui") => {
+            let mut rest = vec!["tui".to_string()];
+            rest.extend(args);
+            Ok(TopLevelCommand::Cli(rest))
+        }
         Some("config") => Ok(TopLevelCommand::Config(args.collect())),
         Some("proto") => Ok(TopLevelCommand::Proto(args.collect())),
         Some("sidecar") => Ok(TopLevelCommand::Sidecar(args.collect())),
@@ -39,7 +44,8 @@ pub fn print_usage() {
 Usage:
   rex daemon
   rex status
-  rex complete \"<prompt>\" [--format text|ndjson] [--model <id>] [--mode ask|plan|agent] [--approval-id <id>] [--trace-id <id>]
+  rex tui [ --no-daemon-autostart ]
+  rex complete \"<prompt>\" [--format text|ndjson] [--model <id>] [--mode ask|plan|agent] [--approval-id <id>] [--trace-id <id>] [--no-ui]
   rex config <init|show|path|validate>
   rex proto <install|path|doctor>
   rex sidecar <list|init|doctor>

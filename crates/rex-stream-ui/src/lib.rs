@@ -15,6 +15,6 @@ pub use consumer::StreamConsumer;
 pub use event::{parse_stream_line, StreamEvent, StreamEventKind};
 #[cfg(feature = "grpc")]
 pub use grpc::stream_event_from_grpc;
-pub use messaging::{LifecyclePhase, OperatorMessaging};
+pub use messaging::{LifecycleContext, LifecyclePhase, OperatorMessaging};
 pub use truncate::{truncate_display, TRUNCATION_MARKER};
 pub use turn_state::{ToolCard, TurnPhase, TurnState, UiEffect};

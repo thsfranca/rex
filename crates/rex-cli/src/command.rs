@@ -3,6 +3,9 @@ pub enum CliCommand {
     Status {
         no_daemon_autostart: bool,
     },
+    Tui {
+        no_daemon_autostart: bool,
+    },
     Complete {
         prompt: String,
         model: String,
@@ -16,6 +19,7 @@ pub enum CliCommand {
         format: CompleteOutputFormat,
         yes: bool,
         verbose: bool,
+        no_ui: bool,
         no_daemon_autostart: bool,
     },
 }
@@ -31,6 +35,12 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
         Some("status") => {
             let no_daemon_autostart = parse_status_trailing(&mut args)?;
             Ok(CliCommand::Status {
+                no_daemon_autostart,
+            })
+        }
+        Some("tui") => {
+            let no_daemon_autostart = parse_status_trailing(&mut args)?;
+            Ok(CliCommand::Tui {
                 no_daemon_autostart,
             })
         }
@@ -53,6 +63,7 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
                 selection_text,
                 yes,
                 verbose,
+                no_ui,
                 no_daemon_autostart,
             ) = parse_complete_trailing(&mut args)?;
             Ok(CliCommand::Complete {
@@ -68,6 +79,7 @@ pub fn parse_command(mut args: impl Iterator<Item = String>) -> Result<CliComman
                 format,
                 yes,
                 verbose,
+                no_ui,
                 no_daemon_autostart,
             })
         }
@@ -86,6 +98,7 @@ type CompleteTrailingArgs = (
     String,
     String,
     String,
+    bool,
     bool,
     bool,
     bool,
@@ -116,11 +129,15 @@ fn parse_complete_trailing(
     let mut selection_text = String::new();
     let mut yes = false;
     let mut verbose = false;
+    let mut no_ui = false;
     let mut no_daemon_autostart = false;
     while let Some(flag) = args.next() {
         match flag.as_str() {
             "--no-daemon-autostart" => {
                 no_daemon_autostart = true;
+            }
+            "--no-ui" => {
+                no_ui = true;
             }
             "--yes" | "-y" => {
                 yes = true;
@@ -197,6 +214,7 @@ fn parse_complete_trailing(
         selection_text,
         yes,
         verbose,
+        no_ui,
         no_daemon_autostart,
     ))
 }
@@ -204,9 +222,10 @@ fn parse_complete_trailing(
 pub fn print_usage() {
     eprintln!("Usage:");
     eprintln!("  rex-cli status [ --no-daemon-autostart ]");
+    eprintln!("  rex-cli tui [ --no-daemon-autostart ]");
     eprintln!("  rex-cli complete \"<prompt>\"");
     eprintln!(
-        "  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ] [ --yes ] [ --verbose ] [ --no-daemon-autostart ] [ --trace-id <id> ] [ --active-file <path> ] [ --language-id <id> ] [ --selection-text <text> ]"
+        "  rex-cli complete \"<prompt>\" [ --format <text|ndjson> ] [ --model <id> ] [ --mode <ask|plan|agent> ] [ --approval-id <id> ] [ --yes ] [ --verbose ] [ --no-ui ] [ --no-daemon-autostart ] [ --trace-id <id> ] [ --active-file <path> ] [ --language-id <id> ] [ --selection-text <text> ]"
     );
 }
 
@@ -245,6 +264,7 @@ mod tests {
                 format: CompleteOutputFormat::Text,
                 yes: false,
                 verbose: false,
+                no_ui: false,
                 no_daemon_autostart: false,
             }
         );
@@ -284,6 +304,7 @@ mod tests {
                 format: CompleteOutputFormat::Ndjson,
                 yes: false,
                 verbose: false,
+                no_ui: false,
                 no_daemon_autostart: false,
             }
         );
@@ -337,6 +358,7 @@ mod tests {
                 format: CompleteOutputFormat::Ndjson,
                 yes: false,
                 verbose: false,
+                no_ui: false,
                 no_daemon_autostart: false,
             }
         );
@@ -373,6 +395,7 @@ mod tests {
                 format: CompleteOutputFormat::Text,
                 yes: false,
                 verbose: false,
+                no_ui: false,
                 no_daemon_autostart: false,
             }
         );

@@ -655,11 +655,51 @@ fn default_max_tools_per_step() -> u32 {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct CliUiConfig {
+    #[serde(default = "default_cli_ui_enabled")]
+    pub enabled: String,
+    #[serde(default)]
+    pub narrator: bool,
+    #[serde(default = "default_true")]
+    pub sync_output: bool,
+}
+
+fn default_cli_ui_enabled() -> String {
+    "auto".to_string()
+}
+
+impl Default for CliUiConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_cli_ui_enabled(),
+            narrator: false,
+            sync_output: true,
+        }
+    }
+}
+
+impl CliUiConfig {
+    /// Whether the interactive TUI should run for the given TTY context.
+    pub fn should_use_tui(&self, is_tty: bool, no_ui: bool) -> bool {
+        if no_ui {
+            return false;
+        }
+        match self.enabled.trim().to_ascii_lowercase().as_str() {
+            "true" | "1" | "yes" => true,
+            "false" | "0" | "no" => false,
+            _ => is_tty,
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct CliConfig {
     #[serde(default = "default_stream_idle_timeout_agent")]
     pub stream_idle_timeout_secs_agent: u64,
     #[serde(default = "default_stream_idle_timeout_ask")]
     pub stream_idle_timeout_secs_ask: u64,
+    #[serde(default)]
+    pub ui: CliUiConfig,
 }
 
 impl Default for CliConfig {
@@ -667,6 +707,7 @@ impl Default for CliConfig {
         Self {
             stream_idle_timeout_secs_agent: default_stream_idle_timeout_agent(),
             stream_idle_timeout_secs_ask: default_stream_idle_timeout_ask(),
+            ui: CliUiConfig::default(),
         }
     }
 }
@@ -747,6 +788,17 @@ mod cli_config_tests {
         let cfg = CliConfig::default();
         assert_eq!(cfg.stream_idle_timeout_secs_agent, 120);
         assert_eq!(cfg.stream_idle_timeout_secs_ask, 120);
+    }
+
+    #[test]
+    fn cli_ui_defaults_match_design() {
+        let ui = super::CliUiConfig::default();
+        assert_eq!(ui.enabled, "auto");
+        assert!(ui.sync_output);
+        assert!(!ui.narrator);
+        assert!(ui.should_use_tui(true, false));
+        assert!(!ui.should_use_tui(false, false));
+        assert!(!ui.should_use_tui(true, true));
     }
 }
 
