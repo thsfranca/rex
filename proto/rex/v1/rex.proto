@@ -17,6 +17,7 @@ service RexService {
  rpc BrokerWorkspaceSearch(BrokerWorkspaceSearchRequest) returns (BrokerWorkspaceSearchResponse);
  // Sidecar broker: OpenAI-compatible HTTP inference (daemon executes backend).
  rpc BrokerInference(BrokerInferenceRequest) returns (BrokerInferenceResponse);
+ rpc RespondToToolApproval(RespondToToolApprovalRequest) returns (RespondToToolApprovalResponse);
 }
 
 message GetSystemStatusRequest {}
@@ -89,6 +90,9 @@ message BrokerWriteFileRequest {
  string content = 2;
  // Optional. Empty normalizes to "ask" on the daemon.
  string mode = 3;
+ // Optional. Required when agent.tool_approvals_enabled blocks until approved.
+ string approval_token = 4;
+ string tool_call_id = 5;
 }
 
 message BrokerWriteFileResponse {
@@ -111,6 +115,8 @@ message BrokerExecShellRequest {
  string command = 1;
  // Optional. Empty normalizes to "ask" on the daemon.
  string mode = 2;
+ string approval_token = 3;
+ string tool_call_id = 4;
 }
 
 message BrokerExecShellResponse {
@@ -214,4 +220,15 @@ message StreamInferenceResponse {
  string turn_id = 10;
  uint64 sequence = 11;
  uint64 elapsed_ms = 12;
+}
+
+message RespondToToolApprovalRequest {
+ string approval_token = 1;
+ bool approved = 2;
+ string tool_call_id = 3;
+}
+
+message RespondToToolApprovalResponse {
+ bool ok = 1;
+ string error = 2;
 }

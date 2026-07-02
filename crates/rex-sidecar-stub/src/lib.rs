@@ -263,6 +263,8 @@ async fn broker_exec_shell(command: &str, mode: &str) -> Result<ShellOut, String
         .broker_exec_shell(BrokerExecShellRequest {
             command: command.to_string(),
             mode: mode.to_string(),
+            approval_token: String::new(),
+            tool_call_id: String::new(),
         })
         .await
         .map_err(|e| e.to_string())?
@@ -302,6 +304,8 @@ async fn broker_write_file(path: &str, content: &str, mode: &str) -> Result<(), 
             path: path.to_string(),
             content: content.to_string(),
             mode: mode.to_string(),
+            approval_token: String::new(),
+            tool_call_id: String::new(),
         })
         .await
         .map_err(|e| e.to_string())?

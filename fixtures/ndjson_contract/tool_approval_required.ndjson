@@ -1,0 +1,4 @@
+{"event":"tool","index":0,"name":"fs.write","phase":"approval_required","detail":"src/main.rs","tool_call_id":"turn-1:write:1"}
+{"event":"tool","index":1,"name":"fs.write","phase":"running","detail":"src/main.rs","tool_call_id":"turn-1:write:1"}
+{"event":"tool","index":2,"name":"fs.write","phase":"completed","detail":"ok","tool_call_id":"turn-1:write:1"}
+{"event":"done","index":3}

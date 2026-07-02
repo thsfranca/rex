@@ -13,7 +13,8 @@ use rex_proto::rex::v1::{
     BrokerReadFileResponse, BrokerSavePlanRequest, BrokerSavePlanResponse, BrokerWebSearchRequest,
     BrokerWebSearchResponse, BrokerWorkspaceSearchRequest, BrokerWorkspaceSearchResponse,
     BrokerWriteFileRequest, BrokerWriteFileResponse, GetSystemStatusRequest,
-    GetSystemStatusResponse, StreamInferenceRequest, StreamInferenceResponse, WebSearchResult,
+    GetSystemStatusResponse, RespondToToolApprovalRequest, RespondToToolApprovalResponse,
+    StreamInferenceRequest, StreamInferenceResponse, WebSearchResult,
     WorkspaceSearchKind as ProtoWorkspaceSearchKind,
 };
 use tokio::time::{sleep, Duration};
@@ -228,6 +229,30 @@ impl RexService for RexDaemonService {
         println!(
             "broker.access_policy=evaluate capability=exec.shell mode={mode} command={command}"
         );
+        if crate::settings::get().tool_approvals_enabled() && mode == "agent" {
+            let token = inner.approval_token.trim();
+            if token.is_empty() {
+                let new_token = crate::tool_approval::register_pending(
+                    "exec.shell",
+                    &command,
+                    inner.tool_call_id.trim(),
+                );
+                return Ok(Response::new(BrokerExecShellResponse {
+                    ok: false,
+                    stdout: String::new(),
+                    stderr: String::new(),
+                    error: crate::tool_approval::approval_required_error(&new_token),
+                }));
+            }
+            if !crate::tool_approval::is_approved(token) {
+                return Ok(Response::new(BrokerExecShellResponse {
+                    ok: false,
+                    stdout: String::new(),
+                    stderr: String::new(),
+                    error: "approval_denied".to_string(),
+                }));
+            }
+        }
         match broker_exec_shell(&command, &mode) {
             Ok(result) => {
                 println!("broker.access_policy=allow capability=exec.shell mode={mode}");
@@ -286,6 +311,26 @@ impl RexService for RexDaemonService {
         let mode = normalize_mode(&inner.mode);
         let path = inner.path;
         println!("broker.access_policy=evaluate capability=fs.write mode={mode} path={path}");
+        if crate::settings::get().tool_approvals_enabled() && mode == "agent" {
+            let token = inner.approval_token.trim();
+            if token.is_empty() {
+                let new_token = crate::tool_approval::register_pending(
+                    "fs.write",
+                    &path,
+                    inner.tool_call_id.trim(),
+                );
+                return Ok(Response::new(BrokerWriteFileResponse {
+                    ok: false,
+                    error: crate::tool_approval::approval_required_error(&new_token),
+                }));
+            }
+            if !crate::tool_approval::is_approved(token) {
+                return Ok(Response::new(BrokerWriteFileResponse {
+                    ok: false,
+                    error: "approval_denied".to_string(),
+                }));
+            }
+        }
         match broker_write_file(&path, &inner.content, &mode) {
             Ok(()) => {
                 println!("broker.access_policy=allow capability=fs.write mode={mode} path={path}");
@@ -408,6 +453,30 @@ impl RexService for RexDaemonService {
                 );
                 Err(status)
             }
+        }
+    }
+
+    async fn respond_to_tool_approval(
+        &self,
+        request: Request<RespondToToolApprovalRequest>,
+    ) -> Result<Response<RespondToToolApprovalResponse>, Status> {
+        let inner = request.into_inner();
+        let token = inner.approval_token.trim();
+        if token.is_empty() {
+            return Ok(Response::new(RespondToToolApprovalResponse {
+                ok: false,
+                error: "approval_token required".to_string(),
+            }));
+        }
+        match crate::tool_approval::respond(token, inner.approved) {
+            Some(_) => Ok(Response::new(RespondToToolApprovalResponse {
+                ok: true,
+                error: String::new(),
+            })),
+            None => Ok(Response::new(RespondToToolApprovalResponse {
+                ok: false,
+                error: "unknown or expired approval token".to_string(),
+            })),
         }
     }
 

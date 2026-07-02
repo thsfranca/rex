@@ -84,6 +84,24 @@ fn activity_stream_emits_operator_messages() {
 }
 
 #[test]
+fn approval_required_fixture_enters_tool_approval_phase() {
+    let fixture =
+        include_str!("../../../fixtures/ndjson_contract/tool_approval_required.ndjson");
+    let mut consumer = StreamConsumer::new();
+    let mut saw_approval = false;
+    for line in fixture.lines() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        consumer.feed_line(line).unwrap();
+        if consumer.state.phase == TurnPhase::ToolApproval {
+            saw_approval = true;
+        }
+    }
+    assert!(saw_approval, "fixture should enter ToolApproval");
+}
+
+#[test]
 fn error_fixture_produces_terminal_error() {
     let fixture =
         include_str!("../../../fixtures/ndjson_contract/sidecar_setup_errors.ndjson");
