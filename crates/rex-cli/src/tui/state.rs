@@ -9,6 +9,14 @@ pub enum SessionPhase {
     Error,
 }
 
+#[derive(Debug, Clone)]
+pub struct PendingApproval {
+    pub tool_call_id: String,
+    pub name: String,
+    pub detail: String,
+    pub approval_token: String,
+}
+
 #[derive(Debug)]
 pub struct AppState {
     pub workspace_root: String,
@@ -23,6 +31,7 @@ pub struct AppState {
     pub turn_phase: TurnPhase,
     pub bypass: bool,
     pub ctrl_c_armed: bool,
+    pub pending_approval: Option<PendingApproval>,
 }
 
 impl AppState {
@@ -40,6 +49,7 @@ impl AppState {
             turn_phase: TurnPhase::Idle,
             bypass: false,
             ctrl_c_armed: false,
+            pending_approval: None,
         }
     }
 

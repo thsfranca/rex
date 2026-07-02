@@ -1,6 +1,7 @@
 //! Interactive terminal UI entry (R073).
 
 mod app;
+mod approval;
 mod state;
 mod stream_task;
 mod ui;
