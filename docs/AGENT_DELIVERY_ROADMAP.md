@@ -2,7 +2,7 @@
 
 **Status: Should program complete — `rex-agent` shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)). **Could** follow-ups only: **R016**, **R033**, **R036**, **R056**, **R055** — see [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
 
-**Current focus:** Terminal harness program **R072** → **R073** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md). LangFuse (**RC-LF1**) deferred until harness MVP.
+**Current focus:** Terminal harness program **R074** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md). LangFuse (**RC-LF1**) unblocked for discovery scheduling.
 
 ## Problem
 
@@ -105,7 +105,7 @@ Extension defaults: **`rex`** + `["daemon"]` for auto-start. Compatibility shims
 
 ## CLI operator UX (R071–R078)
 
-**Status:** partial — **R071** / **R075** Done; design accepted for **R072–R073**. Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Architecture: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Decisions: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
+**Status:** partial — **R071** / **R075** / **R072** / **R073** Done. Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Architecture: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Decisions: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
 Terminal operators use Rex as the **primary surface** without a dedicated foreground **`rex daemon`** session. **`rex complete --format ndjson`** remains the automation and CI contract ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)).
 
@@ -113,8 +113,8 @@ Terminal operators use Rex as the **primary surface** without a dedicated foregr
 |----|-------|--------|------------|-------|
 | **R071** | CLI daemon auto-start | Should | — | **Done** |
 | **R075** | Per-workspace daemon routing | Must | — | **Done** — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md) |
-| **R072** | NDJSON core + messaging + **mdstream** | Must (program) | R071 | **Next** — stdout path before TUI |
-| **R073** | Full terminal UI + approval modals | Should | R072 | **ratatui** + **mpsc** |
+| **R072** | NDJSON core + messaging + **mdstream** | Must (program) | R071 | **Done** |
+| **R073** | Full terminal UI + approval modals | Should | R072 | **Done** |
 | **R074** | Optional LLM narrator | Could | R073 | Off by default |
 | **R076** | Daemon-owned LSP diagnostics | Could | R073 | Later v2 |
 | **R077** | Brokered git dirty-state auto-commit | Should | R073 | **`git.auto_commit_dirty`** |
