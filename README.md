@@ -2,7 +2,7 @@
 
 **This repository is an experimental study project:** it exists to explore patterns (daemon-hosted inference, contracts, tooling, tests)—not as a finished product or supported distribution.
 
-REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns inference and stream lifecycle, while **thin clients** (CLI, VS Code/Cursor extension, scripts) talk to it over **gRPC on a Unix domain socket**. The repo is also a **learning lab** for AI infrastructure patterns and a **small, testable reference** for how to keep editor and automation surfaces stable while the engine evolves.
+REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns inference and stream lifecycle, while **thin clients** (CLI, scripts) talk to it over **gRPC on a Unix domain socket**. The repo is also a **learning lab** for AI infrastructure patterns and a **small, testable reference** for how to keep automation surfaces stable while the engine evolves.
 
 ## Purpose
 
@@ -16,36 +16,33 @@ Canonical **purpose and operating principles** (single source of truth): **[docs
 |---|---|
 | **gRPC + UDS** | Low-latency local transport; socket path from `$REX_ROOT/config.json` (`daemon.socket`). |
 | **Streaming completion** | `StreamInference`-style chunks with deterministic lifecycle logging on the daemon for triage. |
-| **`rex` CLI** | Unified binary: `rex daemon`, `rex status`, `rex complete`; **`--format ndjson`** for one JSON event per line (`chunk`, `done`, `error`) so extensions and CI can parse streams safely. Legacy `rex-cli` / `rex-daemon` shims remain for compatibility. |
+| **`rex` CLI** | Unified binary: `rex daemon`, `rex status`, `rex complete`; **`--format ndjson`** for one JSON event per line (`chunk`, `done`, `error`) so scripts and CI can parse streams safely. Legacy `rex-cli` / `rex-daemon` shims remain for compatibility. |
 | **Startup and failure behavior** | Bounded retry when the daemon is still booting; clear CLI errors for unavailable daemon, interrupted streams, and bad stream endings. |
-| **VS Code / Cursor extension** | Activity-bar chat with streaming markdown, selection-based commands, optional **daemon auto-start**, and install/release docs—see [`extensions/rex-vscode/README.md`](extensions/rex-vscode/README.md) and [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md). |
-| **Development agent (extension)** | Chat with **`ask` / `plan` / `agent`**, guarded apply/insert, NDJSON via **`rex complete`** — assistant runtime in a **daemon-supervised sidecar** ([docs/EXTENSION.md](docs/EXTENSION.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md)). |
+| **Development agent (CLI)** | **`ask` / `plan` / `agent`** modes via **`rex complete --format ndjson`** — assistant runtime in a **daemon-supervised sidecar** ([docs/NDJSON_STREAM.md](docs/NDJSON_STREAM.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md)). |
 | **Brokered HTTP inference** | Daemon invokes **OpenAI-compatible** backend on behalf of the sidecar (`inference.openai_compat` in JSON); **mock** / **cursor-cli** for tests — [docs/ADAPTERS.md](docs/ADAPTERS.md), [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
 | **Quality gates** | Workspace `cargo` checks plus UDS end-to-end tests covering failure paths, startup races, and post-interruption behavior (see [Operational checks](#operational-checks)). |
 
 ## Project status
 
 - **Experimental scope:** APIs, docs, and behavior can change as the study evolves; use this workspace for learning and prototypes, not production SLAs.
-- **Local operator path:** **clone → configure HTTP backend → daemon (sidecar) → REX chat** — [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). Product shape: [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md).
+- **Local operator path:** **clone → configure HTTP backend → daemon (sidecar) → CLI NDJSON stream** — [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). Product shape: [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md).
 - **Done / v1.0:** [`docs/V1_0.md`](docs/V1_0.md) (**RC-*** release criteria, **`1.0.0`** tag gate) — **not Met** until observability **RC-LF1** (LangFuse Cloud export) closes; [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks open gaps; [`docs/LANGFUSE_INTEGRATION.md`](docs/LANGFUSE_INTEGRATION.md) is the observability hub.
 - **Product agent (partial — shipped):** [`docs/AGENT_DELIVERY_ROADMAP.md`](docs/AGENT_DELIVERY_ROADMAP.md) — **`rex-agent`** (**R017–R019** Done); daemon prerequisites **R020–R022** Done; JSON config (**R015**) and unified **`rex`** CLI (**R014**) shipped. **`rex config init`** writes the **rex-agent** operator template; **`rex-sidecar-stub`** remains the CI harness default.
-- Engineering focus: **stream reliability** plus **stable NDJSON** across CLI/extension.
+- Engineering focus: **stream reliability** plus **stable NDJSON** across CLI and automation.
 - Product-learning focus: daemon **economics** (routing, compaction, caches, metrics per [docs/CONTEXT_EFFICIENCY.md](docs/CONTEXT_EFFICIENCY.md)); implementation incremental.
-- VS Code/Cursor extension baseline is **shipped** (chat UX, NDJSON streaming integration, opt-in daemon auto-start, and release/install pipeline); ongoing work is incremental hardening and follow-on capabilities.
 - Not primary scope yet: production-grade local runtime adapters beyond the Phase 1 shape (for example **MLX**), remote networking/TLS, production auth, multi-plugin sidecar fleets. See [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) (scope) and [`docs/V1_0.md`](docs/V1_0.md) (done).
 
 ## Local operator path
 
-Linear recipe from a clone to **REX** chat in the editor (requires **HTTP backend** for brokered inference and a **sidecar agent** per [docs/MVP_SPEC.md](docs/MVP_SPEC.md)):
+Linear recipe from a clone to a working **rex complete** stream (requires **HTTP backend** for brokered inference and a **sidecar agent** per [docs/MVP_SPEC.md](docs/MVP_SPEC.md)):
 
-1. **Build** the Rust workspace: `cargo build --workspace` — or one shot: `chmod +x ./scripts/dev-rex-extension.sh && ./scripts/dev-rex-extension.sh`.
-2. **Put** `rex` where the **editor** can find it — [`scripts/install-cli.sh`](scripts/install-cli.sh) (same binary for CLI and daemon auto-start).
+1. **Build** the Rust workspace: `cargo build --workspace`.
+2. **Install** `rex` on PATH — [`scripts/install-cli.sh`](scripts/install-cli.sh).
 3. **Configure** brokered HTTP in `$REX_ROOT/config.json` — run `rex config init` (rex-agent + mock web search by default), then edit `inference.openai_compat` — [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md).
-4. **Run** `rex status` or `rex complete` — the CLI auto-starts a detached daemon when needed (**R071**, default on). Socket defaults to `/tmp/rex.sock` unless overridden in JSON. Opt out: **`daemon.auto_start: false`**, **`--no-daemon-autostart`**, or extension **`rex.daemonAutoStart: false`**. Terminal UI (**R073**) — [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md).
-5. **Install** the extension — [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md).
-6. **In the editor:** **REX: Open Chat**, try **agent** mode, send a prompt, cancel once, and apply a code block with approval. Verify sidecar health in daemon logs and brokered `fs.read` via a prompt containing `__rex_read:<path>`.
+4. **Run** `rex status` or `rex complete "hello" --format ndjson --mode ask` — the CLI auto-starts a detached daemon when needed (**R071**, default on). Socket defaults to `/tmp/rex.sock` unless overridden in JSON. Opt out: **`daemon.auto_start: false`** or **`--no-daemon-autostart`**. Terminal UI (**R073**) — [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md).
+5. **Verify** sidecar health in daemon logs and brokered `fs.read` via a prompt containing `__rex_read:<path>`.
 
-Details: [docs/EXTENSION_LOCAL_E2E.md](docs/EXTENSION_LOCAL_E2E.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
+Details: [docs/CLI_OPERATOR_UX.md](docs/CLI_OPERATOR_UX.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
 
 ## Why this shape
 
@@ -54,7 +51,7 @@ REX keeps clients thin and centralizes model/runtime policy in one daemon bounda
 | Component | Role |
 |---|---|
 | Daemon | Own inference orchestration, stream lifecycle, and future scheduling and system policy. |
-| Clients | Own UX only (terminal, editor, scripts) and speak one protocol. |
+| Clients | Own UX only (terminal, scripts) and speak one protocol. |
 | Protocol | gRPC over UDS for typed, local, low-latency calls. |
 
 ## Quickstart
@@ -80,25 +77,10 @@ This starts the local gRPC server on `/tmp/rex.sock`.
 ```bash
 cargo run -p rex -- status
 cargo run -p rex -- complete "hello from rex"
-cargo run -p rex -- complete "hello from rex" --format ndjson
+cargo run -p rex -- complete "hello from rex" --format ndjson --mode ask
 ```
 
-This verifies status, server-streaming behavior, and extension-consumable NDJSON output.
-
-4) (Optional) Install the REX VS Code / Cursor extension:
-
-```bash
-chmod +x ./scripts/reinstall-dev.sh
-./scripts/reinstall-dev.sh
-```
-
-This installs `rex`, `rex-sidecar-stub`, and attempts `rex-agent` (via [`scripts/install-cli.sh`](scripts/install-cli.sh) / [`scripts/install-agent-sidecar.sh`](scripts/install-agent-sidecar.sh)), then runs [`scripts/install-extension.sh`](scripts/install-extension.sh): builds `extensions/rex-vscode`, packages `rex-vscode.vsix`, installs it with the `cursor` or `code` CLI (auto-detects the host when you run it from an integrated terminal), and requests **Developer: Reload Window** on the last active window. Fast iteration: `./scripts/reinstall-dev.sh --extension-only --only-install`. Pass extension flags through, for example `./scripts/reinstall-dev.sh --verify` or `./scripts/reinstall-dev.sh -- --editor vscode`. The script does **not** start the daemon; use step 2 above or auto-start as in the E2E doc. [`scripts/dev-rex-extension.sh`](scripts/dev-rex-extension.sh) is a thin wrapper around the same installer.
-
-- **Full checklist** (daemon, editor `PATH`, verification): [`docs/EXTENSION_LOCAL_E2E.md`](docs/EXTENSION_LOCAL_E2E.md).
-- Extension-only: `chmod +x ./scripts/install-extension.sh && ./scripts/install-extension.sh`.
-- Manual path: `cd extensions/rex-vscode && npm install && npm run package`, then **Extensions: Install from VSIX...**
-- Release VSIX: download from a `rex-vscode-vX.Y.Z` GitHub Release.
-- Set `"rex.daemonAutoStart": true` if you want the extension to spawn `rex daemon` on activation. See [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) for install, auto-start, and troubleshooting details.
+This verifies status, server-streaming behavior, and NDJSON output for scripts and CI.
 
 ## Operational checks
 
@@ -127,11 +109,9 @@ The script reinstalls with `--force`, adds `~/.cargo/bin` to your shell profile 
 
 Prebuilt binaries for `rex`, `rex-sidecar-stub`, and compatibility shims (`rex-cli`, `rex-daemon`) are attached to GitHub Releases tagged `vX.Y.Z` after merging the release-plz Release PR. See [`docs/RELEASE.md`](docs/RELEASE.md).
 
-For a full local dev install (CLI, rex-agent, extension), use [`scripts/reinstall-dev.sh`](scripts/reinstall-dev.sh). The VS Code extension auto-discovers `~/.cargo/bin/rex` when `rex.cliPath` is unset.
-
 ## Manual troubleshooting
 
-- Run `rex daemon` before invoking `rex status` or `rex complete` (until CLI auto-start ships — [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md)).
+- Run `rex daemon` before invoking `rex status` or `rex complete` (unless CLI auto-start is enabled — [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md)).
 - If the daemon is still booting, rerun `status` or `complete` after `/tmp/rex.sock` exists.
 - `rex complete` surfaces deterministic lifecycle errors for:
   - daemon unavailable;
@@ -147,8 +127,8 @@ In scope for the first product shape:
 - Local daemon–client communication over UDS.
 - Unary status RPC and server-streaming completion RPC.
 - **HTTP OpenAI-compat** inference and shutdown lifecycle reliability.
-- **Editor path:** extension + **`rex` NDJSON**; modes and guarded apply — [docs/EXTENSION.md](docs/EXTENSION.md).
-- **Dogfooding loop:** develop `rex` from the IDE against a live HTTP backend.
+- **CLI path:** **`rex` NDJSON**; modes and approvals — [docs/NDJSON_STREAM.md](docs/NDJSON_STREAM.md).
+- **Dogfooding loop:** develop `rex` from the terminal against a live HTTP backend.
 - **Test harness:** `REX_INFERENCE_RUNTIME=mock` for CI only — [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
 
 Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
@@ -167,10 +147,9 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md) | Phase 1 product architecture and scope (done: [`docs/V1_0.md`](docs/V1_0.md) only). |
 | [`docs/V1_0.md`](docs/V1_0.md) | v1.0 release criteria (**RC-***), SemVer `1.0.0` meaning, tagging gate. |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Post-v1.0 queue (**R023+**); agent graph **R027–R033**. |
-| [`docs/EXTENSION.md`](docs/EXTENSION.md) | NDJSON consumer contract, extension bootstrap path, component layout (replaces superseded MVP/architecture stubs). |
-| [`docs/EXTENSION_ROADMAP.md`](docs/EXTENSION_ROADMAP.md) | Phased roadmap for the VS Code/Cursor extension. |
-| [`docs/RELEASE.md`](docs/RELEASE.md) | Core and extension release automation (Release PRs, tags, binaries, VSIX). |
-| [`docs/EXTENSION_RELEASE.md`](docs/EXTENSION_RELEASE.md) | Install, daemon auto-start, troubleshooting, and extension release pipeline. |
+| [`docs/NDJSON_STREAM.md`](docs/NDJSON_STREAM.md) | NDJSON consumer contract for CLI and automation. |
+| [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md) | Terminal operator path and daemon lifecycle UX. |
+| [`docs/RELEASE.md`](docs/RELEASE.md) | Core release automation (Release PRs, tags, binaries). |
 | [`docs/PLUGIN_ROADMAP.md`](docs/PLUGIN_ROADMAP.md) | Sidecar agent platform; brokered inference adapters. |
 | [`docs/ADAPTERS.md`](docs/ADAPTERS.md) | Inference adapter contract, capabilities, and Cursor CLI profile. |
 | [`docs/CACHING.md`](docs/CACHING.md) | Layered response cache design: keys, mode safety, bypass. |
@@ -181,7 +160,7 @@ Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 | [`docs/DEVELOPMENT_ASSISTANCE_CAPABILITIES.md`](docs/DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) | Daemon-owned context, turn contract, budget pipeline (ADRs 0011–0017). |
 | [`docs/LONG_TERM_MEMORY.md`](docs/LONG_TERM_MEMORY.md) | Long-term memory design hub (**bets**, optimization-first; ADR 0014). |
 
-See [`docs/README.md`](docs/README.md) for **CONFIGURATION**, **SIDECAR_RUNTIME**, **EXTENSION_LOCAL_E2E**, **AGENT_DELIVERY**, **ERROR_HANDLING**, and **DEVELOPER_EXPERIENCE_GUIDE**.
+See [`docs/README.md`](docs/README.md) for **CONFIGURATION**, **SIDECAR_RUNTIME**, **AGENT_DELIVERY**, **ERROR_HANDLING**, and **DEVELOPER_EXPERIENCE_GUIDE**.
 
 ## Workspace layout
 
@@ -192,14 +171,12 @@ See [`docs/README.md`](docs/README.md) for **CONFIGURATION**, **SIDECAR_RUNTIME*
 - `rex-cli`: CLI client library (compat shim binary `rex-cli`).
 - `rex-sidecar-stub`: harness sidecar for CI and default `rex config init`.
 - `sidecars/rex-agent`: product LangGraph ReAct sidecar.
-- `extensions/rex-vscode`: VS Code/Cursor extension (chat UI, `rex` integration, optional daemon auto-start).
 
 ## Contributing and validation baseline
 
 - Keep changes focused and align with repository docs.
 - Treat generated/runtime outputs as disposable and keep commits source-first:
-  - do not commit `target/`, temporary test outputs, or scratch/handoff files;
-  - treat local VSIX artifacts as build outputs unless a release flow explicitly requires them.
+  - do not commit `target/`, temporary test outputs, or scratch/handoff files.
 - Run CI-aligned local checks before PRs:
 
 ```bash
@@ -208,7 +185,7 @@ See [`docs/README.md`](docs/README.md) for **CONFIGURATION**, **SIDECAR_RUNTIME*
 
 Includes `cargo fmt --check`, clippy, **`cargo audit`**, and workspace tests. When touching sidecars, also run the sidecar verify gate in [`docs/CI.md`](docs/CI.md). For reliability-specific work, follow the full sequence there.
 
-Branch protection should require **`ci-checks`** and **`Conventional PR title`**. Do not require `rust-verify` or `extension-verify` (they skip on docs-only PRs).
+Branch protection should require **`ci-checks`** and **`Conventional PR title`**. Do not require `rust-verify` (it skips on docs-only PRs).
 
 ## License
 

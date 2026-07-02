@@ -30,21 +30,21 @@ Acceptance: sidecar successfully reads a file under policy; denial paths logged 
 
 ```mermaid
 flowchart TB
-  subgraph layers [Evaluation order intent]
-    E[Envelope profile]
-    C[Capability classes]
-    M[Rex mode ask plan agent]
-    A[ApprovalGate ADR 0009]
-    B[Daemon broker executes]
-  end
-  E --> C --> M --> A --> B
+ subgraph layers [Evaluation order intent]
+ E[Envelope profile]
+ C[Capability classes]
+ M[Rex mode ask plan agent]
+ A[ApprovalGate ADR 0009]
+ B[Daemon broker executes]
+ end
+ E --> C --> M --> A --> B
 ```
 
 | Layer | Owns |
 |-------|------|
 | **Envelope** | Process boundary, optional OS sandbox, resource caps. |
 | **Capabilities** | What the guest may **request** (`fs.read`, `fs.write`, `exec.shell`, `net.fetch`). |
-| **Mode** | Extension UX contract — [EXTENSION.md](EXTENSION.md). |
+| **Mode** | Extension UX contract — [NDJSON_STREAM.md](NDJSON_STREAM.md). |
 | **Approvals** | Daemon `ApprovalGate` for `agent` mode — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md). |
 | **Broker** | Daemon authorizes, executes, meters, logs — [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). |
 
@@ -135,15 +135,15 @@ Bounded basename glob and content search under `REX_WORKSPACE_ROOT` — OpenCode
 
 ```text
 BrokerWorkspaceSearchRequest {
-  query: string
-  mode: string
-  kind: basename | content   // basename = glob-style name match; content = line/snippet match
-  max_results: uint32          // default bounded (e.g. 8)
+ query: string
+ mode: string
+ kind: basename | content // basename = glob-style name match; content = line/snippet match
+ max_results: uint32 // default bounded (e.g. 8)
 }
 BrokerWorkspaceSearchResponse {
-  ok: bool
-  results: string            // delimited paths or path:line snippets
-  error: string
+ ok: bool
+ results: string // delimited paths or path:line snippets
+ error: string
 }
 ```
 

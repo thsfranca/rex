@@ -1,6 +1,6 @@
 # Release automation
 
-REX uses **two independent release planes**: the Rust workspace (`v*` tags) and the VS Code extension (`rex-vscode-v*` tags). Both use [Conventional Commits](../CONTRIBUTING.md) and open a **Release PR** on `main` before tagging.
+REX uses **release-plz** for the Rust workspace (`v*` tags). [Conventional Commits](../CONTRIBUTING.md) feed changelog generation; a **Release PR** on `main` precedes tagging.
 
 ## Core (Rust workspace)
 
@@ -24,7 +24,7 @@ REX uses **two independent release planes**: the Rust workspace (`v*` tags) and 
 ### Local binary dry-run
 
 ```bash
-cargo install cargo-dist --locked   # once
+cargo install cargo-dist --locked # once
 ./scripts/release/build_core_artifacts.sh v1.0.0
 ```
 
@@ -40,24 +40,6 @@ dist generate
 
 After `dist generate`, re-apply the **Run Rust verify** and **`sidecar-verify`** jobs in [`.github/workflows/release.yml`](../.github/workflows/release.yml) (see [CI.md](CI.md)).
 
-## Extension (rex-vscode)
-
-| Item | Detail |
-|------|--------|
-| Version | [`extensions/rex-vscode/package.json`](../extensions/rex-vscode/package.json) |
-| Changelog | [`extensions/rex-vscode/CHANGELOG.md`](../extensions/rex-vscode/CHANGELOG.md) |
-| Release PR bot | [release-please](https://github.com/googleapis/release-please) — [`.github/workflows/release-please-extension.yml`](../.github/workflows/release-please-extension.yml) |
-| Tag | `rex-vscode-vX.Y.Z` |
-| Publish | [`.github/workflows/extension-release.yml`](../.github/workflows/extension-release.yml) (VSIX, optional Open VSX / Marketplace) |
-
-### Maintainer flow
-
-1. Merge extension changes with conventional commits.
-2. Merge the **release-please** Release PR (`release-extension` label) when ready.
-3. release-please creates `rex-vscode-v*`; **Extension Release** builds and attaches the VSIX (and publishes when secrets are set).
-
-Details: [EXTENSION_RELEASE.md](EXTENSION_RELEASE.md).
-
 ## When not to merge a Release PR
 
 - Proposed **major** or breaking `rex.v1` / sidecar API change without a versioned migration plan (Must **RC-*** are Met for the current `1.0.0` line).
@@ -67,12 +49,8 @@ Details: [EXTENSION_RELEASE.md](EXTENSION_RELEASE.md).
 ## CI dry-runs
 
 ```bash
-# Extension package only (no publish)
-gh workflow run "Extension Release" -f dry_run=true
-
-# Release-plz / release-please run on push to main; use workflow_dispatch where enabled
+# Release-plz runs on push to main; use workflow_dispatch where enabled
 gh workflow run "Release-plz"
-gh workflow run "Release Please (extension)"
 ```
 
 ## Related

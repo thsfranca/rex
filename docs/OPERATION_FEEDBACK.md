@@ -68,12 +68,12 @@ When `agent.approvals_enabled` is true in merged JSON:
 
 ## Live streaming (ADR 0030)
 
-Sidecar `RunTurn` flushes events during graph execution via a **stream sink** and LangGraph `stream()` — not only after `invoke()` completes. Daemon live path passthrough-maps chunks unchanged.
+Sidecar `RunTurn` flushes events during graph execution via a **stream sink** and LangGraph `stream` — not only after `invoke` completes. Daemon live path passthrough-maps chunks unchanged.
 
 ## Related
 
-- [EXTENSION.md](EXTENSION.md) — NDJSON reference
-- [EXTENSION_UX.md](EXTENSION_UX.md) — presentation (timeline, activity strip)
+- [NDJSON_STREAM.md](NDJSON_STREAM.md) — NDJSON reference
+- [NDJSON_STREAM.md](NDJSON_STREAM.md) — presentation (timeline, activity strip)
 - [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) — terminal TUI and operator messaging (planned)
 - [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) — `web.search` mode matrix
 - [POLICY_ENGINE.md](POLICY_ENGINE.md) — approval gate

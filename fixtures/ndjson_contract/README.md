@@ -1,11 +1,11 @@
 # NDJSON stream contract fixtures
 
-Shared **stdout lines** for `rex-cli complete --format ndjson` ([docs/EXTENSION.md](../../docs/EXTENSION.md) stream contract).
+Shared **stdout lines** for `rex-cli complete --format ndjson` ([docs/NDJSON_STREAM.md](../../docs/NDJSON_STREAM.md) stream contract).
 
 Consumers:
 
 - `crates/rex-cli/tests/ndjson_contract_conformance.rs` — Rust integration checks.
-- `extensions/rex-vscode/src/test/ndjson_contract_fixture.test.ts` — extension parser (resolves the file relative to **cwd** `extensions/rex-vscode`, matching `npm test` and CI).
+- `src/test/ndjson_contract_fixture.test.ts` — extension parser (resolves the file relative to **cwd** `rex CLI`, matching `npm test` and CI).
 
 | File | Purpose |
 |------|---------|

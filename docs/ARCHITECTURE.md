@@ -6,7 +6,7 @@ This document is the **software architecture description (SAD)** for REX: produc
 
 - Deliver a **REX-native development agent** (modes, policy, and future tool orchestration) so **cost and performance** stay under **daemon** control.
 - Centralize **streaming inference**, **layered caching**, and **capability-aware context shaping** in [`rex-daemon`](../crates/rex-daemon).
-- Keep **clients thin** (CLI, editor, scripts): one stable **gRPC** contract over **UDS** (`rex.v1`).
+- Keep **clients thin** (CLI, scripts): one stable **gRPC** contract over **UDS** (`rex.v1`).
 - Run the **development agent** in a **supervised sidecar**; use **inference adapters** (HTTP OpenAI-compat, mock, legacy Cursor CLI) as **broker mechanisms** only. See [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md), [MVP_SPEC.md](MVP_SPEC.md).
 
 Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md).
@@ -45,25 +45,25 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 
 ```mermaid
 flowchart LR
-  dev[Developer]
-  ide[EditorExtension]
-  ci[CIOrScripts]
-  rex[REX_daemon]
-  side[Agent_sidecar]
-  llm[HTTP_LLM_backend]
-  dev --> ide
-  dev --> ci
-  ide -->|"rex_v1_UDS"| rex
-  ci -->|"rex_v1_UDS"| rex
-  rex -->|supervise| side
-  side -->|rex_sidecar_v1| rex
-  rex -->|broker_inference| llm
+ dev[Developer]
+ cli[rex_cli]
+ ci[CIOrScripts]
+ rex[REX_daemon]
+ side[Agent_sidecar]
+ llm[HTTP_LLM_backend]
+ dev --> cli
+ dev --> ci
+ cli -->|"rex_v1_UDS"| rex
+ ci -->|"rex_v1_UDS"| rex
+ rex -->|supervise| side
+ side -->|rex_sidecar_v1| rex
+ rex -->|broker_inference| llm
 ```
 
 | Actor | Interaction |
 |---|---|
-| Developer | Uses IDE or terminal; owns approvals for guarded actions (extension modes). |
-| Editor extension | Thin client; **`rex` + NDJSON**; does **not** host the agent ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)). |
+| Developer | Uses terminal or automation; owns approvals for guarded actions. |
+| **`rex` CLI** | Thin client; **`rex complete --format ndjson`** subprocess contract ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)). |
 | CI / automation | **Mock** runtime and/or stub sidecar — harness only. |
 | Agent sidecar | Reasoning loop + tool **requests**; daemon **brokers** inference and host reach. |
 | HTTP LLM backend | OpenAI-compatible API invoked by daemon on sidecar’s behalf ([ADAPTERS.md](ADAPTERS.md)). |
@@ -74,8 +74,7 @@ flowchart LR
 
 | Container | Responsibility | Status |
 |---|---|---|
-| `extensions/rex-vscode` | Chat UX, modes, approvals; **`rex`** NDJSON subprocess; optional unary gRPC per [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md). | `implemented` — see [EXTENSION.md](EXTENSION.md). |
-| `rex` | Unified CLI: `daemon`, `status`, `complete` (NDJSON for editors). | `implemented` |
+| `rex` | Unified CLI: `daemon`, `status`, `complete` (NDJSON for scripts). | `implemented` |
 | `rex-cli` / `rex-daemon` | Compatibility shims delegating to `rex` libraries. | `implemented` |
 | `rex-config` | JSON config load/merge. | `implemented` |
 | `rex-daemon` | Session authority: stream contract, pipeline, cache, **broker** for sidecar inference/tools. | `implemented` |
@@ -98,15 +97,15 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-  grpc[GRPC_Service_service_rs]
-  l1[L1_exact_cache]
-  pipe[ContextPipeline_plugins_rs]
-  rt[InferenceRuntime_adapters_rs]
-  grpc --> l1
-  l1 -->|miss| pipe
-  pipe --> rt
-  l1 -->|hit| grpc
-  rt --> grpc
+ grpc[GRPC_Service_service_rs]
+ l1[L1_exact_cache]
+ pipe[ContextPipeline_plugins_rs]
+ rt[InferenceRuntime_adapters_rs]
+ grpc --> l1
+ l1 -->|miss| pipe
+ pipe --> rt
+ l1 -->|hit| grpc
+ rt --> grpc
 ```
 
 ## Runtime behavior
@@ -115,23 +114,23 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-  participant Client
-  participant Daemon
-  participant L1 as L1Cache
-  participant Pipe as ContextPipeline
-  participant Ad as Adapter
-  Client->>Daemon: StreamInference
-  Daemon->>L1: lookup
-  alt hit
-    L1-->>Daemon: cached_body
-    Daemon-->>Client: chunks plus done
-  else miss
-    Daemon->>Pipe: run_adapter_caps
-    Pipe-->>Daemon: effective_prompt_metrics
-    Daemon->>Ad: stream
-    Ad-->>Daemon: chunks
-    Daemon-->>Client: chunks plus done
-  end
+ participant Client
+ participant Daemon
+ participant L1 as L1Cache
+ participant Pipe as ContextPipeline
+ participant Ad as Adapter
+ Client->>Daemon: StreamInference
+ Daemon->>L1: lookup
+ alt hit
+ L1-->>Daemon: cached_body
+ Daemon-->>Client: chunks plus done
+ else miss
+ Daemon->>Pipe: run_adapter_caps
+ Pipe-->>Daemon: effective_prompt_metrics
+ Daemon->>Ad: stream
+ Ad-->>Daemon: chunks
+ Daemon-->>Client: chunks plus done
+ end
 ```
 
 **Cancellation / errors:** Preserve a single observable terminal NDJSON outcome on the CLI path (`done` or `error`). Daemon logs `stream.lifecycle` / `stream.terminal`. See [MVP_SPEC.md](MVP_SPEC.md).
@@ -157,7 +156,7 @@ Ownership of chat transcript, turn assembly (`TurnContext`), workspace binding, 
 | Mechanism | Status |
 |---|---|
 | `rex.v1` gRPC | `implemented` |
-| NDJSON CLI contract | `implemented` — [EXTENSION.md](EXTENSION.md) |
+| NDJSON CLI contract | `implemented` — [NDJSON_STREAM.md](NDJSON_STREAM.md) |
 | MCP (or equivalent) for tools | `planned` — **approved direction:** MCP stacks **primarily** in the **isolated sidecar**; host-affecting work **brokered** sidecar → daemon ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix). Remote doc resources vs Rex knowledge bundles: [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md). Formal ADR when implementation is scheduled. |
 | HTTP OpenAI-compat via LiteLLM (default API; opt-in managed gateway) | `accepted` design — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md); external profile [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) |
 | Native Anthropic Messages API | `planned` — [ADAPTERS.md](ADAPTERS.md#direct-anthropic-messages-api-planned--secondary) |
@@ -168,7 +167,7 @@ Full signal catalog, Rex-owned storage, bundled Grafana suite: [OBSERVABILITY_AN
 
 | Field / signal | Where | Purpose |
 |---|---|---|
-| `stream.request_id`, `trace_id` | Daemon stdout | Correlate with CLI / extension. |
+| `stream.request_id`, `trace_id` | Daemon stdout | Correlate with CLI. |
 | `inference_runtime` | Daemon | `mock` vs `cursor-cli`. |
 | `l1_cache=hit|miss` | Daemon | Legacy cache effectiveness signal (emitted only for cacheable lookups). |
 | `cache_decision=hit|miss_stored|bypass|uncacheable_mode` | Daemon | Per-request cache outcome covering bypass and ineligible modes (see [CACHING.md](CACHING.md) Metrics). |
@@ -229,13 +228,13 @@ Inference and cache policy today: JSON-first (`$REX_ROOT/config.json`); legacy *
 | `crates/rex-cli/` | Client library (shim binary) |
 | `crates/rex-sidecar-stub/` | Harness sidecar |
 | `sidecars/rex-agent/` | Product Python sidecar |
-| `extensions/rex-vscode/` | Editor host |
+| `` | Editor host |
 | `docs/` | Architecture hubs and ADRs |
 
 ## Non-goals in this document
 
 - Field-by-field proto reference — [MVP_SPEC.md](MVP_SPEC.md).
-- Extension UX detail — [EXTENSION.md](EXTENSION.md).
+- Extension UX detail — [NDJSON_STREAM.md](NDJSON_STREAM.md).
 - Cursor env catalog — [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Related documents

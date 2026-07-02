@@ -17,28 +17,28 @@ See [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) for the split.
 
 ```mermaid
 flowchart TB
-  subgraph clients [rex_v1_clients]
-    CLI[rex_cli]
-    IDE[extension]
-  end
-  subgraph daemon [rex_daemon]
-    Svc[StreamInference_service]
-    PE[PolicyEngine_cache]
-    AG[ApprovalGate]
-    AP[AccessPolicy_broker]
-    Ex[Executors_adapters_broker]
-  end
-  subgraph sidecar [optional_sidecar]
-    AR[Agent_runtime]
-  end
-  CLI --> Svc
-  IDE --> Svc
-  Svc --> AG
-  Svc --> PE
-  AR -->|rex_sidecar_v1_gRPC| AP
-  AP --> Ex
-  PE --> Ex
-  AG --> Ex
+ subgraph clients [rex_v1_clients]
+ CLI[rex_cli]
+ IDE[extension]
+ end
+ subgraph daemon [rex_daemon]
+ Svc[StreamInference_service]
+ PE[PolicyEngine_cache]
+ AG[ApprovalGate]
+ AP[AccessPolicy_broker]
+ Ex[Executors_adapters_broker]
+ end
+ subgraph sidecar [optional_sidecar]
+ AR[Agent_runtime]
+ end
+ CLI --> Svc
+ IDE --> Svc
+ Svc --> AG
+ Svc --> PE
+ AR -->|rex_sidecar_v1_gRPC| AP
+ AP --> Ex
+ PE --> Ex
+ AG --> Ex
 ```
 
 ## Shipped today
@@ -82,7 +82,7 @@ Does **not** replace `ApprovalGate` — approvals are human/UX gates; access pol
 
 ## Extension and CLI
 
-- **Approval UX** stays in the extension — [EXTENSION.md](EXTENSION.md).
+- **Approval UX** stays in the extension — [NDJSON_STREAM.md](NDJSON_STREAM.md).
 - Clients supply **approval context** to the daemon when enforcement is on; daemon decides.
 - `rex-cli` and extension share one gate — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md).
 

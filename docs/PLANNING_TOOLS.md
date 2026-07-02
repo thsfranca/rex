@@ -47,4 +47,4 @@ Fixture: [`fixtures/ndjson_contract/plan_stream.ndjson`](../fixtures/ndjson_cont
 
 ## Cross-links
 
-- [EXTENSION.md](EXTENSION.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [ROADMAP.md](ROADMAP.md) **R037**
+- [NDJSON_STREAM.md](NDJSON_STREAM.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [ROADMAP.md](ROADMAP.md) **R037**

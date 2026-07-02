@@ -19,7 +19,7 @@ When documents disagree, resolve in this **order**:
 | 1 | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) | Project **intent** and principles. |
 | 2 | **This file** (`ARCHITECTURE_GUIDELINES.md`) | **Stable policies** and ownership expectations that span features. |
 | 3 | Accepted **ADRs** under [architecture/decisions/](architecture/decisions/) | Recorded **decisions** with status and consequences. |
-| 4 | Feature hubs ([ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [EXTENSION.md](EXTENSION.md), …) | **Reference** behavior and contracts per area. |
+| 4 | Feature hubs ([ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [NDJSON_STREAM.md](NDJSON_STREAM.md), …) | **Reference** behavior and contracts per area. |
 | 5 | Code | **Shipped** behavior; docs **must** catch up when contracts change. |
 
 **Conflict rules:**
@@ -47,7 +47,7 @@ Guidelines doc **does not** invent new runtime flags or APIs—only **documents 
 
 | Context | Boundary | Integrate by |
 |---------|-----------|--------------|
-| **`rex.v1` client plane** | Thin stable API for CLI, editors, scripts over UDS. | Protobuf + [MVP_SPEC.md](MVP_SPEC.md); NDJSON via **`rex complete`** (shim: `rex-cli`) per [EXTENSION.md](EXTENSION.md). |
+| **`rex.v1` client plane** | Thin stable API for CLI, editors, scripts over UDS. | Protobuf + [MVP_SPEC.md](MVP_SPEC.md); NDJSON via **`rex complete`** (shim: `rex-cli`) per [NDJSON_STREAM.md](NDJSON_STREAM.md). |
 | **Sidecar control plane** | Brokered integration for isolated runtimes—**not** a widening of `rex.v1` into a generic tunnel. | Dedicated API per [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md); map types at the boundary. |
 
 Do **not** leak raw **`rex.v1`** messages into sidecar-specific logic without translation; do **not** hide host reachability inside guests without daemon policy.
@@ -70,9 +70,9 @@ Canonical **decision** owner means “writes the norm in the referenced doc / AD
 | Sidecar ↔ daemon integration | Product architecture | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | [0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Agent environment access policy | `rex-daemon` broker | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | [0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md), [0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md) |
 | Policy engine (cache, approvals, access) | `rex-daemon` | [POLICY_ENGINE.md](POLICY_ENGINE.md) | [0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md), [0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md) |
-| Extension transport (NDJSON + optional unary gRPC) | Extension + contract docs | [EXTENSION.md](EXTENSION.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | [0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
+| Extension transport (NDJSON + optional unary gRPC) | Extension + contract docs | [NDJSON_STREAM.md](NDJSON_STREAM.md), [ROADMAP.md](ROADMAP.md) | [0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
 | Policy vs mechanism seams in code (ports, resolution-before-semantic-cache) | `rex-daemon` implementation | [POLICY_ENGINE.md](POLICY_ENGINE.md), [ROADMAP.md](ROADMAP.md) **R007** (Done) | `PolicyEngine`, `ResponseCache`, `LayeredCache` / `NullL2` in `policy` module |
-| Agent execution approvals / checkpoints | `rex-daemon` policy (UX in extension) | [EXTENSION.md](EXTENSION.md), [ROADMAP.md](ROADMAP.md) backlog **R008** | [0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md) |
+| Agent execution approvals / checkpoints | `rex-daemon` policy (UX in extension) | [NDJSON_STREAM.md](NDJSON_STREAM.md), [ROADMAP.md](ROADMAP.md) backlog **R008** | [0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md) |
 
 ## When to write or update an ADR vs this file
 

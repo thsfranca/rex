@@ -43,7 +43,7 @@ Operators on Mac who enable **managed oMLX** get **local MLX inference** optimiz
 - Modes: `managed` (primary Mac profile), `external`, `disabled`.
 - Mutual-exclusion validation with managed gateway.
 - Operator sizing guidance for long-context dev agent (model class vs unified memory).
-- Future opt-in live E2E proof (parallel to Ollama §8a in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md)).
+- Future opt-in live E2E proof (parallel to Ollama §8a in [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md)).
 
 ### Out
 
@@ -71,35 +71,35 @@ Rex adds **oMLX supervision** on the daemon — same lifecycle *idea* as the gat
 
 ```mermaid
 flowchart LR
-  subgraph clients [Thin clients]
-    Ext[Extension]
-    CLI[rex CLI]
-  end
-  subgraph daemon [rex_daemon]
-    Broker[BrokerInference]
-    HTTP[http_openai_compat]
-    OmlxSup[omlx_supervisor]
-    GW[gateway_supervisor]
-  end
-  subgraph sidecar [rex_agent]
-    Graph[LangGraph tool loop]
-  end
-  subgraph local [Mac local]
-    OMLX[oMLX OpenAI_compat]
-  end
-  subgraph cloud [Optional cloud]
-    LiteLLM[LiteLLM gateway]
-  end
+ subgraph clients [Thin clients]
+ Ext[Extension]
+ CLI[rex CLI]
+ end
+ subgraph daemon [rex_daemon]
+ Broker[BrokerInference]
+ HTTP[http_openai_compat]
+ OmlxSup[omlx_supervisor]
+ GW[gateway_supervisor]
+ end
+ subgraph sidecar [rex_agent]
+ Graph[LangGraph tool loop]
+ end
+ subgraph local [Mac local]
+ OMLX[oMLX OpenAI_compat]
+ end
+ subgraph cloud [Optional cloud]
+ LiteLLM[LiteLLM gateway]
+ end
 
-  Ext --> CLI --> daemon
-  daemon --> sidecar
-  Graph --> Broker --> HTTP
-  OmlxSup -->|managed inject base_url| HTTP
-  GW -->|managed inject base_url| HTTP
-  HTTP -->|"POST /v1/chat/completions"| EffectiveUrl["openai_compat.base_url"]
-  EffectiveUrl --> OMLX
-  EffectiveUrl -.-> LiteLLM
-  OMLX -.->|"not Rex wire"| OmlxAnthropic["oMLX /v1/messages etc."]
+ Ext --> CLI --> daemon
+ daemon --> sidecar
+ Graph --> Broker --> HTTP
+ OmlxSup -->|managed inject base_url| HTTP
+ GW -->|managed inject base_url| HTTP
+ HTTP -->|"POST /v1/chat/completions"| EffectiveUrl["openai_compat.base_url"]
+ EffectiveUrl --> OMLX
+ EffectiveUrl -.-> LiteLLM
+ OMLX -.->|"not Rex wire"| OmlxAnthropic["oMLX /v1/messages etc."]
 ```
 
 | Concern | Owner |
@@ -199,17 +199,17 @@ Full field table: [CONFIGURATION.md](CONFIGURATION.md#inference-omlx-design).
 
 ```json
 {
-  "inference": {
-    "runtime": "http-openai-compat",
-    "omlx": {
-      "mode": "managed",
-      "port": 8000,
-      "model": "qwen2.5-coder-32b"
-    },
-    "openai_compat": {
-      "native_tools": "auto"
-    }
-  }
+ "inference": {
+ "runtime": "http-openai-compat",
+ "omlx": {
+ "mode": "managed",
+ "port": 8000,
+ "model": "qwen2.5-coder-32b"
+ },
+ "openai_compat": {
+ "native_tools": "auto"
+ }
+ }
 }
 ```
 
@@ -230,7 +230,7 @@ When `omlx.mode` is `managed`, Rex injects `openai_compat.base_url` → `http://
 | PR 2 | `inference.omlx` config schema + supervisor + extend `resolve_effective_openai_compat_base_url` + mutual-exclusion validate | **Done** |
 | PR 3 | oMLX `native_tools` defaults under `openai_compat` (no profile registry) | **Done** |
 | PR 4 | `rex omlx init\|doctor` + `$REX_ROOT/omlx/` templates | **Done** |
-| PR 5 | Opt-in live E2E script + [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §8b | **Done** |
+| PR 5 | Opt-in live E2E script + [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) §8b | **Done** |
 
 ## Cross-links
 

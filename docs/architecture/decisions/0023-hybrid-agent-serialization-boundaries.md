@@ -5,7 +5,7 @@
 
 ## Context
 
-Rex assembles agent context across **three boundaries** (extension user text → daemon `effective_prompt` → sidecar `messages_to_prompt()` per LLM step). In a 5–12 step ReAct loop, **per-step re-transmission** of a static prefix dominates token spend when provider prefix caching is absent (`O(N²)` compounding).
+Rex assembles agent context across **three boundaries** (extension user text → daemon `effective_prompt` → sidecar `messages_to_prompt` per LLM step). In a 5–12 step ReAct loop, **per-step re-transmission** of a static prefix dominates token spend when provider prefix caching is absent (`O(N²)` compounding).
 
 **R018** ships one-line JSON `{"type":"tool"|"final",...}` inside a single broker `user` message. Research on compact notations (TOON, TRON), YAML-for-generation, CBOR, and natural-language tool pipelines does **not** justify replacing Rex’s interim protocol before native broker tool calling lands (**R038**).
 
@@ -43,7 +43,7 @@ TRON-style **static schema compression** in the daemon-assembled prefix remains 
 
 - **Positive:** Single accepted table for format debates; Phase 1 work (prefix lock, raw results, microcompaction) can proceed without re-litigating TOON/YAML; validation metrics (`cached_tokens`, `prefix_hash`, `parse_retries`) have clear owners in [ECONOMICS_VALIDATION.md](../../ECONOMICS_VALIDATION.md).
 - **Negative:** Interim JSON-in-text retains up to **3** parse retries until **R038** native path; delimiter contracts require sidecar/daemon coordination for truncation boundaries.
-- **Risks / follow-up:** Cache header owner (gateway vs native adapter) open — [INFERENCE_GATEWAY.md](../../INFERENCE_GATEWAY.md), [ADAPTERS.md](../../ADAPTERS.md); linter sandbox during tool loop — [AGENT_ACCESS_POLICY.md](../../AGENT_ACCESS_POLICY.md); NDJSON parser version if raw blocks change extension framing — [EXTENSION.md](../../EXTENSION.md).
+- **Risks / follow-up:** Cache header owner (gateway vs native adapter) open — [INFERENCE_GATEWAY.md](../../INFERENCE_GATEWAY.md), [ADAPTERS.md](../../ADAPTERS.md); linter sandbox during tool loop — [AGENT_ACCESS_POLICY.md](../../AGENT_ACCESS_POLICY.md); NDJSON parser version if raw blocks change extension framing — [NDJSON_STREAM.md](../../NDJSON_STREAM.md).
 
 ## Related
 

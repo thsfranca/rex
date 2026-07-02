@@ -7,7 +7,7 @@
 
 Terminal operators today run **`rex daemon`** in a foreground session before **`rex status`** or **`rex complete`**. That session blocks the terminal and prints daemon logs. The Rust CLI connects over UDS only; on failure it returns **`daemon_unavailable`** and instructs the user to start the daemon manually.
 
-The VS Code extension already implements opt-in auto-start: probe the socket, spawn **`rex daemon`** if needed, poll until ready, optionally tear down an owned child on deactivate ([`extensions/rex-vscode/src/runtime/daemonLifecycle.ts`](../../../extensions/rex-vscode/src/runtime/daemonLifecycle.ts)). CLI and extension lifecycle semantics diverge, which hurts operators who use both surfaces.
+The rex CLI already implements opt-in auto-start: probe the socket, spawn **`rex daemon`** if needed, poll until ready, optionally tear down an owned child on deactivate ([`src/runtime/daemonLifecycle.ts`](../../../src/runtime/daemonLifecycle.ts)). CLI and extension lifecycle semantics diverge, which hurts operators who use both surfaces.
 
 CLI feedback during streams is thin compared to the extension: **`--verbose`** stderr lines and NDJSON forwarding ([OPERATION_FEEDBACK.md](../../OPERATION_FEEDBACK.md)). Operators asked for a **full terminal UI** and **legible status** so they understand what Rex is doing without a dedicated daemon terminal.
 
@@ -15,7 +15,7 @@ Constraints:
 
 - Daemon remains system authority ([ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md)).
 - Extension keeps **`rex complete --format ndjson`** as the primary streaming path ([ADR 0007](0007-editor-extension-hybrid-transport-cli-and-grpc.md)).
-- NDJSON event catalog and error codes stay stable ([EXTENSION.md](../../EXTENSION.md), [ERROR_HANDLING.md](../../ERROR_HANDLING.md)).
+- NDJSON event catalog and error codes stay stable ([NDJSON_STREAM.md](../../NDJSON_STREAM.md), [ERROR_HANDLING.md](../../ERROR_HANDLING.md)).
 
 ## Decision
 
@@ -46,5 +46,5 @@ Design detail and acceptance criteria: [CLI_OPERATOR_UX.md](../../CLI_OPERATOR_U
 - [CLI_OPERATOR_UX.md](../../CLI_OPERATOR_UX.md) — feature hub
 - [ADR 0007](0007-editor-extension-hybrid-transport-cli-and-grpc.md) — hybrid transport
 - [OPERATION_FEEDBACK.md](../../OPERATION_FEEDBACK.md) — stream events
-- [EXTENSION_RELEASE.md](../../EXTENSION_RELEASE.md) — extension auto-start
+- [CLI_OPERATOR_UX.md](../../CLI_OPERATOR_UX.md) — extension auto-start
 - [README.md](README.md) (ADR index)

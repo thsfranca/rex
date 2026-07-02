@@ -50,28 +50,28 @@ Rex adds **inference gateway supervision** on the daemon — same lifecycle *ide
 
 ```mermaid
 flowchart TB
-  subgraph clients [Clients]
-    CLI[rex_cli]
-    Ext[extension]
-  end
-  Daemon[rex_daemon]
-  Sidecar[agent_sidecar]
-  GW[inference_gateway_litellm]
-  Adapter[http_openai_compat]
-  Providers[cloud_and_local_providers]
+ subgraph clients [Clients]
+ CLI[rex_cli]
+ Ext[extension]
+ end
+ Daemon[rex_daemon]
+ Sidecar[agent_sidecar]
+ GW[inference_gateway_litellm]
+ Adapter[http_openai_compat]
+ Providers[cloud_and_local_providers]
 
-  CLI -->|rex_v1| Daemon
-  Ext -->|rex_v1| Daemon
-  Daemon --> Sidecar
-  Sidecar -->|BrokerInference| Daemon
-  Daemon -->|mode_managed| GW
-  Daemon --> Adapter
-  Adapter --> GW
-  Adapter -->|mode_external| ExtGW[operator_litellm]
-  GW --> Providers
-  ExtGW --> Providers
-  GW -->|discovery| Ollama[ollama_local]
-  Ollama --> GW
+ CLI -->|rex_v1| Daemon
+ Ext -->|rex_v1| Daemon
+ Daemon --> Sidecar
+ Sidecar -->|BrokerInference| Daemon
+ Daemon -->|mode_managed| GW
+ Daemon --> Adapter
+ Adapter --> GW
+ Adapter -->|mode_external| ExtGW[operator_litellm]
+ GW --> Providers
+ ExtGW --> Providers
+ GW -->|discovery| Ollama[ollama_local]
+ Ollama --> GW
 ```
 
 ## Responsibilities
@@ -124,12 +124,12 @@ Env mirrors (intent): see [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Stopped
-  Stopped --> Starting: daemon_start_mode_managed
-  Starting --> Ready: health_ok
-  Starting --> Failed: timeout_or_spawn_error
-  Ready --> Stopped: daemon_shutdown
-  Failed --> Stopped: daemon_shutdown
+ [*] --> Stopped
+ Stopped --> Starting: daemon_start_mode_managed
+ Starting --> Ready: health_ok
+ Starting --> Failed: timeout_or_spawn_error
+ Ready --> Stopped: daemon_shutdown
+ Failed --> Stopped: daemon_shutdown
 ```
 
 | Phase | Behavior |
@@ -165,13 +165,13 @@ Use LiteLLM [model discovery](https://docs.litellm.ai/docs/proxy/model_discovery
 
 ```yaml
 model_list:
-  - model_name: ollama/*
-    litellm_params:
-      model: ollama/*
-      api_base: http://127.0.0.1:11434
+ - model_name: ollama/*
+ litellm_params:
+ model: ollama/*
+ api_base: http://127.0.0.1:11434
 
 litellm_settings:
-  check_provider_endpoint: true
+ check_provider_endpoint: true
 ```
 
 Add Anthropic/OpenAI entries in the same `model_list` driven by `$REX_ROOT/gateway/.env`.

@@ -60,11 +60,11 @@ This file is the **canonical** bet list. [ARCHITECTURE.md](ARCHITECTURE.md) and 
 
 ```mermaid
 flowchart LR
-  hub[LONG_TERM_MEMORY.md]
-  arch[ARCHITECTURE.md]
-  ctx[CONTEXT_EFFICIENCY.md]
-  roadmap[ROADMAP.md]
-  hub --> arch
-  hub --> ctx
-  hub --> roadmap
+ hub[LONG_TERM_MEMORY.md]
+ arch[ARCHITECTURE.md]
+ ctx[CONTEXT_EFFICIENCY.md]
+ roadmap[ROADMAP.md]
+ hub --> arch
+ hub --> ctx
+ hub --> roadmap
 ```

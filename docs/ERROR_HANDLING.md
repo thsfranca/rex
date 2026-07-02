@@ -1,6 +1,6 @@
 # Error handling
 
-Canonical hub for **how Rex surfaces failures** across daemon, CLI, extension, sidecar, broker, and plugins. Wire shapes for the editor path live in [EXTENSION.md](EXTENSION.md); this document defines **principles**, **message quality**, **code taxonomy**, and **CI enforcement**.
+Canonical hub for **how Rex surfaces failures** across daemon, CLI, extension, sidecar, broker, and plugins. Wire shapes for the editor path live in [NDJSON_STREAM.md](NDJSON_STREAM.md); this document defines **principles**, **message quality**, **code taxonomy**, and **CI enforcement**.
 
 ## Purpose and audiences
 
@@ -19,30 +19,30 @@ Adapted from [AIP-193](https://google.aip.dev/193), [gRPC error handling](https:
 1. **Two channels** — Every user-facing failure exposes a stable **code** (machine) and a **message** (human). Do not encode classification only in prose.
 2. **Actionable messages** — Brief formula: **what failed → why/context → next step**. No crate names, stack traces, or internal type names on operator paths.
 3. **Audience split**
-   - **User/operator path** (NDJSON stdout, extension UI): plain language and recovery steps; link to setup docs when helpful.
-   - **Developer/debug path** (daemon logs, `REX_TRACE_ID`): may include socket paths, env var names, and `source()` chains — never secrets or full sensitive file contents.
+ - **User/operator path** (NDJSON stdout, extension UI): plain language and recovery steps; link to setup docs when helpful.
+ - **Developer/debug path** (daemon logs, `REX_TRACE_ID`): may include socket paths, env var names, and `source` chains — never secrets or full sensitive file contents.
 4. **Memorable codes** — `snake_case` words, not UUIDs. Use domain prefixes for broker/policy (`protected_path`) when codes leave the NDJSON stream taxonomy.
 5. **Test codes, not prose** — Contracts and CI validate **code identity** and terminal outcomes; message wording may improve without breaking clients.
 6. **Boundary policy** — Convert internal errors **once** at each boundary: daemon → gRPC, CLI → NDJSON, extension → UI hints.
 
 ```mermaid
 flowchart LR
-  subgraph internal [Internal Rust]
-    BrokerError
-    SupervisorError
-    CliError
-  end
-  subgraph boundaries [Boundary outputs]
-    GrpcStatus["gRPC Status"]
-    NdjsonError["NDJSON error.code + message"]
-    BrokerOk["Broker ok/error"]
-    UiHint["Extension UX hint"]
-  end
-  BrokerError --> GrpcStatus
-  BrokerError --> BrokerOk
-  SupervisorError --> GrpcStatus
-  CliError --> NdjsonError
-  NdjsonError --> UiHint
+ subgraph internal [Internal Rust]
+ BrokerError
+ SupervisorError
+ CliError
+ end
+ subgraph boundaries [Boundary outputs]
+ GrpcStatus["gRPC Status"]
+ NdjsonError["NDJSON error.code + message"]
+ BrokerOk["Broker ok/error"]
+ UiHint["Extension UX hint"]
+ end
+ BrokerError --> GrpcStatus
+ BrokerError --> BrokerOk
+ SupervisorError --> GrpcStatus
+ CliError --> NdjsonError
+ NdjsonError --> UiHint
 ```
 
 ## Message authoring guide
@@ -84,33 +84,28 @@ flowchart LR
 
 | Surface | Required fields | Transport | Owner |
 |---------|-----------------|-----------|-------|
-| NDJSON terminal | `event`, `code`, `message` | CLI stdout | `rex-cli` emits; extension consumes — [EXTENSION.md](EXTENSION.md) |
+| NDJSON terminal | `event`, `code`, `message` | CLI stdout | `rex-cli` emits; consumers parse per [NDJSON_STREAM.md](NDJSON_STREAM.md) |
 | gRPC stream failure | gRPC status code + message (+ Rex code in metadata when available) | UDS `rex.v1` | `rex-daemon` |
 | Broker unary | `ok`, `error` string today; **`code` target** for policy denies | `rex.v1` broker RPCs | `rex-daemon` |
 | Sidecar stream | Structured terminal error or RPC status — **not** inline stream text | `rex.sidecar.v1` | Sidecar + daemon — [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
-| Extension UI | Classify by `code` first; message heuristics fallback only | Host ↔ webview | Extension |
 | CI signals | `CI_SIGNAL` / `fail_code` | GitHub Actions | [CI.md](CI.md) — not product errors |
 
 ## Error code catalog (NDJSON stream)
 
-**Machine-readable source:** [`fixtures/guidelines/error_codes.yaml`](../fixtures/guidelines/error_codes.yaml) — CI validates this file against TypeScript and fixtures. Update **yaml and this table together** when adding a stream code.
+**Machine-readable source:** [`fixtures/guidelines/error_codes.yaml`](../fixtures/guidelines/error_codes.yaml) — CI validates this file against `rex-cli` runtime mapping and fixtures. Update **yaml and this table together** when adding a stream code.
 
 | Code | Meaning | Retry | Owner | Message template (operator-facing) |
 |------|---------|-------|-------|----------------------------------|
-| `daemon_unavailable` | Daemon not reachable | Yes | both | Daemon is unavailable at {socket}; run `rex daemon` and retry. |
-| `workspace_not_configured` | Product path missing `workspace.root` | No | both | Set `workspace.root` in `.rex/config.json` or enable harness cwd fallback. |
-| `workspace_mismatch` | Daemon bound to a different workspace | No | both | Restart the daemon for this workspace; another project may be using a global daemon. |
-| `sidecar_unavailable` | Sidecar required but missing or unhealthy | No | both | Sidecar is required but unavailable: {detail}. Enable sidecar supervision and ensure the sidecar binary is on PATH. |
-| `inference_config` | Inference backend not configured | No | both | Inference runtime not configured: {detail}. Edit JSON `inference.openai_compat` per [CONFIGURATION.md](CONFIGURATION.md). |
-| `stream_timeout` | No stream activity within window | Yes | both | Timed out waiting for daemon stream chunk after {seconds}s. |
-| `stream_interrupted` | Mid-flight transport failure | Yes | both | Daemon interrupted the stream before completion. |
-| `stream_incomplete` | Stream ended without terminal marker | No | both | Daemon stream ended without completion marker. |
-| `cancelled` | User cancelled | Yes* | extension | Cancelled by user. |
-| `invalid_response` | Malformed NDJSON or unknown event | No | extension | Malformed or unknown NDJSON from CLI. |
-| `spawn_failed` | Could not spawn `rex-cli` | No | extension | Failed to spawn rex-cli; fix install or PATH. |
-| `unknown` | Uncategorized | No | both | Inspect daemon and CLI logs; classify with a stable code when root cause is known. |
-
-\*Retry only if the user resubmits the prompt.
+| `daemon_unavailable` | Daemon not reachable | Yes | cli | Daemon is unavailable at {socket}; run `rex daemon` and retry. |
+| `workspace_not_configured` | Product path missing `workspace.root` | No | cli | Set `workspace.root` in `.rex/config.json` or enable harness cwd fallback. |
+| `workspace_mismatch` | Daemon bound to a different workspace | No | cli | Restart the daemon for this workspace; another project may be using a global daemon. |
+| `sidecar_unavailable` | Sidecar required but missing or unhealthy | No | cli | Sidecar is required but unavailable: {detail}. Enable sidecar supervision and ensure the sidecar binary is on PATH. |
+| `inference_config` | Inference backend not configured | No | cli | Inference runtime not configured: {detail}. Edit JSON `inference.openai_compat` per [CONFIGURATION.md](CONFIGURATION.md). |
+| `stream_timeout` | No stream activity within window | Yes | cli | Timed out waiting for daemon stream chunk after {seconds}s. |
+| `stream_interrupted` | Mid-flight transport failure | Yes | cli | Daemon interrupted the stream before completion. |
+| `stream_incomplete` | Stream ended without terminal marker | No | cli | Daemon stream ended without completion marker. |
+| `approval_required` | Execution blocked pending approval | No | cli | Approval required; pass `--approval-id` after user confirms. |
+| `unknown` | Uncategorized | No | cli | Inspect daemon and CLI logs; classify with a stable code when root cause is known. |
 
 ### Broker / policy codes (not NDJSON stream codes)
 
@@ -138,7 +133,7 @@ These are **documented inconsistencies**; fixing them is follow-up work, not req
 | Sidecar stub broker failures | Embedded as `[broker.* error: …]` in stream **text** | Terminal structured error or gRPC status |
 | Broker proto | `ok` + `error` string only | Add `code` field; keep message human-readable |
 | Extension heuristics | `errorTaxonomy.ts` substring fallbacks when CLI omits `code` | Prefer CLI `code`; shrink heuristics over time |
-| `docs/EXTENSION.md` table | Was missing setup codes | Synced with this catalog — link here for full detail |
+| `docs/NDJSON_STREAM.md` table | Was missing setup codes | Synced with this catalog — link here for full detail |
 
 ## Security and redaction
 
@@ -158,7 +153,7 @@ These are **documented inconsistencies**; fixing them is follow-up work, not req
 ## Adding a new NDJSON stream error
 
 1. Add row to [`fixtures/guidelines/error_codes.yaml`](../fixtures/guidelines/error_codes.yaml) and the catalog table above.
-2. Extend `StreamErrorCode` in [`extensions/rex-vscode/src/shared/messages.ts`](../extensions/rex-vscode/src/shared/messages.ts) and [`ndjsonParser.ts`](../extensions/rex-vscode/src/runtime/ndjsonParser.ts) `asErrorCode`.
+2. Extend `StreamErrorCode` in [`crates/rex-cli/src/runtime.rs`](../crates/rex-cli/src/runtime.rs) and [`ndjsonParser.ts`](../src/runtime/ndjsonParser.ts) `asErrorCode`.
 3. Map in `rex-cli` (`CliError` + `ndjson_error_code`) when the daemon/CLI emits it.
 4. Add or extend NDJSON fixture + conformance tests.
 5. Run `./scripts/ci/run_guidelines_verify.sh`.
@@ -173,8 +168,8 @@ Runs executable checks under [`scripts/ci/guidelines/`](../scripts/ci/guidelines
 
 | Script | Guideline source | Rule |
 |--------|------------------|------|
-| `check_error_codes.sh` | This catalog + [EXTENSION.md](EXTENSION.md) | `error_codes.yaml` ↔ TypeScript ↔ docs ↔ NDJSON error fixtures |
-| `check_ndjson_terminal.sh` | [EXTENSION.md](EXTENSION.md) | Each `fixtures/ndjson_contract/*.ndjson` has exactly one terminal event |
+| `check_error_codes.sh` | This catalog + [NDJSON_STREAM.md](NDJSON_STREAM.md) | `error_codes.yaml` ↔ TypeScript ↔ docs ↔ NDJSON error fixtures |
+| `check_ndjson_terminal.sh` | [NDJSON_STREAM.md](NDJSON_STREAM.md) | Each `fixtures/ndjson_contract/*.ndjson` has exactly one terminal event |
 | `check_ndjson_plan_contract.sh` | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | `plan` events include `index`, `phase`, `title`, `detail`; phases are `draft` \| `clarify` \| `ready` |
 | `check_broker_policy_codes.sh` | Broker table above | `broker_error_codes.yaml` ↔ docs ↔ `access_policy.rs` |
 
@@ -193,7 +188,7 @@ Run locally before PRs that touch error codes or guidelines:
 
 ## Related docs
 
-- [EXTENSION.md](EXTENSION.md) — NDJSON wire contract and bootstrap flow
+- [NDJSON_STREAM.md](NDJSON_STREAM.md) — NDJSON wire contract and bootstrap flow
 - [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) — quality gates and review checklist
 - [MVP_SPEC.md](MVP_SPEC.md) — RC-08 sidecar-missing clear error
 - [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) — sidecar structured errors

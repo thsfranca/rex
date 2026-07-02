@@ -47,7 +47,7 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 | Diff-only writes | Editor unified diff; sidecar read→patch→write before broker | `rex-agent` `fs.write` handler | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | **implemented** — **R030** |
 | Subagent model cascade | Cheaper model hint for Viewer subgraph | `RunTurn.model` or sidecar config | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | **implemented** — **R028** |
 | Sidecar read pruning | Goal-hint filter when read payload >100 lines | Post-`BrokerReadFile` sidecar stage | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | **implemented** — **R031** Done |
-| Prefix immutability (SHA-256 contract) | Static `[system]` + `daemon_context` unchanged across tool steps in one turn | Sidecar `messages_to_prompt()` + daemon assembly | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) | **implemented** — **R027**, **R032** |
+| Prefix immutability (SHA-256 contract) | Static `[system]` + `daemon_context` unchanged across tool steps in one turn | Sidecar `messages_to_prompt` + daemon assembly | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) | **implemented** — **R027**, **R032** |
 | Raw delimited tool results | Daemon returns `<<TOOL_RESULT:tool>>` … `<<END>>`; line-boundary truncation | Broker RPC result shaping → sidecar prompt | [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) | **implemented** — **R034** |
 | Microcompaction tier | Replace stale `fs.read` transcripts (>2 steps) with stubs before each LLM call | Sidecar graph pre-inference hook | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | **cancelled** — prefix-cache cost; not implemented |
 | TRON static schema compression | Compact repeated tool shapes in daemon-assembled prefix | `ContextPipeline` / turn assembly | [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) | **design accepted** — **R036** (Could) |
@@ -65,20 +65,20 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 
 ```mermaid
 flowchart LR
-  editorClient[EditorOrCLI] --> daemonCore[rexDaemon]
-  daemonCore --> layeredCache[LayeredResponseCache]
-  layeredCache -->|miss| budgetGate[TokenBudgetGate]
-  budgetGate --> retrieverPlugin[RetrieverPlugin]
-  retrieverPlugin --> indexerPlugin[IndexerPlugin]
-  retrieverPlugin --> compressorPlugin[CompressorPlugin]
-  budgetGate --> contextPrefixCache[ContextPrefixCache]
-  budgetGate --> behaviorPlugin[BehaviorPrefilterPlugin]
-  compressorPlugin --> runtimeAdapter[InferenceRuntime]
-  contextPrefixCache --> runtimeAdapter
-  behaviorPlugin --> runtimeAdapter
-  layeredCache -->|hit| streamOut[StreamChunkDoneOrError]
-  runtimeAdapter --> streamOut
-  streamOut --> editorClient
+ editorClient[EditorOrCLI] --> daemonCore[rexDaemon]
+ daemonCore --> layeredCache[LayeredResponseCache]
+ layeredCache -->|miss| budgetGate[TokenBudgetGate]
+ budgetGate --> retrieverPlugin[RetrieverPlugin]
+ retrieverPlugin --> indexerPlugin[IndexerPlugin]
+ retrieverPlugin --> compressorPlugin[CompressorPlugin]
+ budgetGate --> contextPrefixCache[ContextPrefixCache]
+ budgetGate --> behaviorPlugin[BehaviorPrefilterPlugin]
+ compressorPlugin --> runtimeAdapter[InferenceRuntime]
+ contextPrefixCache --> runtimeAdapter
+ behaviorPlugin --> runtimeAdapter
+ layeredCache -->|hit| streamOut[StreamChunkDoneOrError]
+ runtimeAdapter --> streamOut
+ streamOut --> editorClient
 ```
 
 The cache and each pipeline stage can be **skipped** when the active adapter’s capabilities say so (for example, Cursor: skip most indexer or compressor context attached to the prompt, but run prefilter).
@@ -192,24 +192,24 @@ Add an **advisory intent** bypass before the length heuristic:
 ### Cache bypass
 
 - Global bypass through environment variable:
-  - `REX_CACHE_BYPASS=1`
+ - `REX_CACHE_BYPASS=1`
 - Per-request bypass directive inside prompt:
-  - `[[cache:bypass]]`
+ - `[[cache:bypass]]`
 
 ### Diagnostics hint
 
 - Add a diagnostics line to improve retrieval focus:
-  - `[[diag: cargo test failed in runtime module]]`
+ - `[[diag: cargo test failed in runtime module]]`
 
 ### Behavior snapshot hint
 
 - Add a focused typing hint to test behavioral prefilter path:
-  - `[[behavior:focused]]`
+ - `[[behavior:focused]]`
 
 ### Retrieval gate
 
 - Skip lexical retrieval for this request:
-  - `[[retrieve:off]]`
+ - `[[retrieve:off]]`
 
 ## Local behavior telemetry defaults
 

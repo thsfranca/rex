@@ -33,11 +33,11 @@ Use one of:
 - `feat!:` or `fix!:` in the subject, or
 - a footer line: `BREAKING CHANGE: <description>`
 
-Breaking changes require a **major** bump now that the workspace is at **`1.0.0`** in [Cargo.toml](Cargo.toml). The VS Code extension may remain on an independent version (see [`.release-please-manifest.json`](.release-please-manifest.json), e.g. **`0.1.0`**) until extension release policy aligns.
+Breaking changes require a **major** bump now that the workspace is at **`1.0.0`** in [Cargo.toml](Cargo.toml).
 
 ### Scopes (optional)
 
-Examples: `feat(cli):`, `fix(daemon):`, `feat(extension):`. Scopes are optional but help changelog grouping.
+Examples: `feat(cli):`, `fix(daemon):`, `docs:`. Scopes are optional but help changelog grouping.
 
 ### Pull request titles
 
@@ -45,7 +45,7 @@ PR titles must follow the same convention when using squash merge (the title bec
 
 ## Releases
 
-See [docs/RELEASE.md](docs/RELEASE.md) for core (`v*`) and extension (`rex-vscode-v*`) release planes.
+See [docs/RELEASE.md](docs/RELEASE.md) for core (`v*`) release automation.
 
 ## Development
 

@@ -11,7 +11,7 @@ This document is the **canonical** policy for how REX settings work: merged **JS
 ## Why this policy exists
 
 - **Developer experience:** One merged config file per machine; `rex config show` for inspection.
-- **Automation:** CI, scripts, and the editor extension set **`REX_ROOT`** and write JSON; legacy `REX_*` tuning vars are ignored with a startup warning.
+- **Automation:** CI, scripts, and the CLI client set **`REX_ROOT`** and write JSON; legacy `REX_*` tuning vars are ignored with a startup warning.
 - **One catalog:** JSON keys, bootstrap commands, and deprecated env tables for migration only.
 
 ## Precedence (implemented)
@@ -23,7 +23,7 @@ This document is the **canonical** policy for how REX settings work: merged **JS
 | `.rex/config.json` | Optional project overrides (walked from cwd upward). |
 | CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--yes`, `--verbose`, `--trace-id`, `--active-file`, `--language-id`, `--selection-text` per invocation. `rex status` and `rex complete` accept **`--no-daemon-autostart`**. |
 
-**Layout root:** `$REX_ROOT` defaults to `~/.rex` when unset. Run `rex config init` to create the layout and operator template `config.json` (**`sidecars.active: agent`**, **`rex-agent`** enabled, **`search.enabled: true`** with **`search.provider: mock`**). Operators typically edit only **`inference.openai_compat`** for a live backend. CI and harness tests use explicit stub configs or `RexConfig::defaults()` in code — not the init template.
+**Layout root:** `$REX_ROOT` defaults to `~/.rex` when unset. Run `rex config init` to create the layout and operator template `config.json` (**`sidecars.active: agent`**, **`rex-agent`** enabled, **`search.enabled: true`** with **`search.provider: mock`**). Operators typically edit only **`inference.openai_compat`** for a live backend. CI and harness tests use explicit stub configs or `RexConfig::defaults` in code — not the init template.
 
 **Legacy environment variables:** Daemon startup ignores former `REX_INFERENCE_RUNTIME`, `REX_OPENAI_COMPAT_*`, `REX_SIDECAR_*`, `REX_DAEMON_SOCKET`, and `REX_WORKSPACE_ROOT` when present and prints a warning — use JSON instead. **`REX_AGENT_APPROVALS`** is **not read** (migration reference only; canonical key is `agent.approvals_enabled` in JSON — [V1_0.md](V1_0.md) RC-06). **`REX_ROOT`** remains the bootstrap override for layout location (tests, extension auto-start).
 
@@ -56,33 +56,33 @@ Minimal example:
 
 ```json
 {
-  "version": 1,
-  "daemon": { "socket": "/tmp/rex.sock" },
-  "sidecars": {
-    "active": "agent",
-    "required": true,
-    "list": [
-      { "name": "agent", "binary": "rex-agent", "enabled": true, "socket": "/tmp/rex-sidecar.sock" }
-    ]
-  },
-  "inference": {
-    "runtime": "http-openai-compat",
-    "openai_compat": {
-      "base_url": "http://127.0.0.1:11434/v1",
-      "model": "llama3.2",
-      "native_tools": "auto"
-    }
-  },
-  "workspace": { "root": "/absolute/path/to/your/project" },
-  "observability": {
-    "enabled": false,
-    "service_name": "rex-daemon",
-    "custom_sidecar_metrics": true,
-    "otlp": {
-      "endpoint": "http://127.0.0.1:4317",
-      "protocol": "grpc"
-    }
-  }
+ "version": 1,
+ "daemon": { "socket": "/tmp/rex.sock" },
+ "sidecars": {
+ "active": "agent",
+ "required": true,
+ "list": [
+ { "name": "agent", "binary": "rex-agent", "enabled": true, "socket": "/tmp/rex-sidecar.sock" }
+ ]
+ },
+ "inference": {
+ "runtime": "http-openai-compat",
+ "openai_compat": {
+ "base_url": "http://127.0.0.1:11434/v1",
+ "model": "llama3.2",
+ "native_tools": "auto"
+ }
+ },
+ "workspace": { "root": "/absolute/path/to/your/project" },
+ "observability": {
+ "enabled": false,
+ "service_name": "rex-daemon",
+ "custom_sidecar_metrics": true,
+ "otlp": {
+ "endpoint": "http://127.0.0.1:4317",
+ "protocol": "grpc"
+ }
+ }
 }
 ```
 
@@ -160,7 +160,7 @@ Design hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](archi
 | `daemon.idle_shutdown_secs` | **`300`** | Shutdown after this many seconds without work and without status contact; **`0`** disables |
 | `daemon.log_path` | `$REX_ROOT/daemon.log` | Detached daemon stdout/stderr |
 
-Opt out: `"auto_start": false` in merged JSON or **`--no-daemon-autostart`**. Extension **`rex.daemonAutoStart`** defaults **on** — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md).
+Opt out: `"auto_start": false` in merged JSON or **`--no-daemon-autostart`**. Extension **`rex.daemonAutoStart`** defaults **on** — [ROADMAP.md](ROADMAP.md).
 
 When **`inference.omlx.mode: managed`** or **`inference.gateway.mode: managed`**, the autostarted daemon also starts and health-checks that managed inference child before binding the UDS socket. Raise **`daemon.ready_timeout_secs`** if the managed child startup budget (for example oMLX **`startup_timeout_secs`**, default 30) exceeds the default ready poll (**10s**).
 
@@ -173,13 +173,6 @@ When **`inference.omlx.mode: managed`** or **`inference.gateway.mode: managed`**
 
 CLI flag (planned): `--no-ui`.
 
-### Related project scripts
-
-| Variable | Where it matters |
-|----------|------------------|
-| `REX_EXTENSION_EDITOR` | [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md), install scripts. |
-| `REX_TEST_STATUS_STATE_FILE` | Extension test fixtures only. |
-
 **Module map:** Daemon: `settings`, `adapters`, `http_openai_compat`, `approvals`, `l1_cache`, stream service. CLI: `transport` (config socket), `runtime` (`--trace-id`).
 
 ## Operator quick start (daemon + brokered HTTP)
@@ -190,7 +183,7 @@ The product path requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)).
 rex config init
 # Edit $REX_ROOT/config.json — set inference.openai_compat.base_url and model; enable sidecars.list[].enabled
 rex config validate
-rex status   # starts detached daemon when needed
+rex status # starts detached daemon when needed
 ```
 
 Foreground **`rex daemon`** remains for debugging. Opt out with **`daemon.auto_start: false`** or **`--no-daemon-autostart`**.
@@ -201,12 +194,12 @@ Example HTTP backend (Ollama) in `$REX_ROOT/config.json`:
 
 ```json
 "inference": {
-  "runtime": "http-openai-compat",
-  "openai_compat": {
-    "base_url": "http://127.0.0.1:11434/v1",
-    "model": "llama3.2",
-    "native_tools": "auto"
-  }
+ "runtime": "http-openai-compat",
+ "openai_compat": {
+ "base_url": "http://127.0.0.1:11434/v1",
+ "model": "llama3.2",
+ "native_tools": "auto"
+ }
 }
 ```
 
@@ -227,11 +220,11 @@ Example with custom auth header:
 
 ```json
 "openai_compat": {
-  "base_url": "https://my-gateway.example/v1",
-  "model": "my-model",
-  "headers": {
-    "X-Api-Key": "secret-token"
-  }
+ "base_url": "https://my-gateway.example/v1",
+ "model": "my-model",
+ "headers": {
+ "X-Api-Key": "secret-token"
+ }
 }
 ```
 
@@ -249,18 +242,18 @@ Opt-in **`inference.gateway.mode: managed`** so `rex-daemon` spawns and controls
 
 ```json
 {
-  "inference": {
-    "runtime": "http-openai-compat",
-    "gateway": {
-      "mode": "managed",
-      "port": 4000,
-      "ollama": { "enabled": true, "api_base": "http://127.0.0.1:11434" }
-    },
-    "openai_compat": {
-      "model": "claude-sonnet-4-20250514",
-      "timeout_secs": 120
-    }
-  }
+ "inference": {
+ "runtime": "http-openai-compat",
+ "gateway": {
+ "mode": "managed",
+ "port": 4000,
+ "ollama": { "enabled": true, "api_base": "http://127.0.0.1:11434" }
+ },
+ "openai_compat": {
+ "model": "claude-sonnet-4-20250514",
+ "timeout_secs": 120
+ }
+ }
 }
 ```
 
@@ -282,17 +275,17 @@ When `mode: managed`, the daemon supervisor spawns `omlx serve --port {port}` an
 
 ```json
 {
-  "inference": {
-    "runtime": "http-openai-compat",
-    "omlx": {
-      "mode": "managed",
-      "port": 8000,
-      "model": "qwen2.5-coder-32b"
-    },
-    "openai_compat": {
-      "native_tools": "auto"
-    }
-  }
+ "inference": {
+ "runtime": "http-openai-compat",
+ "omlx": {
+ "mode": "managed",
+ "port": 8000,
+ "model": "qwen2.5-coder-32b"
+ },
+ "openai_compat": {
+ "native_tools": "auto"
+ }
+ }
 }
 ```
 
@@ -340,21 +333,21 @@ Do not commit secrets. Anthropic API keys belong in LiteLLM configuration, not R
 
 ```json
 {
-  "inference": {
-    "runtime": "http-openai-compat",
-    "openai_compat": {
-      "base_url": "http://127.0.0.1:4000/v1",
-      "model": "claude-sonnet-4-20250514",
-      "timeout_secs": 120
-    }
-  },
-  "sidecars": {
-    "active": "stub",
-    "required": true,
-    "list": [
-      { "name": "stub", "binary": "rex-sidecar-stub", "enabled": true, "socket": "/tmp/rex-sidecar.sock" }
-    ]
-  }
+ "inference": {
+ "runtime": "http-openai-compat",
+ "openai_compat": {
+ "base_url": "http://127.0.0.1:4000/v1",
+ "model": "claude-sonnet-4-20250514",
+ "timeout_secs": 120
+ }
+ },
+ "sidecars": {
+ "active": "stub",
+ "required": true,
+ "list": [
+ { "name": "stub", "binary": "rex-sidecar-stub", "enabled": true, "socket": "/tmp/rex-sidecar.sock" }
+ ]
+ }
 }
 ```
 
@@ -445,7 +438,7 @@ CLI flags: `rex complete --verbose` (stderr status in text mode), `--yes` / `--a
 - [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md)
 - [ADAPTERS.md](ADAPTERS.md)
 - [CACHING.md](CACHING.md)
-- [EXTENSION.md](EXTENSION.md)
+- [NDJSON_STREAM.md](NDJSON_STREAM.md)
 - [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md)
 - [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
 - [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)

@@ -3,8 +3,5 @@ name: "Rex CodeQL config"
 paths-ignore:
   - "**/target/**"
   - "**/node_modules/**"
-  - "extensions/rex-vscode/dist/**"
-  - "extensions/rex-vscode/out/**"
-  - "extensions/rex-vscode/coverage/**"
   - "fixtures/**"
   - "ci-observability/**"

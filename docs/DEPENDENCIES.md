@@ -26,7 +26,7 @@ brew install protobuf
 
 ### Operator install prerequisites (local E2E)
 
-Use this table before `./scripts/reinstall-dev.sh` or the step-by-step path in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md). Run `./scripts/install-preflight.sh` for a live summary; add `--strict` to fail fast.
+Use this table before `./scripts/install-cli.sh` or the step-by-step path in [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Run `./scripts/install-preflight.sh` for a live summary; add `--strict` to fail fast.
 
 | Component | Minimum | macOS install hint |
 |---|---|---|
@@ -35,7 +35,7 @@ Use this table before `./scripts/reinstall-dev.sh` or the step-by-step path in [
 | Python (`rex-agent`) | **3.10+** | `brew install python@3.12` — avoid macOS CLT default **3.9** |
 | `pip` (rex-agent venv) | auto-upgraded in venv | Created at `$REX_ROOT/venv` by [`install-agent-sidecar.sh`](../scripts/install-agent-sidecar.sh) |
 | Node.js (extension build) | **20+** | Required only when packaging/installing the VSIX |
-| Editor VS Code engine | **^1.120.0** | Must match `extensions/rex-vscode/package.json`; [`install-extension.sh`](../scripts/install-extension.sh) preflights before build |
+| Editor VS Code engine | **^1.120.0** | Must match `package.json`; [`install-cli.sh`](../scripts/install-cli.sh) preflights before build |
 
 **rex-agent layout:** editable install into `$REX_ROOT/venv` (default `~/.rex/venv`); wrapper at `~/.cargo/bin/rex-agent` sets `PYTHONPATH=$REX_ROOT/proto/gen`. Verify with `rex sidecar doctor`.
 

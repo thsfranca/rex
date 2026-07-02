@@ -11,18 +11,18 @@
 
 1. **Trait name:** `AccessPolicy` — evaluates sidecar broker requests before host execution.
 2. **Evaluation order** (single path for broker RPCs):
-   - Normalize mode and request metadata
-   - `ApprovalGate` when `agent` and policy requires approval
-   - `AccessPolicy` capability matrix ([AGENT_ACCESS_POLICY.md](../../AGENT_ACCESS_POLICY.md))
-   - Execute on host; log `broker.access_policy=allow|deny` with reason code
+ - Normalize mode and request metadata
+ - `ApprovalGate` when `agent` and policy requires approval
+ - `AccessPolicy` capability matrix ([AGENT_ACCESS_POLICY.md](../../AGENT_ACCESS_POLICY.md))
+ - Execute on host; log `broker.access_policy=allow|deny` with reason code
 3. **Mode × capability** (default product path):
 
-   | Capability | `ask` | `plan` | `agent` |
-   |------------|-------|--------|---------|
-   | `fs.read` / `fs.list` | Allow workspace | Allow workspace | Allow workspace |
-   | `fs.write` | Deny | Deny | Allow workspace (policy) |
-   | `plan.save` | Deny | Allow `.rex/plans/*.md` only | Deny |
-   | `exec.shell` | Deny | Deny | Allow allowlist |
+ | Capability | `ask` | `plan` | `agent` |
+ |------------|-------|--------|---------|
+ | `fs.read` / `fs.list` | Allow workspace | Allow workspace | Allow workspace |
+ | `fs.write` | Deny | Deny | Allow workspace (policy) |
+ | `plan.save` | Deny | Allow `.rex/plans/*.md` only | Deny |
+ | `exec.shell` | Deny | Deny | Allow allowlist |
 
 4. **Output bounds:** Broker truncates `exec.shell` stdout/stderr and large `fs.read` results to **`max_tool_result_bytes`** (config default in R015). Sidecar session scratch uses the same cap (**T5**).
 5. **Does not replace** `ApprovalGate` — approvals are UX/human gates; `AccessPolicy` is technical allow/deny.

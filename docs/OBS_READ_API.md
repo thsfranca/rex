@@ -32,10 +32,10 @@ When CHCE mmap ships, the read API also exposes a **live SSE tail** that merges 
 
 ```json
 {
-  "start_ms": 0,
-  "end_ms": 9999999999999,
-  "instruments": ["rex.stream.requests"],
-  "labels": { "terminal": "done" }
+ "start_ms": 0,
+ "end_ms": 9999999999999,
+ "instruments": ["rex.stream.requests"],
+ "labels": { "terminal": "done" }
 }
 ```
 
@@ -65,32 +65,32 @@ The Rex Grafana datasource sets `"streaming": true` in `plugin.json` when this e
 
 ```mermaid
 sequenceDiagram
-  actor Dev
-  participant Grafana as Bundled_Grafana
-  participant API as rex_obs_api
-  participant Store as rex_obs_store
+ actor Dev
+ participant Grafana as Bundled_Grafana
+ participant API as rex_obs_api
+ participant Store as rex_obs_store
 
-  Dev->>Grafana: Open dashboard
-  Grafana->>API: POST /v1/metrics/query
-  API->>Store: scan_streams_by_time
-  Store-->>API: column decode
-  API-->>Grafana: OTLP JSON + cursor_commit_ms
+ Dev->>Grafana: Open dashboard
+ Grafana->>API: POST /v1/metrics/query
+ API->>Store: scan_streams_by_time
+ Store-->>API: column decode
+ API-->>Grafana: OTLP JSON + cursor_commit_ms
 
-  Grafana->>API: GET /v1/metrics/stream
-  loop Active inference
-    API->>Store: tail_telemetry
-    Store-->>API: ring buffer event
-    API-->>Grafana: SSE point ts gt cursor
-  end
+ Grafana->>API: GET /v1/metrics/stream
+ loop Active inference
+ API->>Store: tail_telemetry
+ Store-->>API: ring buffer event
+ API-->>Grafana: SSE point ts gt cursor
+ end
 ```
 
 ## CLI
 
 ```bash
-rex obs serve    # read API only
-rex obs catalog  # instrument list
-rex obs doctor   # config + TCP health
-rex obs up       # read API + Grafana provisioning
+rex obs serve # read API only
+rex obs catalog # instrument list
+rex obs doctor # config + TCP health
+rex obs up # read API + Grafana provisioning
 ```
 
 ## Error codes

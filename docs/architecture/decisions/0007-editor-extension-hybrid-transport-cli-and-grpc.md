@@ -1,13 +1,13 @@
-# ADR 0007: Editor extension hybrid transport (`rex-cli` NDJSON primary, optional unary `rex.v1`)
+# ADR 0007: CLI client hybrid transport (`rex-cli` NDJSON primary, optional unary `rex.v1`)
 
 **Implementation note (2026):** the unified **`rex`** binary fulfills the NDJSON subprocess contract described here (`rex complete --format ndjson`); **`rex-cli`** remains a compatibility shim.
 
 - **Date:** 2026-05-05
-- **Status:** Accepted
+- **Status:** Superseded by [0038-cli-ndjson-stream-transport.md](0038-cli-ndjson-stream-transport.md) (2026-07-01). Historical: editor extension was the original thin client; contract now applies to CLI/scripts only.
 
 ## Context
 
-The VS Code / Cursor extension must stay **thin** (UX and policy presentation) while **`rex-daemon`** owns inference, streaming authority, and economics ([ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md)). Transport choices:
+The rex CLI must stay **thin** (UX and policy presentation) while **`rex-daemon`** owns inference, streaming authority, and economics ([ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md)). Transport choices:
 
 - **A — `rex-cli` only:** subprocess + **`--format ndjson`** for all daemon interaction — portable, easy to test, no Node gRPC stack.
 - **B — Node gRPC only:** extension speaks **`rex.v1`** directly over the same UDS as other clients — one wire protocol, but heavier dependency and runtime matrix (VS Code vs Cursor).
@@ -19,13 +19,13 @@ This ADR accepts **Option C**. It aligns with **isolated sidecar + dedicated sid
 
 ## Decision
 
-1. **Streaming completion in the extension** uses **`rex-cli complete … --format ndjson`** as the **canonical** path. The stable NDJSON consumer contract remains **[EXTENSION.md](../../EXTENSION.md)**.
+1. **Streaming completion in the extension** uses **`rex-cli complete … --format ndjson`** as the **canonical** path. The stable NDJSON consumer contract remains **[NDJSON_STREAM.md](../../NDJSON_STREAM.md)**.
 
 2. **Optional unary `rex.v1` over UDS** from Node (**`grpc-js`** + generated stubs) is **allowed** for calls that map cleanly to **existing `rex.v1` unary** RPCs (for example **`GetStatus`**), when maintainers accept the Node gRPC dependency cost for that slice.
 
 3. **Do not** implement **`StreamInference`** from the extension via Node gRPC **instead of** the NDJSON **`rex-cli`** path **without** a **new ADR** — that would change reliability, cancellation, and testing assumptions.
 
-4. **Do not** add **editor-only** or **extension-specific** RPCs to **`rex.v1`**; editor remains a thin client on the **shared** contract ([EXTENSION.md](../../EXTENSION.md) non-goals).
+4. **Do not** add **editor-only** or **extension-specific** RPCs to **`rex.v1`**; editor remains a thin client on the **shared** contract ([NDJSON_STREAM.md](../../NDJSON_STREAM.md) non-goals).
 
 5. **`rex-cli`** remains the **supported façade** for scripting, CI, and operators who do not embed gRPC clients.
 
@@ -37,6 +37,6 @@ This ADR accepts **Option C**. It aligns with **isolated sidecar + dedicated sid
 
 ## Related
 
-- [EXTENSION.md](../../EXTENSION.md) · [EXTENSION_ROADMAP.md](../../EXTENSION_ROADMAP.md) · [../ARCHITECTURE.md](../ARCHITECTURE.md)
+- [NDJSON_STREAM.md](../../NDJSON_STREAM.md) · [ROADMAP.md](../../ROADMAP.md) · [../ARCHITECTURE.md](../ARCHITECTURE.md)
 - [ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md) · [ADR 0005](0005-rex-owns-sidecar-environment-not-agent-implementations.md) · [ADR 0008](0008-dedicated-sidecar-control-plane-api.md)
 - [README.md](README.md) (index)

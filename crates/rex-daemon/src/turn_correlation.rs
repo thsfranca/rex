@@ -61,8 +61,8 @@ fn workspace_fingerprint() -> String {
         .unwrap_or_default()
 }
 
-/// Strip extension-embedded `---` / `File:` / `Selection:` trailer (conflict C1).
-pub fn strip_extension_context_blocks(prompt: &str) -> (String, bool) {
+/// Strip client-embedded `---` / `File:` / `Selection:` trailer (conflict C1).
+pub fn strip_client_context_blocks(prompt: &str) -> (String, bool) {
     let trimmed = prompt.trim_end();
     let Some(sep_idx) = trimmed.rfind("\n---\n") else {
         return (prompt.to_string(), false);
@@ -91,7 +91,7 @@ mod tests {
     #[test]
     fn strip_removes_extension_file_selection_trailer() {
         let prompt = "fix the bug\n\n---\nFile: src/main.rs\nLanguage: rust";
-        let (stripped, applied) = strip_extension_context_blocks(prompt);
+        let (stripped, applied) = strip_client_context_blocks(prompt);
         assert!(applied);
         assert_eq!(stripped, "fix the bug");
     }

@@ -4,7 +4,7 @@
 
 ## Purpose
 
-Give **terminal operators** a Rex experience that does not require a dedicated foreground **`rex daemon`** session. The CLI should **ensure the daemon when configured**, present a **full terminal UI** for interactive work, and surface **legible operator messaging** so users understand lifecycle and in-flight work—while preserving **`rex complete --format ndjson`** for the extension, CI, and scripts ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md), [EXTENSION.md](EXTENSION.md)).
+Give **terminal operators** a Rex experience that does not require a dedicated foreground **`rex daemon`** session. The CLI should **ensure the daemon when configured**, present a **full terminal UI** for interactive work, and surface **legible operator messaging** so users understand lifecycle and in-flight work—while preserving **`rex complete --format ndjson`** for the extension, CI, and scripts ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md), [NDJSON_STREAM.md](NDJSON_STREAM.md)).
 
 **Primary surface (target):** multi-pane TUI for **`rex tui`** and TTY **`rex complete`**. Plain text and NDJSON pipe modes remain for automation.
 
@@ -30,7 +30,7 @@ Operators working in a terminal should use Rex as a single command—not as a tw
 - Full TUI for interactive sessions on a TTY.
 - Structured operator messaging catalog (lifecycle + stream events).
 - Config and flags for auto-start, UI mode, readiness timeout, log path (design intent; schema lands in implementation PRs).
-- Alignment table with extension **`DaemonLifecycle`** ([`extensions/rex-vscode/src/runtime/daemonLifecycle.ts`](../extensions/rex-vscode/src/runtime/daemonLifecycle.ts)).
+- Alignment table with extension **`DaemonLifecycle`** ([`src/runtime/daemonLifecycle.ts`](../src/runtime/daemonLifecycle.ts)).
 
 **Out:**
 
@@ -55,28 +55,28 @@ Operators working in a terminal should use Rex as a single command—not as a tw
 
 ```mermaid
 flowchart TB
-  subgraph operator [Operator terminal]
-    TUI[rex_tui_or_complete_TTY]
-  end
-  subgraph cli [rex CLI]
-    Lifecycle[ensure_daemon]
-    MsgLayer[operator_messaging]
-    Transport[NDJSON_consumer]
-  end
-  subgraph daemon [rex daemon]
-    UDS[UDS_rex_v1]
-  end
-  subgraph ext [Extension optional]
-    ExtLife[DaemonLifecycle]
-  end
+ subgraph operator [Operator terminal]
+ TUI[rex_tui_or_complete_TTY]
+ end
+ subgraph cli [rex CLI]
+ Lifecycle[ensure_daemon]
+ MsgLayer[operator_messaging]
+ Transport[NDJSON_consumer]
+ end
+ subgraph daemon [rex daemon]
+ UDS[UDS_rex_v1]
+ end
+ subgraph ext [Extension optional]
+ ExtLife[DaemonLifecycle]
+ end
 
-  TUI --> Lifecycle
-  TUI --> MsgLayer
-  TUI --> Transport
-  Lifecycle -->|"spawn if down"| UDS
-  Transport --> UDS
-  ExtLife -->|"same states"| UDS
-  MsgLayer -->|"maps events"| TUI
+ TUI --> Lifecycle
+ TUI --> MsgLayer
+ TUI --> Transport
+ Lifecycle -->|"spawn if down"| UDS
+ Transport --> UDS
+ ExtLife -->|"same states"| UDS
+ MsgLayer -->|"maps events"| TUI
 ```
 
 | Layer | Owns |
@@ -195,15 +195,15 @@ Optional layer that summarizes a completed multi-tool turn in natural language.
 
 ```json
 {
-  "daemon": {
-    "socket": "/tmp/rex.sock",
-    "auto_start": true,
-    "ready_timeout_secs": 10,
-    "log_path": "~/.rex/daemon.log"
-  },
-  "cli": {
-    "ui": { "enabled": "auto", "narrator": false }
-  }
+ "daemon": {
+ "socket": "/tmp/rex.sock",
+ "auto_start": true,
+ "ready_timeout_secs": 10,
+ "log_path": "~/.rex/daemon.log"
+ },
+ "cli": {
+ "ui": { "enabled": "auto", "narrator": false }
+ }
 }
 ```
 
@@ -218,7 +218,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 | **`cli.ui.enabled`** | `"auto"` | `auto` \| `true` \| `false` — TUI on TTY |
 | **`cli.ui.narrator`** | `false` | Optional LLM summaries (**R074**) |
 
-Extension setting **`rex.daemonAutoStart`** should read/write the same effective value as **`daemon.auto_start`** when both are set (extension override wins for editor-only sessions—document in [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md)).
+Extension setting **`rex.daemonAutoStart`** should read/write the same effective value as **`daemon.auto_start`** when both are set (extension override wins for editor-only sessions—document in [ROADMAP.md](ROADMAP.md)).
 
 ### CLI flags (planned)
 
@@ -277,8 +277,8 @@ Rough rank: **Later** queue on [ROADMAP.md](ROADMAP.md)—after advisory ask-eff
 
 - [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md) — accepted design decision
 - [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md) — NDJSON event catalog
-- [EXTENSION_UX.md](EXTENSION_UX.md) — editor integrated UX (parallel surface)
-- [EXTENSION_RELEASE.md](EXTENSION_RELEASE.md) — extension daemon auto-start
+- [NDJSON_STREAM.md](NDJSON_STREAM.md) — editor integrated UX (parallel surface)
+- [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) — extension daemon auto-start
 - [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) — client surfaces
 - [CONFIGURATION.md](CONFIGURATION.md) — planned keys
 - [ERROR_HANDLING.md](ERROR_HANDLING.md) — stable error codes

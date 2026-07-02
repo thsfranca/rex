@@ -3,215 +3,215 @@ syntax = "proto3";
 package rex.v1;
 
 service RexService {
-  rpc GetSystemStatus(GetSystemStatusRequest) returns (GetSystemStatusResponse);
-  rpc StreamInference(StreamInferenceRequest) returns (stream StreamInferenceResponse);
-  // Sidecar broker: workspace file read (MVP `fs.read`).
-  rpc BrokerReadFile(BrokerReadFileRequest) returns (BrokerReadFileResponse);
-  rpc BrokerListDir(BrokerListDirRequest) returns (BrokerListDirResponse);
-  rpc BrokerWriteFile(BrokerWriteFileRequest) returns (BrokerWriteFileResponse);
-  rpc BrokerSavePlan(BrokerSavePlanRequest) returns (BrokerSavePlanResponse);
-  rpc BrokerExecShell(BrokerExecShellRequest) returns (BrokerExecShellResponse);
-  // Sidecar broker: web search (ask-mode research; provider configured in JSON).
-  rpc BrokerWebSearch(BrokerWebSearchRequest) returns (BrokerWebSearchResponse);
-  // Sidecar broker: bounded workspace basename/content search (R059).
-  rpc BrokerWorkspaceSearch(BrokerWorkspaceSearchRequest) returns (BrokerWorkspaceSearchResponse);
-  // Sidecar broker: OpenAI-compatible HTTP inference (daemon executes backend).
-  rpc BrokerInference(BrokerInferenceRequest) returns (BrokerInferenceResponse);
+ rpc GetSystemStatus(GetSystemStatusRequest) returns (GetSystemStatusResponse);
+ rpc StreamInference(StreamInferenceRequest) returns (stream StreamInferenceResponse);
+ // Sidecar broker: workspace file read (MVP `fs.read`).
+ rpc BrokerReadFile(BrokerReadFileRequest) returns (BrokerReadFileResponse);
+ rpc BrokerListDir(BrokerListDirRequest) returns (BrokerListDirResponse);
+ rpc BrokerWriteFile(BrokerWriteFileRequest) returns (BrokerWriteFileResponse);
+ rpc BrokerSavePlan(BrokerSavePlanRequest) returns (BrokerSavePlanResponse);
+ rpc BrokerExecShell(BrokerExecShellRequest) returns (BrokerExecShellResponse);
+ // Sidecar broker: web search (ask-mode research; provider configured in JSON).
+ rpc BrokerWebSearch(BrokerWebSearchRequest) returns (BrokerWebSearchResponse);
+ // Sidecar broker: bounded workspace basename/content search (R059).
+ rpc BrokerWorkspaceSearch(BrokerWorkspaceSearchRequest) returns (BrokerWorkspaceSearchResponse);
+ // Sidecar broker: OpenAI-compatible HTTP inference (daemon executes backend).
+ rpc BrokerInference(BrokerInferenceRequest) returns (BrokerInferenceResponse);
 }
 
 message GetSystemStatusRequest {}
 
 message GetSystemStatusResponse {
-  string daemon_version = 1;
-  uint64 uptime_seconds = 2;
-  string active_model_id = 3;
-  // Canonical workspace root bound at daemon startup (R075).
-  string workspace_root = 4;
-  // Operational lifecycle: "ready" (work in flight) or "idle" (no active work).
-  string lifecycle_state = 5;
-  // Seconds since last work ended; 0 while lifecycle_state is "ready".
-  uint64 idle_seconds = 6;
-  // Seconds until idle shutdown; 0 when disabled or activity/contact is fresh.
-  uint64 seconds_until_shutdown = 7;
+ string daemon_version = 1;
+ uint64 uptime_seconds = 2;
+ string active_model_id = 3;
+ // Canonical workspace root bound at daemon startup (R075).
+ string workspace_root = 4;
+ // Operational lifecycle: "ready" (work in flight) or "idle" (no active work).
+ string lifecycle_state = 5;
+ // Seconds since last work ended; 0 while lifecycle_state is "ready".
+ uint64 idle_seconds = 6;
+ // Seconds until idle shutdown; 0 when disabled or activity/contact is fresh.
+ uint64 seconds_until_shutdown = 7;
 }
 
 message ClientHints {
-  string active_file_path = 1;
-  string language_id = 2;
-  string selection_text = 3;
+ string active_file_path = 1;
+ string language_id = 2;
+ string selection_text = 3;
 }
 
 message StreamInferenceRequest {
-  string prompt = 1;
-  // Optional. Empty string means "use daemon default" (e.g. mock model id in MVP).
-  string model = 2;
-  // Optional. Empty string is treated as "ask". Values are normalized server-side.
-  string mode = 3;
-  // Optional. Set when extension approved agent execution (ADR 0009).
-  string approval_id = 4;
-  ClientHints client_hints = 5;
-  // Optional. Resume a soft-cap paused sidecar turn (R063 / ADR 0032).
-  string continue_token = 6;
+ string prompt = 1;
+ // Optional. Empty string means "use daemon default" (e.g. mock model id in MVP).
+ string model = 2;
+ // Optional. Empty string is treated as "ask". Values are normalized server-side.
+ string mode = 3;
+ // Optional. Set when the client approved agent execution (ADR 0009).
+ string approval_id = 4;
+ ClientHints client_hints = 5;
+ // Optional. Resume a soft-cap paused sidecar turn (R063 / ADR 0032).
+ string continue_token = 6;
 }
 
 message BrokerReadFileRequest {
-  string path = 1;
-  // Optional. Empty normalizes to "ask" on the daemon.
-  string mode = 2;
+ string path = 1;
+ // Optional. Empty normalizes to "ask" on the daemon.
+ string mode = 2;
 }
 
 message BrokerReadFileResponse {
-  bool ok = 1;
-  string content = 2;
-  string error = 3;
+ bool ok = 1;
+ string content = 2;
+ string error = 3;
 }
 
 message BrokerListDirRequest {
-  // Relative directory under workspace; empty means workspace root.
-  string path = 1;
-  // Optional. Empty normalizes to "ask" on the daemon.
-  string mode = 2;
+ // Relative directory under workspace; empty means workspace root.
+ string path = 1;
+ // Optional. Empty normalizes to "ask" on the daemon.
+ string mode = 2;
 }
 
 message DirEntry {
-  string name = 1;
-  bool is_dir = 2;
+ string name = 1;
+ bool is_dir = 2;
 }
 
 message BrokerListDirResponse {
-  bool ok = 1;
-  repeated DirEntry entries = 2;
-  string error = 3;
+ bool ok = 1;
+ repeated DirEntry entries = 2;
+ string error = 3;
 }
 
 message BrokerWriteFileRequest {
-  string path = 1;
-  string content = 2;
-  // Optional. Empty normalizes to "ask" on the daemon.
-  string mode = 3;
+ string path = 1;
+ string content = 2;
+ // Optional. Empty normalizes to "ask" on the daemon.
+ string mode = 3;
 }
 
 message BrokerWriteFileResponse {
-  bool ok = 1;
-  string error = 2;
+ bool ok = 1;
+ string error = 2;
 }
 
 message BrokerSavePlanRequest {
-  string path = 1;
-  string content = 2;
-  string mode = 3;
+ string path = 1;
+ string content = 2;
+ string mode = 3;
 }
 
 message BrokerSavePlanResponse {
-  bool ok = 1;
-  string error = 2;
+ bool ok = 1;
+ string error = 2;
 }
 
 message BrokerExecShellRequest {
-  string command = 1;
-  // Optional. Empty normalizes to "ask" on the daemon.
-  string mode = 2;
+ string command = 1;
+ // Optional. Empty normalizes to "ask" on the daemon.
+ string mode = 2;
 }
 
 message BrokerExecShellResponse {
-  bool ok = 1;
-  string stdout = 2;
-  string stderr = 3;
-  string error = 4;
+ bool ok = 1;
+ string stdout = 2;
+ string stderr = 3;
+ string error = 4;
 }
 
 message BrokerWebSearchRequest {
-  string query = 1;
-  // Optional. Empty normalizes to "ask" on the daemon.
-  string mode = 2;
-  uint32 max_results = 3;
+ string query = 1;
+ // Optional. Empty normalizes to "ask" on the daemon.
+ string mode = 2;
+ uint32 max_results = 3;
 }
 
 message WebSearchResult {
-  string title = 1;
-  string url = 2;
-  string snippet = 3;
+ string title = 1;
+ string url = 2;
+ string snippet = 3;
 }
 
 message BrokerWebSearchResponse {
-  bool ok = 1;
-  repeated WebSearchResult results = 2;
-  string error = 3;
+ bool ok = 1;
+ repeated WebSearchResult results = 2;
+ string error = 3;
 }
 
 enum WorkspaceSearchKind {
-  WORKSPACE_SEARCH_KIND_UNSPECIFIED = 0;
-  WORKSPACE_SEARCH_KIND_BASENAME = 1;
-  WORKSPACE_SEARCH_KIND_CONTENT = 2;
+ WORKSPACE_SEARCH_KIND_UNSPECIFIED = 0;
+ WORKSPACE_SEARCH_KIND_BASENAME = 1;
+ WORKSPACE_SEARCH_KIND_CONTENT = 2;
 }
 
 message BrokerWorkspaceSearchRequest {
-  string query = 1;
-  string mode = 2;
-  WorkspaceSearchKind kind = 3;
-  uint32 max_results = 4;
+ string query = 1;
+ string mode = 2;
+ WorkspaceSearchKind kind = 3;
+ uint32 max_results = 4;
 }
 
 message BrokerWorkspaceSearchResponse {
-  bool ok = 1;
-  string results = 2;
-  string error = 3;
+ bool ok = 1;
+ string results = 2;
+ string error = 3;
 }
 
 enum InferenceProtocol {
-  INFERENCE_PROTOCOL_UNSPECIFIED = 0;
-  INFERENCE_PROTOCOL_NATIVE = 1;
-  INFERENCE_PROTOCOL_INTERIM = 2;
-  INFERENCE_PROTOCOL_INTERIM_FALLBACK = 3;
+ INFERENCE_PROTOCOL_UNSPECIFIED = 0;
+ INFERENCE_PROTOCOL_NATIVE = 1;
+ INFERENCE_PROTOCOL_INTERIM = 2;
+ INFERENCE_PROTOCOL_INTERIM_FALLBACK = 3;
 }
 
 message ChatMessage {
-  string role = 1;
-  string content = 2;
+ string role = 1;
+ string content = 2;
 }
 
 message ToolSpec {
-  string name = 1;
-  string description = 2;
-  // OpenAI function parameters object as JSON text.
-  string parameters_json = 3;
+ string name = 1;
+ string description = 2;
+ // OpenAI function parameters object as JSON text.
+ string parameters_json = 3;
 }
 
 message ToolCall {
-  string id = 1;
-  string name = 2;
-  string arguments_json = 3;
+ string id = 1;
+ string name = 2;
+ string arguments_json = 3;
 }
 
 message BrokerInferenceRequest {
-  string prompt = 1;
-  string mode = 2;
-  string model = 3;
-  repeated ChatMessage messages = 4;
-  repeated ToolSpec tools = 5;
+ string prompt = 1;
+ string mode = 2;
+ string model = 3;
+ repeated ChatMessage messages = 4;
+ repeated ToolSpec tools = 5;
 }
 
 message BrokerInferenceResponse {
-  bool ok = 1;
-  string text = 2;
-  string error = 3;
-  string content = 4;
-  repeated ToolCall tool_calls = 5;
-  InferenceProtocol protocol = 6;
+ bool ok = 1;
+ string text = 2;
+ string error = 3;
+ string content = 4;
+ repeated ToolCall tool_calls = 5;
+ InferenceProtocol protocol = 6;
 }
 
 message StreamInferenceResponse {
-  string text = 1;
-  uint64 index = 2;
-  bool done = 3;
-  // Optional structured stream event. Empty or "chunk" with text = markdown delta.
-  string event = 4;
-  string tool_name = 5;
-  string phase = 6;
-  string summary = 7;
-  string detail = 8;
-  string tool_call_id = 9;
-  string turn_id = 10;
-  uint64 sequence = 11;
-  uint64 elapsed_ms = 12;
+ string text = 1;
+ uint64 index = 2;
+ bool done = 3;
+ // Optional structured stream event. Empty or "chunk" with text = markdown delta.
+ string event = 4;
+ string tool_name = 5;
+ string phase = 6;
+ string summary = 7;
+ string detail = 8;
+ string tool_call_id = 9;
+ string turn_id = 10;
+ uint64 sequence = 11;
+ uint64 elapsed_ms = 12;
 }

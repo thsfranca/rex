@@ -36,26 +36,26 @@ CHCE is an embedded library in [`crates/rex-obs-store`](../crates/rex-obs-store)
 
 ```mermaid
 flowchart TB
-  subgraph observability [Observability path]
-    daemon[rex_daemon]
-    readApi[obs_read_api]
-    grafana[Grafana_Rex_datasource]
-    cli[rex_obs_CLI]
-  end
+ subgraph observability [Observability path]
+ daemon[rex_daemon]
+ readApi[obs_read_api]
+ grafana[Grafana_Rex_datasource]
+ cli[rex_obs_CLI]
+ end
 
-  subgraph store [rex_obs_store]
-    port[StorePort]
-    sqlite[SqliteEngine]
-    chce[ChceEngine]
-    port --> sqlite
-    port --> chce
-    chce --> files["store.rexobs + store.dict"]
-  end
+ subgraph store [rex_obs_store]
+ port[StorePort]
+ sqlite[SqliteEngine]
+ chce[ChceEngine]
+ port --> sqlite
+ port --> chce
+ chce --> files["store.rexobs + store.dict"]
+ end
 
-  daemon -->|append_* when observability.enabled| port
-  readApi -->|scan_* / tail_*| port
-  grafana --> readApi
-  cli --> readApi
+ daemon -->|append_* when observability.enabled| port
+ readApi -->|scan_* / tail_*| port
+ grafana --> readApi
+ cli --> readApi
 ```
 
 Byte layout, compression tiers, and zone maps: [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md).
@@ -130,21 +130,21 @@ One PR per row where feasible; merge-wait between slices. Canonical queue: [ROAD
 
 ```mermaid
 flowchart TD
-  r043[R043_StorePort]
-  r044[R044_RingBuffer]
-  r045[R045_Dictionary]
-  r046[R046_PageSeal]
-  r047[R047_WriteParity]
-  r048[R048_ReadParity]
-  r049[R049_Harness]
-  r050[R050_SSE]
-  r043 --> r044
-  r044 --> r046
-  r045 --> r046
-  r046 --> r047
-  r047 --> r048
-  r048 --> r049
-  r049 --> r050
+ r043[R043_StorePort]
+ r044[R044_RingBuffer]
+ r045[R045_Dictionary]
+ r046[R046_PageSeal]
+ r047[R047_WriteParity]
+ r048[R048_ReadParity]
+ r049[R049_Harness]
+ r050[R050_SSE]
+ r043 --> r044
+ r044 --> r046
+ r045 --> r046
+ r046 --> r047
+ r047 --> r048
+ r048 --> r049
+ r049 --> r050
 ```
 
 ## Per-slice acceptance

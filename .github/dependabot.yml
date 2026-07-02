@@ -14,23 +14,6 @@ updates:
       prefix: chore
       include: scope
 
-  - package-ecosystem: npm
-    directory: /extensions/rex-vscode
-    schedule:
-      interval: weekly
-      day: tuesday
-    open-pull-requests-limit: 3
-    groups:
-      vscode-deps:
-        patterns: ["*"]
-    cooldown:
-      default-days: 3
-      semver-major-days: 14
-    labels: ["dependencies", "npm"]
-    commit-message:
-      prefix: chore
-      include: scope
-
   - package-ecosystem: pip
     directory: /sidecars/rex-agent
     schedule:

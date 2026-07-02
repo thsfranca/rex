@@ -10,7 +10,7 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 
 REX provides a local AI runtime with one daemon as the **system authority** for **streaming contracts, adapter policy, caches, pipelines, and the agent/economics roadmap** ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). Isolated **agent runtime environments** (when implemented) remain **supervised and policy-bound** to the daemon—see [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). **Sidecar ↔ daemon** integration uses a **dedicated brokered API**, not **`rex.v1`** — [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
-The editor extension keeps **`rex complete` NDJSON** as the **primary** streaming path; optional unary **`rex.v1`** over UDS is allowed per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**.
+The CLI client keeps **`rex complete` NDJSON** as the **primary** streaming path; optional unary **`rex.v1`** over UDS is allowed per **[ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)**.
 
 | Component | Responsibility |
 |---|---|
@@ -41,7 +41,7 @@ rex config init
 # Edit $REX_ROOT/config.json — inference.openai_compat + sidecars.active=agent (binary rex-agent)
 rex config validate
 cargo build --workspace
-rex daemon   # debug / foreground; planned: opt-in auto-start — docs/CLI_OPERATOR_UX.md
+rex daemon # debug / foreground; planned: opt-in auto-start — docs/CLI_OPERATOR_UX.md
 rex status
 rex complete "hello from rex" --format ndjson --mode agent
 ```
@@ -58,14 +58,14 @@ The Phase 1 product path requires a **supervised sidecar** for assistant modes �
 
 ```json
 {
-  "inference": {
-    "runtime": "http-openai-compat",
-    "openai_compat": {
-      "base_url": "http://127.0.0.1:4000/v1",
-      "model": "claude-sonnet-4-20250514"
-    }
-  },
-  "sidecars": { "active": "stub", "required": true }
+ "inference": {
+ "runtime": "http-openai-compat",
+ "openai_compat": {
+ "base_url": "http://127.0.0.1:4000/v1",
+ "model": "claude-sonnet-4-20250514"
+ }
+ },
+ "sidecars": { "active": "stub", "required": true }
 }
 ```
 
@@ -79,22 +79,22 @@ Legacy `REX_OPENAI_COMPAT_*` / `REX_SIDECAR_ENABLED` env vars are **ignored with
 
 ```json
 {
-  "inference": {
-    "runtime": "http-openai-compat",
-    "omlx": {
-      "mode": "managed",
-      "port": 8000,
-      "model": "your-mlx-model-id"
-    },
-    "openai_compat": {
-      "native_tools": "auto"
-    }
-  },
-  "daemon": {
-    "auto_start": true,
-    "ready_timeout_secs": 45
-  },
-  "sidecars": { "active": "agent", "required": true }
+ "inference": {
+ "runtime": "http-openai-compat",
+ "omlx": {
+ "mode": "managed",
+ "port": 8000,
+ "model": "your-mlx-model-id"
+ },
+ "openai_compat": {
+ "native_tools": "auto"
+ }
+ },
+ "daemon": {
+ "auto_start": true,
+ "ready_timeout_secs": 45
+ },
+ "sidecars": { "active": "agent", "required": true }
 }
 ```
 
@@ -135,7 +135,7 @@ AI responsibilities:
 | Installed command not found | PATH not updated after install | Re-run install script and reload shell |
 | `requires-python >=3.10` on rex-agent install | macOS CLT Python 3.9 or wrong `pip` on PATH | `brew install python@3.12`; `./scripts/install-agent-sidecar.sh`; `rex sidecar doctor` |
 | PEP 668 / externally-managed pip | System Python blocked global install | Use `$REX_ROOT/venv` via `./scripts/install-agent-sidecar.sh` |
-| Extension VSIX engine mismatch | Cursor/VS Code below **^1.120.0** | Upgrade editor or use older VSIX; `./scripts/install-extension.sh` preflights before build |
+| Extension VSIX engine mismatch | Cursor/VS Code below **^1.120.0** | Upgrade editor or use older VSIX; `./scripts/install-cli.sh` preflights before build |
 
 ## 3) Development workflow and quality gates
 

@@ -16,15 +16,13 @@ assert_contains() {
 
 run_gate_case() {
   local rust_rel="$1"
-  local ext_rel="$2"
-  local sidecar_rel="$3"
-  local rust_res="$4"
-  local ext_res="$5"
-  local sidecar_res="$6"
-  local expected_exit="$7"
-  local expected_signal_line="$8"
-  local guidelines_res="${9:-success}"
-  local guidelines_rel="${10:-true}"
+  local sidecar_rel="$2"
+  local rust_res="$3"
+  local sidecar_res="$4"
+  local expected_exit="$5"
+  local expected_signal_line="$6"
+  local guidelines_res="${7:-success}"
+  local guidelines_rel="${8:-true}"
 
   local tmp_dir
   tmp_dir="$(mktemp -d)"
@@ -35,11 +33,9 @@ run_gate_case() {
   set +e
   output="$(
     RUST_RELEVANT="${rust_rel}" \
-    EXTENSION_RELEVANT="${ext_rel}" \
     SIDECAR_RELEVANT="${sidecar_rel}" \
     GUIDELINES_RELEVANT="${guidelines_rel}" \
     RUST_RESULT="${rust_res}" \
-    EXTENSION_RESULT="${ext_res}" \
     SIDECAR_RESULT="${sidecar_res}" \
     GUIDELINES_RESULT="${guidelines_res}" \
     GITHUB_RUN_ID="local-test-run-id" \
@@ -64,22 +60,19 @@ run_gate_case() {
   summary_contents="$(cat "${summary_file}")"
   assert_contains "${summary_contents}" "- rust-verify: ${rust_res}"
   assert_contains "${summary_contents}" "- sidecar-verify: ${sidecar_res}"
-  assert_contains "${summary_contents}" "- extension-verify: ${ext_res}"
   assert_contains "${summary_contents}" "- guidelines-verify: ${guidelines_res}"
   assert_contains "${summary_contents}" "- run_id: local-test-run-id"
 
   rm -rf "${tmp_dir}"
 }
 
-run_gate_case "true" "true" "true" "success" "success" "success" 0 "::notice::Top-level CI gate passed."
-run_gate_case "true" "true" "true" "failure" "success" "success" 1 "CI_SIGNAL code=GATE_FAIL"
-run_gate_case "true" "true" "true" "success" "failure" "success" 1 "CI_SIGNAL code=GATE_FAIL"
-run_gate_case "true" "true" "true" "success" "success" "failure" 1 "CI_SIGNAL code=GATE_FAIL"
-run_gate_case "false" "false" "false" "skipped" "skipped" "skipped" 0 "::notice::Top-level CI gate passed."
-run_gate_case "false" "false" "false" "success" "success" "success" 0 "::notice::Top-level CI gate passed."
-run_gate_case "false" "true" "false" "skipped" "success" "skipped" 0 "::notice::Top-level CI gate passed."
-run_gate_case "true" "false" "true" "success" "skipped" "success" 0 "::notice::Top-level CI gate passed."
-run_gate_case "false" "false" "false" "skipped" "skipped" "skipped" 0 "::notice::Top-level CI gate passed." "skipped" "false"
-run_gate_case "true" "true" "true" "success" "success" "success" 1 "CI_SIGNAL code=GUIDELINES_FAIL" "failure"
+run_gate_case "true" "true" "success" "success" 0 "::notice::Top-level CI gate passed."
+run_gate_case "true" "true" "failure" "success" 1 "CI_SIGNAL code=GATE_FAIL"
+run_gate_case "true" "true" "success" "failure" 1 "CI_SIGNAL code=GATE_FAIL"
+run_gate_case "false" "false" "skipped" "skipped" 0 "::notice::Top-level CI gate passed."
+run_gate_case "false" "false" "success" "success" 0 "::notice::Top-level CI gate passed."
+run_gate_case "true" "false" "success" "skipped" 0 "::notice::Top-level CI gate passed."
+run_gate_case "false" "false" "skipped" "skipped" 0 "::notice::Top-level CI gate passed." "skipped" "false"
+run_gate_case "true" "true" "success" "success" 1 "CI_SIGNAL code=GUIDELINES_FAIL" "failure"
 
 echo "enforce_ci_gate contract tests passed."

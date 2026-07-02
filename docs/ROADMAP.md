@@ -29,7 +29,7 @@ Canonical definitions and evidence: **[V1_0.md](V1_0.md)**. Update status there 
 
 | ID | Status | Notes |
 |----|--------|-------|
-| RC-S1 | Met | Extension `rex.modelId` → `--model` — [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
+| RC-S1 | Met | CLI `--model` on `complete` — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) |
 | RC-S2 | Met | Long-session extension stress — cancel returns UI to idle |
 | RC-S6 | Met | Opt-in live LLM economics smoke (**R039–R040**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
 
@@ -37,29 +37,29 @@ Canonical definitions and evidence: **[V1_0.md](V1_0.md)**. Update status there 
 
 ```mermaid
 flowchart LR
-  core[CoreStreaming_RC01_RC07]
-  side[Sidecar_RC03]
-  broker[BrokeredHttpTool_RC04]
-  ext[Extension_RC02_RC06]
-  policyBroker[AccessPolicyBroker_RC05]
-  agent[R013_R038_agent_Done]
-  langfuseDisc[LangFuse_discovery_LF-D]
-  langfuseRm[LF-R01_dead_code_removal]
-  langfuseImpl[LF-F01_export]
-  v1[v1_0_RC_LF1_Met]
-  core --> side
-  side --> broker
-  broker --> ext
-  side --> policyBroker
-  core --> agent
-  ext --> agent
-  agent --> langfuseDisc
-  langfuseDisc --> langfuseRm
-  langfuseRm --> langfuseImpl
-  policyBroker --> v1
-  ext --> v1
-  agent --> v1
-  langfuseImpl --> v1
+ core[CoreStreaming_RC01_RC07]
+ side[Sidecar_RC03]
+ broker[BrokeredHttpTool_RC04]
+ ext[Extension_RC02_RC06]
+ policyBroker[AccessPolicyBroker_RC05]
+ agent[R013_R038_agent_Done]
+ langfuseDisc[LangFuse_discovery_LF-D]
+ langfuseRm[LF-R01_dead_code_removal]
+ langfuseImpl[LF-F01_export]
+ v1[v1_0_RC_LF1_Met]
+ core --> side
+ side --> broker
+ broker --> ext
+ side --> policyBroker
+ core --> agent
+ ext --> agent
+ agent --> langfuseDisc
+ langfuseDisc --> langfuseRm
+ langfuseRm --> langfuseImpl
+ policyBroker --> v1
+ ext --> v1
+ agent --> v1
+ langfuseImpl --> v1
 ```
 
 **Current focus:** LangFuse discovery — **LF-D01** next — [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md); [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md#current-focus-queue-audit-2026-06-09).
@@ -71,7 +71,7 @@ Streaming/agent Must **RC-01–RC-10** are **Met**. Observability Must **RC-LF1*
 | Priority | What | Notes |
 |----------|------|-------|
 | **Should** | Optional hardening | Stream/log polish beyond **RC-07** (Met); `cargo-deny`, Semgrep (**R026** Could) |
-| **Maintenance** | Extension + release docs | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) — E-UX01…E-UX11 **Done** |
+| **Removed** | VS Code extension (in-repo) | Removed 2026-07 — CLI-only thin client; see [NDJSON_STREAM.md](NDJSON_STREAM.md), [ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md) |
 
 ## Next — prioritized queue (audit 2026-06-09)
 
@@ -160,11 +160,11 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 
 | ID | Theme | Priority |
 |----|-------|----------|
-| R004 | CLI / extension NDJSON seam hardening | Done |
+| R004 | CLI NDJSON seam hardening | Done |
 | R005 | Cross-boundary NDJSON conformance tests | Done |
 | R007 | Policy engine / cache seams | Done |
 | R008 | Centralized agent approvals | Done |
-| R009 | Extension contract tests (approval-id, probe recovery) | Done |
+| R009 | CLI contract tests (approval-id, probe recovery) | Done |
 | R010 | Broker `fs.write` | Done |
 | R011 | Broker `exec.shell` allowlist | Done |
 | **R012** | **AccessPolicy broker centralization** (RC-05) | **Done** |

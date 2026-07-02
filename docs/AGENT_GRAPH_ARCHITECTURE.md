@@ -41,7 +41,7 @@ Aligns with [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md): sidecar requ
 | Cost bucket | When charged | Typical dominance (5–12 step agent task) |
 |-------------|--------------|------------------------------------------|
 | **Per-turn fixed** | Once per `RunTurn`: daemon `effective_prompt`, lexical `[context]`, layered assemblies | Moderate on medium repos; amortized over steps |
-| **Per-step quadratic** | Each `BrokerInference`: full `messages_to_prompt()` re-sends static prefix + growing suffix | **Dominant** without vendor prefix cache (~90% input on steps 2–12) |
+| **Per-step quadratic** | Each `BrokerInference`: full `messages_to_prompt` re-sends static prefix + growing suffix | **Dominant** without vendor prefix cache (~90% input on steps 2–12) |
 | **Tool result bulk** | Each read/exec appended to suffix; JSON wrapping adds overhead | High when reads are large; **R034** + microcompaction reduce |
 | **Parse retries** | Up to 3 synthetic errors on malformed JSON tool lines | Non-trivial until **R038** native tools — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 
@@ -49,23 +49,23 @@ Aligns with [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md): sidecar requ
 
 ```mermaid
 sequenceDiagram
-  participant Ext as Extension
-  participant Daemon as rex_daemon
-  participant Sidecar as rex_agent
-  participant LLM as BrokerInference
+ participant Ext as Extension
+ participant Daemon as rex_daemon
+ participant Sidecar as rex_agent
+ participant LLM as BrokerInference
 
-  Ext->>Daemon: StreamInference prompt
-  Note over Daemon: ContextPipeline once per turn
-  Daemon->>Sidecar: RunTurn effective_prompt
-  loop Each tool step max 12
-    Sidecar->>Sidecar: messages_to_prompt static prefix plus suffix
-    Sidecar->>LLM: Single user message string
-    LLM-->>Sidecar: tool or final
-    Sidecar->>Daemon: BrokerReadFile etc
-    Daemon-->>Sidecar: Raw delimited result R034
-    Sidecar->>Sidecar: Microcompact stale reads
-  end
-  Sidecar-->>Ext: NDJSON stream
+ Ext->>Daemon: StreamInference prompt
+ Note over Daemon: ContextPipeline once per turn
+ Daemon->>Sidecar: RunTurn effective_prompt
+ loop Each tool step max 12
+ Sidecar->>Sidecar: messages_to_prompt static prefix plus suffix
+ Sidecar->>LLM: Single user message string
+ LLM-->>Sidecar: tool or final
+ Sidecar->>Daemon: BrokerReadFile etc
+ Daemon-->>Sidecar: Raw delimited result R034
+ Sidecar->>Sidecar: Microcompact stale reads
+ end
+ Sidecar-->>Ext: NDJSON stream
 ```
 
 ## Interfaces (intent)
@@ -147,33 +147,33 @@ Truncation at **line boundaries** when exceeding `max_tool_result_bytes`.
 |---|----------|-----------|
 | 1 | **Cache header owner:** LiteLLM gateway vs native daemon HTTP adapter for Anthropic `cache_control` / OpenAI automatic caching | [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADAPTERS.md](ADAPTERS.md) |
 | 2 | **Linter sandbox:** whether `AccessPolicy` permits compile/lint during tool loop or requires isolated runner | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) |
-| 3 | **NDJSON streaming:** whether raw delimited tool results require extension parser version bump | [EXTENSION.md](EXTENSION.md) |
+| 3 | **NDJSON streaming:** whether raw delimited tool results require extension parser version bump | [NDJSON_STREAM.md](NDJSON_STREAM.md) |
 
 ## Target topology
 
 ```mermaid
 flowchart TB
-  subgraph sidecar [rex_agent]
-    Init[GraphInit_from_RunTurn]
-    Orch{Orchestrator}
-    Viewer[ViewerSubgraph]
-    Editor[EditorSubgraph]
-    Compact[StateCompaction]
-    Micro[Microcompaction]
-    ToolNode[ToolNode]
-    LLM[RexBrokerChatModel]
-    Init --> Orch
-    Orch -->|explore| Viewer
-    Orch -->|modify| Editor
-    Viewer --> ToolNode
-    Editor --> ToolNode
-    ToolNode --> Micro
-    Micro --> Compact
-    Compact --> Orch
-    Viewer -.-> LLM
-    Editor -.-> LLM
-    Orch -.-> LLM
-  end
+ subgraph sidecar [rex_agent]
+ Init[GraphInit_from_RunTurn]
+ Orch{Orchestrator}
+ Viewer[ViewerSubgraph]
+ Editor[EditorSubgraph]
+ Compact[StateCompaction]
+ Micro[Microcompaction]
+ ToolNode[ToolNode]
+ LLM[RexBrokerChatModel]
+ Init --> Orch
+ Orch -->|explore| Viewer
+ Orch -->|modify| Editor
+ Viewer --> ToolNode
+ Editor --> ToolNode
+ ToolNode --> Micro
+ Micro --> Compact
+ Compact --> Orch
+ Viewer -.-> LLM
+ Editor -.-> LLM
+ Orch -.-> LLM
+ end
 ```
 
 ## Phased milestones
@@ -220,9 +220,9 @@ Follow-on after R060–R065 to fix short advisory prompts (for example “What s
 **R068 — Ask answer-first prompt policy**
 
 - Replace explore-first default in `ASK_PROMPT_SLICE` with OpenCode-style guidance:
-  - Questions that do not require file changes → answer from injected context first.
-  - Use `fs.read` / `fs.list` / `workspace.search` only when context is insufficient or the user names paths.
-  - Minimize tool rounds; cite sources in the final answer.
+ - Questions that do not require file changes → answer from injected context first.
+ - Use `fs.read` / `fs.list` / `workspace.search` only when context is insufficient or the user names paths.
+ - Minimize tool rounds; cite sources in the final answer.
 - Operator overlay: [fixtures/prompts/mode/ask.md](../fixtures/prompts/mode/ask.md).
 - **Acceptance:** Golden prompt “What should we do next?” with roadmap in context → final answer without tool calls.
 

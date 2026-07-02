@@ -58,19 +58,19 @@ Assembly runs **once per `StreamInference` / `RunTurn` start** (not per LLM step
 
 ```mermaid
 flowchart TB
-  subgraph perTurn [Per_turn_start_daemon]
-    LP[LayeredPrompts_cap]
-    KR[KnowledgeRetrieval_cap]
-    LM[ProjectMemory_cap]
-    IX[LexicalRetrieval_cap]
-    LP --> KR --> LM --> IX
-    IX --> TC[TurnContext_snapshot]
-  end
-  subgraph intraTurn [Same_RunTurn_rex_agent]
-    TC --> Graph[LangGraph_state]
-    Graph --> Broker[Broker_tools_deltas]
-    Broker --> Graph
-  end
+ subgraph perTurn [Per_turn_start_daemon]
+ LP[LayeredPrompts_cap]
+ KR[KnowledgeRetrieval_cap]
+ LM[ProjectMemory_cap]
+ IX[LexicalRetrieval_cap]
+ LP --> KR --> LM --> IX
+ IX --> TC[TurnContext_snapshot]
+ end
+ subgraph intraTurn [Same_RunTurn_rex_agent]
+ TC --> Graph[LangGraph_state]
+ Graph --> Broker[Broker_tools_deltas]
+ Broker --> Graph
+ end
 ```
 
 **Default budget split (design default, overridable in R015 config):**
@@ -219,9 +219,9 @@ Canonical order: [ROADMAP.md — Next — product agent program](ROADMAP.md#next
 
 ```mermaid
 flowchart LR
-  hub[DEVELOPMENT_ASSISTANCE_CAPABILITIES.md]
-  adrs[ADRs_0011_to_0017]
-  agent[sidecars/rex-agent/DESIGN.md]
-  hub --> adrs
-  hub --> agent
+ hub[DEVELOPMENT_ASSISTANCE_CAPABILITIES.md]
+ adrs[ADRs_0011_to_0017]
+ agent[sidecars/rex-agent/DESIGN.md]
+ hub --> adrs
+ hub --> agent
 ```
