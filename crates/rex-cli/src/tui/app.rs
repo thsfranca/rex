@@ -15,7 +15,9 @@ use crate::domain::REQUEST_TIMEOUT_SECONDS;
 use crate::error::CliError;
 use crate::transport::connect_client;
 
-use super::state::{AppState, SessionPhase};
+use super::approval::respond_to_tool_approval;
+
+use super::state::{AppState, PendingApproval, SessionPhase};
 use super::stream_task::{spawn_stream_task, StreamUpdate};
 use super::ui;
 
@@ -28,6 +30,15 @@ pub async fn run() -> Result<(), String> {
 
 fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>, String> {
     crossterm::terminal::enable_raw_mode().map_err(|e| e.to_string())?;
+    if rex_config::load_merged()
+        .map(|c| c.effective.cli.ui.sync_output)
+        .unwrap_or(true)
+    {
+        let _ = crossterm::execute!(
+            io::stdout(),
+            crossterm::terminal::BeginSynchronizedUpdate
+        );
+    }
     crossterm::execute!(io::stdout(), crossterm::terminal::EnterAlternateScreen)
         .map_err(|e| e.to_string())?;
     let backend = CrosstermBackend::new(io::stdout());
@@ -35,6 +46,15 @@ fn setup_terminal() -> Result<Terminal<CrosstermBackend<io::Stdout>>, String> {
 }
 
 fn teardown_terminal(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<(), String> {
+    if rex_config::load_merged()
+        .map(|c| c.effective.cli.ui.sync_output)
+        .unwrap_or(true)
+    {
+        let _ = crossterm::execute!(
+            io::stdout(),
+            crossterm::terminal::EndSynchronizedUpdate
+        );
+    }
     crossterm::terminal::disable_raw_mode().map_err(|e| e.to_string())?;
     crossterm::execute!(terminal.backend_mut(), crossterm::terminal::LeaveAlternateScreen)
         .map_err(|e| e.to_string())?;
@@ -88,6 +108,28 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                     KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
                         app.cycle_mode();
                     }
+                    KeyCode::Char('a') | KeyCode::Char('A')
+                        if app.pending_approval.is_some() =>
+                    {
+                        if let Some(pending) = app.pending_approval.take() {
+                            let token = pending.approval_token.clone();
+                            let tool_call_id = pending.tool_call_id.clone();
+                            match respond_to_tool_approval(&token, &tool_call_id, true).await {
+                                Ok(()) => app.push_activity(format!("Approved {}", pending.name)),
+                                Err(err) => app.push_activity(format!("Approval failed: {err}")),
+                            }
+                        }
+                    }
+                    KeyCode::Char('d') | KeyCode::Char('D')
+                        if app.pending_approval.is_some() =>
+                    {
+                        if let Some(pending) = app.pending_approval.take() {
+                            let token = pending.approval_token.clone();
+                            let tool_call_id = pending.tool_call_id.clone();
+                            let _ = respond_to_tool_approval(&token, &tool_call_id, false).await;
+                            app.push_activity(format!("Denied {}", pending.name));
+                        }
+                    }
                     KeyCode::Char('y') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         app.bypass = !app.bypass;
                         app.footer = format!("Bypass: {}", if app.bypass { "on" } else { "off" });
@@ -135,6 +177,21 @@ fn apply_stream_update(app: &mut AppState, update: StreamUpdate) {
                     UiEffect::OperatorMessage(msg) => app.push_activity(msg),
                     UiEffect::ToolUpdated(card) => {
                         app.push_activity(format!("{} [{}]", card.name, card.phase));
+                        if card.phase == "approval_required" {
+                            let token = card
+                                .detail
+                                .strip_prefix("approval_required:")
+                                .unwrap_or(&card.detail)
+                                .to_string();
+                            app.pending_approval = Some(PendingApproval {
+                                tool_call_id: card.tool_call_id.clone(),
+                                name: card.name.clone(),
+                                detail: card.detail.clone(),
+                                approval_token: token,
+                            });
+                            app.footer =
+                                "Approval required — A approve | D deny".to_string();
+                        }
                     }
                     UiEffect::PhaseChanged(phase) => app.turn_phase = phase,
                     UiEffect::Ignored => {}

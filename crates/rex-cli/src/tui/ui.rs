@@ -3,7 +3,7 @@
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph, Wrap};
+use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap};
 use ratatui::Frame;
 
 use super::state::{AppState, SessionPhase};
@@ -23,6 +23,9 @@ pub fn draw(frame: &mut Frame, app: &AppState) {
     draw_body(frame, chunks[1], app);
     draw_composer(frame, chunks[2], app);
     draw_footer(frame, chunks[3], app);
+    if app.pending_approval.is_some() {
+        draw_approval_modal(frame, app);
+    }
 }
 
 fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
@@ -98,4 +101,43 @@ fn draw_composer(frame: &mut Frame, area: Rect, app: &AppState) {
 fn draw_footer(frame: &mut Frame, area: Rect, app: &AppState) {
     let footer = Paragraph::new(app.footer.as_str()).style(Style::default().fg(Color::Cyan));
     frame.render_widget(footer, area);
+}
+
+fn draw_approval_modal(frame: &mut Frame, app: &AppState) {
+    let Some(pending) = app.pending_approval.as_ref() else {
+        return;
+    };
+    let area = centered_rect(60, 40, frame.area());
+    frame.render_widget(Clear, area);
+    let body = format!(
+        "Tool: {}\nTarget: {}\n\nA — Approve\nD — Deny",
+        pending.name, pending.detail
+    );
+    let modal = Paragraph::new(body)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Tool approval "),
+        )
+        .wrap(Wrap { trim: false });
+    frame.render_widget(modal, area);
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(area);
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }
