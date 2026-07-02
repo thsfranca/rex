@@ -58,6 +58,9 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
             })
             .await
         }
+        CliCommand::Tui {
+            no_daemon_autostart,
+        } => crate::tui::run_tui(no_daemon_autostart).await,
         CliCommand::Complete {
             prompt,
             model,
@@ -71,8 +74,14 @@ async fn execute(command: CliCommand) -> Result<(), CliError> {
             format,
             yes,
             verbose,
+            no_ui,
             no_daemon_autostart,
         } => {
+            if matches!(format, CompleteOutputFormat::Text)
+                && crate::tui::should_delegate_tty_to_tui(no_ui)
+            {
+                return crate::tui::run_tui(no_daemon_autostart).await;
+            }
             run_complete(
                 prompt,
                 model,
@@ -593,7 +602,7 @@ impl CliCommand {
     fn output_format(&self) -> Option<CompleteOutputFormat> {
         match self {
             CliCommand::Complete { format, .. } => Some(*format),
-            CliCommand::Status { .. } => None,
+            CliCommand::Status { .. } | CliCommand::Tui { .. } => None,
         }
     }
 }
