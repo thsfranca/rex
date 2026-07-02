@@ -1514,6 +1514,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rex-stream-ui"
+version = "1.0.0"
+dependencies = [
+ "rex-proto",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "ring"
 version = "0.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
