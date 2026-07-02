@@ -12,8 +12,8 @@ Rex-specific pipeline stages need stable names that do not collide with generic 
 ## Decision
 
 1. **Dual namespace at export**
-   - Emit **`gen_ai.client.*`** per [OTel GenAI semconv](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-metrics/).
-   - Emit **`rex.stream.*`**, **`rex.cache.*`**, **`rex.pipeline.*`**, and **`rex.local.*`** for product attribution.
+ - Emit **`gen_ai.client.*`** per [OTel GenAI semconv](https://opentelemetry.io/docs/specs/semconv/gen-ai/gen-ai-metrics/).
+ - Emit **`rex.stream.*`**, **`rex.cache.*`**, **`rex.pipeline.*`**, and **`rex.local.*`** for product attribution.
 
 2. **Configuration** — Read from merged JSON `observability` section ([CONFIGURATION.md](../../CONFIGURATION.md)). No `REX_OBS_*` env vars.
 

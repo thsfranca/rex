@@ -12,8 +12,8 @@ Operators also lacked a distinct signal for “daemon up but not doing work” v
 ## Decision
 
 1. **Operational lifecycle** exposed on `GetSystemStatus`:
-   - **`ready`** — active work in flight (`StreamInference` stream and/or broker RPCs).
-   - **`idle`** — daemon reachable, no active work.
+ - **`ready`** — active work in flight (`StreamInference` stream and/or broker RPCs).
+ - **`idle`** — daemon reachable, no active work.
 
 2. **Idle shutdown:** when `daemon.idle_shutdown_secs` (default **300**) elapses without **both** work and client status contact, the daemon exits gracefully, stops supervised children, and removes its UDS socket. **`Some(0)`** disables idle shutdown (long-running debug).
 

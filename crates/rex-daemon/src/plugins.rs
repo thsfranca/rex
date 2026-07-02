@@ -5,7 +5,7 @@ use std::path::Path;
 use std::time::{Duration, Instant};
 
 use crate::adapters::AdapterCapabilities;
-use crate::turn_correlation::strip_extension_context_blocks;
+use crate::turn_correlation::strip_client_context_blocks;
 
 pub fn estimate_tokens(text: &str) -> usize {
     text.chars().count().div_ceil(4)
@@ -405,7 +405,7 @@ impl ContextPipeline {
         };
         let mut c1_stripped = false;
         if capabilities.attach_context && !should_skip_retrieval(request) {
-            let (stripped, applied) = strip_extension_context_blocks(&bounded_prompt);
+            let (stripped, applied) = strip_client_context_blocks(&bounded_prompt);
             if applied {
                 bounded_prompt = stripped;
                 c1_stripped = true;

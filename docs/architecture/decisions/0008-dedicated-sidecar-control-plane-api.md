@@ -9,37 +9,37 @@
 
 Requirements gathered from product architecture discussion:
 
-1. **Trust model — request / authorize, not command / obey**  
-   The sidecar expresses **intent** (for example inference plan tier, structured tool invocation). **`rex-daemon`** **authorizes, executes, meters, logs**, and retains **economics and stream authority** — consistent with [ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md) and ADR 0005.
+1. **Trust model — request / authorize, not command / obey** 
+ The sidecar expresses **intent** (for example inference plan tier, structured tool invocation). **`rex-daemon`** **authorizes, executes, meters, logs**, and retains **economics and stream authority** — consistent with [ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md) and ADR 0005.
 
-2. **Separation from `rex.v1`**  
-   A **narrow, purpose-built** sidecar ↔ daemon integration surface lets guest protocols evolve **without** turning **`rex.v1`** into a tunnel.
+2. **Separation from `rex.v1`** 
+ A **narrow, purpose-built** sidecar ↔ daemon integration surface lets guest protocols evolve **without** turning **`rex.v1`** into a tunnel.
 
-3. **Isolation envelope**  
-   The sidecar runs in an **isolated environment** without ambient host filesystem or network **by default**. Host reach is **only** via **daemon-brokered** API. Cross-boundary transport follows **explicit bridging** assumptions (see [AGENT_RUNTIME_ENVIRONMENT.md](../../AGENT_RUNTIME_ENVIRONMENT.md)).
+3. **Isolation envelope** 
+ The sidecar runs in an **isolated environment** without ambient host filesystem or network **by default**. Host reach is **only** via **daemon-brokered** API. Cross-boundary transport follows **explicit bridging** assumptions (see [AGENT_RUNTIME_ENVIRONMENT.md](../../AGENT_RUNTIME_ENVIRONMENT.md)).
 
-4. **Streaming semantics**  
-   **`StreamInference` / terminal correctness for `rex.v1` clients** remain **daemon-authoritative**. Internal routing or sidecar-planned backends must converge to **one** client-visible outcome.
+4. **Streaming semantics** 
+ **`StreamInference` / terminal correctness for `rex.v1` clients** remain **daemon-authoritative**. Internal routing or sidecar-planned backends must converge to **one** client-visible outcome.
 
-5. **Caching and policy hooks**  
-   Routing identifiers and cache keys attach to **daemon-resolved execution** (“what actually ran”), not only uncleared guest intent — so economics and cache keys stay consistent.
+5. **Caching and policy hooks** 
+ Routing identifiers and cache keys attach to **daemon-resolved execution** (“what actually ran”), not only uncleared guest intent — so economics and cache keys stay consistent.
 
 ## Decision
 
-1. **Dedicated sidecar control plane**  
-   Sidecar workloads integrate through a **purpose-built sidecar ↔ daemon API**, **distinct** from **`rex.v1`** consumed by `rex-cli` and thin editors.
+1. **Dedicated sidecar control plane** 
+ Sidecar workloads integrate through a **purpose-built sidecar ↔ daemon API**, **distinct** from **`rex.v1`** consumed by `rex-cli` and thin editors.
 
-2. **Full isolation by default**  
-   No ambient host FS/network for the guest unless explicitly brokered and policy-gated through the daemon.
+2. **Full isolation by default** 
+ No ambient host FS/network for the guest unless explicitly brokered and policy-gated through the daemon.
 
-3. **`rex.v1` unchanged for client scope**  
-   CLI and extension-class clients keep the **thin shared contract**; sidecar integration **does not** substitute for or widen **`rex.v1`** into a generic proxy.
+3. **`rex.v1` unchanged for client scope** 
+ CLI and extension-class clients keep the **thin shared contract**; sidecar integration **does not** substitute for or widen **`rex.v1`** into a generic proxy.
 
-4. **Explicit versioning**  
-   The sidecar-facing API is **versioned** and evolves with **small composable verbs**, schemas, quotas, timeouts, and structured errors — not ad-hoc escape hatches.
+4. **Explicit versioning** 
+ The sidecar-facing API is **versioned** and evolves with **small composable verbs**, schemas, quotas, timeouts, and structured errors — not ad-hoc escape hatches.
 
-5. **Anti-pattern: generic proxy**  
-   Reject exposing arbitrary URLs, raw TCP “tunnel the host,” or ambient **`exec`** without policy as part of this surface.
+5. **Anti-pattern: generic proxy** 
+ Reject exposing arbitrary URLs, raw TCP “tunnel the host,” or ambient **`exec`** without policy as part of this surface.
 
 | Do | Do not |
 |----|--------|

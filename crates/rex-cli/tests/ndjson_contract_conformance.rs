@@ -1,4 +1,4 @@
-//! Cross-boundary conformance for `rex-cli` NDJSON and the editor consumer ([docs/EXTENSION.md](../../../docs/EXTENSION.md)).
+//! Cross-boundary conformance for `rex-cli` NDJSON and CLI consumers ([docs/NDJSON_STREAM.md](../../../docs/NDJSON_STREAM.md)).
 
 use serde_json::Value;
 
@@ -30,7 +30,7 @@ fn shared_fixture_has_single_terminal_event() {
     assert_eq!(
         terminal_event_count(HAPPY_PATH_FIXTURE),
         1,
-        "EXTENSION.md requires exactly one terminal event per successful stream"
+        "NDJSON_STREAM.md requires exactly one terminal event per successful stream"
     );
 }
 

@@ -40,16 +40,16 @@ Both are **sidecar processes** (separate OS processes, plugin manifest, health p
 
 ```mermaid
 flowchart TB
-  Client[CLI_or_extension]
-  Daemon[rex_daemon]
-  Host[Host_sidecar]
-  CapA[Capability_sidecar_A]
-  CapB[Capability_sidecar_B]
-  Client -->|rex_v1| Daemon
-  Daemon -->|RunTurn| Host
-  Host -->|Broker_RPCs| Daemon
-  Daemon -->|Invoke| CapA
-  Daemon -->|Invoke| CapB
+ Client[CLI_or_extension]
+ Daemon[rex_daemon]
+ Host[Host_sidecar]
+ CapA[Capability_sidecar_A]
+ CapB[Capability_sidecar_B]
+ Client -->|rex_v1| Daemon
+ Daemon -->|RunTurn| Host
+ Host -->|Broker_RPCs| Daemon
+ Daemon -->|Invoke| CapA
+ Daemon -->|Invoke| CapB
 ```
 
 ### Invariants
@@ -86,19 +86,19 @@ Full message shapes live in [ADR 0028](architecture/decisions/0028-host-and-capa
 
 ```json
 {
-  "sidecars": {
-    "host": "rex-agent",
-    "capabilities": [
-      {
-        "name": "searxng",
-        "role": "capability",
-        "binary": "rex-searxng-capability",
-        "socket": "/tmp/rex-cap-searxng.sock",
-        "provides": ["web.search"],
-        "enabled": false
-      }
-    ]
-  }
+ "sidecars": {
+ "host": "rex-agent",
+ "capabilities": [
+ {
+ "name": "searxng",
+ "role": "capability",
+ "binary": "rex-searxng-capability",
+ "socket": "/tmp/rex-cap-searxng.sock",
+ "provides": ["web.search"],
+ "enabled": false
+ }
+ ]
+ }
 }
 ```
 

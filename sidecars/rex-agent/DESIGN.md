@@ -31,19 +31,19 @@ Python sidecar implementing the product development agent: LangGraph ReAct loop,
 
 ```mermaid
 flowchart TB
-  DaemonAssemble[Daemon_assembles_TurnContext_once]
-  Orch[Orchestrator_subgraph]
-  Viewer[Viewer_subgraph]
-  Editor[Editor_subgraph]
-  Compact[StateCompaction]
-  Tools[Broker_tools_for_deltas]
-  DaemonAssemble --> Orch
-  Orch --> Viewer
-  Orch --> Editor
-  Viewer --> Tools
-  Editor --> Tools
-  Tools --> Compact
-  Compact --> Orch
+ DaemonAssemble[Daemon_assembles_TurnContext_once]
+ Orch[Orchestrator_subgraph]
+ Viewer[Viewer_subgraph]
+ Editor[Editor_subgraph]
+ Compact[StateCompaction]
+ Tools[Broker_tools_for_deltas]
+ DaemonAssemble --> Orch
+ Orch --> Viewer
+ Orch --> Editor
+ Viewer --> Tools
+ Editor --> Tools
+ Tools --> Compact
+ Compact --> Orch
 ```
 
 **Shipped (**R027–R032**, **R031**):** Orchestrator / Viewer / Editor routing via `active_subagent`, `RexBrokerChatModel`, `add_messages` + compaction node, diff-only writes, read dedup, goal-hint read pruning (`read_pruning_enabled`, default off), metrics — see `src/rex_agent/graph.py` and `src/rex_agent/graph/`.

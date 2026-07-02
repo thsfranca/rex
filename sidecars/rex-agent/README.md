@@ -33,7 +33,7 @@ When developing the sidecar package itself:
 
 ```bash
 rex proto install
-python3.12 -m venv .venv   # or any Python >= 3.10
+python3.12 -m venv .venv # or any Python >= 3.10
 source .venv/bin/activate
 pip install -e sidecars/rex-agent
 export PYTHONPATH="$(rex proto path):${PYTHONPATH}"
@@ -65,4 +65,4 @@ Supervisor injects `REX_ROOT`, `REX_SIDECAR_SOCKET`, `REX_DAEMON_SOCKET`, and `P
 
 - [DESIGN.md](DESIGN.md) — capability contract
 - [docs/AGENT_DELIVERY_ROADMAP.md](../../docs/AGENT_DELIVERY_ROADMAP.md) — R017–R019 **Done**
-- [docs/EXTENSION_LOCAL_E2E.md](../../docs/EXTENSION_LOCAL_E2E.md) §8 — live-model operator checklist
+- [docs/CLI_OPERATOR_UX.md](../../docs/CLI_OPERATOR_UX.md) §8 — live-model operator checklist

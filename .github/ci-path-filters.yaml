@@ -6,8 +6,6 @@ rust_verify_changed:
   - 'proto/**'
   - 'Cargo.toml'
   - 'Cargo.lock'
-extension_verify_changed:
-  - 'extensions/rex-vscode/**'
 sidecar_changed:
   - 'sidecars/**'
   - 'crates/rex-sidecar-stub/**'
@@ -24,8 +22,8 @@ guidelines_changed:
   - 'fixtures/guidelines/**'
   - 'fixtures/ndjson_contract/**'
   - 'docs/ERROR_HANDLING.md'
-  - 'docs/EXTENSION.md'
-  - 'extensions/rex-vscode/src/shared/messages.ts'
+  - 'docs/NDJSON_STREAM.md'
+  - 'crates/rex-cli/src/runtime.rs'
   - 'crates/rex-daemon/src/access_policy.rs'
   - 'scripts/ci/guidelines/**'
   - 'scripts/ci/run_guidelines_verify.sh'
@@ -33,7 +31,5 @@ guidelines_changed:
 rust_codeql_changed:
   - 'crates/**'
   - 'proto/**'
-extension_codeql_changed:
-  - 'extensions/rex-vscode/**'
 python_codeql_changed:
   - 'sidecars/**'

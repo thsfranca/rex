@@ -14,8 +14,8 @@ CI runs on **Linux** ([CI.md](../../CI.md)); the mmap engine must not be require
 ## Decision
 
 1. **`rex-obs-store` exposes one logical write API** with two engines selected by merged JSON:
-   - **`observability.store.engine: "sqlite"`** (default) — SQLite at `$REX_ROOT/<store.path>` (default `obs/store.sqlite`). [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) unchanged for this path.
-   - **`observability.store.engine: "mmap"`** (opt-in, **macOS only**) — append-only mmap file per [OBS_STORE_MMAP_FORMAT.md](../../OBS_STORE_MMAP_FORMAT.md) (default path `obs/store.rexobs`).
+ - **`observability.store.engine: "sqlite"`** (default) — SQLite at `$REX_ROOT/<store.path>` (default `obs/store.sqlite`). [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) unchanged for this path.
+ - **`observability.store.engine: "mmap"`** (opt-in, **macOS only**) — append-only mmap file per [OBS_STORE_MMAP_FORMAT.md](../../OBS_STORE_MMAP_FORMAT.md) (default path `obs/store.rexobs`).
 
 2. **Feature gate unchanged** — `observability.enabled: true` enables **store + OTLP** together ([ADR 0021](0021-rex-owned-economics-store-byot-visualization.md)).
 

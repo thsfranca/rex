@@ -61,28 +61,28 @@ Rex observability is controlled only by merged JSON: **`observability.enabled`**
 
 ```mermaid
 flowchart LR
-  subgraph rex [Rex]
-    daemon[rex_daemon]
-    sidecar[agent_sidecar]
-    api[SidecarObservabilityService]
-    store[rex_obs_store]
-    readApi[obs_read_api]
-    stdout[stdout_grep]
-    sidecar --> api
-    daemon --> api
-    daemon -->|write| store
-    readApi -->|read| store
-    daemon -->|live_events| readApi
-    daemon --> stdout
-  end
-  subgraph ui [Bundled_UI]
-    grafana[Grafana]
-    plugin[Rex_OTel_datasource]
-    grafana --> plugin
-    plugin -->|HTTP_loopback| readApi
-  end
-  rexObsUp["rex obs up"] --> readApi
-  rexObsUp --> grafana
+ subgraph rex [Rex]
+ daemon[rex_daemon]
+ sidecar[agent_sidecar]
+ api[SidecarObservabilityService]
+ store[rex_obs_store]
+ readApi[obs_read_api]
+ stdout[stdout_grep]
+ sidecar --> api
+ daemon --> api
+ daemon -->|write| store
+ readApi -->|read| store
+ daemon -->|live_events| readApi
+ daemon --> stdout
+ end
+ subgraph ui [Bundled_UI]
+ grafana[Grafana]
+ plugin[Rex_OTel_datasource]
+ grafana --> plugin
+ plugin -->|HTTP_loopback| readApi
+ end
+ rexObsUp["rex obs up"] --> readApi
+ rexObsUp --> grafana
 ```
 
 **Read contract:** Grafana’s Rex datasource calls the **Rex read API** (OTel-shaped metrics, traces, logs). This is **not** PromQL, LogQL, or TraceQL against Prometheus, Loki, or Tempo.
@@ -139,7 +139,7 @@ Canonical vocabulary for grep, OTLP, store, and dashboards. **Implemented** fiel
 | Signal | Status | Meaning |
 |--------|--------|---------|
 | `stream.request_id` | implemented | Per-request id |
-| `trace_id` | implemented | Correlation with CLI / extension |
+| `trace_id` | implemented | Correlation with CLI |
 | `stream.lifecycle` | implemented | e.g. `starting`, terminal phases |
 | `stream.terminal` | implemented | Outcome class at end of stream |
 | `elapsed_ms` | implemented | Request duration |
@@ -195,11 +195,11 @@ Canonical vocabulary for grep, OTLP, store, and dashboards. **Implemented** fiel
 
 ```mermaid
 flowchart TB
-  root[invoke_agent]
-  root --> chat[chat]
-  root --> ret[retrievals]
-  root --> tool[execute_tool]
-  chat --> genai[gen_ai_client_operation]
+ root[invoke_agent]
+ root --> chat[chat]
+ root --> ret[retrievals]
+ root --> tool[execute_tool]
+ chat --> genai[gen_ai_client_operation]
 ```
 
 Correlation: `trace_id`, `stream.request_id`, future `turn_id` on **span attributes only** — not metric labels ([ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md)).

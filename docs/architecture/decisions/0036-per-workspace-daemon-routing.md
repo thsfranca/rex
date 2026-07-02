@@ -13,7 +13,7 @@ Rex used a single global daemon socket (`/tmp/rex.sock`) with config frozen at d
 
 1. **Default product path:** `daemon.socket_scope: per_workspace` (implicit when unset). Derive daemon and host sidecar UDS paths from a stable hash of canonical `workspace.root` under `$REX_ROOT/sockets/`.
 2. **Legacy escape hatch:** `daemon.socket_scope: global` uses explicit `daemon.socket` (single daemon for all clients).
-3. **CLI / extension ensure:** resolve workspace from merged JSON + cwd; autostart with `current_dir` = workspace root; per-socket autostart lock; write `.rex/config.json` `workspace.root` when missing (product path).
+3. **CLI ensure:** resolve workspace from merged JSON + cwd; autostart with `current_dir` = workspace root; per-socket autostart lock; write `.rex/config.json` `workspace.root` when missing (product path).
 4. **Status contract:** `GetSystemStatusResponse.workspace_root` exposes the daemon-bound root; clients treat mismatch as unavailable and restart owned daemons.
 5. **Sidecar socket:** host sidecar socket is overridden at daemon spawn to the derived `-sidecar.sock` path (not committed in project JSON).
 

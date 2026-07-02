@@ -124,15 +124,15 @@ JSON (R015 target): `inference.openai_compat` block — see [CONFIGURATION.md](C
 
 ```mermaid
 flowchart LR
-  CLI[rex complete]
-  Daemon[rex-daemon]
-  Sidecar[sidecar RunTurn]
-  Broker[BrokerInference]
-  Adapter[http_openai_compat]
-  LiteLLM[LiteLLM OpenAI-compat]
-  Providers[Anthropic or OpenAI API]
+ CLI[rex complete]
+ Daemon[rex-daemon]
+ Sidecar[sidecar RunTurn]
+ Broker[BrokerInference]
+ Adapter[http_openai_compat]
+ LiteLLM[LiteLLM OpenAI-compat]
+ Providers[Anthropic or OpenAI API]
 
-  CLI --> Daemon --> Sidecar --> Broker --> Adapter --> LiteLLM --> Providers
+ CLI --> Daemon --> Sidecar --> Broker --> Adapter --> LiteLLM --> Providers
 ```
 
 ### Broker provider errors (intent)

@@ -20,7 +20,7 @@ AI-assisted changes often introduce contract drift, dependency bumps, and sideca
 **In:**
 
 - Phased gates below, aligned with [PRIORITIZATION.md](PRIORITIZATION.md) (CI cost, blast radius).
-- Path-aware CI consistent with [.github/workflows/ci.yml](../.github/workflows/ci.yml) (rust-verify / extension-verify / guidelines-verify model).
+- Path-aware CI consistent with [.github/workflows/ci.yml](../.github/workflows/ci.yml) (rust-verify / guidelines-verify / guidelines-verify model).
 - Failure codes: `AUDIT_FAIL`, `SAST_FAIL`, `RUFF_FAIL` (shipped — [CI.md](CI.md)); **R026** guidelines extensions planned.
 
 **Out:**
@@ -43,14 +43,14 @@ AI-assisted changes often introduce contract drift, dependency bumps, and sideca
 
 ```mermaid
 flowchart LR
-  p1[R023_SupplyChain]
-  p2[R024_SAST_CodeQL]
-  p3[R025_Ruff_rex_agent]
-  p4[R026_Guidelines_Semgrep]
-  p1 --> p2
-  p1 --> p3
-  p2 --> p4
-  p3 --> p4
+ p1[R023_SupplyChain]
+ p2[R024_SAST_CodeQL]
+ p3[R025_Ruff_rex_agent]
+ p4[R026_Guidelines_Semgrep]
+ p1 --> p2
+ p1 --> p3
+ p2 --> p4
+ p3 --> p4
 ```
 
 | Phase | ID | Bucket | What | Acceptance when Done |

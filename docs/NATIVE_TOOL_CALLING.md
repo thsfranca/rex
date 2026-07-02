@@ -4,13 +4,13 @@
 
 **Status:** `complete` — **R038** shipped (daemon + sidecar + operator E2E script).
 
-**Related:** [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) (generative format target) · [ADAPTERS.md](ADAPTERS.md) · [CONFIGURATION.md](CONFIGURATION.md) · [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) · [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md)
+**Related:** [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) (generative format target) · [ADAPTERS.md](ADAPTERS.md) · [CONFIGURATION.md](CONFIGURATION.md) · [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) · [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md)
 
 ## Purpose
 
 Rex’s product agent (`rex-agent`) today asks models to emit tool calls as **JSON in plain text** because `BrokerInference` is `prompt` → `text` only and `http_openai_compat` posts a single user message with **no `tools` field**. Ollama and other OpenAI-compat backends already support native `tools` / `tool_calls` on the same endpoint.
 
-**R038** adds additive broker wire for structured messages and tools, daemon forwarding and SSE parsing, and sidecar routing from real `tool_calls` — with a validated interim JSON fallback for mock CI (**RC-10**). This unblocks reliable live-model plan/agent turns documented in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §8 and closes the honest gap in **R019** acceptance.
+**R038** adds additive broker wire for structured messages and tools, daemon forwarding and SSE parsing, and sidecar routing from real `tool_calls` — with a validated interim JSON fallback for mock CI (**RC-10**). This unblocks reliable live-model plan/agent turns documented in [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) §8 and closes the honest gap in **R019** acceptance.
 
 ## Product defaults (locked for R038)
 
@@ -28,7 +28,7 @@ Rex’s product agent (`rex-agent`) today asks models to emit tool calls as **JS
 - Daemon `http_openai_compat`: forward OpenAI-shaped `tools` / `tool_choice`; parse streaming `delta.tool_calls`; Ollama `/api/show` capability cache.
 - Config tri-state `inference.openai_compat.native_tools` (default **`auto`**); per-step native→interim fallback.
 - Sidecar: native path when broker supports it; interim JSON-in-text fallback for mock CI.
-- **Acceptance:** plan-mode tool loop (read known fixture file → final answer) passes against live **direct** Ollama; documented in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md).
+- **Acceptance:** plan-mode tool loop (read known fixture file → final answer) passes against live **direct** Ollama; documented in [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md).
 
 **Out (stay on R033 / later):**
 
@@ -40,28 +40,28 @@ Rex’s product agent (`rex-agent`) today asks models to emit tool calls as **JS
 
 ```mermaid
 flowchart LR
-  subgraph sidecar [rex-agent]
-    Graph[LangGraph]
-    ToolsReg[tools.py schemas]
-  end
-  subgraph daemon [rex-daemon]
-    Broker[BrokerInference]
-    HTTP[http_openai_compat]
-    Probe[api/show capability cache]
-  end
-  subgraph ollama [Ollama direct default]
-    Chat["/v1/chat/completions"]
-    Show["/api/show"]
-  end
-  Graph -->|"messages + tools"| Broker
-  ToolsReg --> Graph
-  Broker --> HTTP
-  HTTP --> Probe
-  Probe --> Show
-  HTTP -->|"tools + tool_choice"| Chat
-  Chat -->|"tool_calls or content"| HTTP
-  HTTP --> Broker
-  Broker --> Graph
+ subgraph sidecar [rex-agent]
+ Graph[LangGraph]
+ ToolsReg[tools.py schemas]
+ end
+ subgraph daemon [rex-daemon]
+ Broker[BrokerInference]
+ HTTP[http_openai_compat]
+ Probe[api/show capability cache]
+ end
+ subgraph ollama [Ollama direct default]
+ Chat["/v1/chat/completions"]
+ Show["/api/show"]
+ end
+ Graph -->|"messages + tools"| Broker
+ ToolsReg --> Graph
+ Broker --> HTTP
+ HTTP --> Probe
+ Probe --> Show
+ HTTP -->|"tools + tool_choice"| Chat
+ Chat -->|"tool_calls or content"| HTTP
+ HTTP --> Broker
+ Broker --> Graph
 ```
 
 **Not in default path:** LiteLLM gateway (`:4000`) — optional; higher interim-fallback likelihood documented in [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md).
@@ -140,12 +140,12 @@ Config (R015 JSON):
 
 ```json
 "inference": {
-  "runtime": "http-openai-compat",
-  "openai_compat": {
-    "base_url": "http://127.0.0.1:11434/v1",
-    "model": "qwen2.5-coder:7b",
-    "native_tools": "auto"
-  }
+ "runtime": "http-openai-compat",
+ "openai_compat": {
+ "base_url": "http://127.0.0.1:11434/v1",
+ "model": "qwen2.5-coder:7b",
+ "native_tools": "auto"
+ }
 }
 ```
 
@@ -153,7 +153,7 @@ Omit `native_tools` → schema default **`auto`**.
 
 ## E2E acceptance (operator; not PR CI)
 
-After [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) prerequisites (direct Ollama, `rex-agent` active):
+After [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) prerequisites (direct Ollama, `rex-agent` active):
 
 1. **Plan mode:** prompt that reads a known workspace fixture via `fs.read` and returns a final answer citing file content — **without** `parse_retries` on the native path (`protocol=native` in daemon logs).
 2. **Agent mode:** at least one brokered read under workspace root; denied read on protected path still fails closed.
@@ -176,7 +176,7 @@ Pointer: [PRIORITIZATION.md](PRIORITIZATION.md).
 |-------|-------|------------|
 | **R038 PR 1** | Proto + daemon HTTP + `/api/show` cache + `native_tools` tri-state | **Done** — `./scripts/ci/run_rust_verify.sh` |
 | **R038 PR 2** | Sidecar native path + JSON fallback | **Done** — `./scripts/ci/run_rex_agent_checks.sh` |
-| **R038 PR 3** | Operator E2E script + EXTENSION_LOCAL_E2E update | **Done** — `./scripts/verify_native_tools_live.sh` |
+| **R038 PR 3** | Operator E2E script + CLI operator path update | **Done** — `./scripts/verify_native_tools_live.sh` |
 
 ## Cross-links
 

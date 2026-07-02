@@ -13,18 +13,18 @@ Repositories accumulate agent-oriented markdown (rules, ADRs, hubs). Copilot inj
 2. **Retrieval:** Single daemon stage `KnowledgeRetrieval` (15% default context budget); **MCP is a transport profile**, not a second inject path (**C11**).
 3. **Rex-native read path:** Daemon `KnowledgeBroker` (or pipeline hook) lists/reads bundles under policy — not MCP-only.
 4. **Drift rule:**
-   - **`agent` mode:** `fail-closed` — if bundle revision ≠ git pointer, log `knowledge=drift` and omit stale chunks (or block turn per operator config).
-   - **`ask` mode:** `prefer-git` — prefer committed pointer content when drift detected; log warning.
+ - **`agent` mode:** `fail-closed` — if bundle revision ≠ git pointer, log `knowledge=drift` and omit stale chunks (or block turn per operator config).
+ - **`ask` mode:** `prefer-git` — prefer committed pointer content when drift detected; log warning.
 5. **Dedup with layered prompts:** One ingestion path per source file; content-hash dedupe (**C6**).
 6. **Open questions resolved:**
 
-   | Question | Decision |
-   |----------|----------|
-   | Rex-native broker vs MCP-only? | Rex-native broker; MCP optional transport |
-   | Multi-workspace isolation? | **Deferred** — separate bundle namespace per workspace root when implemented |
-   | Who edits knowledge? | **Deferred** — CLI/file drop first; UI later |
-   | Single store vs federated bundles? | **Deferred** — start with one bundle per workspace |
-   | vs layered prompts? | Prompts = rules; knowledge = reference corpora; separate stages |
+ | Question | Decision |
+ |----------|----------|
+ | Rex-native broker vs MCP-only? | Rex-native broker; MCP optional transport |
+ | Multi-workspace isolation? | **Deferred** — separate bundle namespace per workspace root when implemented |
+ | Who edits knowledge? | **Deferred** — CLI/file drop first; UI later |
+ | Single store vs federated bundles? | **Deferred** — start with one bundle per workspace |
+ | vs layered prompts? | Prompts = rules; knowledge = reference corpora; separate stages |
 
 ## Consequences
 

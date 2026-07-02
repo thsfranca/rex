@@ -45,25 +45,25 @@ Example (product path):
 
 ```json
 {
-  "observability": {
-    "enabled": true,
-    "service_name": "rex-daemon",
-    "custom_sidecar_metrics": true,
-    "read_api": {
-      "listen": "127.0.0.1:9470"
-    },
-    "ui": {
-      "enabled": true,
-      "grafana": {
-        "port": 3000
-      }
-    },
-    "store": {
-      "engine": "sqlite",
-      "path": "obs/store.sqlite",
-      "format_version": 1
-    }
-  }
+ "observability": {
+ "enabled": true,
+ "service_name": "rex-daemon",
+ "custom_sidecar_metrics": true,
+ "read_api": {
+ "listen": "127.0.0.1:9470"
+ },
+ "ui": {
+ "enabled": true,
+ "grafana": {
+ "port": 3000
+ }
+ },
+ "store": {
+ "engine": "sqlite",
+ "path": "obs/store.sqlite",
+ "format_version": 1
+ }
+ }
 }
 ```
 
@@ -71,8 +71,8 @@ Optional OTLP interop (not required for bundled Grafana):
 
 ```json
 "otlp": {
-  "endpoint": "http://127.0.0.1:4317",
-  "protocol": "grpc"
+ "endpoint": "http://127.0.0.1:4317",
+ "protocol": "grpc"
 }
 ```
 

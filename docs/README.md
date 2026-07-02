@@ -4,10 +4,10 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 
 | Role | Where to read |
 |------|----------------|
-| **Tutorials** (first success path) | [README.md](../README.md) quickstart, [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) |
-| **How-to** (task recipes) | [RELEASE.md](RELEASE.md), [EXTENSION_RELEASE.md](EXTENSION_RELEASE.md), [CONFIGURATION.md](CONFIGURATION.md), [CI.md](CI.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
-| **Explanation** (design intent) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [V1_0.md](V1_0.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md), [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md), [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [MVP_SPEC.md](MVP_SPEC.md), [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md), [EXTENSION_UX.md](EXTENSION_UX.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) |
-| **Reference** (narrow facts) | [ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [EXTENSION.md](EXTENSION.md), [ERROR_HANDLING.md](ERROR_HANDLING.md), [OBS_READ_API.md](OBS_READ_API.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), `proto/rex/v1/rex.proto`, [DOCUMENTATION.md](DOCUMENTATION.md) |
+| **Tutorials** (first success path) | [README.md](../README.md) quickstart, [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) |
+| **How-to** (task recipes) | [RELEASE.md](RELEASE.md), [CONFIGURATION.md](CONFIGURATION.md), [CI.md](CI.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
+| **Explanation** (design intent) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [V1_0.md](V1_0.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md), [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md), [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [MVP_SPEC.md](MVP_SPEC.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) |
+| **Reference** (narrow facts) | [ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [NDJSON_STREAM.md](NDJSON_STREAM.md), [ERROR_HANDLING.md](ERROR_HANDLING.md), [OBS_READ_API.md](OBS_READ_API.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), `proto/rex/v1/rex.proto`, [DOCUMENTATION.md](DOCUMENTATION.md) |
 
 ## New documentation checklist
 
@@ -60,14 +60,11 @@ Before adding or materially editing a doc under `docs/`:
 | [OBS_READ_API.md](OBS_READ_API.md) | **Cancelled** — loopback read API (historical) |
 | [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | **Cancelled** — bundled Grafana suite (historical) |
 | [CONFIGURATION.md](CONFIGURATION.md) | JSON config schema + deprecated `REX_*` catalog |
-| [EXTENSION.md](EXTENSION.md) | Extension NDJSON contract + component layout |
+| [NDJSON_STREAM.md](NDJSON_STREAM.md) | NDJSON stream contract for CLI and automation |
 | [ERROR_HANDLING.md](ERROR_HANDLING.md) | Error codes, human-readable messages, CI guidelines gate |
 | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Plan mode tools, stream contract, broker plan.save |
-| [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) | Extension phasing |
-| [EXTENSION_UX.md](EXTENSION_UX.md) | Extension integrated UX design hub |
-| [RELEASE.md](RELEASE.md) | Core + extension release automation |
-| [EXTENSION_RELEASE.md](EXTENSION_RELEASE.md) | Install & extension release |
-| [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) | Clone → working editor |
+| [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Terminal operator path and daemon lifecycle UX |
+| [RELEASE.md](RELEASE.md) | Core release automation |
 | [CI.md](CI.md) | Automation gates |
 | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | CI quality and security gates (**R023** Done; **R024–R026** planned) |
 | [DEPENDENCIES.md](DEPENDENCIES.md) | Toolchain prerequisites |
@@ -87,9 +84,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Daemon extensibility / sidecars | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Layered cache policy | [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | Routing / optional gateway stance | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), economics rows in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
-| Extension transport + NDJSON contract | [EXTENSION.md](EXTENSION.md), [ERROR_HANDLING.md](ERROR_HANDLING.md), [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
-| Extension UX phasing | [EXTENSION_ROADMAP.md](EXTENSION_ROADMAP.md) |
-| Extension integrated UX | [EXTENSION_UX.md](EXTENSION_UX.md) |
+| CLI transport + NDJSON contract | [NDJSON_STREAM.md](NDJSON_STREAM.md), [ERROR_HANDLING.md](ERROR_HANDLING.md), [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
 | CLI operator UX (terminal TUI, auto-start) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md) |
 | Operation feedback (live stream) | [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md), [ADR 0030](architecture/decisions/0030-incremental-run-turn-streaming.md), [ADR 0031](architecture/decisions/0031-ask-mode-research-broker.md) |
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
@@ -113,12 +108,9 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 
 | Path | Purpose |
 |------|---------|
-| [../scripts/reinstall-dev.sh](../scripts/reinstall-dev.sh) | Fast reinstall: `rex` + sidecar stub on PATH + VS Code/Cursor extension |
 | [../scripts/install-cli.sh](../scripts/install-cli.sh) | Install unified `rex` binary to `~/.cargo/bin` |
-| [../scripts/install-extension.sh](../scripts/install-extension.sh) | Local VSIX build + install |
-| [../scripts/dev-rex-extension.sh](../scripts/dev-rex-extension.sh) | Wrapper around `reinstall-dev.sh` |
 | [../scripts/verify_mvp_local.sh](../scripts/verify_mvp_local.sh) | MVP preflight (build, rust verify, sidecar verify, product path) |
 
 ## Source vs generated artifacts
 
-- Canonical text lives in **`docs/`** and source trees; **`target/`**, scratch logs, disposable VSIX artifacts stay out of Git unless a release flow dictates otherwise (`TEMP_*` coordination files remain gitignored).
+- Canonical text lives in **`docs/`** and source trees; **`target/`** and scratch logs stay out of Git (`TEMP_*` coordination files remain gitignored).

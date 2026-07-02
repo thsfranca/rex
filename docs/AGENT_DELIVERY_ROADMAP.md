@@ -14,41 +14,41 @@
 
 ```mermaid
 flowchart TB
-  subgraph clients [Clients]
-    Ext[VS_Code_extension]
-    CLI[rex_cli]
-  end
-  subgraph daemon [rex_daemon]
-    SI[StreamInference]
-    CP[ContextPipeline]
-    Pol[Policy_and_Approvals]
-    Sup[SidecarSupervisor]
-    Brk[Broker_RPCs]
-    HTTP[http_openai_compat]
-  end
-  subgraph sidecar [rex_agent_sidecar]
-    GRPC[rex_sidecar_v1_gRPC]
-    Orch[Orchestrator]
-    Viewer[ViewerSubgraph]
-    Editor[EditorSubgraph]
-    RexLLM[RexBrokerChatModel]
-    RexTools[BrokerTool_wrappers]
-    GRPC --> Orch
-    Orch --> Viewer
-    Orch --> Editor
-    Viewer --> RexTools
-    Editor --> RexTools
-    Orch --> RexLLM
-    Viewer --> RexLLM
-    Editor --> RexLLM
-    RexLLM --> Brk
-    RexTools --> Brk
-  end
-  Ext --> CLI
-  CLI --> SI
-  SI --> CP --> Pol --> Sup
-  Sup -->|RunTurn| GRPC
-  Brk --> HTTP
+ subgraph clients [Clients]
+ Ext[VS_Code_extension]
+ CLI[rex_cli]
+ end
+ subgraph daemon [rex_daemon]
+ SI[StreamInference]
+ CP[ContextPipeline]
+ Pol[Policy_and_Approvals]
+ Sup[SidecarSupervisor]
+ Brk[Broker_RPCs]
+ HTTP[http_openai_compat]
+ end
+ subgraph sidecar [rex_agent_sidecar]
+ GRPC[rex_sidecar_v1_gRPC]
+ Orch[Orchestrator]
+ Viewer[ViewerSubgraph]
+ Editor[EditorSubgraph]
+ RexLLM[RexBrokerChatModel]
+ RexTools[BrokerTool_wrappers]
+ GRPC --> Orch
+ Orch --> Viewer
+ Orch --> Editor
+ Viewer --> RexTools
+ Editor --> RexTools
+ Orch --> RexLLM
+ Viewer --> RexLLM
+ Editor --> RexLLM
+ RexLLM --> Brk
+ RexTools --> Brk
+ end
+ Ext --> CLI
+ CLI --> SI
+ SI --> CP --> Pol --> Sup
+ Sup -->|RunTurn| GRPC
+ Brk --> HTTP
 ```
 
 | Layer | Owns |
@@ -107,7 +107,7 @@ Extension defaults: **`rex`** + `["daemon"]` for auto-start. Compatibility shims
 
 **Status: partial (R071 Done).** Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md).
 
-Terminal operators should not need a dedicated foreground **`rex daemon`** session. **R071** ships extension-compatible **ensure daemon** (default on). **R072–R074** add structured messaging, TUI, and optional narrator. **`rex complete --format ndjson`** remains the extension and CI contract ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)).
+Terminal operators should not need a dedicated foreground **`rex daemon`** session. **R071** ships extension-compatible **ensure daemon** (default on). **R072–R074** add structured messaging, TUI, and optional narrator. **`rex complete --format ndjson`** remains the CLI and CI contract ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)).
 
 | ID | Theme | MoSCoW | Depends on |
 |----|-------|--------|------------|
@@ -127,24 +127,24 @@ Layout root: **`REX_ROOT`** (default `~/.rex`). Bootstrap with `rex config init`
 
 ```json
 {
-  "version": 1,
-  "daemon": { "socket": "/tmp/rex.sock" },
-  "sidecars": {
-    "active": "agent",
-    "required": true,
-    "list": [
-      { "name": "agent", "binary": "rex-agent", "enabled": true },
-      { "name": "stub", "binary": "rex-sidecar-stub", "enabled": false }
-    ]
-  },
-  "inference": {
-    "openai_compat": {
-      "base_url": "http://127.0.0.1:11434/v1",
-      "model": "llama3.2"
-    }
-  },
-  "workspace": { "root": "." },
-  "agent": { "max_tool_steps": 12 }
+ "version": 1,
+ "daemon": { "socket": "/tmp/rex.sock" },
+ "sidecars": {
+ "active": "agent",
+ "required": true,
+ "list": [
+ { "name": "agent", "binary": "rex-agent", "enabled": true },
+ { "name": "stub", "binary": "rex-sidecar-stub", "enabled": false }
+ ]
+ },
+ "inference": {
+ "openai_compat": {
+ "base_url": "http://127.0.0.1:11434/v1",
+ "model": "llama3.2"
+ }
+ },
+ "workspace": { "root": "." },
+ "agent": { "max_tool_steps": 12 }
 }
 ```
 
@@ -152,10 +152,10 @@ Layout root: **`REX_ROOT`** (default `~/.rex`). Bootstrap with `rex config init`
 
 ```
 $REX_ROOT/
-  config.json
-  proto/
-    src/               # canonical .proto sources (repo also ships proto/)
-    gen/               # flat generated stubs — path from `rex proto path`
+ config.json
+ proto/
+ src/ # canonical .proto sources (repo also ships proto/)
+ gen/ # flat generated stubs — path from `rex proto path`
 ```
 
 - Generated stubs live at **`$REX_ROOT/proto/gen`** (flat layout; no per-sidecar `proto.python_gen_path`).
@@ -186,18 +186,18 @@ Prerequisites for **`rex-agent`** dogfood (**R017–R018** Done). Design: [DEVEL
 
 ## R019 — Integration and E2E acceptance
 
-**Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, operator checklist in [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md#8-r019-acceptance--live-model-operator-not-ci), and extension operator alignment with **`rex-agent`** (JSON setup hints, default agent workspace overlay, NDJSON **`tool`**/**`step`** cards).
+**Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, operator checklist in [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#8-r019-acceptance--live-model-operator-not-ci), and extension operator alignment with **`rex-agent`** (JSON setup hints, default agent workspace overlay, NDJSON **`tool`**/**`step`** cards).
 
-**Known gap:** none — plan-mode native tool loop on direct Ollama is covered by **`./scripts/verify_native_tools_live.sh`** ([NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md), [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) §8a). CI/stub paths still use interim JSON.
+**Known gap:** none — plan-mode native tool loop on direct Ollama is covered by **`./scripts/verify_native_tools_live.sh`** ([NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) §8a). CI/stub paths still use interim JSON.
 
 **Follow-up:** opt-in automated live Ollama smoke (`ask` + brokered read/policy) — **R039** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). Plan-mode tool-loop E2E is **R038** (separate track).
 
 | Criterion | Evidence |
 |-----------|----------|
 | Extension sets `workspace.root` when auto-starting daemon | Primary `workspaceFolders[0]` |
-| Extension workspace bind merges **`rex-agent`** + approvals | [extensions/rex-vscode/src/workspace/binding.ts](../extensions/rex-vscode/src/workspace/binding.ts); `rex config init` operator template |
+| Extension workspace bind merges **`rex-agent`** + approvals | [src/workspace/binding.ts](../src/workspace/binding.ts); `rex config init` operator template |
 | **C1:** thin `client_hints`; reduce duplicate selection-in-prompt | Document interim double-count until migrated |
-| [EXTENSION_LOCAL_E2E.md](EXTENSION_LOCAL_E2E.md) with **live model** (not stub echo) | `ask`, `plan`, `agent` modes |
+| [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) with **live model** (not stub echo) | `ask`, `plan`, `agent` modes |
 | Optional: refresh [MVP_SPEC.md](MVP_SPEC.md) stub vs product table | When product agent is proven |
 
 ## Multi-active sidecars (R016 — open decision, **Could**)

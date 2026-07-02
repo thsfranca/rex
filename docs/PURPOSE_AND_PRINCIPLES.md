@@ -4,7 +4,7 @@ This document is the **single source of truth** for **why REX exists** and **how
 
 ## Purpose
 
-REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **`rex-daemon`** owns inference and stream lifecycle; **thin clients** (CLI, editor extension, scripts) use **gRPC on a Unix domain socket** (`rex.v1`). The work favors a **daemon-owned economics surface** (routing hooks, caches, pipelines, observability) described in [ARCHITECTURE.md](ARCHITECTURE.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), and [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md).
+REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **`rex-daemon`** owns inference and stream lifecycle; **thin clients** (CLI, CLI client, scripts) use **gRPC on a Unix domain socket** (`rex.v1`). The work favors a **daemon-owned economics surface** (routing hooks, caches, pipelines, observability) described in [ARCHITECTURE.md](ARCHITECTURE.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), and [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md).
 
 Concrete goals:
 

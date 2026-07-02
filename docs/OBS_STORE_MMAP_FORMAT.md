@@ -44,47 +44,47 @@ CHCE is an embedded Rust library in `crates/rex-obs-store` with no standalone da
 
 ```mermaid
 flowchart TB
-  subgraph consumers [Consumers]
-    daemon[rex-daemon]
-    readApi[rex-obs-api]
-    cli[rex CLI]
-    harness[ValidationHarness]
-  end
+ subgraph consumers [Consumers]
+ daemon[rex-daemon]
+ readApi[rex-obs-api]
+ cli[rex CLI]
+ harness[ValidationHarness]
+ end
 
-  subgraph port [StorePortTrait]
-    write[append_*]
-    read[scan_* / rollup_*]
-    live[tail_telemetry]
-  end
+ subgraph port [StorePortTrait]
+ write[append_*]
+ read[scan_* / rollup_*]
+ live[tail_telemetry]
+ end
 
-  subgraph engine [CHCE subsystems]
-    ring[LiveRingBuffer]
-    coord[AppendCoordinator]
-    codec[ColumnarCodec]
-    dict[DictionaryManager]
-    mmap[MmapPaginator]
-  end
+ subgraph engine [CHCE subsystems]
+ ring[LiveRingBuffer]
+ coord[AppendCoordinator]
+ codec[ColumnarCodec]
+ dict[DictionaryManager]
+ mmap[MmapPaginator]
+ end
 
-  subgraph disk [On-disk artifacts]
-    main[store.rexobs]
-    dictFile[store.dict]
-    wal[store.wal]
-  end
+ subgraph disk [On-disk artifacts]
+ main[store.rexobs]
+ dictFile[store.dict]
+ wal[store.wal]
+ end
 
-  daemon --> write
-  readApi --> read
-  readApi --> live
-  cli --> read
-  harness --> write
+ daemon --> write
+ readApi --> read
+ readApi --> live
+ cli --> read
+ harness --> write
 
-  write --> ring
-  coord --> ring
-  coord --> codec
-  codec --> dict
-  codec --> mmap
-  mmap --> main
-  dict --> dictFile
-  ring --> wal
+ write --> ring
+ coord --> ring
+ coord --> codec
+ codec --> dict
+ codec --> mmap
+ mmap --> main
+ dict --> dictFile
+ ring --> wal
 ```
 
 ### Subsystem responsibilities
@@ -256,19 +256,19 @@ Each sealed page is exactly **16384 bytes**.
 
 ```mermaid
 block-beta
-  columns 1
-  FileHeader["Global header magic version"]
-  space
-  block Pages:1
-    columns 4
-    P1 P2 P3 PN
-  end
-  space
-  block PageZoom:1
-    columns 5
-    PHead ColT ColF["Floats v2 ALP"] ColI PFoot
-  end
-  P1 --> PageZoom
+ columns 1
+ FileHeader["Global header magic version"]
+ space
+ block Pages:1
+ columns 4
+ P1 P2 P3 PN
+ end
+ space
+ block PageZoom:1
+ columns 5
+ PHead ColT ColF["Floats v2 ALP"] ColI PFoot
+ end
+ P1 --> PageZoom
 ```
 
 ### Commit tail

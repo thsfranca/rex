@@ -4,9 +4,6 @@ outputs:
   rust_verify_changed:
     description: Rust workspace or source paths changed.
     value: ${{ steps.filter.outputs.rust_verify_changed }}
-  extension_verify_changed:
-    description: Extension source paths changed.
-    value: ${{ steps.filter.outputs.extension_verify_changed }}
   sidecar_changed:
     description: Builtin sidecar paths changed.
     value: ${{ steps.filter.outputs.sidecar_changed }}
@@ -16,18 +13,12 @@ outputs:
   rust_codeql_changed:
     description: Rust source paths changed (CodeQL).
     value: ${{ steps.filter.outputs.rust_codeql_changed }}
-  extension_codeql_changed:
-    description: Extension source paths changed (CodeQL).
-    value: ${{ steps.filter.outputs.extension_codeql_changed }}
   python_codeql_changed:
     description: Python sidecar source paths changed (CodeQL).
     value: ${{ steps.filter.outputs.python_codeql_changed }}
   rust_relevant:
     description: Whether rust-verify should run.
     value: ${{ steps.relevance.outputs.rust_relevant }}
-  extension_relevant:
-    description: Whether extension-verify should run.
-    value: ${{ steps.relevance.outputs.extension_relevant }}
   sidecar_relevant:
     description: Whether sidecar-verify should run.
     value: ${{ steps.relevance.outputs.sidecar_relevant }}
@@ -37,9 +28,6 @@ outputs:
   rust_codeql_relevant:
     description: Whether CodeQL rust analysis should run on path-filtered events.
     value: ${{ steps.relevance.outputs.rust_codeql_relevant }}
-  extension_codeql_relevant:
-    description: Whether CodeQL javascript analysis should run on path-filtered events.
-    value: ${{ steps.relevance.outputs.extension_codeql_relevant }}
   python_codeql_relevant:
     description: Whether CodeQL python analysis should run on path-filtered events.
     value: ${{ steps.relevance.outputs.python_codeql_relevant }}
@@ -56,8 +44,6 @@ runs:
             - 'proto/**'
             - 'Cargo.toml'
             - 'Cargo.lock'
-          extension_verify_changed:
-            - 'extensions/rex-vscode/**'
           sidecar_changed:
             - 'sidecars/**'
             - 'crates/rex-sidecar-stub/**'
@@ -74,8 +60,8 @@ runs:
             - 'fixtures/guidelines/**'
             - 'fixtures/ndjson_contract/**'
             - 'docs/ERROR_HANDLING.md'
-            - 'docs/EXTENSION.md'
-            - 'extensions/rex-vscode/src/shared/messages.ts'
+            - 'docs/NDJSON_STREAM.md'
+            - 'crates/rex-cli/src/runtime.rs'
             - 'crates/rex-daemon/src/access_policy.rs'
             - 'scripts/ci/guidelines/**'
             - 'scripts/ci/run_guidelines_verify.sh'
@@ -83,8 +69,6 @@ runs:
           rust_codeql_changed:
             - 'crates/**'
             - 'proto/**'
-          extension_codeql_changed:
-            - 'extensions/rex-vscode/**'
           python_codeql_changed:
             - 'sidecars/**'
 
@@ -93,10 +77,8 @@ runs:
       shell: bash
       env:
         RUST_VERIFY_CHANGED: ${{ steps.filter.outputs.rust_verify_changed }}
-        EXTENSION_VERIFY_CHANGED: ${{ steps.filter.outputs.extension_verify_changed }}
         SIDECAR_CHANGED: ${{ steps.filter.outputs.sidecar_changed }}
         GUIDELINES_CHANGED: ${{ steps.filter.outputs.guidelines_changed }}
         RUST_CODEQL_CHANGED: ${{ steps.filter.outputs.rust_codeql_changed }}
-        EXTENSION_CODEQL_CHANGED: ${{ steps.filter.outputs.extension_codeql_changed }}
         PYTHON_CODEQL_CHANGED: ${{ steps.filter.outputs.python_codeql_changed }}
       run: bash "$(cd "${GITHUB_ACTION_PATH}/../../.." && pwd)/scripts/ci/evaluate_ci_relevance.sh"

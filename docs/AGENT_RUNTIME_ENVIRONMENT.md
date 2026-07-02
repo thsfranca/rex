@@ -30,7 +30,7 @@ This document is a **refinable explanation hub** for **host–guest transport op
 
 | Situation | Transport |
 |-----------|-----------|
-| CLI/extension ↔ `rex-daemon` | gRPC over UDS (`rex.v1`) |
+| CLI ↔ `rex-daemon` | gRPC over UDS (`rex.v1`) |
 | Sidecar ↔ `rex-daemon` (same Mac) | gRPC over **dedicated UDS** — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) |
 
 ## Deferred: cross-kernel / server transport catalog
@@ -48,14 +48,14 @@ Use when a **future** deployment uses a VM or container with a **different kerne
 
 ```mermaid
 flowchart LR
-  daemon[rex_daemon_on_host]
-  sup[runtime_supervisor]
-  env[sandboxed_process_sidecar]
-  agent[agent_runtime]
-  daemon --> sup
-  sup --> env
-  env --> agent
-  agent -->|sidecar_gRPC_UDS| daemon
+ daemon[rex_daemon_on_host]
+ sup[runtime_supervisor]
+ env[sandboxed_process_sidecar]
+ agent[agent_runtime]
+ daemon --> sup
+ sup --> env
+ env --> agent
+ agent -->|sidecar_gRPC_UDS| daemon
 ```
 
 ## Non-goals

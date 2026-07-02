@@ -66,15 +66,15 @@ Both may **feed** the same context pipeline stage; they must not share one undif
 
 ```mermaid
 flowchart LR
-  operator[OperatorCuratedKnowledge]
-  remote[RemoteSources_MCP_HTTP_Git]
-  store[RexKnowledgeStore]
-  pipeline[ContextPipeline]
-  adapter[InferenceAdapter]
-  operator --> store
-  remote --> store
-  store --> pipeline
-  pipeline --> adapter
+ operator[OperatorCuratedKnowledge]
+ remote[RemoteSources_MCP_HTTP_Git]
+ store[RexKnowledgeStore]
+ pipeline[ContextPipeline]
+ adapter[InferenceAdapter]
+ operator --> store
+ remote --> store
+ store --> pipeline
+ pipeline --> adapter
 ```
 
 - **Operator** edits via future CLI, file drop under `$REX_HOME`, or import from committed docs.
@@ -164,13 +164,13 @@ Stream and tool contracts stay stable until a deliberate `rex.v1` or sidecar API
 
 ```mermaid
 flowchart LR
-  hub[AGENT_KNOWLEDGE.md]
-  ltm[LONG_TERM_MEMORY.md]
-  ctx[CONTEXT_EFFICIENCY.md]
-  obs[OBSERVABILITY_AND_ECONOMICS.md]
-  roadmap[ROADMAP.md]
-  hub --> ltm
-  hub --> ctx
-  hub --> obs
-  hub --> roadmap
+ hub[AGENT_KNOWLEDGE.md]
+ ltm[LONG_TERM_MEMORY.md]
+ ctx[CONTEXT_EFFICIENCY.md]
+ obs[OBSERVABILITY_AND_ECONOMICS.md]
+ roadmap[ROADMAP.md]
+ hub --> ltm
+ hub --> ctx
+ hub --> obs
+ hub --> roadmap
 ```

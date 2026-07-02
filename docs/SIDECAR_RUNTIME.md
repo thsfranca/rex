@@ -14,16 +14,16 @@ Canonical design for Rex **sidecar agents**: a **supervised separate process** o
 
 ```mermaid
 flowchart LR
-  Client[CLI_or_extension]
-  Daemon[rex_daemon]
-  Sidecar[Sidecar_process]
-  Agent[Agent_runtime]
-  Host[Workspace_on_host]
-  Client -->|rex_v1_UDS| Daemon
-  Daemon -->|supervise_health| Sidecar
-  Sidecar --> Agent
-  Agent -->|sidecar_gRPC_UDS| Daemon
-  Daemon -->|broker_exec_fs_net| Host
+ Client[CLI_or_extension]
+ Daemon[rex_daemon]
+ Sidecar[Sidecar_process]
+ Agent[Agent_runtime]
+ Host[Workspace_on_host]
+ Client -->|rex_v1_UDS| Daemon
+ Daemon -->|supervise_health| Sidecar
+ Sidecar --> Agent
+ Agent -->|sidecar_gRPC_UDS| Daemon
+ Daemon -->|broker_exec_fs_net| Host
 ```
 
 ## Multi-language plugins

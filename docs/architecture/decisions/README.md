@@ -12,7 +12,8 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0004](0004-routing-daemon-first-optional-http-gateway.md) | Routing: daemon-first, optional HTTP gateway | Accepted |
 | [0005](0005-rex-owns-sidecar-environment-not-agent-implementations.md) | Rex owns sidecar environment, not third-party agent implementations | Accepted |
 | [0006](0006-gitignored-temp-tracking-sequential-handoffs.md) | Gitignored TEMP tracking for sequential multi-agent repository work | Accepted |
-| [0007](0007-editor-extension-hybrid-transport-cli-and-grpc.md) | Editor extension hybrid transport (`rex-cli` NDJSON primary, optional unary `rex.v1`) | Accepted |
+| [0007](0007-editor-extension-hybrid-transport-cli-and-grpc.md) | CLI client hybrid transport (`rex-cli` NDJSON primary, optional unary `rex.v1`) | Superseded → [0038](0038-cli-ndjson-stream-transport.md) |
+| [0038](0038-cli-ndjson-stream-transport.md) | CLI NDJSON stream transport (post-extension removal) | Accepted |
 | [0008](0008-dedicated-sidecar-control-plane-api.md) | Dedicated sidecar control-plane API (brokered integration) | Accepted |
 | [0009](0009-centralized-agent-approvals-and-checkpoints.md) | Centralized agent execution approvals and checkpoints | Accepted |
 | [0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) | Daemon exports observability via OTLP; sidecar observability API | Accepted |

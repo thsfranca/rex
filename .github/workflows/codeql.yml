@@ -23,7 +23,6 @@ jobs:
     timeout-minutes: 5
     outputs:
       rust_codeql_relevant: ${{ steps.detect.outputs.rust_codeql_relevant }}
-      extension_codeql_relevant: ${{ steps.detect.outputs.extension_codeql_relevant }}
       python_codeql_relevant: ${{ steps.detect.outputs.python_codeql_relevant }}
     steps:
       - name: Checkout
@@ -78,56 +77,6 @@ jobs:
         run: |
           {
             echo "### CodeQL (rust)"
-            echo ""
-            echo "- result: ${{ steps.analyze.outcome }}"
-            echo "- mode: advisory (continue-on-error)"
-            echo "- triage: Security → Code scanning alerts"
-            echo "- run_id: ${GITHUB_RUN_ID}"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  analyze-javascript:
-    name: Analyze (javascript)
-    needs: [changes]
-    if: ${{ github.event_name == 'schedule' || needs.changes.outputs.extension_codeql_relevant == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: extensions/rex-vscode
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-          cache-dependency-path: extensions/rex-vscode/package-lock.json
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: javascript
-          config-file: .github/codeql/codeql-config.yml
-
-      - name: Install and build extension
-        run: |
-          npm ci --no-audit --no-fund
-          npm run build
-
-      - name: Analyze
-        id: analyze
-        continue-on-error: true
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: /language:javascript
-
-      - name: Write Job Summary
-        if: always()
-        run: |
-          {
-            echo "### CodeQL (javascript)"
             echo ""
             echo "- result: ${{ steps.analyze.outcome }}"
             echo "- mode: advisory (continue-on-error)"

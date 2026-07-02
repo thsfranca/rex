@@ -49,7 +49,7 @@ use crate::sidecar_client::{
 use crate::sidecar_config::parse_harness_only;
 use crate::supervisor::{SharedSupervisor, SupervisorError};
 use crate::turn_correlation::{
-    build_turn_correlation, strip_extension_context_blocks, TurnCorrelation,
+    build_turn_correlation, strip_client_context_blocks, TurnCorrelation,
 };
 
 pub struct RexDaemonService {
@@ -456,7 +456,7 @@ impl RexService for RexDaemonService {
                 || !hints.language_id.is_empty()
                 || !hints.selection_text.is_empty()
             {
-                let (stripped, applied) = strip_extension_context_blocks(&prompt);
+                let (stripped, applied) = strip_client_context_blocks(&prompt);
                 if applied {
                     prompt = stripped;
                 }

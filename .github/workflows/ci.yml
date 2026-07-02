@@ -13,11 +13,9 @@ jobs:
     timeout-minutes: 5
     outputs:
       rust_verify_changed: ${{ steps.detect.outputs.rust_verify_changed }}
-      extension_verify_changed: ${{ steps.detect.outputs.extension_verify_changed }}
       sidecar_changed: ${{ steps.detect.outputs.sidecar_changed }}
       guidelines_changed: ${{ steps.detect.outputs.guidelines_changed }}
       rust_relevant: ${{ steps.detect.outputs.rust_relevant }}
-      extension_relevant: ${{ steps.detect.outputs.extension_relevant }}
       sidecar_relevant: ${{ steps.detect.outputs.sidecar_relevant }}
       guidelines_relevant: ${{ steps.detect.outputs.guidelines_relevant }}
     steps:
@@ -135,57 +133,6 @@ jobs:
         if: ${{ steps.run_sidecar_verify.outcome != 'success' }}
         run: ./scripts/ci/enforce_verify_job.sh
 
-  extension-verify:
-    needs: [changes]
-    if: ${{ needs.changes.outputs.extension_relevant == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    env:
-      CI: true
-      NODE_OPTIONS: --max-old-space-size=6144
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: extensions/rex-vscode/package-lock.json
-
-      - name: Run extension verify
-        id: run_extension_verify
-        continue-on-error: true
-        run: ./scripts/ci/run_extension_verify.sh
-
-      - name: Write Job Summary
-        if: ${{ always() }}
-        run: ./scripts/ci/write_job_summary.sh extension-verify
-
-      - name: Upload diagnostics artifact
-        if: ${{ steps.run_extension_verify.outcome != 'success' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ci-logs-extension-verify-${{ github.run_id }}
-          path: ci-observability
-          retention-days: 7
-
-      - name: Upload VSIX artifact
-        if: ${{ steps.run_extension_verify.outcome == 'success' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: rex-vscode-vsix-${{ github.run_id }}
-          path: extensions/rex-vscode/rex-vscode.vsix
-          retention-days: 7
-          if-no-files-found: warn
-
-      - name: Enforce extension verify job status
-        if: ${{ steps.run_extension_verify.outcome != 'success' }}
-        run: ./scripts/ci/enforce_verify_job.sh
-
   guidelines-verify:
     needs: [changes]
     if: ${{ needs.changes.outputs.guidelines_relevant == 'true' }}
@@ -220,7 +167,7 @@ jobs:
 
   ci-checks:
     if: ${{ always() }}
-    needs: [changes, rust-verify, sidecar-verify, extension-verify, guidelines-verify]
+    needs: [changes, rust-verify, sidecar-verify, guidelines-verify]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -237,12 +184,10 @@ jobs:
         continue-on-error: true
         env:
           RUST_RELEVANT: ${{ needs.changes.outputs.rust_relevant }}
-          EXTENSION_RELEVANT: ${{ needs.changes.outputs.extension_relevant }}
           SIDECAR_RELEVANT: ${{ needs.changes.outputs.sidecar_relevant }}
           GUIDELINES_RELEVANT: ${{ needs.changes.outputs.guidelines_relevant }}
           RUST_RESULT: ${{ needs.rust-verify.result }}
           SIDECAR_RESULT: ${{ needs.sidecar-verify.result }}
-          EXTENSION_RESULT: ${{ needs.extension-verify.result }}
           GUIDELINES_RESULT: ${{ needs.guidelines-verify.result }}
         run: ./scripts/ci/enforce_ci_gate.sh
 

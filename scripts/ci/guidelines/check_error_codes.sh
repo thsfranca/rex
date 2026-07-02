@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Validates NDJSON stream error codes stay in sync across yaml, TypeScript, docs, and fixtures.
+# Validates NDJSON stream error codes stay in sync across yaml, Rust CLI, docs, and fixtures.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 CATALOG="${ROOT_DIR}/fixtures/guidelines/error_codes.yaml"
-MESSAGES_TS="${ROOT_DIR}/extensions/rex-vscode/src/shared/messages.ts"
+CLI_RUNTIME="${ROOT_DIR}/crates/rex-cli/src/runtime.rs"
 HUB_DOC="${ROOT_DIR}/docs/ERROR_HANDLING.md"
 NDJSON_DIR="${ROOT_DIR}/fixtures/ndjson_contract"
 
@@ -19,8 +19,8 @@ yaml_codes() {
   awk '/^  - code: / { print $3 }' "${CATALOG}" | sort -u
 }
 
-ts_codes() {
-  sed -n '/export type StreamErrorCode =/,/;/p' "${MESSAGES_TS}" \
+rust_codes() {
+  grep -E 'CliError::.*=> "[a-z_]+"' "${CLI_RUNTIME}" \
     | grep -oE '"[a-z_]+"' \
     | tr -d '"' \
     | sort -u
@@ -39,30 +39,30 @@ code_in_list() {
 }
 
 echo "::group::Error code catalog sync"
-echo "::notice::Checking fixtures/guidelines/error_codes.yaml against TypeScript and docs."
+echo "::notice::Checking fixtures/guidelines/error_codes.yaml against rex-cli runtime and docs."
 
 yaml_list=()
 while IFS= read -r line; do
   [ -n "${line}" ] && yaml_list+=("${line}")
 done < <(yaml_codes)
 
-ts_list=()
+rust_list=()
 while IFS= read -r line; do
-  [ -n "${line}" ] && ts_list+=("${line}")
-done < <(ts_codes)
+  [ -n "${line}" ] && rust_list+=("${line}")
+done < <(rust_codes)
 
 for code in "${yaml_list[@]}"; do
-  if ! code_in_list "${code}" "${ts_list[@]}"; then
-    note_fail "Code '${code}' in error_codes.yaml missing from StreamErrorCode in messages.ts"
+  if ! code_in_list "${code}" "${rust_list[@]}"; then
+    note_fail "Code '${code}' in error_codes.yaml missing from rex-cli runtime error mapping"
   fi
   if ! grep -q "\`${code}\`" "${HUB_DOC}"; then
     note_fail "Code '${code}' in error_codes.yaml missing from docs/ERROR_HANDLING.md catalog table"
   fi
 done
 
-for code in "${ts_list[@]}"; do
+for code in "${rust_list[@]}"; do
   if ! code_in_list "${code}" "${yaml_list[@]}"; then
-    note_fail "Code '${code}' in messages.ts missing from error_codes.yaml"
+    note_fail "Code '${code}' in rex-cli runtime missing from error_codes.yaml"
   fi
 done
 

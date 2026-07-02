@@ -35,24 +35,24 @@ Agents need current documentation, release notes, and external error context wit
 
 ```mermaid
 sequenceDiagram
-  participant Model as LLM
-  participant Host as Host_sidecar
-  participant Daemon as rex_daemon
-  participant Policy as AccessPolicy
-  participant Cap as SearXNG_capability
-  participant Net as Internet
+ participant Model as LLM
+ participant Host as Host_sidecar
+ participant Daemon as rex_daemon
+ participant Policy as AccessPolicy
+ participant Cap as SearXNG_capability
+ participant Net as Internet
 
-  Model->>Host: tool_call web.search
-  Host->>Daemon: BrokerWebSearch
-  Daemon->>Policy: mode capability approval
-  Policy-->>Daemon: allow
-  Daemon->>Cap: Invoke web.search
-  Cap->>Net: SearXNG upstream
-  Net-->>Cap: SERP JSON
-  Cap-->>Daemon: snippets
-  Daemon->>Daemon: markdown truncate 8KB
-  Daemon-->>Host: BrokerWebSearchResponse
-  Host->>Model: tool result
+ Model->>Host: tool_call web.search
+ Host->>Daemon: BrokerWebSearch
+ Daemon->>Policy: mode capability approval
+ Policy-->>Daemon: allow
+ Daemon->>Cap: Invoke web.search
+ Cap->>Net: SearXNG upstream
+ Net-->>Cap: SERP JSON
+ Cap-->>Daemon: snippets
+ Daemon->>Daemon: markdown truncate 8KB
+ Daemon-->>Host: BrokerWebSearchResponse
+ Host->>Model: tool result
 ```
 
 ## Tool schema (host registration intent)
@@ -165,4 +165,4 @@ Row in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md).
 - [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md)
 - [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md)
 - [ERROR_HANDLING.md](ERROR_HANDLING.md)
-- [EXTENSION.md](EXTENSION.md) — tool-progress NDJSON (**E-WS01**)
+- [NDJSON_STREAM.md](NDJSON_STREAM.md) — tool-progress NDJSON (**E-WS01**)

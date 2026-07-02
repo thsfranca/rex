@@ -5,7 +5,7 @@
 
 ## Context
 
-Broker RPCs, the lexical indexer, and L1 cache fingerprinting scope to a resolved **workspace root**. Before R022, harnesses often relied on process **cwd** when JSON `workspace.root` was empty. The VS Code extension did not always write project `.rex/config.json`, so product paths were implicit. Clients also embed editor context in prompt strings, which duplicates daemon retrieval and wastes tokens on remote and local inference paths.
+Broker RPCs, the lexical indexer, and L1 cache fingerprinting scope to a resolved **workspace root**. Before R022, harnesses often relied on process **cwd** when JSON `workspace.root` was empty. The rex CLI did not always write project `.rex/config.json`, so product paths were implicit. Clients also embed editor context in prompt strings, which duplicates daemon retrieval and wastes tokens on remote and local inference paths.
 
 `rex-agent` needs a stable contract for what arrives on `RunTurn` without reading daemon Rust sources.
 
