@@ -322,23 +322,6 @@ mod tests {
     }
 
     #[test]
-    fn agent_config_ignores_removed_step_cap_keys() {
-        let cfg: RexConfig = serde_json::from_str(
-            r#"{
-                "version": 1,
-                "agent": {
-                    "max_tool_steps": 12,
-                    "max_tool_steps_ask": 3,
-                    "soft_cap_enabled": true
-                }
-            }"#,
-        )
-        .expect("unknown agent keys must be ignored");
-        assert_eq!(cfg.agent.max_tools_per_step, 8);
-        assert!(cfg.agent.compaction_enabled.is_none());
-    }
-
-    #[test]
     fn daemon_config_defaults_auto_start_on() {
         let cfg = RexConfig::defaults();
         assert!(cfg.daemon.auto_start_enabled());

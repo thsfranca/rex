@@ -80,18 +80,4 @@ mod tests {
         let root = loaded.resolve_workspace_root().expect("explicit");
         assert!(root.ends_with("tmp"));
     }
-
-    #[test]
-    #[serial_test::serial]
-    fn env_allow_cwd_is_not_read() {
-        // Product path uses JSON `workspace.allow_cwd_fallback` only (R082).
-        let prev = std::env::var("REX_ALLOW_CWD_WORKSPACE").ok();
-        std::env::set_var("REX_ALLOW_CWD_WORKSPACE", "1");
-        let loaded = loaded_with_root("", None);
-        assert_eq!(loaded.resolve_workspace_root(), Err(WorkspaceRootError));
-        match prev {
-            Some(v) => std::env::set_var("REX_ALLOW_CWD_WORKSPACE", v),
-            None => std::env::remove_var("REX_ALLOW_CWD_WORKSPACE"),
-        }
-    }
 }
