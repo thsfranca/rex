@@ -349,6 +349,17 @@ mod tests {
     }
 
     #[test]
+    fn operator_init_template_is_agent_only() {
+        let cfg = RexConfig::operator_init_template();
+        assert_eq!(cfg.sidecars.active, "agent");
+        assert_eq!(cfg.sidecars.list.len(), 1);
+        assert_eq!(cfg.sidecars.list[0].name, "agent");
+        assert_eq!(cfg.sidecars.list[0].binary, "rex-agent");
+        assert!(cfg.sidecars.list[0].enabled);
+        assert_eq!(cfg.agent.approvals_enabled, Some(true));
+    }
+
+    #[test]
     #[serial]
     fn daemon_config_merge_and_log_path() {
         use crate::merge::merge_config;

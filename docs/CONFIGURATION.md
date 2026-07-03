@@ -303,10 +303,10 @@ Do not commit secrets. Anthropic API keys belong in LiteLLM configuration, not R
  }
  },
  "sidecars": {
- "active": "stub",
+ "active": "agent",
  "required": true,
  "list": [
- { "name": "stub", "binary": "rex-sidecar-stub", "enabled": true, "socket": "/tmp/rex-sidecar.sock" }
+ { "name": "agent", "binary": "rex-agent", "enabled": true, "socket": "/tmp/rex-sidecar.sock" }
  ]
  }
 }
@@ -372,11 +372,25 @@ Keys under `cli` and `search` control stream idle timeouts and ask-mode `web.sea
 
 CLI flags: `rex complete --verbose` (stderr status in text mode), `--yes` / `--approval-id` for agent approval automation.
 
+## CI and harness (not operator product config)
+
+These keys exist for automated tests and local harnesses. Prefer `RexConfig::defaults` in code or an explicit test `config.json` under a temp `REX_ROOT`. Do **not** copy them into operator installs from `rex config init`.
+
+| Key | Typical harness value | Purpose |
+|-----|----------------------|---------|
+| `inference.runtime` | `"mock"` | Deterministic broker without network |
+| `sidecars.active` / `list[]` | `stub` / `rex-sidecar-stub` | CI sidecar without Python agent |
+| `sidecars.harness` | `"direct"` | Skip sidecar spawn; in-process inference |
+| `workspace.allow_cwd_fallback` | `true` | Allow `workspace.root` empty or `"."` |
+| `workspace.indexer` | `"seeded"` | In-memory docs for tests |
+| `cache.bypass` | `true` | Disable L1 / prefix cache for diagnostics |
+
+Product operators use **`rex-agent`**, a live `http-openai-compat` backend, and an absolute `workspace.root`. See [CI.md](CI.md).
+
 ## Not implemented yet (roadmap)
 
 - Global CLI flags mirroring all JSON keys — partial today (`rex complete` flags only).
 - Layered prompt assemblies — see **Layered prompts** below.
-- Config surface cleanup (**R082**): dead agent keys and non-`REX_ROOT` product-path env reads removed; optional operator-template slim remains.
 
 ## See also
 

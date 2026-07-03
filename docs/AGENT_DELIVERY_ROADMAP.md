@@ -140,8 +140,7 @@ Layout root: **`REX_ROOT`** (default `~/.rex`) — **sole product environment va
  "active": "agent",
  "required": true,
  "list": [
- { "name": "agent", "binary": "rex-agent", "enabled": true },
- { "name": "stub", "binary": "rex-sidecar-stub", "enabled": false }
+ { "name": "agent", "binary": "rex-agent", "enabled": true }
  ]
  },
  "inference": {

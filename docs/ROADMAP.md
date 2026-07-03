@@ -163,7 +163,7 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 | **R013** | Platform enablers (`BrokerListDir`, `RunTurn.model`, stream passthrough) | Done |
 | **R014** | Unified `rex` CLI | Done |
 | **R015** | JSON config + `rex proto install` | Done |
-| **R082** | Config surface cleanup (JSON-only; sole product env **`REX_ROOT`**; dead key removal) | **Should** — docs + schema/env cleanup; optional operator-template slim — [CONFIGURATION.md](CONFIGURATION.md) |
+| **R082** | Config surface cleanup (JSON-only; sole product env **`REX_ROOT`**; dead key removal) | **Should** — Done (docs, schema, operator template) — [CONFIGURATION.md](CONFIGURATION.md) |
 | **R016** | Multi-active sidecar broadcast | Could — deferred |
 | **R017–R038** | Product agent program | **Done** — see [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) |
 | **R023–R025** | Supply chain / SAST / Ruff | **Done** |
