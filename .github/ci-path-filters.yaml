@@ -6,6 +6,7 @@ rust_verify_changed:
   - 'proto/**'
   - 'Cargo.toml'
   - 'Cargo.lock'
+  - 'scripts/**/*.sh'
 sidecar_changed:
   - 'sidecars/**'
   - 'crates/rex-sidecar-stub/**'
