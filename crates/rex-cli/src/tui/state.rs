@@ -64,16 +64,11 @@ pub struct AppState {
     pub help_expanded: bool,
     pub theme: Theme,
     pub tick: u64,
-    pub reduce_motion: bool,
     pub status_message: Option<String>,
 }
 
 impl AppState {
     pub fn new(workspace_root: String, model_id: String, daemon_version: String) -> Self {
-        let reduce_motion = std::env::var_os("NO_COLOR").is_some()
-            || std::env::var("REX_TUI_REDUCE_MOTION")
-                .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-                .unwrap_or(false);
         Self {
             workspace_root,
             model_id,
@@ -94,7 +89,6 @@ impl AppState {
             help_expanded: false,
             theme: Theme::default_adaptive(),
             tick: 0,
-            reduce_motion,
             status_message: None,
         }
     }
@@ -191,9 +185,6 @@ impl AppState {
     }
 
     pub fn spinner_frame(&self) -> char {
-        if self.reduce_motion {
-            return '…';
-        }
         const FRAMES: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
         FRAMES[(self.tick as usize) % FRAMES.len()]
     }

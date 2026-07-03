@@ -82,7 +82,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
             }
         }
 
-        let poll_ms = if app.session == SessionPhase::Streaming && !app.reduce_motion {
+        let poll_ms = if app.session == SessionPhase::Streaming {
             80
         } else {
             120
