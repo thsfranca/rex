@@ -115,6 +115,7 @@ Terminal operators use Rex as the **primary surface** without a dedicated foregr
 | **R075** | Per-workspace daemon routing | Must | — | **Done** — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md) |
 | **R072** | NDJSON core + messaging + **mdstream** | Must (program) | R071 | **Done** |
 | **R073** | Full terminal UI + approval modals | Should | R072 | **Done** |
+| — | Headless TUI adapter (external agent harness replay/snapshot) | **Won't** | — | Not required — live PTY verification is enough ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md#testing-strategy), [ROADMAP.md](ROADMAP.md)) |
 | **R074** | Optional LLM narrator | Could | R073 | Off by default |
 | **R076** | Daemon-owned LSP diagnostics | Could | R073 | Later v2 |
 | **R077** | Brokered git dirty-state auto-commit | Should | R073 | **`git.auto_commit_dirty`** |
