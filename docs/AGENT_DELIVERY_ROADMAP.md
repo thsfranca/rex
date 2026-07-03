@@ -105,7 +105,7 @@ Extension defaults: **`rex`** + `["daemon"]` for auto-start. Compatibility shims
 
 ## CLI operator UX (R071–R081)
 
-**Status:** partial — **R071** / **R075** / **R072** / **R073** / **R079** Done; **R080–R081** Open. Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Architecture: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Decisions: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
+**Status:** partial — **R071** / **R075** / **R072** / **R073** / **R079** / **R080** / **R081** Done. Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Architecture: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Decisions: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
 Terminal operators use Rex as the **primary surface** without a dedicated foreground **`rex daemon`** session. **`rex complete --format ndjson`** remains the automation and CI contract ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)).
 
@@ -116,8 +116,8 @@ Terminal operators use Rex as the **primary surface** without a dedicated foregr
 | **R072** | NDJSON core + messaging + **mdstream** | Must (program) | R071 | **Done** |
 | **R073** | Full terminal UI + approval modals | Should | R072 | **Done** |
 | **R079** | TUI visual identity design (docs) | Should | R073 | **Done** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) |
-| **R080** | TUI presentation (tokens, responsive, symbols, disclosure) | Should | R079 | Live harness text snapshots at narrow/medium/wide |
-| **R081** | TUI motion (tick + cues) | Should | R080 | Sequential live snapshots for glyph change |
+| **R080** | TUI presentation (tokens, responsive, symbols, disclosure) | Should | R079 | **Done** |
+| **R081** | TUI motion (tick + cues) | Should | R080 | **Done** |
 | — | Headless TUI adapter (external agent harness replay/snapshot) | **Won't** | — | Not required — live PTY verification is enough ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md#testing-strategy), [ROADMAP.md](ROADMAP.md)) |
 | **R074** | Optional LLM narrator | Could | R073 | Off by default; prefer after **R080** |
 | **R076** | Daemon-owned LSP diagnostics | Could | R073 | Later v2 |

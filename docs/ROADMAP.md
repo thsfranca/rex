@@ -85,8 +85,8 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 | 2 | **R072** — NDJSON core + operator messaging + **mdstream** | **Must** (program) | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | **Done** |
 | 3 | **R073** — full terminal UI + approval modals | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md) | **Done** |
 | 4 | **R079** — TUI visual identity design (docs) | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) | **Done** |
-| 5 | **R080** — TUI presentation | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) | Open — **after R079** |
-| 6 | **R081** — TUI motion | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) | Open — **after R080** |
+| 5 | **R080** — TUI presentation | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) | **Done** |
+| 6 | **R081** — TUI motion | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) | **Done** |
 | 7 | **R074** — optional LLM status narrator | **Could** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Open — prefer **after R080** |
 | 5 | **R067** — intent-aware retrieval for short prompts | **Should** | — | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) | Open |
 | 6 | **R068** — ask answer-first prompt policy | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
@@ -137,8 +137,8 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 | **Must** (program) | **R072** — NDJSON core + operator messaging + **mdstream** | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | **Done** |
 | **Should** | **R073** — full terminal UI + approval modals | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md) | **Done** |
 | **Should** | **R079** — TUI visual identity design (docs) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) | **Done** |
-| **Should** | **R080** — TUI presentation (tokens, responsive, symbols, disclosure) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) | After **R079** |
-| **Should** | **R081** — TUI motion (tick + cues) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) | After **R080** |
+| **Should** | **R080** — TUI presentation (tokens, responsive, symbols, disclosure) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) | **Done** |
+| **Should** | **R081** — TUI motion (tick + cues) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) | **Done** |
 | **Could** | **R074** — optional LLM status narrator | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | After **R073**; prefer after **R080** |
 | **Should** | **R077** — brokered git dirty-state auto-commit | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | After **R073** — **`git.auto_commit_dirty`** |
 | **Could** | **R076** — daemon-owned LSP workspace diagnostics | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | After **R073** |
