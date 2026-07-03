@@ -83,7 +83,7 @@ Operator path: `rex omlx init` → merge `$REX_ROOT/omlx/config.snippet.json` in
 
 ### Test harness (non-MVP product path)
 
-- `REX_INFERENCE_RUNTIME=mock` for CI and UDS e2e — no network; **`rex-sidecar-stub`** harness exists for CI; operators use JSON config + live HTTP for dogfood.
+- `inference.runtime: "mock"` in test `config.json` for CI and UDS e2e — no network; **`rex-sidecar-stub`** harness exists for CI; operators use JSON config + live HTTP for dogfood.
 - Legacy `cursor-cli` subprocess optional.
 - Direct daemon HTTP/mock **without** sidecar — harness only per [MVP_SPEC.md](MVP_SPEC.md).
 

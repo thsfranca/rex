@@ -4,15 +4,24 @@ This document is the **canonical** policy for how REX settings work: merged **JS
 
 ## Configuration surface
 
-- **Product settings:** `$REX_ROOT/config.json` and `.rex/config.json` — not `REX_*` tuning environment variables.
-- **Bootstrap env:** **`REX_ROOT`** only (optional). Points at the layout directory (`config.json`, protos, observability store path). Defaults to `~/.rex` when unset.
-- **Secrets:** API keys may use env or OS keychain alongside JSON fields — see below. Observability and inference are **not** configured via `REX_OBS_*` or similar legacy names.
+**Rex has one product environment variable: `REX_ROOT`.** All product settings are JSON. Do not configure Rex with other `REX_*` environment variables.
+
+| Surface | Role |
+|---------|------|
+| **Product settings** | `$REX_ROOT/config.json` and optional `.rex/config.json` (walked from cwd upward) |
+| **Product env** | **`REX_ROOT` only** (optional). Layout directory for `config.json`, protos, and related paths. Defaults to `~/.rex` when unset. |
+| **CLI flags (partial)** | Per-invocation overrides on `rex complete` / `rex status` (see [Precedence](#precedence-implemented)) |
+| **Secrets** | Prefer OS keychain or a non-`REX_*` secret store for API key *values* referenced by JSON fields (`inference.openai_compat.api_key`, `inference.openai_compat.headers`). Do not commit secrets. |
+
+**Not product configuration:** The daemon may inject socket paths into **child processes it spawns** (internal process plumbing). CI and contributor scripts may use test gates — see [CI.md](CI.md). Neither is an operator config catalog.
+
+Former tuning names (if present in the environment) are **ignored** with a startup warning. Use JSON instead. There is **no** migration catalog of those names.
 
 ## Why this policy exists
 
 - **Developer experience:** One merged config file per machine; `rex config show` for inspection.
-- **Automation:** CI, scripts, and the CLI client set **`REX_ROOT`** and write JSON; legacy `REX_*` tuning vars are ignored with a startup warning.
-- **One catalog:** JSON keys, bootstrap commands, and deprecated env tables for migration only.
+- **Automation:** CI, scripts, and clients set **`REX_ROOT`** and write JSON.
+- **One catalog:** JSON keys and bootstrap commands only.
 
 ## Precedence (implemented)
 
@@ -21,13 +30,11 @@ This document is the **canonical** policy for how REX settings work: merged **JS
 | Built-in defaults | Used when a JSON field is unset. |
 | `$REX_ROOT/config.json` | User defaults: daemon socket, sidecars, inference, workspace, broker, agent. |
 | `.rex/config.json` | Optional project overrides (walked from cwd upward). |
-| CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--yes`, `--verbose`, `--trace-id`, `--active-file`, `--language-id`, `--selection-text` per invocation. `rex status` and `rex complete` accept **`--no-daemon-autostart`**. |
+| CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--yes`, `--verbose`, `--trace-id`, `--active-file`, `--language-id`, `--selection-text` per invocation. `rex status` and `rex complete` accept **`--no-daemon-autostart`**. Trace correlation uses **`--trace-id`**. |
 
 **Layout root:** `$REX_ROOT` defaults to `~/.rex` when unset. Run `rex config init` to create the layout and operator template `config.json` (**`sidecars.active: agent`**, **`rex-agent`** enabled, **`search.enabled: true`** with **`search.provider: mock`**). Operators typically edit only **`inference.openai_compat`** for a live backend. CI and harness tests use explicit stub configs or `RexConfig::defaults` in code — not the init template.
 
-**Legacy environment variables:** Daemon startup ignores former `REX_INFERENCE_RUNTIME`, `REX_OPENAI_COMPAT_*`, `REX_SIDECAR_*`, `REX_DAEMON_SOCKET`, and `REX_WORKSPACE_ROOT` when present and prints a warning — use JSON instead. **`REX_AGENT_APPROVALS`** is **not read** (migration reference only; canonical key is `agent.approvals_enabled` in JSON — [V1_0.md](V1_0.md) RC-06). **`REX_ROOT`** remains the bootstrap override for layout location (tests, extension auto-start).
-
-**Secret values:** Prefer environment or OS keychain for API keys and auth header values in JSON (`inference.openai_compat.api_key`, `inference.openai_compat.headers`). Do not commit secrets to the repository.
+The CLI reads merged JSON for UDS transport and daemon lifecycle (`rex_config::load_merged`).
 
 ## JSON configuration keys (implemented)
 
@@ -37,20 +44,21 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 |---------|------|---------|
 | `daemon` | `socket`, `socket_scope`, `auto_start`, `ready_timeout_secs`, `idle_shutdown_secs`, `log_path` | Daemon UDS path; **`socket_scope`** (`per_workspace` default, or `global` for legacy single socket); **auto-start on by default** (**R071**); readiness poll budget; idle auto-shutdown (**default 300s**, **`0`** disables); detached daemon log file. Per-workspace scope derives `$REX_ROOT/sockets/ws-<hash>.sock` from `workspace.root` — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), idle shutdown — [ADR 0037](architecture/decisions/0037-daemon-idle-shutdown.md). |
 | `sidecars` | `active`, `host`, `required`, `harness`, `list[]`, `capabilities[]` | Host sidecar (`list[]` entry named by `host` or `active`); optional capability fleet (`capabilities[]` with `provides`, `socket`, `binary`); `harness: "direct"` skips spawn (CI/tests). |
-| `inference` | `runtime`, `openai_compat`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. |
-| `workspace` | `root`, `indexer`, `allow_cwd_fallback` | Broker root and lexical indexer (`workspace` or `seeded`). Product path requires non-empty `root` (not `"."`). Harness/CI: `allow_cwd_fallback: true` or `REX_ALLOW_CWD_WORKSPACE=1`. |
+| `inference` | `runtime`, `openai_compat`, `gateway`, `omlx`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. Managed gateway/oMLX inject `openai_compat.base_url` — see below. |
+| `workspace` | `root`, `indexer`, `allow_cwd_fallback` | Broker root and lexical indexer (`workspace` or `seeded`). Product path requires non-empty `root` (not `"."`). Harness/CI: `workspace.allow_cwd_fallback: true` in JSON. |
 | `context` | `max_prompt_tokens`, `max_context_tokens` | Context pipeline budgets. |
-| `context` | `advisory_intent_enabled` | **Planned (R067):** when true (default), short advisory prompts bypass the ≤48 char retrieval skip. |
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
-| `agent` | `approvals_enabled`, `max_tools_per_step`, `compaction_suffix_fraction`, `read_pruning_enabled`, `deterministic_init_enabled` | Agent-mode approval gate; max batchable broker calls per LLM round (default **8**, **R057**); intra-turn compaction; goal-hint read pruning (**R031** Done, default off); pre-LLM ask init (**R060**). |
-| `cli` | `stream_idle_timeout_secs_agent`, `stream_idle_timeout_secs_ask` | Per-chunk idle timeout for `rex complete` streams (defaults **120** for all modes). |
+| `agent` | `approvals_enabled`, `tool_approvals_enabled`, `max_tools_per_step`, `deterministic_init_enabled`, `compaction_enabled` | Agent-mode approval gates; max batchable broker calls per LLM round (default **8**, **R057**); pre-LLM ask init (**R060**); intra-turn compaction (**R029**, default off). Agent also reads `compaction_suffix_fraction` and `read_pruning_enabled` (sidecar-only until **R082** schema sync). |
+| `cli` | `stream_idle_timeout_secs_agent`, `stream_idle_timeout_secs_ask`, `ui` | Per-chunk idle timeouts (defaults **120**); `cli.ui.enabled` / `sync_output` for TUI (**R073**). |
 | `search` | `enabled`, `provider`, `max_results`, `api_key_path` | Ask-mode `web.search` broker (`provider: mock` for local demos). **R055** will migrate to capability sidecar — [WEB_SEARCH.md](WEB_SEARCH.md). |
+| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `otlp` | OTLP export + stdout economics — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [Observability](#observability) |
 
 **Capability sidecar entry (`capabilities[]`):** `name`, `binary`, `enabled`, `socket`, `provides` (capability ids, e.g. `web.search`), optional `required`. Daemon spawns enabled entries alongside the host; invoke routing is **R056-2** — [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md).
 
-**Planned (design — not implemented):** `broker.web_search` (enablement, timeouts, rate limits, cache TTL) — [WEB_SEARCH.md](WEB_SEARCH.md).
-| `observability` | `enabled`, `service_name`, `custom_sidecar_metrics`, `otlp` | OTLP export + stdout economics — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [Observability](#observability) |
+**Not implemented (do not set):** `context.advisory_intent_enabled` (**R067**), `broker.web_search`, `git.auto_commit_dirty` (**R077**) — design only in linked hubs.
+
+**Ignored if present (removed by R069 / ADR 0034; schema cleanup in R082):** `agent.max_tool_steps`, `agent.max_tool_steps_ask`, `agent.max_tool_steps_plan`, `agent.soft_cap_enabled`, `agent.soft_cap_fraction`, `agent.soft_cap_step_extension`.
 
 Minimal example:
 
@@ -86,7 +94,7 @@ Minimal example:
 }
 ```
 
-**Workspace root (product path):** Set `workspace.root` to an absolute project path in `.rex/config.json` (extension auto-start writes this when a folder is open). Unset or `"."` without `allow_cwd_fallback` causes broker and `StreamInference` to fail closed. For harness tests only: `workspace.allow_cwd_fallback: true` in JSON or `REX_ALLOW_CWD_WORKSPACE=1` in the environment.
+**Workspace root (product path):** Set `workspace.root` to an absolute project path in `.rex/config.json`. Unset or `"."` without `allow_cwd_fallback` causes broker and `StreamInference` to fail closed. For harness tests only: `workspace.allow_cwd_fallback: true` in JSON.
 
 ## Observability
 
@@ -104,52 +112,7 @@ When `observability.enabled` is `true`, the daemon emits economics on **stdout**
 
 Legacy `store`, `read_api`, and `ui` keys in older config files are ignored at load time.
 
-## Legacy environment variables (deprecated)
-
-The tables below document **former** env-based tuning. **Do not use** for new setups — they are ignored by the daemon (warning only). Tests and the extension should set **`REX_ROOT`** and write or merge JSON instead.
-
-### Former `rex-daemon` variables
-
-| Variable | Default (if unset) | Purpose |
-|----------|--------------------|---------|
-| `REX_INFERENCE_RUNTIME` | `http-openai-compat` | Broker backend when sidecar requests inference: **`http-openai-compat`**, **`mock`** (tests/harness), **`cursor-cli`** (legacy). Direct daemon HTTP without sidecar is **harness only** for MVP acceptance. |
-| `REX_OPENAI_COMPAT_BASE_URL` | (none — **required** for HTTP runtime) | Base URL for **OpenAI-compatible** chat/completions (protocol name — not OpenAI-only). Examples: Ollama, LiteLLM gateway, OpenAI API — [ADAPTERS.md](ADAPTERS.md#terminology-protocol-vs-vendor). |
-| `REX_OPENAI_COMPAT_API_KEY` | (none) | Optional `Bearer` token for remote APIs. |
-| `REX_OPENAI_COMPAT_MODEL` | `gpt-4o-mini` | Model id sent in chat/completions requests; reported on `GetSystemStatus` when HTTP runtime is active. |
-| `REX_OPENAI_COMPAT_TIMEOUT_SECS` | `120` | Upper bound for a single HTTP completion request. |
-| `REX_CURSOR_CLI_PATH` | `cursor-agent` | Executable when runtime is `cursor-cli` (non-MVP). |
-| `REX_CURSOR_CLI_COMMAND` | (none) | Optional shell template; `{prompt}` substituted (non-MVP). |
-| `REX_CURSOR_CLI_TIMEOUT_SECS` | `20` | Subprocess bound for Cursor CLI adapter. |
-| `REX_CACHE_BYPASS` | off | `1` or `true` bypasses L1 and context prefix cache — [`CACHING.md`](CACHING.md). |
-| `REX_WORKSPACE_ROOT` | (cwd) | L1 fingerprint scope, brokered `fs.read`, and workspace lexical indexer root ([CACHING.md](CACHING.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md)). |
-| `REX_INDEXER` | `workspace` | `workspace` walks the workspace (bounded); `seeded` uses deterministic in-memory docs (CI/tests). |
-| `REX_MAX_PROMPT_TOKENS` | `512` | Context pipeline max prompt tokens (char heuristic ÷4). |
-| `REX_MAX_CONTEXT_TOKENS` | `192` | Context pipeline max injected context tokens. |
-| `REX_BROKER_SHELL_ALLOWLIST` | `echo,printf,true` | Comma-separated programs `exec.shell` broker may run (workspace cwd). |
-| `REX_AGENT_APPROVALS` | — | **Deprecated / not read.** Use `agent.approvals_enabled` in JSON instead ([ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md), [V1_0.md](V1_0.md) RC-06). When enabled, pass `approval_id` on `StreamInference` (via `rex complete --approval-id`) after extension approval. |
-
-### Sidecar supervision and harness
-
-| Variable | Default (if unset) | Purpose |
-|----------|--------------------|---------|
-| `REX_SIDECAR_ENABLED` | off | `1`/`true` enables spawn; product path uses sidecar when enabled |
-| `REX_SIDECAR_REQUIRED` | on when enabled | `0` makes sidecar optional (daemon starts without hard fail) |
-| `REX_SIDECAR_BINARY` | `rex-sidecar-stub` on `PATH` | Sidecar executable for supervision |
-| `REX_SIDECAR_SOCKET` | `/tmp/rex-sidecar.sock` | UDS for `rex.sidecar.v1` — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) |
-| `REX_SIDECAR_HARNESS` | (none) | `direct` forces in-process inference (CI/tests); not MVP product acceptance |
-| `REX_DAEMON_SOCKET` | `/tmp/rex.sock` | Daemon UDS for sidecar `BrokerInference` and `BrokerReadFile` during `RunTurn` |
-
-### `rex` CLI (client)
-
-| Variable | Default (if unset) | Purpose |
-|----------|--------------------|---------|
-| `REX_ROOT` | `~/.rex` | Layout root for `config.json`, proto paths, and daemon auto-start from the extension. |
-
-**CLI flags:** `rex complete` accepts `--format`, `--model <id>`, `--mode <ask|plan|agent>`, `--approval-id <id>`, and `--trace-id <id>`. `rex status` and `rex complete` accept **`--no-daemon-autostart`**. Trace correlation uses **`--trace-id`** (not `REX_TRACE_ID`). Unset model uses daemon default; empty mode normalizes to **`ask`** on the server ([`MVP_SPEC.md`](MVP_SPEC.md), [`CACHING.md`](CACHING.md)).
-
-The CLI reads merged JSON for UDS transport and daemon lifecycle (`rex_config::load_merged`).
-
-### CLI daemon auto-start (**R071** — implemented)
+## CLI daemon auto-start (**R071** — implemented)
 
 Design hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md).
 
@@ -164,16 +127,13 @@ Opt out: `"auto_start": false` in merged JSON or **`--no-daemon-autostart`**. Ex
 
 When **`inference.omlx.mode: managed`** or **`inference.gateway.mode: managed`**, the autostarted daemon also starts and health-checks that managed inference child before binding the UDS socket. Raise **`daemon.ready_timeout_secs`** if the managed child startup budget (for example oMLX **`startup_timeout_secs`**, default 30) exceeds the default ready poll (**10s**).
 
-### CLI operator UX (planned — R072–R074)
+### CLI operator UX (`cli.ui` — implemented)
 
-| Key | Default (design) | Purpose |
-|-----|------------------|---------|
+| Key | Default | Purpose |
+|-----|---------|---------|
 | `cli.ui.enabled` | `"auto"` | TUI on TTY: `auto` \| `true` \| `false` |
-| `cli.ui.narrator` | `false` | Optional post-turn LLM summary (**R074**) |
 | `cli.ui.sync_output` | `true` | Emit terminal `?2026` synchronized output when supported |
-| `git.auto_commit_dirty` | `true` | Daemon broker auto-commits dirty files before **`fs.write`** (**R077**) |
-
-CLI flags (planned): `--no-ui`.
+| `cli.ui.narrator` | `false` | Schema present; product behavior **R074** (Could) — not shipped |
 
 Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
@@ -411,29 +371,13 @@ Keys under `cli` and `search` control stream idle timeouts and ask-mode `web.sea
 | `agent.deterministic_init_enabled` | `true` | Pre-LLM ask init (`fs.read` README + `fs.list`) before first inference (**R060**) |
 | `agent.compaction_enabled` | `false` | Intra-turn suffix compaction node (**R029**, **R062** — off by default to preserve prefix cache) |
 
-### Deprecated (R069 — ignored after implementation)
-
-| Key | Former purpose |
-|-----|----------------|
-| `agent.max_tool_steps_ask` | Ask-mode tool loop hard cap |
-| `agent.max_tool_steps_plan` | Plan-mode tool loop hard cap |
-| `agent.max_tool_steps` | Agent-mode tool loop hard cap |
-| `agent.soft_cap_enabled` | Soft pause before hard cap (**R063**, superseded by [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md)) |
-| `agent.soft_cap_fraction` | Soft cap threshold fraction |
-| `agent.soft_cap_step_extension` | Steps added on Continue |
-
-### Planned (R067)
-
-| Key | Default | Purpose |
-|-----|---------|---------|
-| `context.advisory_intent_enabled` | `true` | Advisory intent bypass for short-prompt retrieval — [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) |
-
-CLI flags: `rex complete --verbose` (stderr status in text mode), `--yes` / `--approval-id` for agent approval automation.
+CLI flags: `rex complete --verbose` (stderr status in text mode), `--yes` / `--approval-id` for agent approval automation. Keys listed under **Ignored if present** above are not tunables.
 
 ## Not implemented yet (roadmap)
 
 - Global CLI flags mirroring all JSON keys — partial today (`rex complete` flags only).
 - Layered prompt assemblies — see **Layered prompts** below.
+- Config surface cleanup (**R082**): remove dead agent keys from schema; drop remaining non-`REX_ROOT` product-path env reads — this document is the policy hub.
 
 ## See also
 

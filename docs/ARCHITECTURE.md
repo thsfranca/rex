@@ -209,7 +209,7 @@ Full signal catalog, Rex-owned storage, bundled Grafana suite: [OBSERVABILITY_AN
 
 ## Configuration
 
-Inference and cache policy today: JSON-first (`$REX_ROOT/config.json`); legacy **`REX_*` env** ignored with warning. Full catalog: [CONFIGURATION.md](CONFIGURATION.md).
+Inference and cache policy today: JSON only (`$REX_ROOT/config.json`); sole product env var **`REX_ROOT`**. Catalog: [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Reliability rules
 

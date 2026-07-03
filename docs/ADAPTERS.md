@@ -18,7 +18,7 @@ Rex names adapters and config blocks after the **HTTP wire contract**, not the u
 | Name layer | What it means | Anthropic reachable? |
 |------------|---------------|----------------------|
 | `http_openai_compat` / `http-openai-compat` | Client speaks **OpenAI Chat Completions** (`POST …/chat/completions`, SSE `choices[].delta.content`) | **Yes**, when `base_url` points at an OpenAI-compat server (LiteLLM, Ollama, LM Studio, OpenAI API) |
-| `inference.openai_compat` / `REX_OPENAI_COMPAT_*` | Configuration for that adapter (URL, key, model id on the wire) | **Yes** on the gateway path — `model` is whatever the compat server expects |
+| `inference.openai_compat` | JSON configuration for that adapter (URL, key, model id on the wire) — [CONFIGURATION.md](CONFIGURATION.md) | **Yes** on the gateway path — `model` is whatever the compat server expects |
 | Planned `anthropic` runtime | **Anthropic Messages API** (`POST /v1/messages`, different SSE events) | **Yes**, native second hop — not OpenAI-shaped |
 
 **Rule:** *OpenAI-compat* = request shape; vendor is chosen by **`base_url`** and server-side routing (for example LiteLLM config).
@@ -43,7 +43,7 @@ See [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inferenc
 |---|---|
 | `prompt` | User-visible task after optional pipeline rewriting. |
 | `mode` | `ask`, `plan`, `agent` driving cacheability ([CACHING.md](CACHING.md)). |
-| `model_hint` | Optional id from client; HTTP runtime uses env default when unset. |
+| `model_hint` | Optional id from client; HTTP runtime uses `inference.openai_compat.model` when unset. |
 | `trace_id` | Correlation across daemon, CLI, extension. |
 
 **Invariant:** exactly **one terminal client-visible outcome** per `StreamInference` attempt.
@@ -54,16 +54,16 @@ Chunks carry incremental `text`, monotonic `index`, terminating `done` chunk **o
 
 ## HTTP OpenAI-compatible chat/completions profile (broker)
 
-Runtime id remains **`http-openai-compat`** (`REX_INFERENCE_RUNTIME`). Config keys remain **`REX_OPENAI_COMPAT_*`** / `inference.openai_compat` — they name the **protocol**, not OpenAI-the-vendor.
+Runtime id remains **`http-openai-compat`** (`inference.runtime` in JSON). Config keys are **`inference.openai_compat.*`** — they name the **protocol**, not OpenAI-the-vendor. Product settings are JSON only; **`REX_ROOT`** is the sole product env var — [CONFIGURATION.md](CONFIGURATION.md).
 
 | Aspect | Policy |
 |---|---|
-| Runtime id | `http-openai-compat` (`REX_INFERENCE_RUNTIME`) |
+| Runtime id | `http-openai-compat` (`inference.runtime`) |
 | Endpoint | `POST {base}/chat/completions` with `stream: true` (SSE) |
-| Configuration | [CONFIGURATION.md](CONFIGURATION.md) — `REX_OPENAI_COMPAT_*` |
+| Configuration | [CONFIGURATION.md](CONFIGURATION.md) — `inference.openai_compat` |
 | Context injection | **On** — daemon `ContextPipeline` may shape prompt before HTTP call |
 | Cacheable modes | **`ask`** only (same as mock; **`agent`** never cached) |
-| Timeouts | `REX_OPENAI_COMPAT_TIMEOUT_SECS` (default 120s) |
+| Timeouts | `inference.openai_compat.timeout_secs` (default 120s) |
 | Custom headers | `inference.openai_compat.headers` — optional map forwarded on every `POST …/chat/completions`; `api_key` adds `Authorization: Bearer` only when `Authorization` is not already set — [CONFIGURATION.md](CONFIGURATION.md#inferenceopenai_compat-keys) |
 
 ### External server defaults (not Rex APIs)
@@ -76,13 +76,13 @@ Rex has **one** broker wire (`http_openai_compat`). Operators point `inference.o
 | **LiteLLM (multi-provider)** | `http://127.0.0.1:4000/v1` | Managed lifecycle injects URL — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) |
 | Ollama (local) | `http://127.0.0.1:11434/v1` | Direct `base_url`; native-tools E2E reference |
 | LM Studio | `http://127.0.0.1:1234/v1` | Direct `base_url` |
-| OpenAI API (direct) | `https://api.openai.com/v1` (+ `REX_OPENAI_COMPAT_API_KEY`) | Direct `base_url` |
+| OpenAI API (direct) | `https://api.openai.com/v1` (+ `inference.openai_compat.api_key`) | Direct `base_url` |
 
 Optional operator cheat sheet (not a broker API selector): [fixtures/guidelines/inference_provider_profiles.yaml](../fixtures/guidelines/inference_provider_profiles.yaml).
 
 ### Verification
 
-- Local: configure env, start daemon, `rex complete "hello" --format ndjson`.
+- Local: set `inference.openai_compat` in `$REX_ROOT/config.json`, start daemon, `rex complete "hello" --format ndjson`.
 - LiteLLM: see [CONFIGURATION.md](CONFIGURATION.md#operator-profile-litellm-anthropic-and-other-providers).
 - Automated: `http_openai_compat` unit test with in-process TCP SSE stub; UDS e2e uses **`mock`** — [CI.md](CI.md).
 
@@ -99,7 +99,7 @@ Use a single OpenAI-compat broker URL where **LiteLLM** holds provider keys (Ant
 | In | Out |
 |----|-----|
 | Default API documentation; opt-in **managed** gateway (daemon spawn/stop/health) | Embedding LiteLLM inside `rex-daemon` |
-| Env/JSON mapping, model hint → LiteLLM, secrets on gateway host | Gateway as `rex.sidecar.v1` plugin |
+| JSON mapping, model hint → LiteLLM, secrets on gateway host | Gateway as `rex.sidecar.v1` plugin |
 | Ollama auto-discovery via LiteLLM template | Replacing the sidecar agent loop |
 | Broker error intent catalog (below) | Stable Rust error enums (until [ERROR_HANDLING.md](ERROR_HANDLING.md) exists) |
 
@@ -107,18 +107,18 @@ Use a single OpenAI-compat broker URL where **LiteLLM** holds provider keys (Ant
 
 - **Mechanism:** existing `http_openai_compat` ([ADR 0002](architecture/decisions/0002-inference-adapter-contract.md)).
 - **Policy:** `ContextPipeline`, L1 cache, and mode gates unchanged ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)).
-- **Secrets:** Anthropic and OpenAI API keys live in **LiteLLM** configuration, not Rex `config.json` (optional LiteLLM master key via `REX_OPENAI_COMPAT_API_KEY`).
+- **Secrets:** Anthropic and OpenAI API keys live in **LiteLLM** configuration, not Rex `config.json` (optional LiteLLM master key via `inference.openai_compat.api_key`).
 
 ### Interfaces (intent)
 
 | Setting | Example |
 |---------|---------|
-| `REX_OPENAI_COMPAT_BASE_URL` | `http://127.0.0.1:4000/v1` |
-| `REX_OPENAI_COMPAT_API_KEY` | LiteLLM proxy key (if enabled) |
-| `REX_OPENAI_COMPAT_MODEL` | LiteLLM model alias (for example Claude id configured in LiteLLM) |
+| `inference.openai_compat.base_url` | `http://127.0.0.1:4000/v1` |
+| `inference.openai_compat.api_key` | LiteLLM proxy key (if enabled) |
+| `inference.openai_compat.model` | LiteLLM model alias (for example Claude id configured in LiteLLM) |
 | `rex complete --model` | Passes through to LiteLLM as the chat/completions `model` field |
 
-JSON (R015 target): `inference.openai_compat` block — see [CONFIGURATION.md](CONFIGURATION.md#operator-profile-litellm-anthropic-and-other-providers).
+JSON: `inference.openai_compat` block — see [CONFIGURATION.md](CONFIGURATION.md#operator-profile-litellm-anthropic-and-other-providers).
 
 ### Operator flow
 
@@ -144,7 +144,7 @@ Design catalog for `BrokerInferenceResponse.error` (implementation follow-up). P
 | HTTP 401 / 403 | `provider_auth` | Fix LiteLLM or upstream API keys |
 | HTTP 429 | `provider_rate_limit` | Back off; check LiteLLM quotas |
 | HTTP 5xx / timeout | `provider_unavailable` | Check LiteLLM and upstream health |
-| Unknown model (gateway body) | `provider_model` | Fix `REX_OPENAI_COMPAT_MODEL` / LiteLLM model map |
+| Unknown model (gateway body) | `provider_model` | Fix `inference.openai_compat.model` / LiteLLM model map |
 
 Fold into [ERROR_HANDLING.md](ERROR_HANDLING.md) when that hub is created ([ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md)).
 
@@ -179,7 +179,7 @@ Optional **native** Anthropic adapter when an OpenAI-compat gateway hop is undes
 
 ### Interfaces (intent)
 
-- Runtime id: `anthropic` on `REX_INFERENCE_RUNTIME`.
+- Runtime id: `anthropic` on `inference.runtime`.
 - Config: `inference.anthropic` — `base_url`, `api_key`, `model`, `timeout_secs`, optional `api_version` header.
 - `AdapterCapabilities`: same as HTTP OpenAI-compat (`attach_context`, `truncate_prompt`, **`ask`**-only L1) unless Anthropic-specific limits are documented at implementation time.
 
@@ -199,7 +199,7 @@ Optional **native** Anthropic adapter when an OpenAI-compat gateway hop is undes
 
 ## Cursor CLI subprocess profile (legacy / non-MVP)
 
-Optional subprocess via `REX_INFERENCE_RUNTIME=cursor-cli`. Not the REX agent product boundary. See [CONFIGURATION.md](CONFIGURATION.md) for `REX_CURSOR_CLI_*`.
+Optional subprocess via `inference.runtime: "cursor-cli"`. Not the REX agent product boundary. See [CONFIGURATION.md](CONFIGURATION.md) for `inference.cursor_cli`.
 
 CI exercises this path with a **`printf` stub** in `uds_e2e.rs`, not the real `cursor-agent` binary.
 
@@ -266,8 +266,8 @@ Optional **in-process Apple MLX** as an `InferenceRuntime` broker backend for on
 
 ### Interfaces (intent)
 
-- Runtime id (for example `mlx`) on `REX_INFERENCE_RUNTIME`.
-- Env catalog TBD (model path, device) — documented in [CONFIGURATION.md](CONFIGURATION.md) when scheduled.
+- Runtime id (for example `mlx`) on `inference.runtime`.
+- JSON keys TBD (model path, device) — documented in [CONFIGURATION.md](CONFIGURATION.md) when scheduled.
 - `AdapterCapabilities`: full context pipeline (budget, indexer, compressor) per [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md).
 
 ### Cross-links

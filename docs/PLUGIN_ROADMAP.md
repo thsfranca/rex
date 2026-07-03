@@ -29,10 +29,10 @@ Completion status: **[V1_0.md](V1_0.md)** **RC-*** only—not this table.
 
 ## Brokered HTTP (daemon mechanism)
 
-- JSON: **`inference.openai_compat`** in `$REX_ROOT/config.json` — [CONFIGURATION.md](CONFIGURATION.md). Keys name the **OpenAI-compat protocol**, not OpenAI-the-vendor — [ADAPTERS.md](ADAPTERS.md#terminology-protocol-vs-vendor). Legacy **`REX_OPENAI_COMPAT_*`** env vars are ignored with warning.
+- JSON: **`inference.openai_compat`** in `$REX_ROOT/config.json` — [CONFIGURATION.md](CONFIGURATION.md). Keys name the **OpenAI-compat protocol**, not OpenAI-the-vendor — [ADAPTERS.md](ADAPTERS.md#terminology-protocol-vs-vendor). Product settings are JSON only (**`REX_ROOT`** is the sole product env var).
 - **Multi-provider (default API):** LiteLLM gateway — opt-in managed or external URL — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md).
 - **Not** the product agent: the sidecar requests inference; the daemon executes the HTTP adapter.
-- **Legacy:** `REX_INFERENCE_RUNTIME=cursor-cli` subprocess — non-MVP.
+- **Legacy:** `inference.runtime: "cursor-cli"` subprocess — non-MVP.
 - CI: **`mock`** or stub sidecar — [CI.md](CI.md).
 - **Done:** native broker tool calling (**R038**) — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md).
 - **Next (Must):** LangFuse Cloud observability (**RC-LF1**, **LF-D01**) — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md).

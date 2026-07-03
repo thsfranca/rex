@@ -13,7 +13,7 @@ Teams often run **LiteLLM** (or similar) as a multi-provider OpenAI-compat proxy
 
 ## Decision
 
-1. **Primary (documented operator path):** Point `inference.openai_compat` / `REX_OPENAI_COMPAT_*` at a **LiteLLM** (or equivalent) OpenAI-compat gateway. Provider choice and API keys live on the **gateway**; Rex sends `model` and prompt on the compat wire.
+1. **Primary (documented operator path):** Point `inference.openai_compat` at a **LiteLLM** (or equivalent) OpenAI-compat gateway. Provider choice and API keys live on the **gateway**; Rex sends `model` and prompt on the compat wire.
 2. **Secondary A:** Same `http_openai_compat` adapter with **direct** OpenAI-compat URLs (OpenAI API, Ollama, LM Studio).
 3. **Secondary B (planned implementation):** Native **`anthropic`** `InferenceRuntime` for the **Messages API** when gateway hop or compat translation is insufficient.
 4. **Naming:** Keep `openai_compat` identifiers as **protocol** names in docs and config until a separate migration ADR adds neutral aliases (`http_chat_completions`, etc.).

@@ -2,13 +2,13 @@
 
 Rex is a **small study project** (see [README.md](../README.md)): a hands-on look at local AI infrastructure (daemon, gRPC over UDS, thin clients, streaming contracts). This document gives a **lightweight** way to **order** work and to **park** deferred items, using clear buckets and a short score.
 
-Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view toward **[V1_0.md](V1_0.md)**. Deeper lists live in [MVP_SPEC.md](MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ROADMAP.md](ROADMAP.md), and [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md). The **`REX_*` catalog** is in [CONFIGURATION.md](CONFIGURATION.md).
+Use [ROADMAP.md](ROADMAP.md) for a **Now / Next / Later** view toward **[V1_0.md](V1_0.md)**. Deeper lists live in [MVP_SPEC.md](MVP_SPEC.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ROADMAP.md](ROADMAP.md), and [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md). **JSON configuration** (and the sole product env var **`REX_ROOT`**) is in [CONFIGURATION.md](CONFIGURATION.md).
 
 ## When to use this
 
 - **Bucketing** (Must/Should/Could/Won’t) and a **quick** R-ICE pass to compare two **Should**-level items → this file, with [ROADMAP.md](ROADMAP.md) for the one-page list.
 - **Choosing what to learn or build next** in the near term → this file and the roadmap, aligned with the linked design docs.
-- **Environment variable names, defaults, and configuration semantics** → [CONFIGURATION.md](CONFIGURATION.md).
+- **Configuration keys, defaults, and semantics** → [CONFIGURATION.md](CONFIGURATION.md) (JSON only; product env is **`REX_ROOT`** alone).
 - **A small, focused change** (for example one crate, one test) → ship the fix; a full pass through this file is **optional** unless the change shifts priorities.
 - **Architecture policy or doc precedence** (which doc wins, ownership of a boundary) → [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) before re-scoring.
 

@@ -8,7 +8,7 @@ REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **daemon** owns 
 
 Canonical **purpose and operating principles** (single source of truth): **[docs/PURPOSE_AND_PRINCIPLES.md](docs/PURPOSE_AND_PRINCIPLES.md)**.
 
-**Configuration policy** (JSON-first via `$REX_ROOT`, `rex config`, legacy env deprecation): [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+**Configuration policy** (JSON only; sole product env var **`REX_ROOT`**): [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
 
 ## What works today (high-value capabilities)
 
@@ -129,7 +129,7 @@ In scope for the first product shape:
 - **HTTP OpenAI-compat** inference and shutdown lifecycle reliability.
 - **CLI path:** **`rex` NDJSON**; modes and approvals — [docs/NDJSON_STREAM.md](docs/NDJSON_STREAM.md).
 - **Dogfooding loop:** develop `rex` from the terminal against a live HTTP backend.
-- **Test harness:** `REX_INFERENCE_RUNTIME=mock` for CI only — [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
+- **Test harness:** `inference.runtime: "mock"` in test `config.json` for CI only — [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
 
 Out of scope for Phase 1 (see [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md)):
 

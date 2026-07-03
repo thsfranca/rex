@@ -13,7 +13,7 @@ GitHub Copilot and similar tools inject repository instructions on every chat tu
 2. **Glob filtering** applies to project slices (Copilot-style `applyTo` semantics): only sections matching the active file path or task glob are merged.
 3. **Config (R015):** JSON section `prompts` with paths or inline refs; env overrides remain for CI. Keys are documented in [CONFIGURATION.md](../../CONFIGURATION.md).
 4. **`prompt_assembly_revision`:** Bump when any layer file changes; include in L1 cache key together with normalized effective user prompt and `context_revision` when retrieval ran ([CACHING.md](../../CACHING.md), tension **T1**).
-5. **Caps:** Layered prompts consume up to **25%** of `REX_MAX_CONTEXT_TOKENS` by default (overridable); truncation trims retrieval before dropping core system slice.
+5. **Caps:** Layered prompts consume up to **25%** of `context.max_context_tokens` by default (overridable); truncation trims retrieval before dropping core system slice.
 6. **Dedup:** When importing git instruction files into a Rex bundle, dedupe by **content hash**; log `prompts=dedupe` on collision.
 7. **Status:** Design accepted; implementation scheduled after R015.
 

@@ -31,7 +31,7 @@ Rejected alternatives considered:
  When **`observability.enabled`** is true in merged JSON ([CONFIGURATION.md](../../CONFIGURATION.md)), `rex-daemon` embeds the OpenTelemetry SDK and pushes **metrics** via **OTLP** using `observability.otlp.endpoint` and `observability.otlp.protocol`. Stdout grep is retained. Rex does not use `REX_OBS_*` or `OTEL_EXPORTER_OTLP_*` env vars for product configuration.
 
 2. **`SidecarObservabilityService` on daemon UDS (planned implementation)** 
- Sidecars call **`SidecarObservabilityService`** over the **daemon UDS** (`REX_DAEMON_SOCKET`), not the sidecar control-plane socket. RPCs: `RegisterMetric`, `RecordMetric`, `GetEconomicsSnapshot`, `ReportResourceStats`. The daemon aggregates sidecar points and exports them as `rex.sidecar.custom.*` on the same OTLP stream as daemon economics.
+ Sidecars call **`SidecarObservabilityService`** over the **daemon UDS** (`daemon.socket`), not the sidecar control-plane socket. RPCs: `RegisterMetric`, `RecordMetric`, `GetEconomicsSnapshot`, `ReportResourceStats`. The daemon aggregates sidecar points and exports them as `rex.sidecar.custom.*` on the same OTLP stream as daemon economics.
 
 3. **BYOT tooling** 
  Rex documents integration patterns only ([OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md)). Rex does not ship collectors, TSDBs, or dashboard servers.
