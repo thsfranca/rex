@@ -171,6 +171,7 @@ When **`inference.omlx.mode: managed`** or **`inference.gateway.mode: managed`**
 | `cli.ui.enabled` | `"auto"` | TUI on TTY: `auto` \| `true` \| `false` |
 | `cli.ui.narrator` | `false` | Optional post-turn LLM summary (**R074**) |
 | `cli.ui.sync_output` | `true` | Emit terminal `?2026` synchronized output when supported |
+| `cli.ui.reduce_motion` | `false` | Static glyphs instead of animated TUI cues (**R081**) |
 | `git.auto_commit_dirty` | `true` | Daemon broker auto-commits dirty files before **`fs.write`** (**R077**) |
 
 CLI flags (planned): `--no-ui`.

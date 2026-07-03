@@ -70,10 +70,9 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(workspace_root: String, model_id: String, daemon_version: String) -> Self {
-        let reduce_motion = std::env::var_os("NO_COLOR").is_some()
-            || std::env::var("REX_TUI_REDUCE_MOTION")
-                .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-                .unwrap_or(false);
+        let reduce_motion = rex_config::load_merged()
+            .map(|c| c.effective.cli.ui.reduce_motion)
+            .unwrap_or(false);
         Self {
             workspace_root,
             model_id,

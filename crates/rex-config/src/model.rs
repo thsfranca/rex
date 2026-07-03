@@ -667,6 +667,9 @@ pub struct CliUiConfig {
     pub narrator: bool,
     #[serde(default = "default_true")]
     pub sync_output: bool,
+    /// When true, TUI uses static glyphs instead of animated frames (**R081**).
+    #[serde(default)]
+    pub reduce_motion: bool,
 }
 
 fn default_cli_ui_enabled() -> String {
@@ -679,6 +682,7 @@ impl Default for CliUiConfig {
             enabled: default_cli_ui_enabled(),
             narrator: false,
             sync_output: true,
+            reduce_motion: false,
         }
     }
 }

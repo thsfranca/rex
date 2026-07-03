@@ -465,6 +465,9 @@ fn merge_cli_ui(base: &mut crate::model::CliUiConfig, overlay: crate::model::Cli
     if !overlay.sync_output {
         base.sync_output = overlay.sync_output;
     }
+    if overlay.reduce_motion {
+        base.reduce_motion = overlay.reduce_motion;
+    }
 }
 
 fn merge_search(base: &mut crate::model::SearchConfig, overlay: crate::model::SearchConfig) {

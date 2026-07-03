@@ -181,7 +181,7 @@ Mode **`ask`** enforces daemon policy that denies **`fs.write`** and **`exec.she
 | **Responsive layout** | Panels keep stable roles; breakpoints change *which* panels show, not their meaning. |
 | **Organic motion** | Tick-driven cues (stream caret, activity spinner, health pulse) convey progress without flashy effects. |
 
-Respect **`NO_COLOR`** and optional **`cli.ui.reduce_motion`** (schema in **R080** / **R081** implementation). Theme remains adaptive to terminal capabilities ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) decision checklist).
+Optional **`cli.ui.reduce_motion`** uses static glyphs instead of animated frames. Theme remains adaptive to terminal capabilities ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) decision checklist).
 
 ### Current baseline (shipped **R073**)
 
@@ -375,6 +375,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 | **`cli.ui.enabled`** | `"auto"` | `auto` \| `true` \| `false` — TUI on TTY |
 | **`cli.ui.narrator`** | `false` | Optional LLM summaries (**R074**) |
 | **`cli.ui.sync_output`** | `true` | Emit `?2026` synchronized output when terminal supports it |
+| **`cli.ui.reduce_motion`** | `false` | Static glyphs instead of animated TUI cues (**R081**) |
 | **`git.auto_commit_dirty`** | `true` | Daemon broker auto-commits dirty files before AI edits (**R077**) |
 
 ### CLI flags (planned)
