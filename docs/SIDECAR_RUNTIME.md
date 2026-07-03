@@ -1,6 +1,6 @@
 # Sidecar runtime (design hub)
 
-Canonical design for Rex **sidecar agents**: a **supervised separate process** on the same Mac as `rex-daemon`, **not** a VM. The **IDE development assistant depends on this process** for agent behavior — see [MVP_SPEC.md](MVP_SPEC.md). **Implementation:** supervisor, `rex.sidecar.v1`, brokered HTTP inference, and `BrokerReadFile` are **implemented** — configure via JSON (`sidecars` in `$REX_ROOT/config.json`); legacy `REX_SIDECAR_*` env is deprecated — [CONFIGURATION.md](CONFIGURATION.md).
+Canonical design for Rex **sidecar agents**: a **supervised separate process** on the same Mac as `rex-daemon`, **not** a VM. The **IDE development assistant depends on this process** for agent behavior — see [MVP_SPEC.md](MVP_SPEC.md). **Implementation:** supervisor, `rex.sidecar.v1`, brokered HTTP inference, and `BrokerReadFile` are **implemented** — configure via JSON (`sidecars` in `$REX_ROOT/config.json`) — [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Role in the architecture
 
@@ -44,9 +44,9 @@ The daemon validates **compatibility metadata** (OS, arch, min runtime version) 
 
 | Link | Transport |
 |------|-----------|
-| Client ↔ daemon | gRPC over UDS (`daemon.socket` in JSON, default `/tmp/rex.sock`; bootstrap may use `REX_DAEMON_SOCKET`) |
-| Sidecar ↔ daemon (broker) | gRPC over **sidecar control-plane UDS** (for example `/tmp/rex-sidecar.sock`) |
-| Sidecar ↔ daemon (observability, planned) | **`SidecarObservabilityService`** on **daemon UDS** (`REX_DAEMON_SOCKET`) — not the sidecar socket |
+| Client ↔ daemon | gRPC over UDS (`daemon.socket` in JSON, default `/tmp/rex.sock`) |
+| Sidecar ↔ daemon (broker) | gRPC over **sidecar control-plane UDS** (from `sidecars.list[].socket`) |
+| Sidecar ↔ daemon (observability, planned) | **`SidecarObservabilityService`** on **daemon UDS** (`daemon.socket`) — not the sidecar socket |
 
 Cross-VM bridging (loopback TCP, vsock) applies only if a **future server** envelope uses a different kernel — not the Mac-first path. See [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) deferred catalog.
 
@@ -103,7 +103,7 @@ Proto package **`rex.sidecar.v1`** — broker RPCs on the sidecar socket; **`Sid
 
 Sidecars produce custom metrics **through the daemon**, not via a separate observability sidecar (**planned**):
 
-1. Sidecar opens gRPC to **daemon UDS** (`REX_DAEMON_SOCKET`) and calls `SidecarObservabilityService.RegisterMetric`, then `RecordMetric`.
+1. Sidecar opens gRPC to **daemon UDS** (`daemon.socket`) and calls `SidecarObservabilityService.RegisterMetric`, then `RecordMetric`.
 2. Daemon aggregates and exports on the same OTLP stream as daemon economics (`rex.sidecar.custom.*`).
 3. Optional: sidecar calls `GetEconomicsSnapshot` on **daemon UDS** to read recent cache/route/token summaries for agent logic.
 

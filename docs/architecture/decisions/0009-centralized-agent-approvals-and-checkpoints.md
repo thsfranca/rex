@@ -5,7 +5,7 @@
 
 ## Context
 
-`rex-daemon` already owns **stream lifecycle**, **adapter envelope**, and (**R007**) the **policy seam** that decides cache outcomes ([`docs/ARCHITECTURE_GUIDELINES.md`](../../ARCHITECTURE_GUIDELINES.md), [`docs/CACHING.md`](../../CACHING.md)). **Agent-mode** enforcement now includes a daemon **`ApprovalGate`** ([`crates/rex-daemon/src/approvals.rs`](../../../crates/rex-daemon/src/approvals.rs)) with opt-in `REX_AGENT_APPROVALS=1`; the **extension** still owns approval **UX** and passes `--approval-id` / `StreamInferenceRequest.approval_id` when required. Mode guardrails remain in [`docs/NDJSON_STREAM.md`](../../NDJSON_STREAM.md); full tool **sandbox** broker matrix is **partial** ([`docs/CONTEXT_EFFICIENCY.md`](../../CONTEXT_EFFICIENCY.md)).
+`rex-daemon` already owns **stream lifecycle**, **adapter envelope**, and (**R007**) the **policy seam** that decides cache outcomes ([`docs/ARCHITECTURE_GUIDELINES.md`](../../ARCHITECTURE_GUIDELINES.md), [`docs/CACHING.md`](../../CACHING.md)). **Agent-mode** enforcement now includes a daemon **`ApprovalGate`** ([`crates/rex-daemon/src/approvals.rs`](../../../crates/rex-daemon/src/approvals.rs)) with opt-in `agent.approvals_enabled` in JSON; clients pass `--approval-id` / `StreamInferenceRequest.approval_id` when required. Mode guardrails remain in [`docs/NDJSON_STREAM.md`](../../NDJSON_STREAM.md); full tool **sandbox** broker matrix is **partial** ([`docs/CONTEXT_EFFICIENCY.md`](../../CONTEXT_EFFICIENCY.md)).
 
 Pressures forcing this decision:
 
@@ -22,7 +22,7 @@ Pressures forcing this decision:
  - `ApprovalContext` — request-scoped inputs the gate may inspect (mode, runtime, prompt directives, future client-supplied permissions).
  - `ApprovalDecision { Allow, Deny { reason }, Checkpoint { reason } }` — `Checkpoint` reserved for future tool / write-step gating without changing the trait shape.
  - **Default impl:** `AlwaysAllow` so introducing the gate is a behavior-preserving refactor.
-4. **Activation is opt-in via env.** Enforcement of `agent`-mode denial when no approval context is present ships behind an environment flag (e.g. `REX_AGENT_APPROVALS=1`), following the precedence catalog in [`docs/CONFIGURATION.md`](../../CONFIGURATION.md). Default off; existing flows unchanged until a client supplies approval context.
+4. **Activation is opt-in via JSON.** Enforcement of `agent`-mode denial when no approval context is present ships behind `agent.approvals_enabled` in merged config ([CONFIGURATION.md](../../CONFIGURATION.md)). Default off; existing flows unchanged until a client supplies approval context.
 5. **`ask` and `plan` are out of scope.** The gate is consulted only when policy already routes a request through the `agent` branch of [`docs/architecture/decisions/0003-layered-cache-agent-mode-policy.md`](0003-layered-cache-agent-mode-policy.md). `ask` and `plan` keep today's behavior.
 6. **Anti-patterns.** Reject: per-client approval logic that diverges between `rex-cli` and the extension; ambient "auto-approve everything" environment switches with no observability; bypassing the policy seam to hardcode approval in the stream service layer.
 
@@ -43,7 +43,7 @@ Pressures forcing this decision:
  - **Shipped:** `rex-cli` and the extension pass `approval_id`; daemon logs `approval=allow|deny|checkpoint` on agent-mode streams.
 - **Risks / follow-up:**
  - Defining what counts as a "checkpoint" beyond simple allow/deny will drive further design (tool / write-step gating). Today `Checkpoint { reason }` is **reserved** and proceeds without blocking the stream until phase-2 semantics land.
- - `REX_AGENT_APPROVALS` is cataloged in [`docs/CONFIGURATION.md`](../../CONFIGURATION.md).
+ - `agent.approvals_enabled` is cataloged in [`docs/CONFIGURATION.md`](../../CONFIGURATION.md).
 
 ## Implementation status (2026-06)
 

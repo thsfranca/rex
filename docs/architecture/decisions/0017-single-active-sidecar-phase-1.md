@@ -12,7 +12,7 @@
 1. **Phase 1 product path:** **Single active sidecar** — config key `sidecars.active` names one entry (default `agent` → `rex-agent` when shipped).
 2. **R016 broadcast API:** **Deferred** (Could) — no `sidecars.active[]` broadcast in Phase 1.
 3. **When multi-active is revisited:** Shared **daemon** LTM and knowledge stores with workspace-scoped locks; **per-sidecar** ephemeral scratch only; ADR amendment required.
-4. **`rex-sidecar-stub`** remains the CI harness; switched via `REX_SIDECAR_*` or R015 config.
+4. **`rex-sidecar-stub`** remains the CI harness; switched via `sidecars` in JSON (R015).
 
 ## Consequences
 

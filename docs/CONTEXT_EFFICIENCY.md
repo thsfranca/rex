@@ -193,7 +193,7 @@ Add an **advisory intent** bypass before the length heuristic:
 ### Cache bypass
 
 - Global bypass through environment variable:
- - `REX_CACHE_BYPASS=1`
+ - `cache.bypass: true` in JSON — [CONFIGURATION.md](CONFIGURATION.md)
 - Per-request bypass directive inside prompt:
  - `[[cache:bypass]]`
 

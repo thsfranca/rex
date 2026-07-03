@@ -70,7 +70,7 @@ The Phase 1 product path requires a **supervised sidecar** for assistant modes �
 }
 ```
 
-Legacy `REX_OPENAI_COMPAT_*` / `REX_SIDECAR_ENABLED` env vars are **ignored with warning** — [CONFIGURATION.md](CONFIGURATION.md).
+Product settings are **JSON only**; the sole product env var is **`REX_ROOT`** — [CONFIGURATION.md](CONFIGURATION.md).
 
 **Managed gateway (`inference.gateway.mode: managed`):** `rex gateway init`, set keys in `$REX_ROOT/gateway/.env`, `rex gateway doctor`, then `rex status` — [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
 

@@ -1,6 +1,6 @@
 # Product agent delivery
 
-**Status: Should program complete — `rex-agent` shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)). **Could** follow-ups only: **R016**, **R033**, **R036**, **R056**, **R055** — see [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
+**Status: Should program complete — `rex-agent` shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** only; sole product env var **`REX_ROOT`** ([CONFIGURATION.md](CONFIGURATION.md), **R082**). **Could** follow-ups only: **R016**, **R033**, **R036**, **R056**, **R055** — see [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
 
 **Current focus:** TUI presentation **R080** → motion **R081** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md). LangFuse (**RC-LF1**) unblocked for discovery scheduling.
 
@@ -69,7 +69,7 @@ flowchart TB
 | LLM | **Broker-only** — `BrokerInference` via daemon; no direct OpenAI keys in sidecar |
 | Tools | Broker RPCs: `fs.read`, `fs.list`, `fs.write`, `exec.shell` (mode-gated) |
 | Modes | `ask` (no tools), `plan` (read/list), `agent` (read/list/write/exec) |
-| Harness | **`rex-sidecar-stub`** stays for CI; switch via config or `REX_SIDECAR_*` |
+| Harness | **`rex-sidecar-stub`** stays for CI; switch via `sidecars` in JSON |
 | Python lint | **R025** — Ruff on `rex-agent` in CI — **Done** — [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) |
 
 ### One `RunTurn` flow (target)
@@ -128,7 +128,7 @@ Terminal operators use Rex as the **primary surface** without a dedicated foregr
 
 **Status: implemented.** Precedence (low → high): defaults → `$REX_ROOT/config.json` → `.rex/config.json` → CLI flags on `rex complete`.
 
-Layout root: **`REX_ROOT`** (default `~/.rex`). Bootstrap with `rex config init`.
+Layout root: **`REX_ROOT`** (default `~/.rex`) — **sole product environment variable**. All other settings are JSON — [CONFIGURATION.md](CONFIGURATION.md). Bootstrap with `rex config init`.
 
 ### Minimal example (illustrative)
 
@@ -189,7 +189,7 @@ Prerequisites for **`rex-agent`** dogfood (**R017–R018** Done). Design: [DEVEL
 
 ### R022 — Workspace binding (daemon)
 
-**Status: Done.** Product path: fail-closed when `workspace.root` unset ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)); harness cwd fallback via `workspace.allow_cwd_fallback` or `REX_ALLOW_CWD_WORKSPACE` in [CONFIGURATION.md](CONFIGURATION.md). Extension supplies root under **R019**.
+**Status: Done.** Product path: fail-closed when `workspace.root` unset ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)); harness cwd fallback via `workspace.allow_cwd_fallback` in JSON — [CONFIGURATION.md](CONFIGURATION.md). (**R082** removes any remaining non-`REX_ROOT` product-path env reads.)
 
 ## R019 — Integration and E2E acceptance
 
@@ -284,6 +284,6 @@ Roadmap target: **`sidecars.active[]`** with daemon **broadcast** of `RunTurn`. 
 - [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) — hybrid serialization boundaries
 - [MVP_SPEC.md](MVP_SPEC.md) — Phase 1 architecture
 - [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) — sidecar runtime hub
-- [CONFIGURATION.md](CONFIGURATION.md) — settings policy
+- [CONFIGURATION.md](CONFIGURATION.md) — settings policy (**R082**: JSON only; sole product env **`REX_ROOT`**)
 - [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) — plugin platform
 - [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md) · [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md)

@@ -7,9 +7,9 @@ Canonical **architecture-level** design for how Rex constrains **agent workloads
 | Capability | MVP | Notes |
 |------------|-----|-------|
 | **`fs.read`** | **Required** (recommended default) | Workspace paths; proves agent can inspect repo via broker |
-| **`fs.list`** | **Implemented** (broker RPC) | Non-recursive directory listing under `REX_WORKSPACE_ROOT` (256-entry cap); sidecar stub `__rex_list:` directive |
-| **`fs.write`** | **Implemented** (broker RPC) | Bounded write under `REX_WORKSPACE_ROOT`; sidecar stub `__rex_write:` directive |
-| **`exec.shell`** | **Implemented** (broker RPC) | Allowlisted programs only (`REX_BROKER_SHELL_ALLOWLIST`); sidecar stub `__rex_exec:` directive |
+| **`fs.list`** | **Implemented** (broker RPC) | Non-recursive directory listing under `workspace.root` (256-entry cap); sidecar stub `__rex_list:` directive |
+| **`fs.write`** | **Implemented** (broker RPC) | Bounded write under `workspace.root`; sidecar stub `__rex_write:` directive |
+| **`exec.shell`** | **Implemented** (broker RPC) | Allowlisted programs only (`broker.shell_allowlist`); sidecar stub `__rex_exec:` directive |
 | **`net.fetch`** | Won't (now) | Default deny |
 | **`web.search`** | **Interim** (ask, ADR 0031) | Mock broker when `search.enabled`; **R055** migrates to SearXNG capability sidecar — [WEB_SEARCH.md](WEB_SEARCH.md) |
 
@@ -114,7 +114,7 @@ Sidecar graphs must not be the only enforcement layer once **`rex-agent`** ships
 
 ### Purpose
 
-Bounded basename glob and content search under `REX_WORKSPACE_ROOT` — OpenCode `grep` / `glob` analogue. Reduces `fs.list` + `fs.read` rounds when the agent needs to locate files by name or snippet.
+Bounded basename glob and content search under `workspace.root` — OpenCode `grep` / `glob` analogue. Reduces `fs.list` + `fs.read` rounds when the agent needs to locate files by name or snippet.
 
 ### Scope
 

@@ -114,7 +114,7 @@ Documented in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Illustrative verbs:
 
 ## Brokered HTTP (not “daemon = agent”)
 
-- JSON: `inference.openai_compat` in `$REX_ROOT/config.json` — [CONFIGURATION.md](CONFIGURATION.md) (legacy `REX_OPENAI_COMPAT_*` env ignored with warning).
+- JSON: `inference.openai_compat` in `$REX_ROOT/config.json` — [CONFIGURATION.md](CONFIGURATION.md).
 - Daemon **`http_openai_compat`** module is the **broker implementation** when the sidecar (or harness) requests inference.
 - Operator profiles: Ollama, LM Studio, OpenAI API — [ADAPTERS.md](ADAPTERS.md).
 
@@ -133,7 +133,7 @@ Documented in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Illustrative verbs:
 
 | Path | Use |
 |------|-----|
-| `REX_INFERENCE_RUNTIME=mock` | CI, `uds_e2e` |
+| `inference.runtime: "mock"` in test `config.json` | CI, `uds_e2e` |
 | Direct in-process HTTP without sidecar | Migration and tests only — **not** product acceptance (**RC-03**) |
 
 When sidecar is required but absent, clients must get a **clear error**, not silent fallback that looks like success (**RC-08**).
@@ -151,7 +151,7 @@ Covered by `cargo test -p rex-daemon mvp_product_path` (also run from `verify_mv
 - [x] Build workspace (via preflight script).
 - [x] Sidecar health under daemon supervision (stub spawn + health).
 - [x] `StreamInference` **agent** mode uses sidecar **`BrokerInference`** → daemon HTTP (loopback fixture in CI; live JSON `inference.openai_compat` for operator dogfood).
-- [x] Brokered **`fs.read`** via prompt `__rex_read:<file>` under `REX_WORKSPACE_ROOT`.
+- [x] Brokered **`fs.read`** via prompt `__rex_read:<file>` under `workspace.root`.
 - [x] Required sidecar missing → clear **sidecar** error at daemon startup (no silent success).
 
 ### Operator-only (live HTTP backend)

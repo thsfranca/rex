@@ -20,7 +20,7 @@ Adapted from [AIP-193](https://google.aip.dev/193), [gRPC error handling](https:
 2. **Actionable messages** — Brief formula: **what failed → why/context → next step**. No crate names, stack traces, or internal type names on operator paths.
 3. **Audience split**
  - **User/operator path** (NDJSON stdout, extension UI): plain language and recovery steps; link to setup docs when helpful.
- - **Developer/debug path** (daemon logs, `REX_TRACE_ID`): may include socket paths, env var names, and `source` chains — never secrets or full sensitive file contents.
+ - **Developer/debug path** (daemon logs, CLI `--trace-id`): may include socket paths and `source` chains — never secrets or full sensitive file contents.
 4. **Memorable codes** — `snake_case` words, not UUIDs. Use domain prefixes for broker/policy (`protected_path`) when codes leave the NDJSON stream taxonomy.
 5. **Test codes, not prose** — Contracts and CI validate **code identity** and terminal outcomes; message wording may improve without breaking clients.
 6. **Boundary policy** — Convert internal errors **once** at each boundary: daemon → gRPC, CLI → NDJSON, extension → UI hints.
@@ -139,7 +139,7 @@ These are **documented inconsistencies**; fixing them is follow-up work, not req
 
 - Do **not** return secrets, tokens, or full contents of protected files in user-facing messages.
 - Policy denies: name the **policy code** and operation; avoid echoing sensitive paths beyond what the user already supplied.
-- Debug logs may include more context when correlated with `REX_TRACE_ID` — see [CONFIGURATION.md](CONFIGURATION.md).
+- Debug logs may include more context when correlated with CLI **`--trace-id`** — see [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Review checklist (error-related PRs)
 

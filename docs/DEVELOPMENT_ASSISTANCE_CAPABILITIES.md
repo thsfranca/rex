@@ -75,7 +75,7 @@ flowchart TB
 
 **Default budget split (design default, overridable in R015 config):**
 
-| Stage | Default share of `REX_MAX_CONTEXT_TOKENS` | Truncation priority |
+| Stage | Default share of `context.max_context_tokens` | Truncation priority |
 |-------|------------------------------------------|---------------------|
 | Layered prompts | 25% | Trim last (after retrieval) |
 | Knowledge retrieval | 15% | Third |
@@ -127,10 +127,10 @@ Daemon-assembled snapshot at turn start. Not yet a separate proto message in Pha
 
 ### Workspace binding (summary)
 
-- Config: `workspace.root` in `.rex/config.json` / env (**R015**).
+- Config: `workspace.root` in `.rex/config.json` (**R015**).
 - Extension: set `workspace.root` when auto-starting daemon (**R019**).
 - Daemon: fail-closed when `workspace.root` unset unless harness flag — **R022** ([CONFIGURATION.md](CONFIGURATION.md)).
-- Product path: **fail-closed** if root unset; cwd fallback only with `REX_ALLOW_CWD_WORKSPACE=1` (harness/CI) — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md).
+- Product path: **fail-closed** if root unset; cwd fallback only with `workspace.allow_cwd_fallback: true` in JSON (harness/CI) — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md).
 - Multi-root: Phase 1 uses primary folder only; log `workspace.warning=multi_root` when `folders.length > 1`.
 
 ## Interfaces (intent)
@@ -138,7 +138,7 @@ Daemon-assembled snapshot at turn start. Not yet a separate proto message in Pha
 | Name | Role |
 |------|------|
 | `TurnContext` | Daemon-assembled per-turn snapshot (this hub) |
-| `ContextBudgetAllocator` | Splits `REX_MAX_*_TOKENS` across pipeline stages |
+| `ContextBudgetAllocator` | Splits `context.max_prompt_tokens` / `context.max_context_tokens` across pipeline stages |
 | `LayeredPromptAssembly` | `system → project → mode` merge ([ADR 0012](architecture/decisions/0012-layered-prompt-assemblies.md)) |
 | `AccessPolicy` | Broker allow/deny ([ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md)) |
 | `ProjectMemoryRetrieval` | LTM pipeline stage ([ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md)) |
@@ -160,8 +160,8 @@ Hard conflicts (**C***) and resolutions recorded in ADRs.
 | **C5** | Large layered prompts vs retrieval/memory/knowledge | `ContextBudgetAllocator` with stage caps (table above) |
 | **C6** | Git Copilot-style files vs Rex bundles | Single ingestion path per source; dedupe by content hash ([ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md)) |
 | **C7** | Drift `fail-closed` (agent) vs `prefer-git` (ask) | Intentional per-mode policy |
-| **C8** | Fail-closed workspace vs cwd fallback | **Implemented (R022):** product requires `workspace.root`; harness: `workspace.allow_cwd_fallback` or `REX_ALLOW_CWD_WORKSPACE=1` |
-| **C9** | Single `REX_WORKSPACE_ROOT` vs multi-root IDE | Phase 1 primary folder only |
+| **C8** | Fail-closed workspace vs cwd fallback | **Implemented (R022):** product requires `workspace.root`; harness: `workspace.allow_cwd_fallback: true` in JSON |
+| **C9** | Single `workspace.root` vs multi-root IDE | Phase 1 primary folder only |
 | **C10** | MCP in sidecar vs broker-only host | Host effects map to broker verbs only ([ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md)) |
 | **C11** | KnowledgeBroker vs MCP resources | One `KnowledgeRetrieval` stage; MCP is transport profile |
 
