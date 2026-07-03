@@ -1,6 +1,6 @@
 # CLI operator UX — design hub
 
-**Status:** `design accepted` — **R071** / **R075** implemented; **R072–R074** planned ([ROADMAP.md](ROADMAP.md)). Architecture: [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
+**Status:** `design accepted` — **R071** / **R075** / **R072** / **R073** implemented; **R079** visual identity (this hub); **R080–R081** presentation and motion Open; **R074** Could ([ROADMAP.md](ROADMAP.md)). Architecture: [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
 
 ## Purpose
 
@@ -10,7 +10,7 @@ Give **terminal operators** the **primary** Rex experience: a single command in 
 
 ## Language policy
 
-Describe **target experience and acceptance criteria in Rex terms only**. Do not name other CLIs or assistants as UX benchmarks in this hub or in R071–R074 PR text. Comparative landscape synthesis lives in the external research repository.
+Describe **target experience and acceptance criteria in Rex terms only**. Do not name other CLIs or assistants as UX benchmarks in this hub or in **R071–R081** PR text. Comparative landscape synthesis lives in the external research repository.
 
 ## North-star UX
 
@@ -55,12 +55,14 @@ Operators run **`cd ~/projects/my-app && rex`** (or **`rex tui`**) and enter an 
 |------------|-----------|--------|
 | Daemon start | Auto-start shipped (**R071**) | Done |
 | Per-workspace routing | **R075** Done | Done |
-| Lifecycle feedback | Header states partial | Full header strip in TUI |
-| Stream progress | `--verbose` stderr; NDJSON pipe | TUI activity pane + messaging layer |
-| Interactive session | `rex complete` plain text on TTY | **`rex tui`** + TTY-delegating **`complete`** |
-| Markdown output | Plain text chunks | Incremental rendered markdown (**mdstream**) |
-| Tool approval | TTY prompt / `--approval-id` | TUI modal with diff preview |
-| Friendly status | Minimal | Structured copy (Must); optional narrator (Could) |
+| Lifecycle feedback | Header shows session word (`idle` / `streaming` / `error`) | Symbol-first health + phase (**R080**) |
+| Stream progress | Activity list + output pane | Same panes; human phrases and glyphs, not tool tags (**R080**) |
+| Interactive session | **`rex tui`** + TTY-delegating **`complete`** (**R073**) | Done (chrome); presentation program **R080–R081** |
+| Markdown output | Incremental **mdstream** path | Done |
+| Tool approval | Modal with tool name + detail | Human-first change summary; technical id secondary (**R080**) |
+| Friendly status | Minimal structured copy | Progressive disclosure; optional narrator (**R074**) |
+| Layout density | Fixed 35/65 split; full labels on every pane | Responsive breakpoints; calm density (**R080**) |
+| Motion | Redraw on input/events only | Tick-driven cues (**R081**) |
 
 ## Boundaries
 
@@ -164,6 +166,88 @@ flowchart TB
 | `/mode <name>` | Slash fallback for mode switch |
 
 Mode **`ask`** enforces daemon policy that denies **`fs.write`** and **`exec.shell`**. Mode **`plan`** restricts broker to read-only and **`plan.save`**. Mode **`agent`** unlocks full mutative tools subject to approval policy.
+
+## Visual identity and operator presentation (**R079–R081**)
+
+**Program status:** **R079** design (this section) — **Done** when this hub revision merges. **R080** presentation (tokens, responsive layout, symbol-first UI, progressive disclosure) and **R081** motion (tick loop + cues) are **Open**.
+
+### Principles
+
+| Principle | Intent |
+|-----------|--------|
+| **Calm density** | Output is primary; chrome and secondary panes recede. Prefer one border depth between terminal edge and content. |
+| **Symbol-first status** | Mode, health, streaming, and approval use glyphs, weight, and color; words only when needed. Color is never the only signal (pair with glyph or letter). |
+| **Progressive disclosure** | Tool ids, capability tags, full paths, and model ids stay hidden by default; reveal on focus, **`?`**, or approval expand. |
+| **Responsive layout** | Panels keep stable roles; breakpoints change *which* panels show, not their meaning. |
+| **Organic motion** | Tick-driven cues (stream caret, activity spinner, health pulse) convey progress without flashy effects. |
+
+Respect **`NO_COLOR`** and optional **`cli.ui.reduce_motion`** (schema in **R080** / **R081** implementation). Theme remains adaptive to terminal capabilities ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) decision checklist).
+
+### Current baseline (shipped **R073**)
+
+Observed on a live **`rex tui`** session (wide terminal, idle):
+
+- **Header:** full path, `model=…`, `mode=…`, version string; status word `idle` / `streaming` / `error` inside the block.
+- **Body:** fixed horizontal split (~35% Activity / ~65% Output) with titled borders (`Activity`, `Output`).
+- **Activity:** plain-language ready line; no glyph phase markers.
+- **Composer / footer:** titled `Composer`; footer is a full key-hint sentence (`Enter: submit | Esc: cancel | …`).
+- **Approval modal (when shown):** leads with tool name and detail strings.
+- **Layout:** no breakpoint behavior — narrow terminals still use the same split and long header line (truncation only).
+- **Motion:** no animation tick; UI redraws on input and stream events only.
+
+### Target presentation (**R080**)
+
+| Pane | Default (symbol-first) | Disclosed on demand |
+|------|------------------------|---------------------|
+| **Header** | Workspace basename, mode glyph, health dot, compact phase cue | Full path, model id, version, trace id (`?` or overlay) |
+| **Activity** | Short human phrase or symbol + phase from operator messaging ([OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md)) | Tool id / capability / raw detail on focus or expand |
+| **Output** | Streaming markdown (primary focus) | Raw toggle optional (unchanged intent) |
+| **Composer** | Prompt + mode glyph; minimal chrome | Mode name text when cycling or on `?` |
+| **Footer** | Minimal key glyphs | Full help when **`?`** toggled |
+| **Approval** | What will change (path / summary) | Technical tool id as secondary line |
+
+**Default activity and approval copy must not** lead with broker capability tags or protocol-style identifiers. Map NDJSON **`tool`** / **`activity`** events through the messaging catalog; do not dump event field names into the default timeline.
+
+### Responsive breakpoints (**R080**)
+
+| Width (cols) | Layout |
+|--------------|--------|
+| **Narrow** (cols under 80) | Single column: Output primary; Activity collapsed or stacked below; header truncated to basename + glyphs |
+| **Medium** (80–119) | Activity narrow + Output wide |
+| **Wide** (120 and up) | Full header / activity / output / composer / footer grid |
+
+Panels must not reorder on focus. Below a minimum size, show a clear “terminal too small” message rather than an unusable grid.
+
+### Motion inventory (**R081**)
+
+| Cue | When |
+|-----|------|
+| Stream caret / pulse on output edge | Session streaming |
+| Activity row spinner | Tool or activity in progress |
+| Header health pulse | Daemon ensure / reconnect |
+| Focused pane border accent | Tab focus cycle |
+
+Requires a **tick** in the app loop while cues are active (not only event-driven redraw). When **`cli.ui.reduce_motion`** is on, use static glyphs instead of animated frames.
+
+### Run and validate
+
+| Step | Command / tool |
+|------|----------------|
+| Install | `./scripts/install-cli.sh` (or `--skip-shell-path`) |
+| Run | `rex tui` from a project directory |
+| Agent live validation | External live harness (tuiwright MCP): `tui_open` → `tui_wait_for` / `tui_send_keys` → `tui_snapshot` with **text** format → `tui_close` |
+| Resize checks | `tui_resize` then text snapshot at narrow / medium / wide |
+| Motion checks | Sequential text snapshots while streaming (glyph change over time) |
+
+A Rex **headless** TUI adapter (NDJSON replay + ANSI snapshot) is **Won't** — live PTY validation is enough ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md#testing-strategy)).
+
+### Acceptance (program)
+
+| ID | Done when |
+|----|-----------|
+| **R079** | This section is the implementer source of truth; roadmaps list **R080–R081**. |
+| **R080** | Semantic tokens; breakpoints; default idle snapshot free of tool tags; human-first approval; live harness checks at narrow/medium/wide. |
+| **R081** | Tick loop; streaming/activity/header cues; optional reduce_motion; sequential live snapshots show changing glyphs. |
 
 ## Tool approval UX
 
@@ -334,6 +418,22 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 
 - Off by default; configurable via **`cli.ui.narrator`**.
 - Post-turn summary only; does not alter NDJSON stream.
+- Narrator copy must follow progressive disclosure (no tool-tag spam in default UI).
+
+### R079 — TUI visual identity design (docs)
+
+- This hub section **Visual identity and operator presentation** is the source of truth.
+- Roadmaps list **R080** / **R081**; validation path documents live harness text snapshots.
+
+### R080 — TUI presentation (tokens, responsive, symbols, disclosure)
+
+- Semantic color tokens; no scattered one-off colors for status.
+- Breakpoints per table above; live harness resize checks.
+- Default activity and approval free of leading tool tags; human-first approval copy.
+
+### R081 — TUI motion
+
+- App-loop tick while cues active; stream / activity / header cues; optional **`cli.ui.reduce_motion`**.
 
 ## Prioritization
 
@@ -342,12 +442,15 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 | Design hub + ADR 0039 | **Must** | This document + [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) |
 | R071 auto-start | **Should** | **Done** |
 | R075 per-workspace | **Must** | **Done** |
-| R072 messaging + NDJSON core | **Must** (program) | Current **Next** focus |
-| R073 TUI + approvals | **Should** | After R072 |
-| R074 narrator | **Could** | After R073 |
+| R072 messaging + NDJSON core | **Must** (program) | **Done** |
+| R073 TUI + approvals | **Should** | **Done** |
+| R079 visual identity docs | **Should** | **Done** (this revision) |
+| R080 presentation | **Should** | After R079 |
+| R081 motion | **Should** | After R080 |
+| R074 narrator | **Could** | After R073; prefer after R080 disclosure rules |
 | R076–R078 daemon intelligence | **Could** / **Later** | After TUI MVP |
 
-**Current program focus:** [ROADMAP.md](ROADMAP.md) — terminal harness **R072** → **R073**. LangFuse discovery deferred until harness MVP lands; **RC-LF1** remains **Not met**.
+**Current program focus:** [ROADMAP.md](ROADMAP.md) — TUI presentation **R080** → motion **R081**. LangFuse discovery unblocked for scheduling; **RC-LF1** remains **Not met**.
 
 ## Open questions
 

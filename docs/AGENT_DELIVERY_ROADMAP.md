@@ -2,7 +2,7 @@
 
 **Status: Should program complete — `rex-agent` shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** ([CONFIGURATION.md](CONFIGURATION.md)). **Could** follow-ups only: **R016**, **R033**, **R036**, **R056**, **R055** — see [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
 
-**Current focus:** Terminal harness program **R074** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md). LangFuse (**RC-LF1**) unblocked for discovery scheduling.
+**Current focus:** TUI presentation **R080** → motion **R081** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md). LangFuse (**RC-LF1**) unblocked for discovery scheduling.
 
 ## Problem
 
@@ -103,9 +103,9 @@ flowchart TB
 
 Extension defaults: **`rex`** + `["daemon"]` for auto-start. Compatibility shims **`rex-cli`** / **`rex-daemon`** delegate to the same libraries with deprecation hints.
 
-## CLI operator UX (R071–R078)
+## CLI operator UX (R071–R081)
 
-**Status:** partial — **R071** / **R075** / **R072** / **R073** Done. Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Architecture: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Decisions: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
+**Status:** partial — **R071** / **R075** / **R072** / **R073** / **R079** Done; **R080–R081** Open. Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Architecture: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Decisions: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
 Terminal operators use Rex as the **primary surface** without a dedicated foreground **`rex daemon`** session. **`rex complete --format ndjson`** remains the automation and CI contract ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)).
 
@@ -115,8 +115,11 @@ Terminal operators use Rex as the **primary surface** without a dedicated foregr
 | **R075** | Per-workspace daemon routing | Must | — | **Done** — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md) |
 | **R072** | NDJSON core + messaging + **mdstream** | Must (program) | R071 | **Done** |
 | **R073** | Full terminal UI + approval modals | Should | R072 | **Done** |
+| **R079** | TUI visual identity design (docs) | Should | R073 | **Done** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081) |
+| **R080** | TUI presentation (tokens, responsive, symbols, disclosure) | Should | R079 | Live harness text snapshots at narrow/medium/wide |
+| **R081** | TUI motion (tick + cues) | Should | R080 | Sequential live snapshots for glyph change |
 | — | Headless TUI adapter (external agent harness replay/snapshot) | **Won't** | — | Not required — live PTY verification is enough ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md#testing-strategy), [ROADMAP.md](ROADMAP.md)) |
-| **R074** | Optional LLM narrator | Could | R073 | Off by default |
+| **R074** | Optional LLM narrator | Could | R073 | Off by default; prefer after **R080** |
 | **R076** | Daemon-owned LSP diagnostics | Could | R073 | Later v2 |
 | **R077** | Brokered git dirty-state auto-commit | Should | R073 | **`git.auto_commit_dirty`** |
 | **R078** | Dynamic MCP approval schema UI | Could | R073 | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
