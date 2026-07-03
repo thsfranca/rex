@@ -27,7 +27,7 @@ Constraints:
 
 4. **Operator messaging (Must):** A structured mapping from lifecycle phases and NDJSON events to curated plain-language strings is **required** for the CLI operator program. This is the primary “friendly” layer—no LLM on the critical path.
 
-5. **LLM narrator (Could):** An optional post-turn natural-language summary may be added later (**R074**), off by default (**`cli.ui.narrator: false`**).
+5. **LLM narrator (Could):** An optional post-turn natural-language summary may be added later (**R074**), off by default (config key not in schema until shipped).
 
 6. **Automation path preserved:** **`rex complete --format ndjson`** on non-TTY stdout remains the canonical extension, CI, and scripting contract. TUI must not alter NDJSON wire shape or break pipe consumers.
 
