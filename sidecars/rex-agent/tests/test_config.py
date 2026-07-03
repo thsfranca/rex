@@ -72,83 +72,21 @@ def test_broker_timeout_default_when_unconfigured(
     assert config.broker_timeout_secs() == config.DEFAULT_BROKER_TIMEOUT_SEC
 
 
-def test_agent_limits_from_config(
+def test_max_tool_result_bytes_from_config(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     root = tmp_path / "rex"
     root.mkdir()
     (root / "config.json").write_text(
-        json.dumps(
-            {
-                "agent": {"max_tool_steps": 3},
-                "broker": {"max_tool_result_bytes": 1024},
-            }
-        ),
+        json.dumps({"broker": {"max_tool_result_bytes": 1024}}),
         encoding="utf-8",
     )
     monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
-    assert config.max_tool_steps() == 0
     assert config.max_tool_result_bytes() == 1024
 
 
-def test_ask_tool_steps_deprecated_r069(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = tmp_path / "rex"
-    root.mkdir()
-    (root / "config.json").write_text(
-        json.dumps({"agent": {"max_tool_steps": 12}}),
-        encoding="utf-8",
-    )
-    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
-    assert config.max_tool_steps_for_mode("ask") == 0
-    assert config.max_tool_steps_for_mode("agent") == 0
-
-
-def test_ask_tool_steps_config_ignored_r069(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = tmp_path / "rex"
-    root.mkdir()
-    (root / "config.json").write_text(
-        json.dumps({"agent": {"max_tool_steps": 12, "max_tool_steps_ask": 2}}),
-        encoding="utf-8",
-    )
-    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
-    assert config.max_tool_steps_for_mode("ask") == 0
-    assert config.max_tool_steps_for_mode("agent") == 0
-
-
-def test_plan_tool_steps_deprecated_r069(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = tmp_path / "rex"
-    root.mkdir()
-    (root / "config.json").write_text(
-        json.dumps({"agent": {"max_tool_steps": 12}}),
-        encoding="utf-8",
-    )
-    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
-    assert config.max_tool_steps_for_mode("plan") == 0
-    assert config.max_tool_steps_for_mode("agent") == 0
-
-
-def test_plan_tool_steps_config_ignored_r069(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    root = tmp_path / "rex"
-    root.mkdir()
-    (root / "config.json").write_text(
-        json.dumps({"agent": {"max_tool_steps_plan": 15}}),
-        encoding="utf-8",
-    )
-    monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
-    assert config.max_tool_steps_for_mode("plan") == 0
-
-
-def test_agent_limits_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_max_tool_result_bytes_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
-    assert config.max_tool_steps() == 0
     assert config.max_tool_result_bytes() == config.DEFAULT_MAX_TOOL_RESULT_BYTES
 
 
@@ -213,11 +151,6 @@ def test_search_disabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     assert config.search_enabled() is False
 
 
-def test_ask_step_cap_removed_r069(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
-    assert config.max_tool_steps_for_mode("ask") == 0
-
-
 def test_deterministic_init_enabled_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
     assert config.deterministic_init_enabled() is True
@@ -253,12 +186,3 @@ def test_compaction_enabled_from_config(
     monkeypatch.setenv(config.REX_ROOT_ENV, str(root))
     assert config.compaction_enabled() is True
 
-
-def test_soft_cap_enabled_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
-    assert config.soft_cap_enabled() is True
-
-
-def test_soft_cap_fraction_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(config.REX_ROOT_ENV, "/nonexistent-rex-root-for-test")
-    assert config.soft_cap_fraction() == pytest.approx(config.DEFAULT_SOFT_CAP_FRACTION)

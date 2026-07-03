@@ -110,7 +110,7 @@ Truncation at **line boundaries** when exceeding `max_tool_result_bytes`.
 | **Raw delimited tool results** from daemon; no JSON wrap of file/shell stdout | R034 |
 | Viewer isolation — Editor without raw read dumps | R028 |
 | Unified diff for edits; reject whole-file rewrite >50 lines | R030 |
-| Read dedup + default `max_tool_steps=12` | R032 |
+| Read dedup (step caps removed R069/R082) | R032 |
 | Parallel read-only tool batching; 1 step = 1 LLM round (**R057**) | R057 |
 | Goal-hint pruning when read >100 lines (config-gated) | R031 Done |
 | TRON-class static schema compression in daemon prefix | R036 (Could) |

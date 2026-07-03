@@ -16,14 +16,14 @@ R063 shipped Continue UX to extend caps; operators still hit cap-terminal errors
 2. **Remove soft-cap pause** — no `awaiting_continue` activity, no `ContinueTurn` step extension path. Deprecate `ContinueTurn` RPC (no-op or removed in a follow-up cleanup PR).
 3. **Loop termination:** model emits `final` / `clarify` / `plan`, or **`agent_loop_stuck`** fires after three consecutive policy/config tool failures (R060 circuit breaker unchanged).
 4. **Retain:** `max_tools_per_step` batch limit (R057), exact-match duplicate cache (R061), broker access policy, agent approvals.
-5. **Config:** `agent.max_tool_steps`, `agent.max_tool_steps_ask`, `agent.max_tool_steps_plan`, `agent.soft_cap_enabled`, `agent.soft_cap_fraction`, `agent.soft_cap_step_extension` → **deprecated**, ignored by sidecar after **R069** implementation.
+5. **Config:** `agent.max_tool_steps`, `agent.max_tool_steps_ask`, `agent.max_tool_steps_plan`, `agent.soft_cap_enabled`, `agent.soft_cap_fraction`, `agent.soft_cap_step_extension` → **removed** from schema (**R082**); ignored if present in older JSON.
 6. **Economics guardrail:** turn metrics (R064) and LangFuse export remain the path to reintroduce optional caps if runaway cost appears — not a default product limit.
 
 ## Consequences
 
 - **Positive:** Ask/plan research prompts can complete without artificial cap errors; aligns with OpenCode-style agent loops.
 - **Negative:** Unbounded loops possible on misbehaving models; mitigated by circuit breaker and operator cancel.
-- **Follow-up:** Remove deprecated config fields from `rex-config` schema; strip extension Continue UX when soft cap is gone.
+- **Follow-up:** Schema fields removed (**R082**).
 
 ## Related
 

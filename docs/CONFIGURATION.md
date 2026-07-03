@@ -58,7 +58,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 
 **Not implemented (do not set):** `context.advisory_intent_enabled` (**R067**), `broker.web_search`, `git.auto_commit_dirty` (**R077**) — design only in linked hubs.
 
-**Ignored if present (removed by R069 / ADR 0034; schema cleanup in R082):** `agent.max_tool_steps`, `agent.max_tool_steps_ask`, `agent.max_tool_steps_plan`, `agent.soft_cap_enabled`, `agent.soft_cap_fraction`, `agent.soft_cap_step_extension`.
+**Removed (R069 / ADR 0034 / R082):** `agent.max_tool_steps`, `agent.max_tool_steps_ask`, `agent.max_tool_steps_plan`, `agent.soft_cap_enabled`, `agent.soft_cap_fraction`, `agent.soft_cap_step_extension` — ignored if present in older files.
 
 Minimal example:
 
@@ -371,13 +371,13 @@ Keys under `cli` and `search` control stream idle timeouts and ask-mode `web.sea
 | `agent.deterministic_init_enabled` | `true` | Pre-LLM ask init (`fs.read` README + `fs.list`) before first inference (**R060**) |
 | `agent.compaction_enabled` | `false` | Intra-turn suffix compaction node (**R029**, **R062** — off by default to preserve prefix cache) |
 
-CLI flags: `rex complete --verbose` (stderr status in text mode), `--yes` / `--approval-id` for agent approval automation. Keys listed under **Ignored if present** above are not tunables.
+CLI flags: `rex complete --verbose` (stderr status in text mode), `--yes` / `--approval-id` for agent approval automation.
 
 ## Not implemented yet (roadmap)
 
 - Global CLI flags mirroring all JSON keys — partial today (`rex complete` flags only).
 - Layered prompt assemblies — see **Layered prompts** below.
-- Config surface cleanup (**R082**): remove dead agent keys from schema; drop remaining non-`REX_ROOT` product-path env reads — this document is the policy hub.
+- Config surface cleanup (**R082**): dead agent step/soft-cap keys removed from schema; remaining slices drop non-`REX_ROOT` product-path env reads and slim operator templates.
 
 ## See also
 

@@ -9,10 +9,6 @@ use std::sync::Arc;
 
 use crate::adapters::RuntimeKind;
 
-/// **Deprecated catalog name** — retained for stable deny-reason text (ADR 0009).
-#[allow(dead_code)]
-pub const APPROVALS_ENV: &str = "REX_AGENT_APPROVALS";
-
 /// Per-request inputs the gate may inspect when authorizing `agent` mode.
 /// Owned (rather than borrowed) so the gate can move it across `await` points
 /// without complicating lifetimes for the trait object.
@@ -46,7 +42,7 @@ pub trait ApprovalGate: Send + Sync {
 }
 
 /// No-op gate: every `agent`-mode request is allowed. Default for daemon
-/// startup unless `REX_AGENT_APPROVALS` opts into enforcement.
+/// startup unless `agent.approvals_enabled` opts into enforcement.
 pub struct AlwaysAllow;
 
 #[tonic::async_trait]
@@ -56,15 +52,15 @@ impl ApprovalGate for AlwaysAllow {
     }
 }
 
-/// Enforcement gate selected by `REX_AGENT_APPROVALS=1`. Denies `agent` requests
-/// without a non-empty `approval_id` in `ApprovalContext`; allows when the
-/// client supplied approval context (extension/CLI).
+/// Enforcement gate selected when `agent.approvals_enabled` is true. Denies
+/// `agent` requests without a non-empty `approval_id` in `ApprovalContext`;
+/// allows when the client supplied approval context (CLI).
 pub struct EnforceWithoutContext;
 
 /// Stable deny reason returned by `EnforceWithoutContext`. Kept as a constant
 /// so tests, dashboards, and clients have one string to match on.
 pub const ENFORCEMENT_DENY_REASON: &str =
-    "REX_AGENT_APPROVALS=1 and no approval context supplied for agent mode";
+    "agent.approvals_enabled is true and no approval context supplied for agent mode";
 
 #[tonic::async_trait]
 impl ApprovalGate for EnforceWithoutContext {
