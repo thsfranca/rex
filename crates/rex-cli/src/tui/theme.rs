@@ -19,9 +19,6 @@ pub struct Theme {
 
 impl Theme {
     pub fn default_adaptive() -> Self {
-        if std::env::var_os("NO_COLOR").is_some() {
-            return Self::monochrome();
-        }
         Self {
             text: Color::Reset,
             text_muted: Color::DarkGray,
@@ -33,21 +30,6 @@ impl Theme {
             warning: Color::Yellow,
             error: Color::Red,
             info: Color::Blue,
-        }
-    }
-
-    pub fn monochrome() -> Self {
-        Self {
-            text: Color::Reset,
-            text_muted: Color::DarkGray,
-            text_bright: Color::White,
-            accent: Color::Reset,
-            border: Color::DarkGray,
-            border_focus: Color::White,
-            success: Color::Reset,
-            warning: Color::Reset,
-            error: Color::Reset,
-            info: Color::Reset,
         }
     }
 

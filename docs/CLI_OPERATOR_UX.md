@@ -181,7 +181,7 @@ Mode **`ask`** enforces daemon policy that denies **`fs.write`** and **`exec.she
 | **Responsive layout** | Panels keep stable roles; breakpoints change *which* panels show, not their meaning. |
 | **Organic motion** | Tick-driven cues (stream caret, activity spinner, health pulse) convey progress without flashy effects. |
 
-Respect **`NO_COLOR`** and optional **`cli.ui.reduce_motion`** (schema in **R080** / **R081** implementation). Theme remains adaptive to terminal capabilities ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) decision checklist).
+Theme remains adaptive to terminal capabilities ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) decision checklist).
 
 ### Current baseline (shipped **R073**)
 
@@ -227,7 +227,7 @@ Panels must not reorder on focus. Below a minimum size, show a clear “terminal
 | Header health pulse | Daemon ensure / reconnect |
 | Focused pane border accent | Tab focus cycle |
 
-Requires a **tick** in the app loop while cues are active (not only event-driven redraw). When **`cli.ui.reduce_motion`** is on, use static glyphs instead of animated frames.
+Requires a **tick** in the app loop while cues are active (not only event-driven redraw).
 
 ### Run and validate
 
@@ -247,7 +247,7 @@ A Rex **headless** TUI adapter (NDJSON replay + ANSI snapshot) is **Won't** — 
 |----|-----------|
 | **R079** | This section is the implementer source of truth; roadmaps list **R080–R081**. |
 | **R080** | Semantic tokens; breakpoints; default idle snapshot free of tool tags; human-first approval; live harness checks at narrow/medium/wide. |
-| **R081** | Tick loop; streaming/activity/header cues; optional reduce_motion; sequential live snapshots show changing glyphs. |
+| **R081** | Tick loop; streaming/activity/header cues; sequential live snapshots show changing glyphs. |
 
 ## Tool approval UX
 
@@ -377,6 +377,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 | **`cli.ui.sync_output`** | `true` | Emit `?2026` synchronized output when terminal supports it |
 | **`git.auto_commit_dirty`** | `true` | Daemon broker auto-commits dirty files before AI edits (**R077**) |
 
+
 ### CLI flags (planned)
 
 | Flag | Purpose |
@@ -433,7 +434,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 
 ### R081 — TUI motion
 
-- App-loop tick while cues active; stream / activity / header cues; optional **`cli.ui.reduce_motion`**.
+- App-loop tick while cues active; stream / activity / header cues.
 
 ## Prioritization
 

@@ -50,7 +50,7 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
         SessionPhase::Streaming => app.theme.accent(),
         SessionPhase::Error => app.theme.error(),
     };
-    let phase = if app.session == SessionPhase::Streaming && !app.reduce_motion {
+    let phase = if app.session == SessionPhase::Streaming {
         Span::styled(format!("{} ", app.spinner_frame()), phase_style)
     } else {
         Span::styled(format!("{} ", app.phase_glyph()), phase_style)
@@ -132,14 +132,7 @@ fn draw_output(frame: &mut Frame, area: Rect, app: &AppState, pane: FocusPane) {
     let focused = app.focus == pane;
     let mut text = app.output_lines.join("");
     if app.session == SessionPhase::Streaming {
-        let caret = if app.reduce_motion {
-            "▌"
-        } else if app.tick % 2 == 0 {
-            "▌"
-        } else {
-            " "
-        };
-        text.push_str(caret);
+        text.push_str(if app.tick % 2 == 0 { "▌" } else { " " });
     }
     let title = if focused { " · " } else { " " };
     let widget = Paragraph::new(text)
