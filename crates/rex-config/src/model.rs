@@ -150,20 +150,12 @@ impl RexConfig {
                 host: None,
                 required: Some(true),
                 harness: None,
-                list: vec![
-                    SidecarEntry {
-                        name: "stub".to_string(),
-                        binary: "rex-sidecar-stub".to_string(),
-                        enabled: false,
-                        socket: DEFAULT_SIDECAR_SOCKET.to_string(),
-                    },
-                    SidecarEntry {
-                        name: "agent".to_string(),
-                        binary: "rex-agent".to_string(),
-                        enabled: true,
-                        socket: DEFAULT_SIDECAR_SOCKET.to_string(),
-                    },
-                ],
+                list: vec![SidecarEntry {
+                    name: "agent".to_string(),
+                    binary: "rex-agent".to_string(),
+                    enabled: true,
+                    socket: DEFAULT_SIDECAR_SOCKET.to_string(),
+                }],
                 capabilities: Vec::new(),
             },
             agent: AgentConfig {

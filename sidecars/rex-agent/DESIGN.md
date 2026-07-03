@@ -89,7 +89,7 @@ Emit `RunTurnChunk` incrementally to daemon; daemon passthrough to `rex.v1` clie
 
 ## Harness
 
-CI and local tests may use **`rex-sidecar-stub`** instead; switch via `REX_SIDECAR_BINARY` or R015 `sidecars` config.
+CI and local tests may use **`rex-sidecar-stub`** instead; switch via `sidecars` in JSON — [CONFIGURATION.md](../../docs/CONFIGURATION.md#ci-and-harness-not-operator-product-config).
 
 ## Market benchmark
 
