@@ -315,14 +315,27 @@ mod tests {
 
         let mut overlay = RexConfig::default();
         overlay.agent.compaction_enabled = Some(true);
-        overlay.agent.soft_cap_enabled = Some(true);
-        overlay.agent.soft_cap_fraction = Some(0.5);
 
         merge_config(&mut base, overlay);
         assert_eq!(base.agent.compaction_enabled, Some(true));
-        assert_eq!(base.agent.soft_cap_enabled, Some(true));
-        assert_eq!(base.agent.soft_cap_fraction, Some(0.5));
         assert_eq!(base.agent.deterministic_init_enabled, Some(true));
+    }
+
+    #[test]
+    fn agent_config_ignores_removed_step_cap_keys() {
+        let cfg: RexConfig = serde_json::from_str(
+            r#"{
+                "version": 1,
+                "agent": {
+                    "max_tool_steps": 12,
+                    "max_tool_steps_ask": 3,
+                    "soft_cap_enabled": true
+                }
+            }"#,
+        )
+        .expect("unknown agent keys must be ignored");
+        assert_eq!(cfg.agent.max_tools_per_step, 8);
+        assert!(cfg.agent.compaction_enabled.is_none());
     }
 
     #[test]

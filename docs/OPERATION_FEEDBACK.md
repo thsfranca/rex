@@ -64,7 +64,7 @@ When `agent.approvals_enabled` is true in merged JSON:
 
 ## Tool step billing (all modes)
 
-`tool_steps` counts **productive** broker rounds toward the mode cap (`agent.max_tool_steps`, `agent.max_tool_steps_ask`, or `agent.max_tool_steps_plan`). A round bills when any tool returns `ok=True` or the broker executed and returned exploratory feedback (for example not-found, non-zero exit). Rounds where **every** failure is policy or configuration class (`mode_denied`, `access policy denied`, sidecar validation) do **not** increment — the model may retry without exhausting the cap ([ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md)). Sidecar pre-gate rejections (invalid batch, workspace-first) never reach billing.
+`tool_steps` counts **productive** broker rounds for turn metrics (step caps removed — [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md)). A round bills when any tool returns `ok=True` or the broker executed and returned exploratory feedback (for example not-found, non-zero exit). Rounds where **every** failure is policy or configuration class (`mode_denied`, `access policy denied`, sidecar validation) do **not** increment ([ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md)). Sidecar pre-gate rejections (invalid batch, workspace-first) never reach billing.
 
 ## Live streaming (ADR 0030)
 

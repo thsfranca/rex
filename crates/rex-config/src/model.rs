@@ -129,14 +129,9 @@ impl RexConfig {
             agent: AgentConfig {
                 approvals_enabled: Some(false),
                 tool_approvals_enabled: Some(false),
-                max_tool_steps: 25,
-                max_tool_steps_ask: default_max_tool_steps_ask(),
-                max_tool_steps_plan: default_max_tool_steps_plan(),
                 max_tools_per_step: 8,
                 deterministic_init_enabled: None,
                 compaction_enabled: None,
-                soft_cap_enabled: None,
-                soft_cap_fraction: None,
             },
             cli: CliConfig::default(),
             search: SearchConfig::default(),
@@ -172,14 +167,9 @@ impl RexConfig {
             agent: AgentConfig {
                 approvals_enabled: Some(true),
                 tool_approvals_enabled: Some(false),
-                max_tool_steps: 25,
-                max_tool_steps_ask: default_max_tool_steps_ask(),
-                max_tool_steps_plan: default_max_tool_steps_plan(),
                 max_tools_per_step: 8,
                 deterministic_init_enabled: None,
                 compaction_enabled: None,
-                soft_cap_enabled: None,
-                soft_cap_fraction: None,
             },
             search: SearchConfig {
                 enabled: Some(true),
@@ -604,12 +594,6 @@ pub struct AgentConfig {
     pub approvals_enabled: Option<bool>,
     #[serde(default)]
     pub tool_approvals_enabled: Option<bool>,
-    #[serde(default = "default_max_tool_steps")]
-    pub max_tool_steps: u32,
-    #[serde(default = "default_max_tool_steps_ask")]
-    pub max_tool_steps_ask: u32,
-    #[serde(default = "default_max_tool_steps_plan")]
-    pub max_tool_steps_plan: u32,
     #[serde(default = "default_max_tools_per_step")]
     pub max_tools_per_step: u32,
     /// Pre-LLM ask init (README + list). Sidecar default true when unset.
@@ -618,12 +602,6 @@ pub struct AgentConfig {
     /// Intra-turn suffix compaction (R029). Sidecar default false when unset.
     #[serde(default)]
     pub compaction_enabled: Option<bool>,
-    /// Soft cap pause before hard step limit (R063). Sidecar default false when unset.
-    #[serde(default)]
-    pub soft_cap_enabled: Option<bool>,
-    /// Fraction of mode step cap at which soft cap fires (R063). Sidecar default 2/3 when unset.
-    #[serde(default)]
-    pub soft_cap_fraction: Option<f64>,
 }
 
 impl Default for AgentConfig {
@@ -631,28 +609,11 @@ impl Default for AgentConfig {
         Self {
             approvals_enabled: None,
             tool_approvals_enabled: None,
-            max_tool_steps: default_max_tool_steps(),
-            max_tool_steps_ask: default_max_tool_steps_ask(),
-            max_tool_steps_plan: default_max_tool_steps_plan(),
             max_tools_per_step: default_max_tools_per_step(),
             deterministic_init_enabled: None,
             compaction_enabled: None,
-            soft_cap_enabled: None,
-            soft_cap_fraction: None,
         }
     }
-}
-
-fn default_max_tool_steps() -> u32 {
-    25
-}
-
-fn default_max_tool_steps_ask() -> u32 {
-    15
-}
-
-fn default_max_tool_steps_plan() -> u32 {
-    25
 }
 
 fn default_max_tools_per_step() -> u32 {

@@ -419,15 +419,6 @@ fn merge_agent(base: &mut crate::model::AgentConfig, overlay: crate::model::Agen
     if overlay.tool_approvals_enabled.is_some() {
         base.tool_approvals_enabled = overlay.tool_approvals_enabled;
     }
-    if overlay.max_tool_steps != 0 {
-        base.max_tool_steps = overlay.max_tool_steps;
-    }
-    if overlay.max_tool_steps_ask != 0 {
-        base.max_tool_steps_ask = overlay.max_tool_steps_ask;
-    }
-    if overlay.max_tool_steps_plan != 0 {
-        base.max_tool_steps_plan = overlay.max_tool_steps_plan;
-    }
     if overlay.max_tools_per_step != 0 {
         base.max_tools_per_step = overlay.max_tools_per_step;
     }
@@ -436,12 +427,6 @@ fn merge_agent(base: &mut crate::model::AgentConfig, overlay: crate::model::Agen
     }
     if overlay.compaction_enabled.is_some() {
         base.compaction_enabled = overlay.compaction_enabled;
-    }
-    if overlay.soft_cap_enabled.is_some() {
-        base.soft_cap_enabled = overlay.soft_cap_enabled;
-    }
-    if overlay.soft_cap_fraction.is_some() {
-        base.soft_cap_fraction = overlay.soft_cap_fraction;
     }
 }
 

@@ -49,7 +49,7 @@ Pressures forcing this decision:
 
 - **Activation:** `agent.approvals_enabled` in JSON config (`approval_gate_from_config` at daemon boot). Default off → `AlwaysAllow`.
 - **Clients:** Extension and `rex complete` pass `--approval-id` when enforcement is on — [V1_0.md](../../V1_0.md) RC-06.
-- **Stable deny string:** Retains `REX_AGENT_APPROVALS=1` label in `ENFORCEMENT_DENY_REASON` for client/test compatibility; env var is **not read**.
+- **Stable deny string:** `ENFORCEMENT_DENY_REASON` names `agent.approvals_enabled` (R082); former `REX_AGENT_APPROVALS` label removed.
 - **Access policy broker:** Mode × capability matrix complete per **R020** — [POLICY_ENGINE.md](../../POLICY_ENGINE.md), [ADR 0013](0013-access-policy-broker-completion.md).
 - **Reserved:** `Checkpoint` decision variant for future tool-step gating.
 

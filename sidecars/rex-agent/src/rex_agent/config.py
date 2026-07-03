@@ -9,17 +9,11 @@ from typing import Any, Optional
 
 DEFAULT_DAEMON_SOCKET = "/tmp/rex.sock"
 DEFAULT_SIDECAR_SOCKET = "/tmp/rex-sidecar.sock"
-DEFAULT_MAX_TOOL_STEPS = 25
-DEFAULT_MAX_TOOL_STEPS_ASK = 15
-DEFAULT_MAX_TOOL_STEPS_PLAN = 25
 DEFAULT_MAX_TOOLS_PER_STEP = 8
 DEFAULT_MAX_TOOL_RESULT_BYTES = 8192
 DEFAULT_COMPACTION_SUFFIX_FRACTION = 0.25
 DEFAULT_COMPACTION_ENABLED = False
 DEFAULT_DETERMINISTIC_INIT_ENABLED = True
-DEFAULT_SOFT_CAP_ENABLED = True
-DEFAULT_SOFT_CAP_FRACTION = 2 / 3
-DEFAULT_SOFT_CAP_STEP_EXTENSION = 10
 DEFAULT_BROKER_TIMEOUT_SEC = 120.0
 REX_ROOT_ENV = "REX_ROOT"
 
@@ -114,16 +108,6 @@ def daemon_socket() -> str:
     return DEFAULT_DAEMON_SOCKET
 
 
-def max_tool_steps() -> int:
-    return max_tool_steps_for_mode("agent")
-
-
-def max_tool_steps_for_mode(mode: str) -> int:
-    """Deprecated (R069): step caps removed; returns 0 (unbounded for metrics)."""
-    _ = mode
-    return 0
-
-
 def max_tools_per_step() -> int:
     cfg = _load_config_json()
     if cfg:
@@ -192,40 +176,6 @@ def compaction_enabled() -> bool:
         if isinstance(flag, bool):
             return flag
     return DEFAULT_COMPACTION_ENABLED
-
-
-def soft_cap_enabled() -> bool:
-    cfg = _load_config_json()
-    if cfg:
-        agent = cfg.get("agent") or {}
-        flag = agent.get("soft_cap_enabled")
-        if isinstance(flag, bool):
-            return flag
-    return DEFAULT_SOFT_CAP_ENABLED
-
-
-def soft_cap_fraction() -> float:
-    cfg = _load_config_json()
-    if cfg:
-        agent = cfg.get("agent") or {}
-        fraction = agent.get("soft_cap_fraction")
-        if isinstance(fraction, (int, float)) and 0 < float(fraction) < 1:
-            return float(fraction)
-    return DEFAULT_SOFT_CAP_FRACTION
-
-
-def soft_cap_step_extension() -> int:
-    cfg = _load_config_json()
-    if cfg:
-        agent = cfg.get("agent") or {}
-        bonus = agent.get("soft_cap_step_extension")
-        if isinstance(bonus, int) and bonus > 0:
-            return bonus
-    return DEFAULT_SOFT_CAP_STEP_EXTENSION
-
-
-def soft_cap_threshold(max_steps: int) -> int:
-    return max(1, int(max_steps * soft_cap_fraction()))
 
 
 def broker_timeout_secs() -> float:

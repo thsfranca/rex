@@ -533,12 +533,12 @@ async fn stream_reports_terminal_error_when_daemon_interrupts() {
     restore_inference_runtime(prev_runtime);
 }
 
-/// With `REX_AGENT_APPROVALS=1`, an `agent`-mode request must surface a
+/// With `agent.approvals_enabled` true, an `agent`-mode request must surface a
 /// `FailedPrecondition` gRPC error matching `ENFORCEMENT_DENY_REASON` from
 /// `approvals.rs`. `ask`-mode requests on the same daemon stay successful.
 #[tokio::test]
 #[serial]
-async fn agent_mode_is_denied_when_approvals_env_is_set() {
+async fn agent_mode_is_denied_when_approvals_enabled() {
     if !uds_bind_supported() {
         eprintln!("Skipping UDS e2e: sandbox does not allow unix socket bind");
         return;
@@ -570,9 +570,9 @@ async fn agent_mode_is_denied_when_approvals_env_is_set() {
         .expect_err("agent mode must be denied when agent.approvals_enabled is true");
     assert_eq!(agent_err.code(), tonic::Code::FailedPrecondition);
     assert!(
-        agent_err
-            .message()
-            .contains("REX_AGENT_APPROVALS=1 and no approval context supplied for agent mode"),
+        agent_err.message().contains(
+            "agent.approvals_enabled is true and no approval context supplied for agent mode"
+        ),
         "deny reason should match ADR 0009 wording: {}",
         agent_err.message()
     );
@@ -644,11 +644,11 @@ async fn agent_mode_succeeds_with_approval_id_when_enforced() {
     settings::reset_for_test();
 }
 
-/// With `REX_AGENT_APPROVALS` unset, an `agent`-mode request must succeed
+/// With `agent.approvals_enabled` false, an `agent`-mode request must succeed
 /// (preserves today's default behavior).
 #[tokio::test]
 #[serial]
-async fn agent_mode_is_allowed_when_approvals_env_is_unset() {
+async fn agent_mode_is_allowed_when_approvals_disabled() {
     if !uds_bind_supported() {
         eprintln!("Skipping UDS e2e: sandbox does not allow unix socket bind");
         return;

@@ -422,7 +422,7 @@ def is_policy_config_failure(result: str) -> bool:
 
 
 def should_bill_tool_step(results: list[tuple[bool, str]]) -> bool:
-    """Return True when a tool batch should count toward max_tool_steps*."""
+    """Return True when a tool batch should count toward turn tool_steps metrics."""
     if not results:
         return False
     if any(ok for ok, _ in results):

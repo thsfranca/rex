@@ -151,7 +151,7 @@ Layout root: **`REX_ROOT`** (default `~/.rex`) — **sole product environment va
  }
  },
  "workspace": { "root": "." },
- "agent": { "max_tool_steps": 12 }
+ "agent": { "approvals_enabled": true }
 }
 ```
 
