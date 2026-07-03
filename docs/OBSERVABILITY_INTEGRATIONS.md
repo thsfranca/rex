@@ -48,7 +48,6 @@ Example (product path):
  "observability": {
  "enabled": true,
  "service_name": "rex-daemon",
- "custom_sidecar_metrics": true,
  "read_api": {
  "listen": "127.0.0.1:9470"
  },

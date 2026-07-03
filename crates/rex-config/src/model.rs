@@ -132,6 +132,8 @@ impl RexConfig {
                 max_tools_per_step: 8,
                 deterministic_init_enabled: None,
                 compaction_enabled: None,
+                compaction_suffix_fraction: None,
+                read_pruning_enabled: None,
             },
             cli: CliConfig::default(),
             search: SearchConfig::default(),
@@ -170,6 +172,8 @@ impl RexConfig {
                 max_tools_per_step: 8,
                 deterministic_init_enabled: None,
                 compaction_enabled: None,
+                compaction_suffix_fraction: None,
+                read_pruning_enabled: None,
             },
             search: SearchConfig {
                 enabled: Some(true),
@@ -602,6 +606,13 @@ pub struct AgentConfig {
     /// Intra-turn suffix compaction (R029). Sidecar default false when unset.
     #[serde(default)]
     pub compaction_enabled: Option<bool>,
+    /// Fraction of `broker.max_tool_result_bytes` used as compaction threshold.
+    /// Sidecar default **0.25** when unset.
+    #[serde(default)]
+    pub compaction_suffix_fraction: Option<f64>,
+    /// Goal-hint read pruning (R031). Sidecar default false when unset.
+    #[serde(default)]
+    pub read_pruning_enabled: Option<bool>,
 }
 
 impl Default for AgentConfig {
@@ -612,6 +623,8 @@ impl Default for AgentConfig {
             max_tools_per_step: default_max_tools_per_step(),
             deterministic_init_enabled: None,
             compaction_enabled: None,
+            compaction_suffix_fraction: None,
+            read_pruning_enabled: None,
         }
     }
 }
@@ -624,8 +637,6 @@ fn default_max_tools_per_step() -> u32 {
 pub struct CliUiConfig {
     #[serde(default = "default_cli_ui_enabled")]
     pub enabled: String,
-    #[serde(default)]
-    pub narrator: bool,
     #[serde(default = "default_true")]
     pub sync_output: bool,
 }
@@ -638,7 +649,6 @@ impl Default for CliUiConfig {
     fn default() -> Self {
         Self {
             enabled: default_cli_ui_enabled(),
-            narrator: false,
             sync_output: true,
         }
     }
@@ -712,8 +722,6 @@ pub struct ObservabilityConfig {
     pub enabled: Option<bool>,
     #[serde(default = "default_obs_service_name")]
     pub service_name: String,
-    #[serde(default = "default_true")]
-    pub custom_sidecar_metrics: bool,
     #[serde(default)]
     pub otlp: OtlpConfig,
 }
@@ -723,7 +731,6 @@ impl Default for ObservabilityConfig {
         Self {
             enabled: None,
             service_name: default_obs_service_name(),
-            custom_sidecar_metrics: true,
             otlp: OtlpConfig::default(),
         }
     }
@@ -761,7 +768,6 @@ mod cli_config_tests {
         let ui = super::CliUiConfig::default();
         assert_eq!(ui.enabled, "auto");
         assert!(ui.sync_output);
-        assert!(!ui.narrator);
         assert!(ui.should_use_tui(true, false));
         assert!(!ui.should_use_tui(false, false));
         assert!(!ui.should_use_tui(true, true));

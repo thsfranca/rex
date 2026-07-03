@@ -334,7 +334,7 @@ Map stable **`code`** values to one-line operator hints (for example **`sidecar_
 
 Optional layer that summarizes a completed multi-tool turn in natural language.
 
-- **Default:** off (**`cli.ui.narrator: false`**).
+- **Default:** off (planned key **`cli.ui.narrator`** — not in schema until **R074** ships).
 - **Trigger:** after terminal **`done`**, only when activity pane had more than N tool/step events (threshold TBD).
 - **Model:** small/fast local or configured inference; must not block **`StreamInference`** start.
 - **Non-goal:** replacing structured messaging or NDJSON events.
@@ -354,7 +354,6 @@ Optional layer that summarizes a completed multi-tool turn in natural language.
   "cli": {
     "ui": {
       "enabled": "auto",
-      "narrator": false,
       "sync_output": true
     }
   },
@@ -373,7 +372,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 | **`daemon.idle_shutdown_secs`** | **`300`** | Idle auto-shutdown (**R071b**); **`0`** disables |
 | **`daemon.log_path`** | `~/.rex/daemon.log` | Detached daemon stdout/stderr |
 | **`cli.ui.enabled`** | `"auto"` | `auto` \| `true` \| `false` — TUI on TTY |
-| **`cli.ui.narrator`** | `false` | Optional LLM summaries (**R074**) |
+| **`cli.ui.narrator`** | `false` | Planned (**R074**); not in schema yet |
 | **`cli.ui.sync_output`** | `true` | Emit `?2026` synchronized output when terminal supports it |
 | **`git.auto_commit_dirty`** | `true` | Daemon broker auto-commits dirty files before AI edits (**R077**) |
 
@@ -417,7 +416,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 
 ### R074 — Optional LLM narrator (Could)
 
-- Off by default; configurable via **`cli.ui.narrator`**.
+- Off by default; will be configurable via **`cli.ui.narrator`** when **R074** ships.
 - Post-turn summary only; does not alter NDJSON stream.
 - Narrator copy must follow progressive disclosure (no tool-tag spam in default UI).
 

@@ -428,6 +428,12 @@ fn merge_agent(base: &mut crate::model::AgentConfig, overlay: crate::model::Agen
     if overlay.compaction_enabled.is_some() {
         base.compaction_enabled = overlay.compaction_enabled;
     }
+    if overlay.compaction_suffix_fraction.is_some() {
+        base.compaction_suffix_fraction = overlay.compaction_suffix_fraction;
+    }
+    if overlay.read_pruning_enabled.is_some() {
+        base.read_pruning_enabled = overlay.read_pruning_enabled;
+    }
 }
 
 fn merge_cli(base: &mut crate::model::CliConfig, overlay: crate::model::CliConfig) {
@@ -443,9 +449,6 @@ fn merge_cli(base: &mut crate::model::CliConfig, overlay: crate::model::CliConfi
 fn merge_cli_ui(base: &mut crate::model::CliUiConfig, overlay: crate::model::CliUiConfig) {
     if !overlay.enabled.is_empty() {
         base.enabled = overlay.enabled;
-    }
-    if overlay.narrator {
-        base.narrator = overlay.narrator;
     }
     if !overlay.sync_output {
         base.sync_output = overlay.sync_output;
@@ -476,9 +479,6 @@ fn merge_observability(
     }
     if !overlay.service_name.is_empty() {
         base.service_name = overlay.service_name;
-    }
-    if !overlay.custom_sidecar_metrics {
-        base.custom_sidecar_metrics = overlay.custom_sidecar_metrics;
     }
     if !overlay.otlp.endpoint.is_empty() {
         base.otlp.endpoint = overlay.otlp.endpoint;
