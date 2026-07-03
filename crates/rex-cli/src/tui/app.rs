@@ -71,6 +71,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
     let mut stream_rx: Option<Receiver<StreamUpdate>> = None;
 
     loop {
+        app.tick = app.tick.wrapping_add(1);
         terminal
             .draw(|f| ui::draw(f, &app))
             .map_err(|e| e.to_string())?;
@@ -81,7 +82,13 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
             }
         }
 
-        if event::poll(Duration::from_millis(100)).map_err(|e| e.to_string())? {
+        let poll_ms = if app.session == SessionPhase::Streaming && !app.reduce_motion {
+            80
+        } else {
+            120
+        };
+
+        if event::poll(Duration::from_millis(poll_ms)).map_err(|e| e.to_string())? {
             if let Event::Key(key) = event::read().map_err(|e| e.to_string())? {
                 match key.code {
                     KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => break,
@@ -90,11 +97,11 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                             break;
                         }
                         app.ctrl_c_armed = true;
-                        app.footer = "Press Ctrl+C again to exit".to_string();
+                        app.status_message = Some("Press Ctrl+C again to exit".to_string());
                         if app.session == SessionPhase::Streaming {
                             stream_rx = None;
                             app.session = SessionPhase::Idle;
-                            app.footer = "Turn canceled".to_string();
+                            app.status_message = Some("Turn canceled".to_string());
                         }
                     }
                     KeyCode::Esc => {
@@ -102,11 +109,17 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                         if app.session == SessionPhase::Streaming {
                             stream_rx = None;
                             app.session = SessionPhase::Idle;
-                            app.footer = "Turn canceled".to_string();
+                            app.status_message = Some("Turn canceled".to_string());
                         }
                     }
                     KeyCode::Tab if key.modifiers.contains(KeyModifiers::SHIFT) => {
                         app.cycle_mode();
+                    }
+                    KeyCode::Tab => {
+                        app.cycle_focus();
+                    }
+                    KeyCode::Char('?') => {
+                        app.toggle_help();
                     }
                     KeyCode::Char('a') | KeyCode::Char('A')
                         if app.pending_approval.is_some() =>
@@ -115,9 +128,12 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                             let token = pending.approval_token.clone();
                             let tool_call_id = pending.tool_call_id.clone();
                             match respond_to_tool_approval(&token, &tool_call_id, true).await {
-                                Ok(()) => app.push_activity(format!("Approved {}", pending.name)),
-                                Err(err) => app.push_activity(format!("Approval failed: {err}")),
+                                Ok(()) => app.push_activity("✓ Approved", Some(pending.name)),
+                                Err(err) => {
+                                    app.push_activity(format!("✖ Approval failed: {err}"), None)
+                                }
                             }
+                            app.status_message = None;
                         }
                     }
                     KeyCode::Char('d') | KeyCode::Char('D')
@@ -127,12 +143,17 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                             let token = pending.approval_token.clone();
                             let tool_call_id = pending.tool_call_id.clone();
                             let _ = respond_to_tool_approval(&token, &tool_call_id, false).await;
-                            app.push_activity(format!("Denied {}", pending.name));
+                            app.push_activity("○ Denied", Some(pending.name));
+                            app.status_message = None;
                         }
                     }
                     KeyCode::Char('y') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         app.bypass = !app.bypass;
-                        app.footer = format!("Bypass: {}", if app.bypass { "on" } else { "off" });
+                        app.status_message = Some(if app.bypass {
+                            "Bypass on".to_string()
+                        } else {
+                            "Bypass off".to_string()
+                        });
                     }
                     KeyCode::Enter if app.session == SessionPhase::Idle => {
                         let prompt = app.composer.trim().to_string();
@@ -174,9 +195,11 @@ fn apply_stream_update(app: &mut AppState, update: StreamUpdate) {
             for effect in effects {
                 match effect {
                     UiEffect::AppendChunk(text) => app.append_output(&text),
-                    UiEffect::OperatorMessage(msg) => app.push_activity(msg),
+                    UiEffect::OperatorMessage(msg) => app.push_activity(msg, None),
                     UiEffect::ToolUpdated(card) => {
-                        app.push_activity(format!("{} [{}]", card.name, card.phase));
+                        let (summary, detail) =
+                            AppState::humanize_tool_phase(&card.name, &card.phase);
+                        app.push_activity(summary, detail);
                         if card.phase == "approval_required" {
                             let token = card
                                 .detail
@@ -189,8 +212,7 @@ fn apply_stream_update(app: &mut AppState, update: StreamUpdate) {
                                 detail: card.detail.clone(),
                                 approval_token: token,
                             });
-                            app.footer =
-                                "Approval required — A approve | D deny".to_string();
+                            app.status_message = Some("A approve · D deny".to_string());
                         }
                     }
                     UiEffect::PhaseChanged(phase) => app.turn_phase = phase,
@@ -216,7 +238,9 @@ async fn fetch_status() -> Result<rex_proto::rex::v1::GetSystemStatusResponse, C
         client.get_system_status(request),
     )
     .await
-    .map_err(|_| CliError::StreamTimeout { seconds: REQUEST_TIMEOUT_SECONDS })?
+    .map_err(|_| CliError::StreamTimeout {
+        seconds: REQUEST_TIMEOUT_SECONDS,
+    })?
     .map_err(CliError::Status)?;
     Ok(response.into_inner())
 }

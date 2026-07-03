@@ -4,6 +4,7 @@ mod app;
 mod approval;
 mod state;
 mod stream_task;
+mod theme;
 mod ui;
 
 use std::io::{self, IsTerminal, Write};

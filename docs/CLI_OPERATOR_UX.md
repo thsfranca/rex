@@ -169,7 +169,7 @@ Mode **`ask`** enforces daemon policy that denies **`fs.write`** and **`exec.she
 
 ## Visual identity and operator presentation (**R079–R081**)
 
-**Program status:** **R079** design (this section) — **Done** when this hub revision merges. **R080** presentation (tokens, responsive layout, symbol-first UI, progressive disclosure) and **R081** motion (tick loop + cues) are **Open**.
+**Program status:** **R079** design, **R080** presentation, and **R081** motion are **Done**.
 
 ### Principles
 
@@ -444,9 +444,9 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 | R075 per-workspace | **Must** | **Done** |
 | R072 messaging + NDJSON core | **Must** (program) | **Done** |
 | R073 TUI + approvals | **Should** | **Done** |
-| R079 visual identity docs | **Should** | **Done** (this revision) |
-| R080 presentation | **Should** | After R079 |
-| R081 motion | **Should** | After R080 |
+| R079 visual identity docs | **Should** | **Done** |
+| R080 presentation | **Should** | **Done** |
+| R081 motion | **Should** | **Done** |
 | R074 narrator | **Could** | After R073; prefer after R080 disclosure rules |
 | R076–R078 daemon intelligence | **Could** / **Later** | After TUI MVP |
 
