@@ -14,7 +14,7 @@ The CLI client keeps **`rex complete` NDJSON** as the **primary** streaming path
 
 | Component | Responsibility |
 |---|---|
-| `rex` | Unified CLI: `daemon`, `status`, `complete`, `tui` (planned **R073**). |
+| `rex` | Unified CLI: `daemon`, `status`, `complete`, `tui` (**R073** shipped; presentation **R080–R081**). |
 | `rex-daemon` | Model/agent **policy trajectory**, adapters, caches, **`StreamInference`** lifecycle, queues. |
 | `rex-proto` | `rex.v1` gRPC contract. |
 | `rex-config` | JSON config load/merge (`$REX_ROOT/config.json`). |
@@ -44,10 +44,10 @@ cargo build --workspace
 rex daemon # debug / foreground; auto-start default — docs/CLI_OPERATOR_UX.md
 rex status
 rex complete "hello from rex" --format ndjson --mode agent
-# rex tui  # planned R073 — interactive terminal harness
+rex tui  # interactive terminal harness (R073); visual identity R079–R081
 ```
 
-**Current focus:** terminal harness program **R072** → **R073** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Auto-start **R071** shipped. **`rex status`** / **`rex complete`** auto-start the daemon by default; opt out with **`daemon.auto_start: false`** or **`--no-daemon-autostart`**.
+**Current focus:** TUI presentation **R080** → motion **R081** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) (Visual identity), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Auto-start **R071** shipped. **`rex status`** / **`rex complete`** auto-start the daemon by default; opt out with **`daemon.auto_start: false`** or **`--no-daemon-autostart`**. Install with **`./scripts/install-cli.sh`**. Agent live validation of **`rex tui`**: external live harness (tuiwright MCP) with text snapshots — see [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081).
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Configure **`sidecars`** and **`inference.openai_compat`** in JSON ([CONFIGURATION.md](CONFIGURATION.md)); legacy `REX_*` tuning env vars are ignored. CI may use `sidecars.harness: "direct"` (harness only).
 
