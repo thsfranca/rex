@@ -200,6 +200,9 @@ API keys remain in daemon. **`Ctrl+M`** overlay sends configuration override via
 | NDJSON fixtures | Pipe `fixtures/ndjson_contract/*.ndjson` through consumer |
 | TUI snapshots | **`ratatui`** buffer snapshots vs expected ASCII |
 | Parity | Same fixtures assert pipe and TUI consumer produce equivalent tool truncation |
+| Agent-driven live TUI | Optional external live harness (PTY open → keys → text snapshot). Sufficient for agent iteration on `rex tui` |
+
+**Out of scope:** a Rex **headless** TUI adapter (NDJSON replay + ANSI snapshot command for external harnesses). Live PTY verification is enough; that adapter is **not** a Rex requirement ([ROADMAP.md](ROADMAP.md) — **Won't**).
 
 ## Decision checklist
 
