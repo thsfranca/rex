@@ -39,8 +39,11 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 | [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | LangFuse discovery queue |
 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Economics validation program |
 | [MVP_SPEC.md](MVP_SPEC.md) | Phase 1 product scope |
-| [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Terminal operator UX |
-| [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | Terminal harness architecture |
+| [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Terminal operator UX (migrating to web) |
+| [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | Web desktop design system |
+| [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md) | Web desktop architecture |
+| [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md) | Web UI phased delivery |
+| [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | Terminal harness architecture (historical) |
 
 ### Reference (narrow facts)
 

@@ -1,0 +1,89 @@
+# Web UI implementation roadmap
+
+
+> Role: explanation | Status: active | Audience: contributors | Read when: web UI phased delivery
+> Prefer: ## Phases
+
+## Summary
+
+Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **R090–R096** TUI visual identity program.
+
+**Design hub:** [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md). **Architecture:** [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md).
+
+## Phases
+
+| Phase | ID | Concern | Status |
+|-------|-----|---------|--------|
+| 0 | **W100** | rex-ui-harness MCP + static probe | **Done** |
+| 1 | **W101** | Tauri shell + `--rex-*` tokens | Planned |
+| 2 | **W102** | UDS bridge + simple streaming chat | Planned |
+| 3 | **W103** | `rex` launches desktop + menu bar | Planned |
+| 4 | **W104** | TUI removal | Planned |
+| 5 | **W105** | Motion v1 (Framer Motion tiers) | Planned |
+| 6 | **W106** | Approval modal + diff scrubber | Planned |
+| 7 | **W107** | Session picker carousel | Planned |
+| 8 | **W108** | Canvas/WebGL cinematic tier (regl) | Planned |
+| 9 | **W109** | tauri-plugin-playwright native harness | Planned |
+| 10 | **W110** | macOS signing + auto-update CI | Planned |
+
+## Phase detail
+
+### W101 — Shell MVP
+
+- Tauri 2 monorepo (`crates/rex-desktop`, `apps/rex-web`)
+- Wide-profile wireframe: header, transcript, timeline, composer, footer
+- Harness token asserts on idle shell
+
+### W102 — Chat MVP
+
+- UDS gRPC proxy + `tauri::ipc::Channel` streaming
+- react-virtuoso transcript with `skipAnimationFrameInResizeObserver`
+- Zustand store; human-first copy from stream events
+
+### W103 — CLI integration
+
+- Bare `rex` spawns/focuses desktop window
+- Native menu: Session, View, Help
+- `--continue` / `--last` routed to desktop
+
+### W104 — TUI removal
+
+- Delete ratatui compositor and tuiwright fixtures
+- No retrocompatibility
+
+### W105 — Motion v1
+
+- Framer Motion slide-ins, timeline stagger
+- Tiered budget: Idle / Ambient / Active
+
+### W106 — Approval gate
+
+- Human-first modal; RK4 spring enter/exit
+- Horizontal unified diff scrubber
+
+### W107 — Session picker
+
+- Scroll-snap carousel; preview snippets on hover
+
+### W108 — Cinematic tier
+
+- regl ambient shaders; battery-aware throttle via `navigator.getBattery()`
+
+### W109 — Native harness
+
+- tauri-plugin-playwright; WKWebView baselines
+
+### W110 — Deployment
+
+- Developer ID signing, notarytool, `tauri-plugin-updater`
+
+## Cancelled
+
+| ID | Former concern | Reason |
+|----|----------------|--------|
+| **R090–R096** | TUI compositor, Braille flux, cinematic terminal surfaces | Superseded by web UI program ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)) |
+
+## Related
+
+- [ROADMAP.md](ROADMAP.md)
+- [PRIORITIZATION.md](PRIORITIZATION.md)

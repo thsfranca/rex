@@ -230,6 +230,24 @@ documents:
     topics:
       - tui-design
     summary_heading: "## Purpose"
+  - path: docs/WEB_UI_DESIGN.md
+    role: explanation
+    status: active
+    topics:
+      - web-ui-design
+    summary_heading: "## Summary"
+  - path: docs/WEB_UI_ARCHITECTURE.md
+    role: explanation
+    status: active
+    topics:
+      - web-ui-architecture
+    summary_heading: "## Purpose"
+  - path: docs/WEB_UI_ROADMAP.md
+    role: explanation
+    status: active
+    topics:
+      - web-ui-roadmap
+    summary_heading: "## Summary"
   - path: docs/V1_0.md
     role: explanation
     status: active
