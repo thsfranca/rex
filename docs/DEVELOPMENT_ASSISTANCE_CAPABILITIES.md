@@ -127,11 +127,9 @@ Daemon-assembled snapshot at turn start. Not yet a separate proto message in Pha
 
 ### Workspace binding (summary)
 
-- Config: `workspace.root` in `.rex/config.json` (**R015**).
-- Extension: set `workspace.root` when auto-starting daemon (**R019**).
-- Daemon: fail-closed when `workspace.root` unset unless harness flag — **R022** ([CONFIGURATION.md](CONFIGURATION.md)).
-- Product path: **fail-closed** if root unset; cwd fallback only with `workspace.allow_cwd_fallback: true` in JSON (harness/CI) — [ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md).
-- Multi-root: Phase 1 uses primary folder only; log `workspace.warning=multi_root` when `folders.length > 1`.
+- **Workspace root:** canonical process **cwd** when `rex` / the daemon runs ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)).
+- Optional `workspace.indexer` in project `.rex/config.json` (`workspace` vs `seeded`).
+- Per-workspace daemon routing — **R075** ([ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md)).
 
 ## Interfaces (intent)
 
@@ -160,8 +158,8 @@ Hard conflicts (**C***) and resolutions recorded in ADRs.
 | **C5** | Large layered prompts vs retrieval/memory/knowledge | `ContextBudgetAllocator` with stage caps (table above) |
 | **C6** | Git Copilot-style files vs Rex bundles | Single ingestion path per source; dedupe by content hash ([ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md)) |
 | **C7** | Drift `fail-closed` (agent) vs `prefer-git` (ask) | Intentional per-mode policy |
-| **C8** | Fail-closed workspace vs cwd fallback | **Implemented (R022):** product requires `workspace.root`; harness: `workspace.allow_cwd_fallback: true` in JSON |
-| **C9** | Single `workspace.root` vs multi-root IDE | Phase 1 primary folder only |
+| **C8** | Fail-closed workspace vs cwd fallback | **Resolved (cwd-only):** workspace = canonical cwd; removed `workspace.root` and `allow_cwd_fallback` |
+| **C9** | Single workspace vs multi-root / monorepo parent | cwd authoritative; parent-root override deferred |
 | **C10** | MCP in sidecar vs broker-only host | Host effects map to broker verbs only ([ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md)) |
 | **C11** | KnowledgeBroker vs MCP resources | One `KnowledgeRetrieval` stage; MCP is transport profile |
 

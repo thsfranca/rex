@@ -5,7 +5,7 @@ use thiserror::Error;
 use crate::merge::LoadedConfig;
 
 #[derive(Debug, Error, PartialEq, Eq)]
-#[error("workspace root not configured (set workspace.root or enable harness cwd fallback)")]
+#[error("could not resolve workspace from current working directory")]
 pub struct WorkspaceRootError;
 
 impl LoadedConfig {
@@ -20,22 +20,11 @@ impl LoadedConfig {
 }
 
 pub fn resolve_workspace_root_for_effective(
-    config: &crate::model::RexConfig,
+    _config: &crate::model::RexConfig,
 ) -> Result<PathBuf, WorkspaceRootError> {
-    let raw = config.workspace.root.trim();
-    if !raw.is_empty() && raw != "." {
-        return Ok(canonicalize_if_possible(PathBuf::from(raw)));
-    }
-    if cwd_fallback_allowed_for_effective(config) {
-        return std::env::current_dir()
-            .map(canonicalize_if_possible)
-            .map_err(|_| WorkspaceRootError);
-    }
-    Err(WorkspaceRootError)
-}
-
-fn cwd_fallback_allowed_for_effective(config: &crate::model::RexConfig) -> bool {
-    config.workspace.allow_cwd_fallback.unwrap_or(false)
+    std::env::current_dir()
+        .map(canonicalize_if_possible)
+        .map_err(|_| WorkspaceRootError)
 }
 
 fn canonicalize_if_possible(path: PathBuf) -> PathBuf {
@@ -49,35 +38,21 @@ fn canonicalize_if_possible(path: PathBuf) -> PathBuf {
 mod tests {
     use super::*;
     use crate::model::RexConfig;
+    use serial_test::serial;
 
-    fn loaded_with_root(root: &str, allow_cwd: Option<bool>) -> LoadedConfig {
-        let mut cfg = RexConfig::defaults();
-        cfg.workspace.root = root.to_string();
-        cfg.workspace.allow_cwd_fallback = allow_cwd;
-        LoadedConfig::for_test(
-            PathBuf::from("/tmp/rex-test"),
-            cfg,
-        )
+    fn loaded_for_test() -> LoadedConfig {
+        LoadedConfig::for_test(PathBuf::from("/tmp/rex-test"), RexConfig::defaults())
     }
 
     #[test]
-    fn unset_root_without_flag_errors() {
-        let loaded = loaded_with_root("", None);
-        assert_eq!(loaded.resolve_workspace_root(), Err(WorkspaceRootError));
-    }
-
-    #[test]
-    fn allow_cwd_fallback_uses_current_dir() {
-        let loaded = loaded_with_root(".", Some(true));
-        let root = loaded.resolve_workspace_root().expect("cwd fallback");
+    #[serial]
+    fn resolves_to_current_dir() {
+        if std::env::current_dir().is_err() {
+            std::env::set_current_dir(std::env::temp_dir()).expect("recover cwd");
+        }
+        let loaded = loaded_for_test();
+        let root = loaded.resolve_workspace_root().expect("cwd");
         let cwd = std::env::current_dir().expect("cwd");
         assert_eq!(root, canonicalize_if_possible(cwd));
-    }
-
-    #[test]
-    fn explicit_path_wins() {
-        let loaded = loaded_with_root("/tmp", None);
-        let root = loaded.resolve_workspace_root().expect("explicit");
-        assert!(root.ends_with("tmp"));
     }
 }

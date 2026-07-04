@@ -34,7 +34,7 @@ pub fn resolve_sockets(config: &RexConfig, rex_root: &Path) -> Result<ResolvedSo
         DaemonSocketScope::PerWorkspace => {
             let workspace_root = resolve_workspace_root_for_effective(config).map_err(|_| {
                 ConfigError::Validation(
-                    "daemon.socket_scope is per_workspace but workspace.root is not configured"
+                    "daemon.socket_scope is per_workspace but current working directory is unavailable"
                         .to_string(),
                 )
             })?;
@@ -96,12 +96,39 @@ fn hex_encode(bytes: &[u8]) -> String {
 mod tests {
     use super::*;
     use crate::model::RexConfig;
+    use serial_test::serial;
+
+    struct CwdGuard {
+        prev: PathBuf,
+    }
+
+    impl CwdGuard {
+        fn chdir(path: &Path) -> Self {
+            let prev = std::env::current_dir().unwrap_or_else(|_| std::env::temp_dir());
+            std::env::set_current_dir(path).expect("chdir");
+            Self { prev }
+        }
+    }
+
+    impl Drop for CwdGuard {
+        fn drop(&mut self) {
+            if self.prev.is_dir() {
+                let _ = std::env::set_current_dir(&self.prev);
+            } else {
+                let _ = std::env::set_current_dir(std::env::temp_dir());
+            }
+        }
+    }
 
     #[test]
+    #[serial]
     fn per_workspace_sockets_are_stable_for_same_root() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let project = tmp.path().join("project-a");
+        std::fs::create_dir_all(&project).expect("mkdir");
+        let _cwd = CwdGuard::chdir(&project);
         let mut cfg = RexConfig::defaults();
         cfg.daemon.socket_scope = Some(DaemonSocketScope::PerWorkspace);
-        cfg.workspace.root = "/tmp/project-a".to_string();
         let rex_root = PathBuf::from("/home/operator/.rex");
         let first = resolve_sockets(&cfg, &rex_root).expect("resolve");
         let second = resolve_sockets(&cfg, &rex_root).expect("resolve");
@@ -111,15 +138,22 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn per_workspace_sockets_differ_for_different_roots() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let project_a = tmp.path().join("project-a");
+        let project_b = tmp.path().join("project-b");
+        std::fs::create_dir_all(&project_a).expect("mkdir a");
+        std::fs::create_dir_all(&project_b).expect("mkdir b");
         let rex_root = PathBuf::from("/home/operator/.rex");
+        let _cwd_a = CwdGuard::chdir(&project_a);
         let mut cfg_a = RexConfig::defaults();
         cfg_a.daemon.socket_scope = Some(DaemonSocketScope::PerWorkspace);
-        cfg_a.workspace.root = "/tmp/project-a".to_string();
+        let a = resolve_sockets(&cfg_a, &rex_root).expect("a");
+        drop(_cwd_a);
+        let _cwd_b = CwdGuard::chdir(&project_b);
         let mut cfg_b = RexConfig::defaults();
         cfg_b.daemon.socket_scope = Some(DaemonSocketScope::PerWorkspace);
-        cfg_b.workspace.root = "/tmp/project-b".to_string();
-        let a = resolve_sockets(&cfg_a, &rex_root).expect("a");
         let b = resolve_sockets(&cfg_b, &rex_root).expect("b");
         assert_ne!(a.daemon_socket, b.daemon_socket);
     }
@@ -134,11 +168,15 @@ mod tests {
     }
 
     #[test]
-    fn per_workspace_without_root_errors() {
+    #[serial]
+    fn per_workspace_resolves_from_cwd() {
+        let tmp = tempfile::tempdir().expect("tempdir");
+        let project = tmp.path().join("project");
+        std::fs::create_dir_all(&project).expect("mkdir");
+        let _cwd = CwdGuard::chdir(&project);
         let mut cfg = RexConfig::defaults();
         cfg.daemon.socket_scope = Some(DaemonSocketScope::PerWorkspace);
-        cfg.workspace.root = String::new();
-        let err = resolve_sockets(&cfg, Path::new("/home/operator/.rex")).expect_err("missing");
-        assert!(err.to_string().contains("workspace.root"));
+        let resolved = resolve_sockets(&cfg, Path::new("/home/operator/.rex")).expect("resolve");
+        assert!(resolved.daemon_socket.contains("/sockets/ws-"));
     }
 }

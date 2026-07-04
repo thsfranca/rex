@@ -42,10 +42,10 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 
 | Section | Keys | Purpose |
 |---------|------|---------|
-| `daemon` | `socket`, `socket_scope`, `ready_timeout_secs`, `idle_shutdown_secs`, `log_path` | Daemon UDS path; **`socket_scope`** (`per_workspace` default, or `global` for legacy single socket); CLI always ensures the daemon (**R071**); readiness poll budget; idle auto-shutdown (**default 300s**, **`0`** disables); detached daemon log file. Per-workspace scope derives `$REX_ROOT/sockets/ws-<hash>.sock` from `workspace.root` — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), idle shutdown — [ADR 0037](architecture/decisions/0037-daemon-idle-shutdown.md). |
+| `daemon` | `socket`, `socket_scope`, `ready_timeout_secs`, `idle_shutdown_secs`, `log_path` | Daemon UDS path; **`socket_scope`** (`per_workspace` default, or `global` for legacy single socket); CLI always ensures the daemon (**R071**); readiness poll budget; idle auto-shutdown (**default 300s**, **`0`** disables); detached daemon log file. Per-workspace scope derives `$REX_ROOT/sockets/ws-<hash>.sock` from canonical process **cwd** — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), idle shutdown — [ADR 0037](architecture/decisions/0037-daemon-idle-shutdown.md). |
 | `sidecars` | `active`, `host`, `required`, `harness`, `list[]`, `capabilities[]` | Host sidecar (`list[]` entry named by `host` or `active`); optional capability fleet (`capabilities[]` with `provides`, `socket`, `binary`); `harness: "direct"` skips spawn (CI/tests). |
 | `inference` | `runtime`, `openai_compat`, `gateway`, `omlx`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. Managed gateway/oMLX inject `openai_compat.base_url` — see below. |
-| `workspace` | `root`, `indexer`, `allow_cwd_fallback` | Broker root and lexical indexer (`workspace` or `seeded`). Product path requires non-empty `root` (not `"."`). Harness/CI: `workspace.allow_cwd_fallback: true` in JSON. |
+| `workspace` | `indexer` | Lexical indexer mode (`workspace` or `seeded`). **Workspace root** is always canonical process **cwd** — not configurable ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)). |
 | `context` | `max_prompt_tokens`, `max_context_tokens` | Context pipeline budgets. |
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
@@ -59,6 +59,8 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 **Not implemented (do not set):** `context.advisory_intent_enabled` (**R067**), `broker.web_search`, `git.auto_commit_dirty` (**R077**), `cli.ui.narrator` (**R074**) — design only in linked hubs.
 
 **Removed (R069 / ADR 0034 / R082):** `agent.max_tool_steps`, `agent.max_tool_steps_ask`, `agent.max_tool_steps_plan`, `agent.soft_cap_enabled`, `agent.soft_cap_fraction`, `agent.soft_cap_step_extension`, `observability.custom_sidecar_metrics` — ignored if present in older files.
+
+**Removed (cwd-only workspace binding):** `workspace.root`, `workspace.allow_cwd_fallback` — ignored if present in older files. Run `rex` from the project directory; broker and daemon scope to that cwd.
 
 Minimal example:
 
@@ -81,7 +83,6 @@ Minimal example:
  "native_tools": "auto"
  }
  },
- "workspace": { "root": "/absolute/path/to/your/project" },
  "observability": {
  "enabled": false,
  "service_name": "rex-daemon",
@@ -93,7 +94,7 @@ Minimal example:
 }
 ```
 
-**Workspace root (product path):** Set `workspace.root` to an absolute project path in `.rex/config.json`. Unset or `"."` without `allow_cwd_fallback` causes broker and `StreamInference` to fail closed. For harness tests only: `workspace.allow_cwd_fallback: true` in JSON.
+**Workspace root (product path):** Run `rex` from the project directory. The daemon resolves workspace as canonical **cwd**; per-workspace sockets and broker sandbox derive from that path. Optional `workspace.indexer` in project `.rex/config.json` selects lexical vs seeded indexer mode only.
 
 ## Observability
 
@@ -378,11 +379,10 @@ These keys exist for automated tests and local harnesses. Prefer `RexConfig::def
 | `inference.runtime` | `"mock"` | Deterministic broker without network |
 | `sidecars.active` / `list[]` | `stub` / `rex-sidecar-stub` | CI sidecar without Python agent |
 | `sidecars.harness` | `"direct"` | Skip sidecar spawn; in-process inference |
-| `workspace.allow_cwd_fallback` | `true` | Allow `workspace.root` empty or `"."` |
 | `workspace.indexer` | `"seeded"` | In-memory docs for tests |
 | `cache.bypass` | `true` | Disable L1 / prefix cache for diagnostics |
 
-Product operators use **`rex-agent`**, a live `http-openai-compat` backend, and an absolute `workspace.root`. See [CI.md](CI.md).
+Product operators use **`rex-agent`**, a live `http-openai-compat` backend, and run `rex` from the project directory. See [CI.md](CI.md).
 
 ## Not implemented yet (roadmap)
 

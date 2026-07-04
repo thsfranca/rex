@@ -20,6 +20,7 @@ mod support;
 
 use support::config::{
     install_rex_config, loaded_from_config, product_path_config_named, rex_root_path,
+    WorkspaceCwdGuard,
 };
 use support::openai_compat_sse::spawn_loopback_openai_compat_sse_fixture;
 
@@ -404,6 +405,7 @@ async fn agent_product_path_stream_inference_via_supervisor() {
         ),
         &rex_root,
     ));
+    let _cwd = WorkspaceCwdGuard::new(&workspace);
 
     let daemon_socket_task = daemon_socket.clone();
     let daemon = tokio::spawn(async move {

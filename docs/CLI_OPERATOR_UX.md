@@ -16,7 +16,7 @@ Describe **target experience and acceptance criteria in Rex terms only**. Do not
 
 Operators run **`cd ~/projects/my-app && rex`** and enter an immersive terminal workspace without babysitting a foreground daemon session.
 
-1. CLI derives workspace identity from cwd / **`workspace.root`** and probes the per-workspace UDS under **`$REX_ROOT/sockets/`** ([ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), **R075** Done).
+1. CLI derives workspace identity from canonical **cwd** and probes the per-workspace UDS under **`$REX_ROOT/sockets/`** ([ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), **R075** Done).
 2. When the socket is unresponsive, CLI spawns a detached daemon (internal entry), shows a loading state, and polls **`GetSystemStatus`** until the daemon is ready (context pipeline warmed, sidecar supervised).
 3. TUI transitions to the primary layout: header, activity timeline, streaming output, composer, footer.
 4. The operator interacts via keyboard; tool executions appear as timeline cards; destructive mutations pause for explicit approval routed through the daemon broker.
@@ -106,7 +106,7 @@ Technical detail: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTU
 | Step | Behavior |
 |------|----------|
 | 1 | Operator runs **`rex`** in a project directory |
-| 2 | CLI resolves **`workspace.root`** and workspace-scoped socket path |
+| 2 | CLI resolves workspace from **cwd** and workspace-scoped socket path |
 | 3 | Probe UDS; on failure spawn detached daemon |
 | 4 | Poll **`GetSystemStatus`** until ready or timeout; show loading UI |
 | 5 | Open multi-pane TUI; composer accepts first prompt |

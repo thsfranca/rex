@@ -97,7 +97,7 @@ flowchart LR
 | Code | Meaning | Retry | Owner | Message template (operator-facing) |
 |------|---------|-------|-------|----------------------------------|
 | `daemon_unavailable` | Daemon not reachable | Yes | cli | Daemon is unavailable at {socket}; run `rex`. |
-| `workspace_not_configured` | Product path missing `workspace.root` | No | cli | Set `workspace.root` in `.rex/config.json` or enable harness cwd fallback. |
+| `workspace_not_configured` | Process cwd unavailable | No | cli | Run `rex` from a valid project directory; check filesystem permissions on cwd. |
 | `workspace_mismatch` | Daemon bound to a different workspace | No | cli | Restart the daemon for this workspace; another project may be using a global daemon. |
 | `sidecar_unavailable` | Sidecar required but missing or unhealthy | No | cli | Sidecar is required but unavailable: {detail}. Enable sidecar supervision and ensure the sidecar binary is on PATH. |
 | `inference_config` | Inference backend not configured | No | cli | Inference runtime not configured: {detail}. Edit JSON `inference.openai_compat` per [CONFIGURATION.md](CONFIGURATION.md). |

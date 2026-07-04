@@ -110,9 +110,7 @@ impl RexConfig {
                 },
             },
             workspace: WorkspaceConfig {
-                root: String::new(),
                 indexer: "workspace".to_string(),
-                allow_cwd_fallback: None,
             },
             context: ContextConfig {
                 max_prompt_tokens: 512,
@@ -531,11 +529,7 @@ pub struct CursorCliConfig {
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct WorkspaceConfig {
     #[serde(default)]
-    pub root: String,
-    #[serde(default)]
     pub indexer: String,
-    #[serde(default)]
-    pub allow_cwd_fallback: Option<bool>,
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]

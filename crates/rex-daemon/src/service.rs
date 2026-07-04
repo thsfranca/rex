@@ -999,7 +999,7 @@ fn ensure_workspace_configured() -> Result<(), Status> {
     loaded.resolve_workspace_root().map(|_| ()).map_err(|_| {
         eprintln!("workspace.error=not_configured");
         Status::failed_precondition(
-            "workspace root not configured (set workspace.root in .rex/config.json)",
+            "could not resolve workspace from current working directory",
         )
     })
 }
@@ -1034,7 +1034,7 @@ fn session_store_to_status(err: SessionStoreError) -> Status {
             Status::invalid_argument("invalid harness session id")
         }
         SessionStoreError::WorkspaceNotConfigured => Status::failed_precondition(
-            "workspace root not configured (set workspace.root in .rex/config.json)",
+            "could not resolve workspace from current working directory",
         ),
         SessionStoreError::Io(err) => Status::internal(format!("session store io error: {err}")),
     }
@@ -1232,24 +1232,6 @@ mod tests {
     fn init_stream_test_settings() {
         settings::reset_for_test();
         let mut cfg = rex_config::RexConfig::defaults();
-        cfg.workspace.allow_cwd_fallback = Some(true);
-        cfg.sidecars.harness = Some("direct".to_string());
-        cfg.sidecars.required = Some(false);
-        if let Some(entry) = cfg.sidecars.list.first_mut() {
-            entry.enabled = false;
-        }
-        settings::init_for_test(Arc::new(LoadedConfig::for_test(
-            std::path::PathBuf::from("/tmp/rex-test"),
-            cfg,
-        )));
-    }
-
-    fn init_unconfigured_workspace_settings() {
-        settings::reset_for_test();
-        let mut cfg = rex_config::RexConfig::defaults();
-        cfg.workspace.root = String::new();
-        cfg.workspace.allow_cwd_fallback = None;
-        cfg.workspace.indexer = "workspace".to_string();
         cfg.sidecars.harness = Some("direct".to_string());
         cfg.sidecars.required = Some(false);
         if let Some(entry) = cfg.sidecars.list.first_mut() {
@@ -1362,8 +1344,8 @@ mod tests {
 
     #[tokio::test]
     #[serial]
-    async fn stream_fails_when_workspace_unconfigured() {
-        init_unconfigured_workspace_settings();
+    async fn stream_succeeds_resolving_workspace_from_cwd() {
+        init_stream_test_settings();
         let svc = RexDaemonService::with_components(
             Instant::now(),
             Arc::new(MockInferenceRuntime),
@@ -1377,16 +1359,13 @@ mod tests {
             mode: "ask".to_string(),
             ..Default::default()
         });
-        let err = match svc.stream_inference(req).await {
-            Ok(_) => panic!("missing workspace.root must fail closed"),
-            Err(e) => e,
-        };
-        assert_eq!(err.code(), tonic::Code::FailedPrecondition);
-        assert!(
-            err.message().contains("workspace root not configured"),
-            "message: {}",
-            err.message()
-        );
+        let mut stream = svc
+            .stream_inference(req)
+            .await
+            .expect("stream should succeed with cwd workspace")
+            .into_inner();
+        let first = stream.next().await.expect("chunk").expect("ok chunk");
+        assert!(!first.text.is_empty());
     }
 
     #[tokio::test]

@@ -370,14 +370,8 @@ fn merge_workspace(
     base: &mut crate::model::WorkspaceConfig,
     overlay: crate::model::WorkspaceConfig,
 ) {
-    if !overlay.root.is_empty() {
-        base.root = overlay.root;
-    }
     if !overlay.indexer.is_empty() {
         base.indexer = overlay.indexer;
-    }
-    if overlay.allow_cwd_fallback.is_some() {
-        base.allow_cwd_fallback = overlay.allow_cwd_fallback;
     }
 }
 

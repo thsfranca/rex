@@ -22,7 +22,7 @@ pub enum CliError {
     },
     #[error("failed to write to stdout: {0}")]
     Stdout(#[from] io::Error),
-    #[error("workspace root not configured; set workspace.root in .rex/config.json or enable harness cwd fallback")]
+    #[error("could not resolve workspace from current working directory")]
     WorkspaceNotConfigured,
     #[error("daemon at {socket_path} is bound to {reported}; expected {expected}; restart the daemon for this workspace")]
     WorkspaceMismatch {
