@@ -572,39 +572,33 @@ mod tests {
     use std::fs;
     use std::sync::Arc;
 
-    struct SettingsGuard;
+    struct SettingsGuard {
+        prev_cwd: std::path::PathBuf,
+    }
 
     impl Drop for SettingsGuard {
         fn drop(&mut self) {
             crate::settings::reset_for_test();
+            if self.prev_cwd.is_dir() {
+                let _ = std::env::set_current_dir(&self.prev_cwd);
+            } else {
+                let _ = std::env::set_current_dir(std::env::temp_dir());
+            }
         }
     }
 
     fn init_workspace_root(root: &str) -> SettingsGuard {
         crate::settings::reset_for_test();
-        let mut cfg = rex_config::RexConfig::defaults();
-        cfg.workspace.root = root.to_string();
+        let prev_cwd = std::env::current_dir().unwrap_or_else(|_| std::env::temp_dir());
+        let path = std::path::PathBuf::from(root);
+        std::fs::create_dir_all(&path).expect("workspace dir");
+        std::env::set_current_dir(&path).expect("chdir workspace");
+        let cfg = rex_config::RexConfig::defaults();
         crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
             std::path::PathBuf::from("/tmp/rex-broker-test"),
             cfg,
         )));
-        SettingsGuard
-    }
-
-    #[test]
-    #[serial]
-    fn broker_fails_when_workspace_unconfigured() {
-        let _guard = {
-            crate::settings::reset_for_test();
-            let cfg = rex_config::RexConfig::defaults();
-            crate::settings::init_for_test(Arc::new(rex_config::LoadedConfig::for_test(
-                std::path::PathBuf::from("/tmp/rex-broker-test"),
-                cfg,
-            )));
-            SettingsGuard
-        };
-        let err = broker_read_file("README.md", "agent").unwrap_err();
-        assert_eq!(err, BrokerError::NoWorkspaceRoot);
+        SettingsGuard { prev_cwd }
     }
 
     #[test]

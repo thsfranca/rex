@@ -1,37 +1,37 @@
 # ADR 0011: Workspace binding and turn context authority
 
 - **Date:** 2026-05-24
-- **Status:** Accepted
+- **Status:** Accepted (amended 2026-07-04 — cwd-only workspace binding)
 
 ## Context
 
-Broker RPCs, the lexical indexer, and L1 cache fingerprinting scope to a resolved **workspace root**. Before R022, harnesses often relied on process **cwd** when JSON `workspace.root` was empty. The rex CLI did not always write project `.rex/config.json`, so product paths were implicit. Clients also embed editor context in prompt strings, which duplicates daemon retrieval and wastes tokens on remote and local inference paths.
+Broker RPCs, the lexical indexer, and L1 cache fingerprinting scope to a resolved **workspace root**. Earlier slices introduced JSON `workspace.root` and a harness-only `workspace.allow_cwd_fallback` flag (R022), which duplicated what operators already express by **where they run `rex`**. Clients also embed editor context in prompt strings, which duplicates daemon retrieval and wastes tokens on remote and local inference paths.
 
 `rex-agent` needs a stable contract for what arrives on `RunTurn` without reading daemon Rust sources.
 
 ## Decision
 
 1. **`rex-daemon` is the authority** for resolved `workspace_root`, `TurnContext` assembly at turn start, and `request_id` / `turn_id` issuance.
-2. **Clients supply** workspace intent via merged JSON (`workspace.root` in `.rex/config.json` / `$REX_ROOT/config.json`) and optional gRPC `client_hints` (active file path, selection text on the wire). Clients must **not** rely on prompt text alone to spoof workspace paths for broker operations.
-3. **Product path (fail-closed):** When `workspace.root` is empty or `"."` and harness fallback is off (`workspace.allow_cwd_fallback` not true), broker paths and `StreamInference` (workspace indexer mode) **fail** with a clear error. Harness/CI may enable cwd fallback via JSON — see [CONFIGURATION.md](../../CONFIGURATION.md).
+2. **Workspace root is canonical process cwd** — not a JSON field. CLI spawns the daemon with `current_dir` set to the resolved cwd; broker, indexer, L1 cache, and per-workspace sockets derive from that path. Optional gRPC `client_hints` (active file path, selection text on the wire) supplement context; clients must **not** rely on prompt text alone to spoof workspace paths for broker operations.
+3. **Failure mode:** broker paths and `StreamInference` (workspace indexer mode) fail only when `current_dir()` is unavailable (OS-level). There is no fail-closed path for “missing `workspace.root` in JSON.”
 4. **Phase 1 wire:** `RunTurnRequest.prompt` carries the enriched turn string. **Phase 1b:** additive optional `turn_id` and `context_revision` on `rex.sidecar.v1.RunTurnRequest`.
 5. **Initial context vs tool deltas:** Daemon injects lexical/knowledge/memory/prompt stages **once per turn start**. The sidecar may call broker `fs.*` / `exec.shell` for **deltas** (post-edit reads, exploration)—not to re-derive the same indexed chunks the daemon already injected.
-6. **Multi-root IDEs:** Phase 1 uses the **primary** workspace folder (`workspaceFolders[0]`). When multiple folders are open, log `workspace.warning=multi_root`. Multi-root lists are deferred.
-7. **Phase 2 (R075):** Each workspace folder receives its own `.rex/config.json` and may use a **per-folder daemon** (derived socket per [ADR 0036](0036-per-workspace-daemon-routing.md)); chat and broker scope remain on the **primary** folder until a multi-root UX slice assigns active scope explicitly.
+6. **Multi-root / monorepo parent-root scoping:** deferred; cwd is authoritative until a future slice adds explicit override.
+7. **Per-folder daemon:** derived socket per [ADR 0036](0036-per-workspace-daemon-routing.md) (**R075** Done).
 
 ## Consequences
 
-- **Positive:** Consistent broker sandbox; attributable economics; `rex-agent` can document inputs without proto churn in Phase 1.
-- **Negative:** Extension and R015 must set workspace root before product use; fail-closed may break scripts that depended on silent cwd.
-- **Risks / follow-up:** Thin `client_hints` vs prompt embedding (**C1** partial in R019); selection **range** on wire deferred (text hint today).
+- **Positive:** Matches CLI north-star (`cd project && rex`); removes dual product/harness config modes; consistent broker sandbox; attributable economics.
+- **Negative:** Operators must run `rex` from the intended project directory; monorepo “scope to repo root while cwd is a subdir” is not supported yet.
+- **Risks / follow-up:** Thin `client_hints` vs prompt embedding (**C1**); monorepo parent-root override if needed.
 
 ## Related
 
 - [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](../../DEVELOPMENT_ASSISTANCE_CAPABILITIES.md) — Turn contract, conflict register
 - [ADR 0008](0008-dedicated-sidecar-control-plane-api.md) — Broker authority
-- [CONFIGURATION.md](../../CONFIGURATION.md) — `workspace.root`, `workspace.allow_cwd_fallback`
+- [CONFIGURATION.md](../../CONFIGURATION.md) — `workspace.indexer` only
 
 ## Market benchmark
 
-- **Codex** binds automation to `workspace-write` sandbox and cwd — REX mirrors with explicit root + broker.
-- **Cursor / Copilot** use implicit opened folder — REX makes root **explicit and logged**.
+- **Codex** binds automation to `workspace-write` sandbox and cwd — REX aligns with cwd-as-authority + broker.
+- **Cursor / Copilot** use implicit opened folder — REX logs resolved cwd at daemon start (`workspace.root=<path>` in listen log).

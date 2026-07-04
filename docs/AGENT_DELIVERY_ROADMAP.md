@@ -188,7 +188,7 @@ Prerequisites for **`rex-agent`** dogfood (**R017–R018** Done). Design: [DEVEL
 
 ### R022 — Workspace binding (daemon)
 
-**Status: Done.** Product path: fail-closed when `workspace.root` unset ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)); harness cwd fallback via `workspace.allow_cwd_fallback` in JSON only — [CONFIGURATION.md](CONFIGURATION.md).
+**Status: Done (amended).** Workspace root is canonical process **cwd** — not JSON ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)). Removed `workspace.root` and `workspace.allow_cwd_fallback` — [CONFIGURATION.md](CONFIGURATION.md).
 
 ## R019 — Integration and E2E acceptance
 

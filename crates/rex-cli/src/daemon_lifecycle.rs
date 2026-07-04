@@ -5,7 +5,7 @@ use std::process::Stdio;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
-use rex_config::{ensure_project_workspace_root, DaemonSocketScope, LoadedConfig, REX_ROOT_ENV};
+use rex_config::{DaemonSocketScope, LoadedConfig, REX_ROOT_ENV};
 use rex_proto::rex::v1::{GetSystemStatusRequest, GetSystemStatusResponse};
 use tokio::sync::Mutex;
 use tokio::time::sleep;
@@ -189,17 +189,6 @@ fn paths_equal(left: &str, right: &str) -> bool {
 }
 
 fn prepare_loaded_config() -> Result<LoadedConfig, CliError> {
-    let loaded = load_config()?;
-    if loaded.effective.daemon.effective_socket_scope() != DaemonSocketScope::PerWorkspace {
-        return Ok(loaded);
-    }
-    let workspace_root = loaded
-        .resolve_workspace_root()
-        .map_err(|_| CliError::workspace_not_configured())?;
-    ensure_project_workspace_root(&workspace_root).map_err(|err| CliError::DaemonUnavailable {
-        socket_path: loaded.daemon_socket().to_string(),
-        suffix: format!("; could not write project config: {err}"),
-    })?;
     load_config()
 }
 

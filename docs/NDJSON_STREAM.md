@@ -61,7 +61,7 @@ Operation feedback design hub: [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md).
 | `invalid_response` | Malformed NDJSON | Inspect CLI/daemon logs |
 | `spawn_failed` | `rex` could not spawn | Fix install / PATH |
 | `approval_required` | Approval needed before execution | Supply `--approval-id` after user approval |
-| `workspace_not_configured` | Workspace root not bound | Set workspace via CLI flags or config |
+| `workspace_not_configured` | Process cwd unavailable | Run `rex` from a valid project directory |
 | `workspace_mismatch` | Prompt workspace does not match daemon | Rebind workspace |
 | `unknown` | Uncategorized | Manual diagnosis |
 

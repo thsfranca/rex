@@ -11,6 +11,27 @@ pub struct RexRootGuard {
     prev_rex_root: Option<String>,
 }
 
+pub struct WorkspaceCwdGuard {
+    prev_cwd: PathBuf,
+}
+
+impl WorkspaceCwdGuard {
+    pub fn new(workspace: &std::path::Path) -> Self {
+        if !workspace.exists() {
+            std::fs::create_dir_all(workspace).expect("mkdir workspace");
+        }
+        let prev_cwd = std::env::current_dir().expect("cwd");
+        std::env::set_current_dir(workspace).expect("chdir workspace");
+        Self { prev_cwd }
+    }
+}
+
+impl Drop for WorkspaceCwdGuard {
+    fn drop(&mut self) {
+        let _ = std::env::set_current_dir(&self.prev_cwd);
+    }
+}
+
 impl Drop for RexRootGuard {
     fn drop(&mut self) {
         match &self.prev_rex_root {
@@ -50,7 +71,6 @@ pub fn loaded_from_config(cfg: RexConfig, rex_root: &std::path::Path) -> Arc<Loa
 pub fn mock_e2e_config() -> RexConfig {
     let mut cfg = RexConfig::defaults();
     cfg.daemon.socket_scope = Some(rex_config::DaemonSocketScope::Global);
-    cfg.workspace.allow_cwd_fallback = Some(true);
     cfg.inference.runtime = "mock".to_string();
     cfg.sidecars.harness = Some("direct".to_string());
     cfg.sidecars.required = Some(false);
@@ -93,7 +113,7 @@ pub fn product_path_config(
 pub fn product_path_config_named(
     daemon_socket: &str,
     sidecar_socket: &str,
-    workspace: &str,
+    _workspace: &str,
     http_base_url: &str,
     active_name: &str,
     sidecar_binary: &str,
@@ -113,7 +133,6 @@ pub fn product_path_config_named(
         enabled: true,
         socket: sidecar_socket.to_string(),
     }];
-    cfg.workspace.root = workspace.to_string();
     cfg
 }
 

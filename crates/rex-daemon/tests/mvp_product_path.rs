@@ -111,14 +111,18 @@ const STREAM_TIMEOUT: Duration = Duration::from_secs(5);
 
 struct ProductPathEnv {
     _rex_root: support::config::RexRootGuard,
+    _cwd: support::config::WorkspaceCwdGuard,
 }
 
-fn init_product_path_settings(cfg: rex_config::RexConfig) -> ProductPathEnv {
+fn init_product_path_settings(cfg: rex_config::RexConfig, workspace: &std::path::Path) -> ProductPathEnv {
     settings::reset_for_test();
     let guard = install_rex_config(cfg.clone());
     let root = rex_root_path(&guard);
     settings::init_for_test(loaded_from_config(cfg, &root));
-    ProductPathEnv { _rex_root: guard }
+    ProductPathEnv {
+        _rex_root: guard,
+        _cwd: support::config::WorkspaceCwdGuard::new(workspace),
+    }
 }
 
 fn restore_product_path_env(_saved: ProductPathEnv) {
@@ -186,13 +190,16 @@ fn configure_product_path(
     workspace: &str,
     http_base_url: &str,
 ) -> ProductPathEnv {
-    init_product_path_settings(product_path_config(
-        daemon_socket,
-        sidecar_socket,
-        workspace,
-        http_base_url,
-        &stub_binary_path(),
-    ))
+    init_product_path_settings(
+        product_path_config(
+            daemon_socket,
+            sidecar_socket,
+            workspace,
+            http_base_url,
+            &stub_binary_path(),
+        ),
+        std::path::Path::new(workspace),
+    )
 }
 
 async fn connect_client(
@@ -409,11 +416,14 @@ async fn mvp_product_path_sidecar_required_clear_error_when_binary_missing() {
     let daemon_socket = temp_socket_path("daemon-err");
     let sidecar_socket = temp_socket_path("sidecar-err");
     cleanup_socket(&daemon_socket);
-    let saved = init_product_path_settings(sidecar_required_missing_binary_config(
-        &daemon_socket,
-        &sidecar_socket,
-        "/nonexistent/rex-sidecar-stub-for-mvp-test",
-    ));
+    let saved = init_product_path_settings(
+        sidecar_required_missing_binary_config(
+            &daemon_socket,
+            &sidecar_socket,
+            "/nonexistent/rex-sidecar-stub-for-mvp-test",
+        ),
+        std::env::temp_dir().as_path(),
+    );
 
     let daemon_socket_task = daemon_socket.clone();
     let result = timeout(

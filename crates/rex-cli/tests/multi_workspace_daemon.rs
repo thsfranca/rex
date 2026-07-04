@@ -54,18 +54,17 @@ fn per_workspace_global_config() -> RexConfig {
     cfg
 }
 
-fn write_project(root: &TempDir, name: &str, workspace_root: &PathBuf) -> PathBuf {
+fn write_project(root: &TempDir, name: &str) -> PathBuf {
     let proj = root.path().join(name);
     fs::create_dir_all(proj.join(".rex")).expect("mkdir");
-    let mut overlay = RexConfig {
+    let overlay = RexConfig {
         version: 1,
-        workspace: rex_config::WorkspaceConfig {
-            root: workspace_root.display().to_string(),
+        daemon: rex_config::DaemonConfig {
+            socket_scope: Some(DaemonSocketScope::PerWorkspace),
             ..Default::default()
         },
         ..Default::default()
     };
-    overlay.daemon.socket_scope = Some(DaemonSocketScope::PerWorkspace);
     fs::write(
         proj.join(".rex/config.json"),
         serde_json::to_string_pretty(&overlay).expect("serialize"),
@@ -86,8 +85,8 @@ async fn two_projects_get_distinct_daemon_sockets_and_workspaces() {
     )
     .expect("write global config");
 
-    let proj_a = write_project(&guard._dir, "proj-a", &guard._dir.path().join("proj-a"));
-    let proj_b = write_project(&guard._dir, "proj-b", &guard._dir.path().join("proj-b"));
+    let proj_a = write_project(&guard._dir, "proj-a");
+    let proj_b = write_project(&guard._dir, "proj-b");
     let root_a = proj_a.canonicalize().unwrap_or_else(|_| proj_a.clone());
     let root_b = proj_b.canonicalize().unwrap_or_else(|_| proj_b.clone());
 

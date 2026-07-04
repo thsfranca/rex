@@ -9,7 +9,6 @@ mod omlx;
 mod omlx_layout;
 mod openai_compat;
 mod paths;
-mod project;
 mod sidecar_binary;
 mod sockets;
 mod workspace;
@@ -48,7 +47,6 @@ pub use paths::{
     gateway_dir, gateway_env_path, global_config_path, omlx_dir, proto_gen_path,
     proto_src_path, rex_root, REX_ROOT_ENV,
 };
-pub use project::ensure_project_workspace_root;
 pub use sidecar_binary::{
     rex_agent_doctor_applies, rex_agent_doctor_checks, sidecar_binary_resolvable,
     sidecar_install_hint,
@@ -188,7 +186,6 @@ mod tests {
             ensure_global_layout().unwrap();
             let mut global = RexConfig::defaults();
             global.inference.runtime = "mock".to_string();
-            global.workspace.allow_cwd_fallback = Some(true);
             fs::write(
                 global_config_path(),
                 serde_json::to_string_pretty(&global).unwrap(),
@@ -225,7 +222,6 @@ mod tests {
                 global_config_path(),
                 r#"{
   "version": 1,
-  "workspace": { "allow_cwd_fallback": true },
   "inference": {
     "runtime": "http-openai-compat",
     "gateway": { "mode": "managed", "port": 4000 },
@@ -253,7 +249,6 @@ mod tests {
                 global_config_path(),
                 r#"{
   "version": 1,
-  "workspace": { "allow_cwd_fallback": true },
   "observability": {
     "enabled": true,
     "otlp": { "endpoint": "http://127.0.0.1:4317", "protocol": "grpc" }
@@ -276,7 +271,6 @@ mod tests {
                 global_config_path(),
                 r#"{
   "version": 1,
-  "workspace": { "allow_cwd_fallback": true },
   "observability": { "enabled": true, "store": { "engine": "mmap" } }
 }"#,
             )
@@ -296,7 +290,6 @@ mod tests {
                 global_config_path(),
                 r#"{
   "version": 1,
-  "workspace": { "allow_cwd_fallback": true },
   "inference": {
     "runtime": "http-openai-compat",
     "gateway": { "mode": "disabled" },
@@ -369,7 +362,6 @@ mod tests {
             assert_eq!(base.daemon.log_path, "/tmp/custom-daemon.log");
 
             let mut cfg = RexConfig::defaults();
-            cfg.workspace.allow_cwd_fallback = Some(true);
             fs::write(
                 global_config_path(),
                 serde_json::to_string_pretty(&cfg).unwrap(),

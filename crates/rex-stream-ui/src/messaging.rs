@@ -113,7 +113,7 @@ impl OperatorMessaging {
             "stream_timeout" => "Stream timed out — retry is usually safe",
             "stream_interrupted" => "Stream interrupted — retry is usually safe",
             "approval_required" => "Approval required — confirm execution",
-            "workspace_not_configured" => "Workspace root not configured",
+            "workspace_not_configured" => "Could not resolve workspace from current directory",
             "workspace_mismatch" => "Workspace does not match daemon",
             _ => message.trim(),
         };

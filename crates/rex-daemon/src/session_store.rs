@@ -286,14 +286,14 @@ mod tests {
     use serial_test::serial;
     use std::sync::Arc;
 
-    fn init_store_test() -> (tempfile::TempDir, HarnessSessionStore) {
+    fn init_store_test() -> (tempfile::TempDir, HarnessSessionStore, std::path::PathBuf) {
         crate::settings::reset_for_test();
         let dir = tempfile::tempdir().expect("tempdir");
         let workspace = dir.path().to_path_buf();
+        let prev_cwd = std::env::current_dir().unwrap_or_else(|_| std::env::temp_dir());
         let mut cfg = rex_config::RexConfig::defaults();
-        cfg.workspace.root = workspace.display().to_string();
-        cfg.workspace.allow_cwd_fallback = Some(false);
         cfg.daemon.socket_scope = Some(rex_config::DaemonSocketScope::Global);
+        std::env::set_current_dir(&workspace).expect("chdir workspace");
         crate::settings::init_for_test(Arc::new(LoadedConfig::for_test(
             workspace.clone(),
             cfg,
@@ -303,13 +303,39 @@ mod tests {
             .expect("workspace root");
         std::fs::create_dir_all(resolved.join(".rex").join(SESSIONS_DIR))
             .expect("sessions dir");
-        (dir, HarnessSessionStore::new())
+        (dir, HarnessSessionStore::new(), prev_cwd)
+    }
+
+    struct StoreTestGuard {
+        _dir: tempfile::TempDir,
+        _prev_cwd: std::path::PathBuf,
+    }
+
+    impl Drop for StoreTestGuard {
+        fn drop(&mut self) {
+            if self._prev_cwd.is_dir() {
+                let _ = std::env::set_current_dir(&self._prev_cwd);
+            } else {
+                let _ = std::env::set_current_dir(std::env::temp_dir());
+            }
+        }
+    }
+
+    fn store_test_env() -> (StoreTestGuard, HarnessSessionStore) {
+        let (dir, store, prev_cwd) = init_store_test();
+        (
+            StoreTestGuard {
+                _dir: dir,
+                _prev_cwd: prev_cwd,
+            },
+            store,
+        )
     }
 
     #[test]
     #[serial_test::serial]
     fn append_and_fetch_incremental() {
-        let (_dir, store) = init_store_test();
+        let (_guard, store) = store_test_env();
         store
             .append_operator_prompt("hs-test", "hello", "turn-1")
             .expect("append");
@@ -337,7 +363,7 @@ mod tests {
     #[test]
     #[serial_test::serial]
     fn retroactive_fetch_returns_older_events() {
-        let (_dir, store) = init_store_test();
+        let (_guard, store) = store_test_env();
         for i in 1..=5 {
             store
                 .append_operator_prompt("hs-retro", &format!("msg {i}"), &format!("t{i}"))

@@ -41,10 +41,6 @@ impl RexRootGuard {
 
         let overlay = RexConfig {
             version: 1,
-            workspace: rex_config::WorkspaceConfig {
-                root: workspace.display().to_string(),
-                ..Default::default()
-            },
             daemon: rex_config::DaemonConfig {
                 socket_scope: Some(DaemonSocketScope::PerWorkspace),
                 ..Default::default()
