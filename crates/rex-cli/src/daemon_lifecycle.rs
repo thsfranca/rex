@@ -1,5 +1,5 @@
 use std::fs::OpenOptions;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::OnceLock;
@@ -53,12 +53,94 @@ pub async fn ensure_daemon_ready() -> Result<(), CliError> {
     if let Some(parent) = lock_path.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    let lock = try_acquire_lock(&lock_path);
-    if lock.is_some() {
-        spawn_detached_daemon(&loaded, &log_path)?;
+
+    let autostart_lock = try_acquire_autostart_lock(&lock_path);
+
+    if autostart_lock.is_some() {
+        if probe_daemon(&loaded).await.is_err() {
+            spawn_detached_daemon(&loaded, &log_path)?;
+        }
     }
 
-    poll_until_ready(&loaded, timeout_secs, &log_path).await
+    let result = poll_until_ready(&loaded, timeout_secs, &log_path).await;
+    drop(autostart_lock);
+    result
+}
+
+fn try_acquire_autostart_lock(path: &Path) -> Option<AutostartLock> {
+    match create_lock_file(path) {
+        Ok(lock) => Some(lock),
+        Err(LockAcquireError::Contended) => {
+            if lock_holder_alive(path) {
+                return None;
+            }
+            let _ = std::fs::remove_file(path);
+            create_lock_file(path).ok()
+        }
+        Err(LockAcquireError::Io(err)) => {
+            eprintln!(
+                "rex: warning: could not acquire daemon autostart lock at {}: {err}",
+                path.display()
+            );
+            None
+        }
+    }
+}
+
+enum LockAcquireError {
+    Contended,
+    Io(io::Error),
+}
+
+fn create_lock_file(path: &Path) -> Result<AutostartLock, LockAcquireError> {
+    let pid = std::process::id();
+    match OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+    {
+        Ok(mut file) => {
+            let _ = writeln!(file, "{pid}");
+            Ok(AutostartLock {
+                path: path.to_path_buf(),
+                held: true,
+            })
+        }
+        Err(err) if err.kind() == io::ErrorKind::AlreadyExists => Err(LockAcquireError::Contended),
+        Err(err) => Err(LockAcquireError::Io(err)),
+    }
+}
+
+fn read_lock_pid(path: &Path) -> Option<u32> {
+    let contents = std::fs::read_to_string(path).ok()?;
+    contents.split_whitespace().next()?.parse().ok()
+}
+
+fn lock_holder_alive(path: &Path) -> bool {
+    read_lock_pid(path)
+        .map(process_alive)
+        .unwrap_or(false)
+}
+
+fn process_alive(pid: u32) -> bool {
+    if pid == 0 {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        std::process::Command::new("kill")
+            .args(["-0", &pid.to_string()])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false)
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = pid;
+        true
+    }
 }
 
 async fn probe_daemon(loaded: &LoadedConfig) -> Result<(), CliError> {
@@ -130,29 +212,7 @@ fn load_config() -> Result<LoadedConfig, CliError> {
     })
 }
 
-fn try_acquire_lock(path: &Path) -> Option<AutostartLock> {
-    match OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(path)
-    {
-        Ok(_) => Some(AutostartLock {
-            path: path.to_path_buf(),
-            held: true,
-        }),
-        Err(err) if err.kind() == io::ErrorKind::AlreadyExists => None,
-        Err(err) => {
-            eprintln!(
-                "rex: warning: could not acquire daemon autostart lock at {}: {err}",
-                path.display()
-            );
-            None
-        }
-    }
-}
-
 fn resolve_rex_binary(log_path: &Path) -> Result<PathBuf, CliError> {
-    // Integration tests set this so in-process ensure spawns the real `rex` binary.
     if let Ok(path) = std::env::var("CARGO_BIN_EXE_rex") {
         let path = PathBuf::from(path);
         if path.is_file() {
@@ -246,11 +306,40 @@ mod tests {
             std::process::id()
         ));
         let _ = std::fs::remove_file(&lock_path);
-        let first = try_acquire_lock(&lock_path);
+        let first = try_acquire_autostart_lock(&lock_path);
         assert!(first.is_some());
-        assert!(try_acquire_lock(&lock_path).is_none());
+        assert!(try_acquire_autostart_lock(&lock_path).is_none());
         drop(first);
-        assert!(try_acquire_lock(&lock_path).is_some());
+        assert!(try_acquire_autostart_lock(&lock_path).is_some());
+        let _ = std::fs::remove_file(&lock_path);
+    }
+
+    #[test]
+    fn lock_records_holder_pid() {
+        let lock_path = std::env::temp_dir().join(format!(
+            "rex-autostart-pid-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&lock_path);
+        let lock = try_acquire_autostart_lock(&lock_path).expect("lock");
+        assert_eq!(read_lock_pid(&lock_path), Some(std::process::id()));
+        assert!(lock_holder_alive(&lock_path));
+        drop(lock);
+        let _ = std::fs::remove_file(&lock_path);
+    }
+
+    #[test]
+    fn dead_pid_lock_is_reclaimed() {
+        let lock_path = std::env::temp_dir().join(format!(
+            "rex-autostart-dead-pid-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_file(&lock_path);
+        std::fs::write(&lock_path, "999999999\n").expect("write stale lock");
+        assert!(!lock_holder_alive(&lock_path));
+        let lock = try_acquire_autostart_lock(&lock_path).expect("reclaim");
+        assert_eq!(read_lock_pid(&lock_path), Some(std::process::id()));
+        drop(lock);
         let _ = std::fs::remove_file(&lock_path);
     }
 }

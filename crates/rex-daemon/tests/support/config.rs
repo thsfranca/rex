@@ -99,6 +99,7 @@ pub fn product_path_config_named(
 ) -> RexConfig {
     let mut cfg = RexConfig::defaults();
     cfg.daemon.socket = Some(daemon_socket.to_string());
+    cfg.daemon.socket_scope = Some(rex_config::DaemonSocketScope::Global);
     cfg.inference.runtime = "http-openai-compat".to_string();
     cfg.inference.openai_compat.base_url = http_base_url.to_string();
     cfg.inference.openai_compat.api_key = None;
@@ -122,6 +123,7 @@ pub fn sidecar_required_missing_binary_config(
 ) -> RexConfig {
     let mut cfg = mock_e2e_config();
     cfg.daemon.socket = Some(daemon_socket.to_string());
+    cfg.daemon.socket_scope = Some(rex_config::DaemonSocketScope::Global);
     cfg.sidecars.harness = None;
     cfg.sidecars.required = Some(true);
     if let Some(entry) = cfg.sidecars.list.first_mut() {
