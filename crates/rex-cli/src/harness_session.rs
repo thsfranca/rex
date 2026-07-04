@@ -9,14 +9,11 @@ static SESSION_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Stable id for one bare-`rex` TUI process; sent on every `StreamInference` call.
 ///
-/// When `REX_HARNESS_SESSION_ID` is set (probe/fixture harness only), that value is used
-/// so tuiwright baselines stay stable across runs.
+/// Inside the tuiwright probe fixture (see `tui::probe_context`), returns a fixed id so
+/// baselines stay stable. Otherwise generates a unique per-process id.
 pub fn new_harness_session_id() -> String {
-    if let Ok(id) = std::env::var("REX_HARNESS_SESSION_ID") {
-        let trimmed = id.trim();
-        if !trimmed.is_empty() {
-            return trimmed.to_string();
-        }
+    if crate::probe_context::is_tui_probe_fixture() {
+        return "hs-probe".to_string();
     }
     let seq = SESSION_COUNTER.fetch_add(1, Ordering::Relaxed);
     let nanos = SystemTime::now()
@@ -41,9 +38,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn env_override_pins_probe_session() {
-        std::env::set_var("REX_HARNESS_SESSION_ID", "hs-probe");
-        assert_eq!(new_harness_session_id(), "hs-probe");
-        std::env::remove_var("REX_HARNESS_SESSION_ID");
+    fn generates_unique_ids_outside_fixture() {
+        let a = new_harness_session_id();
+        let b = new_harness_session_id();
+        if !crate::probe_context::is_tui_probe_fixture() {
+            assert_ne!(a, b);
+        }
     }
 }

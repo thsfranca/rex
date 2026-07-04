@@ -48,6 +48,7 @@ pub fn draw(frame: &mut Frame, app: &mut AppState) {
     // Region targets for tachyonfx (post-process after widgets).
     app.motion.viewport = area;
     app.motion.header = chunks[0];
+    app.motion.composer = chunks[2];
     app.motion.composer_hairline = Rect {
         x: chunks[2].x,
         y: chunks[2].y,
@@ -77,15 +78,18 @@ pub fn draw(frame: &mut Frame, app: &mut AppState) {
     };
 
     draw_header(frame, chunks[0], app);
+    let layout_start = std::time::Instant::now();
     draw_body(frame, chunks[1], app);
     draw_composer(frame, chunks[2], app);
     draw_footer(frame, chunks[3], app);
     if app.pending_approval.is_some() {
         draw_approval_modal(frame, app);
     }
+    let layout_ms = layout_start.elapsed().as_millis() as u64;
+    app.motion.set_reflow_paused(layout_ms > 16);
 
-    // Apply region effects on the rendered buffer (Quiet idle when no effects).
-    app.motion.process(frame.buffer_mut());
+    let theme = app.theme;
+    app.motion.process(frame.buffer_mut(), &theme);
 }
 
 fn composer_height(total_h: u16, header_h: u16, footer_h: u16) -> u16 {
