@@ -233,14 +233,20 @@ fn transcript_lines(text: &str, app: &AppState) -> Vec<Line<'static>> {
 
 fn draw_composer(frame: &mut Frame, area: Rect, app: &AppState) {
     let focused = app.focus == FocusPane::Composer;
-    let line = Line::from(vec![
-        Span::styled(format!("{} ", app.mode_glyph()), app.theme.text_accent()),
-        if app.composer.is_empty() {
-            Span::styled("Type your prompt…", app.theme.text_tertiary())
-        } else {
-            Span::styled(app.composer.as_str(), app.theme.text_primary())
-        },
-    ]);
+    // Accent prompt glyph; mode name text only when disclosed (`?`).
+    let mut spans = vec![Span::styled("❯ ".to_string(), app.theme.text_accent())];
+    if app.help_expanded {
+        spans.push(Span::styled(
+            format!("{} ", app.mode),
+            app.theme.text_tertiary(),
+        ));
+    }
+    spans.push(if app.composer.is_empty() {
+        Span::styled("Type your prompt…".to_string(), app.theme.text_tertiary())
+    } else {
+        Span::styled(app.composer.clone(), app.theme.text_primary())
+    });
+    let line = Line::from(spans);
     // Top hairline only; focus uses hairline.focus.
     let composer = Paragraph::new(line).block(
         Block::default()
@@ -251,6 +257,7 @@ fn draw_composer(frame: &mut Frame, area: Rect, app: &AppState) {
 }
 
 fn draw_footer(frame: &mut Frame, area: Rect, app: &AppState) {
+    // Minimal key glyphs by default; full help, path, version on `?`.
     let line = if app.help_expanded {
         let path = &app.workspace_root;
         let ver = &app.daemon_version;
@@ -260,7 +267,12 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &AppState) {
     } else if let Some(msg) = &app.status_message {
         msg.clone()
     } else {
-        "↵  esc  ⇧⇥  ?".to_string()
+        let phase = match app.session {
+            SessionPhase::Idle => "○ Ready",
+            SessionPhase::Streaming => "● Working…",
+            SessionPhase::Error => "✖ Error",
+        };
+        format!("{phase}  [?]")
     };
     frame.render_widget(
         Paragraph::new(line).style(app.theme.text_tertiary()),
