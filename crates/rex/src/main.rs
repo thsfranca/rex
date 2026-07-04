@@ -27,9 +27,15 @@ pub async fn run(args: impl Iterator<Item = String>) -> ExitCode {
                 ExitCode::from(1)
             }
         },
+        #[cfg(target_os = "macos")]
         Ok(TopLevelCommand::Desktop(_launch)) => {
             rex_desktop_lib::run();
             ExitCode::SUCCESS
+        }
+        #[cfg(not(target_os = "macos"))]
+        Ok(TopLevelCommand::Desktop(_launch)) => {
+            eprintln!("Error: Rex desktop app requires macOS.");
+            ExitCode::from(1)
         }
         Ok(TopLevelCommand::Config(rest)) => config_cmd::run_config(rest.into_iter()),
         Ok(TopLevelCommand::Proto(rest)) => proto_cmd::run_proto(rest.into_iter()),
