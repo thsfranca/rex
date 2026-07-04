@@ -92,7 +92,7 @@ flowchart LR
 
 ## Error code catalog (NDJSON stream)
 
-**Machine-readable source:** [`fixtures/guidelines/error_codes.yaml`](../fixtures/guidelines/error_codes.yaml) — CI validates this file against `rex-cli` runtime mapping and fixtures. Update **yaml and this table together** when adding a stream code.
+**Machine-readable source:** [`fixtures/guidelines/error_codes.yaml`](../fixtures/guidelines/error_codes.yaml) — CI validates this file against this table and NDJSON fixtures. Update **yaml and this table together** when adding a stream code. The public `rex complete` NDJSON emit path (and `CliError` → `error.code` mapping) was removed; codes remain the stream-contract catalog for the TUI and fixtures.
 
 | Code | Meaning | Retry | Owner | Message template (operator-facing) |
 |------|---------|-------|-------|----------------------------------|
@@ -146,17 +146,16 @@ These are **documented inconsistencies**; fixing them is follow-up work, not req
 - [ ] User-path message follows the template; no internal type names.
 - [ ] Stable **code** present at the boundary (NDJSON `error.code` for stream terminals).
 - [ ] Exactly **one** terminal `done` or `error` per NDJSON request path.
-- [ ] New stream codes added to `error_codes.yaml`, this table, and `StreamErrorCode` in the extension.
+- [ ] New stream codes added to `error_codes.yaml` and this table.
 - [ ] Fixtures updated under [`fixtures/ndjson_contract/`](../fixtures/ndjson_contract/) when wire shape changes.
 - [ ] `./scripts/ci/run_guidelines_verify.sh` passes locally when codes or fixtures change.
 
 ## Adding a new NDJSON stream error
 
 1. Add row to [`fixtures/guidelines/error_codes.yaml`](../fixtures/guidelines/error_codes.yaml) and the catalog table above.
-2. Extend `StreamErrorCode` in [`crates/rex-cli/src/runtime.rs`](../crates/rex-cli/src/runtime.rs) and [`ndjsonParser.ts`](../src/runtime/ndjsonParser.ts) `asErrorCode`.
-3. Map in `rex-cli` (`CliError` + `ndjson_error_code`) when the daemon/CLI emits it.
-4. Add or extend NDJSON fixture + conformance tests.
-5. Run `./scripts/ci/run_guidelines_verify.sh`.
+2. Map the code where the stream consumer surfaces it (for example `rex-stream-ui` operator messaging).
+3. Add or extend NDJSON fixture + conformance tests.
+4. Run `./scripts/ci/run_guidelines_verify.sh`.
 
 ## CI enforcement
 
@@ -168,7 +167,7 @@ Runs executable checks under [`scripts/ci/guidelines/`](../scripts/ci/guidelines
 
 | Script | Guideline source | Rule |
 |--------|------------------|------|
-| `check_error_codes.sh` | This catalog + [NDJSON_STREAM.md](NDJSON_STREAM.md) | `error_codes.yaml` ↔ TypeScript ↔ docs ↔ NDJSON error fixtures |
+| `check_error_codes.sh` | This catalog + [NDJSON_STREAM.md](NDJSON_STREAM.md) | `error_codes.yaml` ↔ docs ↔ NDJSON error fixtures |
 | `check_ndjson_terminal.sh` | [NDJSON_STREAM.md](NDJSON_STREAM.md) | Each `fixtures/ndjson_contract/*.ndjson` has exactly one terminal event |
 | `check_ndjson_plan_contract.sh` | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | `plan` events include `index`, `phase`, `title`, `detail`; phases are `draft` \| `clarify` \| `ready` |
 | `check_broker_policy_codes.sh` | Broker table above | `broker_error_codes.yaml` ↔ docs ↔ `access_policy.rs` |
