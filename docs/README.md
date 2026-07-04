@@ -28,6 +28,7 @@ Before adding or materially editing a doc under `docs/`:
 | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) | Project purpose and operating principles (canonical) |
 | [DOCUMENTATION.md](DOCUMENTATION.md) | Writing checklist + doc-type norms |
 | [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) | How to contribute and gate quality |
+| [KISS_CONFIG_SURFACE.md](KISS_CONFIG_SURFACE.md) | KISS guardrails for config keys and runtime binding |
 | [PRIORITIZATION.md](PRIORITIZATION.md) | MoSCoW + quick R-ICE |
 | [PROJECT_CONTEXT_PATHS.md](PROJECT_CONTEXT_PATHS.md) | OpenCode-style context path pre-injection (**R066** planned) |
 | [V1_0.md](V1_0.md) | v1.0 release criteria (SMART), SemVer meaning, tagging gate |
