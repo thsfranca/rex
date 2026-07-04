@@ -1,8 +1,18 @@
 # Copy to repo-root rex-ui-harness.toml (local, untracked). Restart rex-ui-harness MCP after edits.
 
+# desktop = real Tauri app + UDS daemon (macOS). static = HTML probe fixture (CI / Linux).
+[launch]
+mode = "desktop"
+
 base_url = "file://fixtures/ui_probe/static/index.html"
 static_root = "fixtures/ui_probe/static"
 baseline_dir = ".rex-ui-harness/baselines"
+
+[desktop]
+rex_root = "fixtures/ui_probe/rex_root"
+workspace_dir = "fixtures/ui_probe/workspace"
+socket = "/tmp/rex-playwright.sock"
+start_timeout_secs = 180
 
 [viewport]
 width = 1200

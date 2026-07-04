@@ -10,19 +10,31 @@ Agent playbook for **rex-ui-harness** MCP acceptance. Canonical design bars: [WE
 
 Register MCP: `node crates/rex-ui-harness/dist/index.js` with cwd = repo root.
 
-## Minimum scenario bundle
+## Default: real desktop + daemon (macOS)
+
+`ui_open` with no arguments launches **rex-desktop** with:
+
+- `REX_ROOT=fixtures/ui_probe/rex_root` (mock inference, `sidecars.harness=direct`)
+- Real Tauri IPC → UDS `StreamInference` → streaming transcript
+
+Use `ui_open { "mode": "static" }` for the HTML fixture only (CI / layout tokens without daemon).
+
+## Minimum scenario bundle (desktop)
 
 1. `ui_open`
-2. `ui_goto_scenario` → `idle`
+2. `ui_wait_for` — selector `[data-testid=shell]`
 3. `ui_assert_token` — `#status-dot`, `--rex-status-success`, `background-color`
-4. `ui_assert_layout` — `[data-testid=shell]`, display `grid`
-5. `ui_goto_scenario` → `streaming`
-6. `ui_assert_motion` or `ui_assert_canvas`
-7. `ui_close`
+4. `ui_send_keys` — selector `[data-testid=composer-input]`, keys `hello{Enter}` (or fill + Enter via separate tools)
+5. `ui_wait_for` — text in assistant response (mock stream)
+6. `ui_close`
 
-## Native WKWebView (W109)
+## Static fixture bundle
 
-When `tauri-plugin-playwright` is enabled, pass `{ "native": true }` to `ui_open` to target the desktop shell instead of the static fixture.
+1. `ui_open` with `{ "mode": "static" }`
+2. `ui_goto_scenario` → `idle`
+3. Token + layout asserts
+4. `ui_goto_scenario` → `streaming` (fixture motion)
+5. `ui_close`
 
 ## Related
 

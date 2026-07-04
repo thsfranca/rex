@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "daemon": {
+    "socket": "/tmp/rex-ui-probe.sock",
+    "socket_scope": "global",
+    "ready_timeout_secs": 60,
+    "log_path": ""
+  },
+  "sidecars": {
+    "active": "stub",
+    "required": false,
+    "harness": "direct",
+    "list": [
+      {
+        "name": "stub",
+        "binary": "rex-sidecar-stub",
+        "enabled": false,
+        "socket": "/tmp/rex-ui-probe-sidecar.sock"
+      }
+    ],
+    "capabilities": []
+  },
+  "inference": {
+    "runtime": "mock",
+    "openai_compat": {
+      "base_url": "",
+      "model": "mock-model-v0",
+      "timeout_secs": 120
+    },
+    "cursor_cli": {
+      "path": "cursor-agent",
+      "timeout_secs": 20
+    }
+  },
+  "agent": {
+    "approvals_enabled": false,
+    "tool_approvals_enabled": false,
+    "max_tools_per_step": 8
+  },
+  "broker": {
+    "shell_allowlist": ["echo", "printf", "true"],
+    "max_tool_result_bytes": 65536
+  },
+  "context": {
+    "max_prompt_tokens": 512,
+    "max_context_tokens": 192
+  },
+  "cache": {
+    "bypass": false
+  },
+  "cli": {},
+  "workspace": {
+    "indexer": "workspace"
+  },
+  "search": {
+    "enabled": false,
+    "provider": "mock"
+  },
+  "observability": {}
+}

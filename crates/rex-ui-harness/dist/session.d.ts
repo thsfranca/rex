@@ -1,15 +1,10 @@
-import type { Page, Browser, BrowserContext } from "playwright";
 import type { HarnessConfig } from "./config.js";
-export interface SessionState {
-    browser: Browser;
-    context: BrowserContext;
-    page: Page;
-    motionFrames: Buffer[];
-    recording: boolean;
-}
-export declare function getSession(): SessionState;
+import type { HarnessSession } from "./page.js";
+export type { HarnessSession };
+export declare function getSession(): HarnessSession;
 export declare function openSession(cfg: HarnessConfig, launch?: {
     headless?: boolean;
-}): Promise<SessionState>;
+    mode?: "desktop" | "static";
+}): Promise<HarnessSession>;
 export declare function closeSession(): Promise<void>;
 export declare function gotoScenario(scenario: string): Promise<void>;
