@@ -45,6 +45,7 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0036](0036-per-workspace-daemon-routing.md) | Per-workspace daemon routing | Accepted |
 | [0037](0037-daemon-idle-shutdown.md) | Daemon idle lifecycle and auto-shutdown | Accepted |
 | [0039](0039-terminal-harness-presentation-and-daemon-intelligence.md) | Terminal harness — presentation layer and daemon intelligence | Accepted (design) |
+| [0040](0040-harness-session-transcript-authority.md) | Harness session transcript authority (daemon context, TUI viewport) | Accepted |
 
 ## How to use
 

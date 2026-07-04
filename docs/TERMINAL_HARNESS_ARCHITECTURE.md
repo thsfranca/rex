@@ -169,9 +169,18 @@ sequenceDiagram
 
 Per [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md): schema parsing in sidecar envelope; execution brokered. Daemon registers MCP capabilities in **`ApprovalGate`**. TUI renders **dynamic** approval modals from JSON schema—no hardcoded UI per tool.
 
-### Memory and context
+### Memory, context, and harness session transcript
 
-Daemon SQLite FTS5 index under project **`.rex/`** ([ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md)). **`ProjectMemoryRetrieval`** caps at 10% token budget. TUI is stateless for memory; shows retrieval activity events only.
+| Layer | Responsibility | Storage |
+|-------|----------------|---------|
+| **Daemon** | Durable **session context** per `harness_session_id`; agent turn seed | Append-only log under `.rex/sessions/` ([ADR 0040](architecture/decisions/0040-harness-session-transcript-authority.md)) |
+| **TUI** | All **UI logic** — viewport cache, pagination, scroll, motion | In-memory only; not source of truth |
+
+Daemon SQLite FTS5 index under project **`.rex/`** ([ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md)) supports lexical retrieval. **`ProjectMemoryRetrieval`** caps at 10% token budget. **LTM** ingests extracted facts — not the operational session log.
+
+**Fetch APIs (sketch):** `FetchSessionEvents` — incremental (`after_sequence`) and retroactive (`before_sequence`) cursors. Live tail remains on `StreamInference`. TUI merge rule: retroactive fetch **prepends**; **hot tail never evicted** on backfill.
+
+**Motion:** in-flight harness work must show choreographed motion per [TUI_DESIGN.md](TUI_DESIGN.md) § In-flight operations invariant.
 
 ### Provider and model picker
 
