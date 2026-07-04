@@ -29,3 +29,23 @@ pub fn diff_scrub_green(intensity: f32) -> Color {
 pub fn diff_scrub_red(intensity: f32) -> Color {
     lerp_rgb((0x1A, 0x1B, 0x20), (0xFF, 0x6B, 0x6B), intensity)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::style::Color;
+
+    #[test]
+    fn lerp_rgb_midpoint() {
+        assert_eq!(
+            lerp_rgb((0, 0, 0), (100, 200, 50), 0.5),
+            Color::Rgb(50, 100, 25)
+        );
+    }
+
+    #[test]
+    fn diff_scrub_tokens_use_semantic_hues() {
+        assert!(matches!(diff_scrub_green(1.0), Color::Rgb(0x86, 0xE5, 0x9A)));
+        assert!(matches!(diff_scrub_red(1.0), Color::Rgb(0xFF, 0x6B, 0x6B)));
+    }
+}

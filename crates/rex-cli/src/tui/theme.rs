@@ -64,6 +64,11 @@ impl Theme {
         }
     }
 
+    #[cfg(test)]
+    pub fn truecolor_for_test() -> Self {
+        Self::truecolor()
+    }
+
     fn truecolor() -> Self {
         Self {
             surface_base: Color::Reset,
