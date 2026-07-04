@@ -27,7 +27,7 @@ cat <<'EOF'
 
 Next (live LLM, after Ollama is up): ./scripts/verify_native_tools_live.sh
 
-Then: configure JSON per docs/CLI_OPERATOR_UX.md, run rex status or rex complete,
-and follow the CLI operator path for agent-mode dogfood (NDJSON stream, cancel,
+Then: configure JSON per docs/CLI_OPERATOR_UX.md, run rex (or rex tui),
+and follow the CLI operator path for agent-mode dogfood (TUI stream, cancel,
 brokered fs.read).
 EOF

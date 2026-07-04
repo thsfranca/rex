@@ -2,15 +2,15 @@
 set -euo pipefail
 
 cat <<'EOF'
-Manual test steps (use two terminals):
+Manual test steps:
 
-Terminal 1:
-  rex daemon
-
-Terminal 2:
-  rex complete "hello from rex"
+  rex
 
 Expected behavior:
-- Terminal 2 prints text in incremental chunks.
-- Output ends with a newline once the done chunk arrives.
+- Interactive TUI opens (daemon auto-starts when needed).
+- Health and phase appear in the header.
+- Submit a prompt in the composer; assistant text streams in the transcript.
+- Esc cancels an in-flight turn; Ctrl+C twice exits.
+
+Public `rex daemon`, `rex status`, and `rex complete` were removed.
 EOF

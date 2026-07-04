@@ -6,7 +6,12 @@
 # Explicit out: plan-mode native tool loop (see scripts/verify_native_tools_live.sh / R038).
 #
 # Defaults: http://127.0.0.1:11434/v1; model qwen2.5-coder:7b or llama3.2 (first available).
+#
+# Blocked: public `rex complete` was removed; turns need a TUI or internal harness rewrite.
 set -euo pipefail
+
+echo "verify_ollama_live: blocked — public \`rex complete\` was removed; use \`rex\` / \`rex tui\` for operator dogfood." >&2
+exit 1
 
 if [[ "${REX_OLLAMA_LIVE:-}" != "1" ]]; then
   echo "verify_ollama_live: opt-in required — export REX_OLLAMA_LIVE=1 (not default PR CI; see docs/ECONOMICS_VALIDATION.md)." >&2
@@ -149,11 +154,11 @@ PY
 wait_for_daemon_ready() {
   local deadline=$((SECONDS + READINESS_TIMEOUT_SECS))
   while (( SECONDS < deadline )); do
-    if env REX_ROOT="${REX_ROOT}" "${REX_BIN}" status >/dev/null 2>&1; then
+    if env REX_ROOT="${REX_ROOT}" "${REX_BIN}" __rex_internal_status >/dev/null 2>&1; then
       return 0
     fi
     if ! kill -0 "${DAEMON_PID}" 2>/dev/null; then
-      fail "rex daemon exited before ready (see ${DAEMON_LOG})"
+      fail "daemon exited before ready (see ${DAEMON_LOG})"
     fi
     sleep 0.25
   done
@@ -262,8 +267,8 @@ if ! env REX_ROOT="${REX_ROOT}" "${REX_BIN}" proto install; then
   fail "rex proto install failed (run from repo root so proto/ is discoverable)"
 fi
 
-info "Starting rex daemon (log: ${DAEMON_LOG})"
-env REX_ROOT="${REX_ROOT}" "${REX_BIN}" daemon >>"${DAEMON_LOG}" 2>&1 &
+info "Starting internal daemon (log: ${DAEMON_LOG})"
+env REX_ROOT="${REX_ROOT}" "${REX_BIN}" __rex_internal_daemon >>"${DAEMON_LOG}" 2>&1 &
 DAEMON_PID=$!
 
 info "Waiting for daemon + sidecar ready (timeout ${READINESS_TIMEOUT_SECS}s)"

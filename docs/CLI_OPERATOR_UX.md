@@ -6,7 +6,7 @@
 
 Give **terminal operators** the **primary** Rex experience: a single command in a project directory provisions a per-workspace daemon and opens a responsive, keyboard-driven multi-pane workspace. The CLI **ensures the daemon when configured** and surfaces **legible operator messaging**. The TUI consumes the NDJSON event stream **internally** ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md), [NDJSON_STREAM.md](NDJSON_STREAM.md)).
 
-**Primary surface:** multi-pane TUI via bare **`rex`** or **`rex tui`**. Public **`rex complete`** is removed.
+**Primary surface:** multi-pane TUI via bare **`rex`**.
 
 ## Language policy
 
@@ -14,10 +14,10 @@ Describe **target experience and acceptance criteria in Rex terms only**. Do not
 
 ## North-star UX
 
-Operators run **`cd ~/projects/my-app && rex`** (or **`rex tui`**) and enter an immersive terminal workspace without babysitting a foreground daemon session.
+Operators run **`cd ~/projects/my-app && rex`** and enter an immersive terminal workspace without babysitting a foreground daemon session.
 
 1. CLI derives workspace identity from cwd / **`workspace.root`** and probes the per-workspace UDS under **`$REX_ROOT/sockets/`** ([ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), **R075** Done).
-2. When the socket is unresponsive and **`daemon.auto_start`** is on, CLI spawns a detached **`rex daemon`**, shows a loading state, and polls **`GetSystemStatus`** until the daemon is ready (context pipeline warmed, sidecar supervised).
+2. When the socket is unresponsive, CLI spawns a detached daemon (internal entry), shows a loading state, and polls **`GetSystemStatus`** until the daemon is ready (context pipeline warmed, sidecar supervised).
 3. TUI transitions to the primary layout: header, activity timeline, streaming output, composer, footer.
 4. The operator interacts via keyboard; tool executions appear as timeline cards; destructive mutations pause for explicit approval routed through the daemon broker.
 5. Session memory and diagnostics are assembled by the daemon context pipeline—the TUI is a deterministic projection of the NDJSON event stream.
@@ -57,7 +57,7 @@ Operators run **`cd ~/projects/my-app && rex`** (or **`rex tui`**) and enter an 
 | Per-workspace routing | **R075** Done | Done |
 | Lifecycle feedback | Compact glyphs; still thin chrome | Product design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R080** Done |
 | Stream progress | Activity list + output in titled boxes | Chat-primary transcript + timeline; human phrases (**R080** Done) |
-| Interactive session | Bare **`rex`** / **`rex tui`** (**R073**) | Done; presentation **R080** Done; motion **R081** Done; **`complete`** removed |
+| Interactive session | Bare **`rex`** (**R073**) | Done; presentation **R080** Done; motion **R081** Done |
 | Markdown output | Incremental **mdstream** path | Done |
 | Tool approval | Modal present | Human-first copy per design system (**R080**) |
 | Friendly status | Minimal structured copy | Progressive insight; optional narrator (**R074**) |
@@ -105,9 +105,9 @@ Technical detail: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTU
 
 | Step | Behavior |
 |------|----------|
-| 1 | Operator runs **`rex`** or **`rex tui`** in a project directory |
+| 1 | Operator runs **`rex`** in a project directory |
 | 2 | CLI resolves **`workspace.root`** and workspace-scoped socket path |
-| 3 | Probe UDS; on failure spawn detached daemon when **`daemon.auto_start`** is true |
+| 3 | Probe UDS; on failure spawn detached daemon |
 | 4 | Poll **`GetSystemStatus`** until ready or timeout; show loading UI |
 | 5 | Open multi-pane TUI; composer accepts first prompt |
 
@@ -143,8 +143,7 @@ flowchart TB
 
 | Command | When |
 |---------|------|
-| **`rex`** / **`rex tui`** | Sole interactive product entry |
-| **`rex complete`** | **Removed** — use the TUI |
+| **`rex`** | Sole interactive product entry (daemon auto-starts) |
 
 ### Keyboard map
 
@@ -167,7 +166,7 @@ Mode **`ask`** enforces daemon policy that denies **`fs.write`** and **`exec.she
 
 ## TUI design system (**R082**)
 
-Canonical product design for **`rex tui`** presentation and motion: **[TUI_DESIGN.md](TUI_DESIGN.md)**.
+Canonical product design for the **`rex`** TUI presentation and motion: **[TUI_DESIGN.md](TUI_DESIGN.md)**.
 
 | ID | Scope | Status |
 |----|-------|--------|
@@ -177,7 +176,7 @@ Canonical product design for **`rex tui`** presentation and motion: **[TUI_DESIG
 
 Presentation and motion meet [TUI_DESIGN.md](TUI_DESIGN.md). Do not reintroduce blink-only cues or titled-box wireframe chrome.
 
-Validate with `./scripts/install-cli.sh`, `rex tui`, and tuiwright MCP text snapshots (sequential frames must show **region** change). Headless NDJSON-replay adapter remains **Won't**.
+Validate with `./scripts/install-cli.sh`, `rex`, and tuiwright MCP text snapshots (sequential frames must show **region** change). Headless NDJSON-replay adapter remains **Won't**.
 
 ## Tool approval UX
 
@@ -222,7 +221,6 @@ Fixed copy mapped from lifecycle and NDJSON events. Wording may tune in implemen
 | State | Operator message |
 |-------|------------------|
 | Probe success | Ready — connected to Rex |
-| Probe fail, auto-start off | Rex is not running. Enable **`daemon.auto_start`** or run **`rex daemon`** |
 | Starting spawn | Starting Rex… |
 | Poll waiting | Waiting for Rex to become ready… |
 | Ready | Rex is ready |
@@ -276,14 +274,12 @@ Optional layer that summarizes a completed multi-tool turn in natural language.
 ```json
 {
   "daemon": {
-    "auto_start": true,
     "ready_timeout_secs": 10,
     "idle_shutdown_secs": 300,
     "log_path": "~/.rex/daemon.log"
   },
   "cli": {
     "ui": {
-      "enabled": "auto",
       "sync_output": true
     }
   },
@@ -293,35 +289,25 @@ Optional layer that summarizes a completed multi-tool turn in natural language.
 }
 ```
 
-Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → flags (**`--no-daemon-autostart`**, **`--no-ui`**).
+Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`**.
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| **`daemon.auto_start`** | **`true`** | CLI ensures daemon before client RPCs |
 | **`daemon.ready_timeout_secs`** | `10` | Readiness poll budget |
 | **`daemon.idle_shutdown_secs`** | **`300`** | Idle auto-shutdown (**R071b**); **`0`** disables |
 | **`daemon.log_path`** | `~/.rex/daemon.log` | Detached daemon stdout/stderr |
-| **`cli.ui.enabled`** | `"auto"` | `auto` \| `true` \| `false` — TUI on TTY |
 | **`cli.ui.narrator`** | `false` | Planned (**R074**); not in schema yet |
 | **`cli.ui.sync_output`** | `true` | Emit `?2026` synchronized output when terminal supports it |
 | **`git.auto_commit_dirty`** | `true` | Daemon broker auto-commits dirty files before AI edits (**R077**) |
-
-
-### CLI flags (planned)
-
-| Flag | Purpose |
-|------|---------|
-| **`--no-daemon-autostart`** | Fail fast with **`daemon_unavailable`** |
-| **`--no-ui`** | Force plain text on TTY |
 
 ## Delivery items and acceptance
 
 ### R071 — CLI daemon auto-start (Done)
 
-- When **`daemon.auto_start`** is true and socket is missing, CLI spawns detached **`rex daemon`** and polls **`GetSystemStatus`** until ready or timeout.
+- When the socket is missing, CLI always spawns a detached daemon (internal entry) and polls **`GetSystemStatus`** until ready or timeout.
 - Managed inference children start during daemon boot before the socket binds when configured.
 - Single-flight: concurrent CLI invocations do not spawn duplicate daemons.
-- CLI-spawned daemon survives CLI exit until idle shutdown; manual **`rex daemon`** in foreground still supported.
+- CLI-spawned daemon survives CLI exit until idle shutdown; health and phase live in the TUI.
 - Error messages reference **`daemon.log_path`** on spawn/timeout failures.
 
 ### R072 — Structured messaging + NDJSON core (Phase 1)
@@ -337,7 +323,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 
 ### R073 — Full terminal UI + approval modals (Phase 2–3)
 
-- Bare **`rex`** / **`rex tui`** opens multi-pane **`ratatui`** layout; public **`rex complete`** is removed.
+- Bare **`rex`** opens multi-pane **`ratatui`** layout.
 - Background tokio NDJSON consumer → **`mpsc`** → IMGUI draw loop; UI thread never blocks on I/O.
 - **`--format ndjson`** on non-TTY stdout unchanged.
 - Approval modals for **`fs.write`** / **`exec.shell`** with diff preview; keystrokes unblock daemon **`ApprovalGate`**.
@@ -384,9 +370,9 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 
 ## Open questions
 
-- Default TTY behavior: always TUI vs plain text until **`rex tui`** is explicit (recommend **`auto`**).
+- Default TTY behavior: bare **`rex`** is the TUI.
 - Log rotation policy for **`daemon.log_path`**.
-- Whether **`rex status`** should print friendly lifecycle copy when auto-start runs.
+- Whether the TUI header should print friendlier lifecycle copy while auto-start runs.
 - Threshold N for narrator trigger (**R074**).
 
 **Resolved** (see [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md)): TUI framework **`ratatui`**; markdown **`mdstream`**; LSP in daemon; git pre-commit in broker; UDS gRPC + NDJSON automation parity.

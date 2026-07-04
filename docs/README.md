@@ -64,7 +64,7 @@ Before adding or materially editing a doc under `docs/`:
 | [ERROR_HANDLING.md](ERROR_HANDLING.md) | Error codes, human-readable messages, CI guidelines gate |
 | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Plan mode tools, stream contract, broker plan.save |
 | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Terminal operator path and daemon lifecycle UX — **product hub** |
-| [TUI_DESIGN.md](TUI_DESIGN.md) | Product-grade `rex tui` design system — **acceptance gate** (**R082**) |
+| [TUI_DESIGN.md](TUI_DESIGN.md) | Product-grade `rex` TUI design system — **acceptance gate** (**R082**) |
 | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | Terminal harness technical architecture — **design spoke** (**R072–R073**) |
 | [RELEASE.md](RELEASE.md) | Core release automation |
 | [CI.md](CI.md) | Automation gates |

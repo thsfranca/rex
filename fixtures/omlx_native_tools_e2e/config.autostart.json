@@ -1,7 +1,6 @@
 {
   "version": 1,
   "daemon": {
-    "auto_start": true,
     "socket": "__DAEMON_SOCKET__",
     "ready_timeout_secs": 90,
     "log_path": "daemon.log"

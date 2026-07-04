@@ -39,7 +39,7 @@ Linear recipe from a clone to a working **rex complete** stream (requires **HTTP
 1. **Build** the Rust workspace: `cargo build --workspace`.
 2. **Install** `rex` on PATH — [`scripts/install-cli.sh`](scripts/install-cli.sh).
 3. **Configure** brokered HTTP in `$REX_ROOT/config.json` — run `rex config init` (rex-agent + mock web search by default), then edit `inference.openai_compat` — [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md).
-4. **Run** `rex status` or `rex complete "hello" --format ndjson --mode ask` — the CLI auto-starts a detached daemon when needed (**R071**, default on). Socket defaults to `/tmp/rex.sock` unless overridden in JSON. Opt out: **`daemon.auto_start: false`** or **`--no-daemon-autostart`**. Terminal UI (**R073**) — [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md).
+4. **Run** `rex` — opens the terminal UI and ensures a detached daemon (**R071**). Socket defaults to `/tmp/rex.sock` unless overridden in JSON — [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md).
 5. **Verify** sidecar health in daemon logs and brokered `fs.read` via a prompt containing `__rex_read:<path>`.
 
 Details: [docs/CLI_OPERATOR_UX.md](docs/CLI_OPERATOR_UX.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md).

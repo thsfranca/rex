@@ -127,7 +127,7 @@ Rex resolves the **single** broker URL in this order. Rows 2 and 3 are **mutuall
 
 ## Daemon autostart (R071)
 
-When **`daemon.auto_start`** is enabled (default), CLI and extension auto-spawn **`rex daemon`**. Managed oMLX starts **inside daemon boot** before the UDS socket binds — same invariant as managed gateway. There is **no** separate oMLX autostart flag.
+The CLI always ensures a daemon when you run **`rex`**. Managed oMLX starts **inside daemon boot** before the UDS socket binds — same invariant as managed gateway. There is **no** separate oMLX autostart flag.
 
 | Event | Outcome |
 |-------|---------|

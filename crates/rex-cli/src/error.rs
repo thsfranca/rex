@@ -33,14 +33,6 @@ pub enum CliError {
 }
 
 impl CliError {
-    pub fn daemon_unavailable_manual(socket_path: &str) -> Self {
-        Self::DaemonUnavailable {
-            socket_path: socket_path.to_string(),
-            suffix: "; enable `daemon.auto_start` or remove --no-daemon-autostart, then run `rex`"
-                .to_string(),
-        }
-    }
-
     pub fn daemon_spawn_failed(log_path: &std::path::Path, reason: String) -> Self {
         Self::DaemonUnavailable {
             socket_path: String::new(),

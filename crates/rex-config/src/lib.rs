@@ -322,9 +322,8 @@ mod tests {
     }
 
     #[test]
-    fn daemon_config_defaults_auto_start_on() {
+    fn daemon_config_defaults_ready_timeout() {
         let cfg = RexConfig::defaults();
-        assert!(cfg.daemon.auto_start_enabled());
         assert_eq!(
             cfg.daemon.ready_timeout_secs,
             crate::model::DEFAULT_DAEMON_READY_TIMEOUT_SECS
@@ -351,11 +350,9 @@ mod tests {
         with_rex_root(tmp.path(), || {
             let mut base = RexConfig::defaults();
             let mut overlay = RexConfig::default();
-            overlay.daemon.auto_start = Some(false);
             overlay.daemon.ready_timeout_secs = 30;
             overlay.daemon.log_path = "/tmp/custom-daemon.log".to_string();
             merge_config(&mut base, overlay);
-            assert!(!base.daemon.auto_start_enabled());
             assert_eq!(base.daemon.ready_timeout_secs, 30);
             assert_eq!(base.daemon.log_path, "/tmp/custom-daemon.log");
 

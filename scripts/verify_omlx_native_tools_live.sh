@@ -8,7 +8,12 @@
 # Usage:
 #   ./scripts/verify_omlx_native_tools_live.sh [direct|managed|autostart]
 # Default scenario: direct (explicit openai_compat.base_url at http://127.0.0.1:8000/v1).
+#
+# Blocked: public `rex complete` was removed; turns need a TUI or internal harness rewrite.
 set -euo pipefail
+
+echo "verify_omlx_native_tools_live: blocked — public \`rex complete\` was removed; use \`rex\` / \`rex tui\` for operator dogfood." >&2
+exit 1
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
@@ -114,11 +119,11 @@ run_complete_ndjson() {
 wait_for_daemon_ready() {
   local deadline=$((SECONDS + READINESS_TIMEOUT_SECS))
   while (( SECONDS < deadline )); do
-    if env REX_ROOT="${REX_ROOT}" "${REX_BIN}" status >/dev/null 2>&1; then
+    if env REX_ROOT="${REX_ROOT}" "${REX_BIN}" __rex_internal_status >/dev/null 2>&1; then
       return 0
     fi
     if [[ -n "${DAEMON_PID}" ]] && ! kill -0 "${DAEMON_PID}" 2>/dev/null; then
-      fail "rex daemon exited before ready (see ${DAEMON_LOG})"
+      fail "daemon exited before ready (see ${DAEMON_LOG})"
     fi
     sleep 0.25
   done
@@ -173,12 +178,12 @@ PY
 env REX_ROOT="${REX_ROOT}" "${REX_BIN}" proto install || fail "rex proto install failed"
 
 if [[ "${SCENARIO}" == "autostart" ]]; then
-  info "Autostart via rex status (R071 + managed oMLX from config)"
-  env REX_ROOT="${REX_ROOT}" "${REX_BIN}" status >/dev/null
+  info "Autostart via internal status (R071 + managed oMLX from config)"
+  env REX_ROOT="${REX_ROOT}" "${REX_BIN}" __rex_internal_status >/dev/null
   cp "${REX_ROOT}/daemon.log" "${DAEMON_LOG}" 2>/dev/null || true
 else
-  info "Starting rex daemon (log: ${DAEMON_LOG})"
-  env REX_ROOT="${REX_ROOT}" "${REX_BIN}" daemon >>"${DAEMON_LOG}" 2>&1 &
+  info "Starting internal daemon (log: ${DAEMON_LOG})"
+  env REX_ROOT="${REX_ROOT}" "${REX_BIN}" __rex_internal_daemon >>"${DAEMON_LOG}" 2>&1 &
   DAEMON_PID=$!
   wait_for_daemon_ready
 fi

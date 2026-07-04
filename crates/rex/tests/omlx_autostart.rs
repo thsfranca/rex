@@ -1,16 +1,19 @@
-//! Integration: CLI auto-start with managed oMLX (R071 + oMLX supervisor).
+//! Integration: daemon ensure with managed oMLX (R071 + oMLX supervisor).
 
 use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::PathBuf;
-use std::process::Command;
 use std::thread;
 
 use assert_cmd::cargo::cargo_bin;
 use rex_config::{DaemonSocketScope, RexConfig, REX_ROOT_ENV};
 use serial_test::serial;
 use tempfile::TempDir;
+
+fn set_rex_bin_env() {
+    std::env::set_var("CARGO_BIN_EXE_rex", cargo_bin("rex"));
+}
 
 const MODELS_JSON: &str = "{\"object\":\"list\",\"data\":[{\"id\":\"test-model\"}]}";
 
@@ -68,6 +71,7 @@ fn managed_omlx_autostart_config(socket_path: &str, port: u16, omlx_command: &st
 struct RexRootGuard {
     _dir: TempDir,
     prev_rex_root: Option<String>,
+    prev_cwd: PathBuf,
     socket_path: PathBuf,
     log_path: PathBuf,
 }
@@ -88,11 +92,14 @@ impl RexRootGuard {
         )
         .expect("write config");
         let prev_rex_root = std::env::var(REX_ROOT_ENV).ok();
+        let prev_cwd = std::env::current_dir().expect("cwd");
         std::env::set_var(REX_ROOT_ENV, dir.path());
+        std::env::set_current_dir(dir.path()).expect("chdir");
         let log_path = dir.path().join("daemon.log");
         Self {
             _dir: dir,
             prev_rex_root,
+            prev_cwd,
             socket_path,
             log_path,
         }
@@ -102,6 +109,7 @@ impl RexRootGuard {
 impl Drop for RexRootGuard {
     fn drop(&mut self) {
         let _ = fs::remove_file(&self.socket_path);
+        let _ = std::env::set_current_dir(&self.prev_cwd);
         match &self.prev_rex_root {
             Some(v) => std::env::set_var(REX_ROOT_ENV, v),
             None => std::env::remove_var(REX_ROOT_ENV),
@@ -109,25 +117,18 @@ impl Drop for RexRootGuard {
     }
 }
 
-#[test]
+#[tokio::test]
 #[serial]
-fn status_autostarts_daemon_with_managed_omlx() {
+async fn ensure_starts_daemon_with_managed_omlx() {
+    set_rex_bin_env();
     let port = spawn_models_fixture();
     let guard = RexRootGuard::new(port);
     assert!(!guard.socket_path.exists());
 
-    let output = Command::new(cargo_bin("rex"))
-        .current_dir(guard._dir.path())
-        .env(REX_ROOT_ENV, guard._dir.path())
-        .args(["__rex_internal_status"])
-        .output()
-        .expect("run rex status");
+    rex_cli::ensure_daemon_ready()
+        .await
+        .expect("ensure daemon");
 
-    assert!(
-        output.status.success(),
-        "status failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
     assert!(guard.socket_path.exists(), "daemon socket should exist");
     let log = fs::read_to_string(&guard.log_path).unwrap_or_default();
     assert!(
@@ -136,9 +137,10 @@ fn status_autostarts_daemon_with_managed_omlx() {
     );
 }
 
-#[test]
+#[tokio::test]
 #[serial]
-fn status_autostart_fails_when_omlx_command_missing() {
+async fn ensure_fails_when_omlx_command_missing() {
+    set_rex_bin_env();
     let port = spawn_models_fixture();
     let dir = TempDir::new().expect("temp rex root");
     let socket_path = dir.path().join("rex-omlx-fail.sock");
@@ -155,26 +157,22 @@ fn status_autostart_fails_when_omlx_command_missing() {
     .expect("write config");
 
     let prev_rex_root = std::env::var(REX_ROOT_ENV).ok();
+    let prev_cwd = std::env::current_dir().expect("cwd");
     std::env::set_var(REX_ROOT_ENV, dir.path());
+    std::env::set_current_dir(dir.path()).expect("chdir");
 
-    let output = Command::new(cargo_bin("rex"))
-        .current_dir(dir.path())
-        .env(REX_ROOT_ENV, dir.path())
-        .args(["__rex_internal_status"])
-        .output()
-        .expect("run rex status");
+    let err = rex_cli::ensure_daemon_ready().await.expect_err("ensure should fail");
 
-    if let Some(v) = prev_rex_root {
-        std::env::set_var(REX_ROOT_ENV, v);
-    } else {
-        std::env::remove_var(REX_ROOT_ENV);
+    let _ = std::env::set_current_dir(prev_cwd);
+    match prev_rex_root {
+        Some(v) => std::env::set_var(REX_ROOT_ENV, v),
+        None => std::env::remove_var(REX_ROOT_ENV),
     }
 
-    assert!(!output.status.success());
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let msg = err.to_string();
     assert!(
-        stderr.contains("did not become ready") || stderr.contains("unavailable"),
-        "expected ready timeout, got: {stderr}"
+        msg.contains("did not become ready") || msg.contains("unavailable"),
+        "expected ready timeout, got: {msg}"
     );
     assert!(!socket_path.exists());
 }

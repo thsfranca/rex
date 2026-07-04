@@ -18,11 +18,6 @@ const POLL_INTERVAL_MS: u64 = 250;
 
 static ENSURE_MUTEX: OnceLock<Mutex<()>> = OnceLock::new();
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct EnsureOptions {
-    pub no_autostart: bool,
-}
-
 struct AutostartLock {
     path: PathBuf,
     held: bool,
@@ -36,7 +31,7 @@ impl Drop for AutostartLock {
     }
 }
 
-pub async fn ensure_daemon_ready(opts: EnsureOptions) -> Result<(), CliError> {
+pub async fn ensure_daemon_ready() -> Result<(), CliError> {
     let mutex = ENSURE_MUTEX.get_or_init(|| Mutex::new(()));
     let _guard = mutex.lock().await;
 
@@ -44,14 +39,9 @@ pub async fn ensure_daemon_ready(opts: EnsureOptions) -> Result<(), CliError> {
     let socket_path = loaded.daemon_socket().to_string();
     let log_path = loaded.daemon_log_path();
     let timeout_secs = loaded.daemon_ready_timeout_secs();
-    let auto_start = loaded.daemon_auto_start() && !opts.no_autostart;
 
     if probe_daemon(&loaded).await.is_ok() {
         return Ok(());
-    }
-
-    if !auto_start {
-        return Err(CliError::daemon_unavailable_manual(&socket_path));
     }
 
     loaded.ensure_sockets_dir().map_err(|err| CliError::DaemonUnavailable {
@@ -161,6 +151,19 @@ fn try_acquire_lock(path: &Path) -> Option<AutostartLock> {
     }
 }
 
+fn resolve_rex_binary(log_path: &Path) -> Result<PathBuf, CliError> {
+    // Integration tests set this so in-process ensure spawns the real `rex` binary.
+    if let Ok(path) = std::env::var("CARGO_BIN_EXE_rex") {
+        let path = PathBuf::from(path);
+        if path.is_file() {
+            return Ok(path);
+        }
+    }
+    std::env::current_exe().map_err(|source| {
+        CliError::daemon_spawn_failed(log_path, format!("could not resolve rex binary: {source}"))
+    })
+}
+
 fn spawn_detached_daemon(loaded: &LoadedConfig, log_path: &Path) -> Result<(), CliError> {
     let spawn_cwd = match loaded.effective.daemon.effective_socket_scope() {
         DaemonSocketScope::Global => std::env::current_dir().map_err(|source| {
@@ -176,9 +179,7 @@ fn spawn_detached_daemon(loaded: &LoadedConfig, log_path: &Path) -> Result<(), C
             })?,
     };
 
-    let rex_binary = std::env::current_exe().map_err(|source| {
-        CliError::daemon_spawn_failed(log_path, format!("could not resolve rex binary: {source}"))
-    })?;
+    let rex_binary = resolve_rex_binary(log_path)?;
 
     if let Some(parent) = log_path.parent() {
         std::fs::create_dir_all(parent).map_err(|source| {

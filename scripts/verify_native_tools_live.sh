@@ -6,7 +6,12 @@
 #
 # Daemon logs protocol as numeric enum (proto/rex/v1/rex.proto InferenceProtocol):
 #   1 = INFERENCE_PROTOCOL_NATIVE, 3 = INFERENCE_PROTOCOL_INTERIM_FALLBACK
+#
+# Blocked: public `rex complete` was removed; turns need a TUI or internal harness rewrite.
 set -euo pipefail
+
+echo "verify_native_tools_live: blocked — public \`rex complete\` was removed; use \`rex\` / \`rex tui\` for operator dogfood." >&2
+exit 1
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
@@ -129,11 +134,11 @@ PY
 wait_for_daemon_ready() {
   local deadline=$((SECONDS + READINESS_TIMEOUT_SECS))
   while (( SECONDS < deadline )); do
-    if env REX_ROOT="${REX_ROOT}" "${REX_BIN}" status >/dev/null 2>&1; then
+    if env REX_ROOT="${REX_ROOT}" "${REX_BIN}" __rex_internal_status >/dev/null 2>&1; then
       return 0
     fi
     if ! kill -0 "${DAEMON_PID}" 2>/dev/null; then
-      fail "rex daemon exited before ready (see ${DAEMON_LOG})"
+      fail "daemon exited before ready (see ${DAEMON_LOG})"
     fi
     sleep 0.25
   done
@@ -245,8 +250,8 @@ if ! env REX_ROOT="${REX_ROOT}" "${REX_BIN}" proto install; then
   fail "rex proto install failed (run from repo root so proto/ is discoverable)"
 fi
 
-info "Starting rex daemon (log: ${DAEMON_LOG})"
-env REX_ROOT="${REX_ROOT}" "${REX_BIN}" daemon >>"${DAEMON_LOG}" 2>&1 &
+info "Starting internal daemon (log: ${DAEMON_LOG})"
+env REX_ROOT="${REX_ROOT}" "${REX_BIN}" __rex_internal_daemon >>"${DAEMON_LOG}" 2>&1 &
 DAEMON_PID=$!
 
 info "Waiting for daemon + sidecar ready (timeout ${READINESS_TIMEOUT_SECS}s)"
