@@ -135,3 +135,19 @@ async fn run_fetch(
         head_sequence: inner.head_sequence,
     })
 }
+
+/// Paginate retroactively until the full session log is loaded (resume hydrate).
+pub async fn fetch_full_session_history(
+    harness_session_id: &str,
+) -> Result<Vec<rex_proto::rex::v1::SessionEvent>, CliError> {
+    let mut page = run_fetch(harness_session_id, 0, 0, DEFAULT_FETCH_LIMIT).await?;
+    let mut events = page.events;
+    while page.has_more_before {
+        let before = events.first().map(|e| e.sequence).unwrap_or(1);
+        page = run_fetch(harness_session_id, before, 0, DEFAULT_FETCH_LIMIT).await?;
+        let mut older = page.events;
+        older.append(&mut events);
+        events = older;
+    }
+    Ok(events)
+}

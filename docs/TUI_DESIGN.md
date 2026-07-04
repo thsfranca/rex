@@ -86,6 +86,19 @@ Panels must not reorder on focus. Focus uses **hairline.focus** (and weight), no
 ○ Ready                                                   [?]
 ```
 
+**Session picker** (`rex --continue`) — full-screen list before chat; closed sessions only:
+
+```text
+● workspace ○
+Recent chats
+  Fix autostart lock reclaim                         2h ago
+  Add session resume picker                          yesterday
+────────────────────────────────────────────────────────────
+↑↓ select · Enter open · Esc quit                         [?]
+```
+
+Rules: title `text.primary` (selected: `text.accent`); relative `closed_at` suffix `text.tertiary` (hidden below 80 cols); no harness ids in default view; `fade_in` on mount (~400ms); after Enter, **History fetch** flux on transcript hairline until hydrate completes.
+
 **Streaming** — transcript grows; timeline shows human task phrases; status shows working:
 
 ```text

@@ -119,6 +119,18 @@ Documented for broker responses and future structured fields; **not** in `error_
 | `plan_path_invalid` | `plan.save` path outside `.rex/plans/*.md` or malformed | daemon broker |
 | `session_title_failed` | LLM title refresh failed (daemon log; non-fatal to operator) | daemon |
 
+### CLI session resume (pre-TUI exit codes)
+
+Documented for `rex --continue` / `rex --last`; surfaced as CLI stderr before alternate screen. **Not** in `error_codes.yaml` today.
+
+| Code | Meaning | Layer |
+|------|---------|-------|
+| `no_session_to_continue` | No eligible closed session (empty history or all open / missing logs) | cli |
+| `all_sessions_open` | `--last` only: history exists but every entry is locked | cli |
+| `session_not_found` | Selected id has no restorable log | cli |
+| `session_lock_failed` | Could not acquire PID lock after selection | cli |
+| `session_title_failed` | LLM title refresh failed (daemon log; non-fatal to operator) | daemon |
+
 ## Economics store codes (removed)
 
 Rex-owned `rex-obs-store` and `rex obs` were removed (**LF-R01**). Historical store error codes and the `store_error_codes.yaml` catalog are superseded by [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). OTLP export degrades to stdout-only when the endpoint is missing or misconfigured (`obs.export=degraded` log line).

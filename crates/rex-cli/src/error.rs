@@ -30,9 +30,39 @@ pub enum CliError {
         expected: String,
         reported: String,
     },
+    #[error("no closed session is available to continue")]
+    NoSessionToContinue,
+    #[error("every recent session is still open in another terminal")]
+    AllSessionsOpen,
+    #[error("session transcript could not be restored")]
+    SessionNotFound,
+    #[error("could not acquire session lock; another terminal may have this chat open")]
+    SessionLockFailed,
 }
 
 impl CliError {
+    pub fn product_code(&self) -> Option<&'static str> {
+        match self {
+            Self::WorkspaceNotConfigured => Some("workspace_not_configured"),
+            Self::WorkspaceMismatch { .. } => Some("workspace_mismatch"),
+            Self::StreamTimeout { .. } => Some("stream_timeout"),
+            Self::NoSessionToContinue => Some("no_session_to_continue"),
+            Self::AllSessionsOpen => Some("all_sessions_open"),
+            Self::SessionNotFound => Some("session_not_found"),
+            Self::SessionLockFailed => Some("session_lock_failed"),
+            Self::DaemonUnavailable { .. } => Some("daemon_unavailable"),
+            _ => None,
+        }
+    }
+
+    pub fn operator_message(&self) -> String {
+        if let Some(code) = self.product_code() {
+            format!("{code}: {self}")
+        } else {
+            self.to_string()
+        }
+    }
+
     pub fn daemon_spawn_failed(log_path: &std::path::Path, reason: String) -> Self {
         Self::DaemonUnavailable {
             socket_path: String::new(),
@@ -67,5 +97,25 @@ impl CliError {
             expected,
             reported,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resume_errors_expose_stable_codes() {
+        assert_eq!(
+            CliError::NoSessionToContinue.product_code(),
+            Some("no_session_to_continue")
+        );
+        assert!(CliError::NoSessionToContinue
+            .operator_message()
+            .starts_with("no_session_to_continue:"));
+        assert_eq!(
+            CliError::AllSessionsOpen.product_code(),
+            Some("all_sessions_open")
+        );
     }
 }

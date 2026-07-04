@@ -4,7 +4,7 @@ pub enum TopLevelCommand {
     /// Detached process entry used by auto-start.
     InternalDaemon,
     /// Interactive terminal workspace (bare `rex`).
-    Tui,
+    Tui(rex_cli::TuiLaunch),
     Config(Vec<String>),
     Proto(Vec<String>),
     Sidecar(Vec<String>),
@@ -15,16 +15,49 @@ pub enum TopLevelCommand {
 /// Argv for auto-start when spawning a detached daemon process.
 pub const INTERNAL_DAEMON_ARG: &str = "__rex_internal_daemon";
 
-pub fn parse_top_level(mut args: impl Iterator<Item = String>) -> Result<TopLevelCommand, String> {
-    match args.next().as_deref() {
-        None => Ok(TopLevelCommand::Tui),
+pub fn parse_top_level(args: impl Iterator<Item = String>) -> Result<TopLevelCommand, String> {
+    let mut continue_flag = false;
+    let mut last_flag = false;
+    let mut positional = Vec::new();
+    for arg in args {
+        match arg.as_str() {
+            "--continue" => continue_flag = true,
+            "--last" => last_flag = true,
+            other => positional.push(other.to_string()),
+        }
+    }
+    if continue_flag && last_flag {
+        return Err("--continue and --last are mutually exclusive".to_string());
+    }
+
+    match positional.first().map(|s| s.as_str()) {
+        None => {
+            let launch = if last_flag {
+                rex_cli::TuiLaunch::Last
+            } else if continue_flag {
+                rex_cli::TuiLaunch::ContinuePicker
+            } else {
+                rex_cli::TuiLaunch::New
+            };
+            Ok(TopLevelCommand::Tui(launch))
+        }
         Some("-h") | Some("--help") | Some("help") => Ok(TopLevelCommand::Help),
         Some(INTERNAL_DAEMON_ARG) => Ok(TopLevelCommand::InternalDaemon),
-        Some("config") => Ok(TopLevelCommand::Config(args.collect())),
-        Some("proto") => Ok(TopLevelCommand::Proto(args.collect())),
-        Some("sidecar") => Ok(TopLevelCommand::Sidecar(args.collect())),
-        Some("gateway") => Ok(TopLevelCommand::Gateway(args.collect())),
-        Some("omlx") => Ok(TopLevelCommand::Omlx(args.collect())),
+        Some("config") => Ok(TopLevelCommand::Config(
+            positional.into_iter().skip(1).collect(),
+        )),
+        Some("proto") => Ok(TopLevelCommand::Proto(
+            positional.into_iter().skip(1).collect(),
+        )),
+        Some("sidecar") => Ok(TopLevelCommand::Sidecar(
+            positional.into_iter().skip(1).collect(),
+        )),
+        Some("gateway") => Ok(TopLevelCommand::Gateway(
+            positional.into_iter().skip(1).collect(),
+        )),
+        Some("omlx") => Ok(TopLevelCommand::Omlx(
+            positional.into_iter().skip(1).collect(),
+        )),
         Some(other) => Err(format!("Unknown command: {other}")),
     }
 }
@@ -33,27 +66,49 @@ pub fn print_usage() {
     eprintln!(
         "\
 Usage:
-  rex
+  rex [--continue | --last]
   rex config <init|show|path|validate>
   rex proto <install|path|doctor>
   rex sidecar <list|init|doctor>
   rex gateway <init|doctor>
   rex omlx <init|doctor>
 
-Open the interactive terminal workspace (default), or run setup and doctor commands."
+Open the interactive terminal workspace (default), resume a closed session, or run setup and doctor commands."
     );
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rex_cli::TuiLaunch;
 
     #[test]
     fn bare_rex_opens_tui() {
         assert_eq!(
             parse_top_level(std::iter::empty()).unwrap(),
-            TopLevelCommand::Tui
+            TopLevelCommand::Tui(TuiLaunch::New)
         );
+    }
+
+    #[test]
+    fn parses_continue_flag() {
+        assert_eq!(
+            parse_top_level(["--continue".to_string()].into_iter()).unwrap(),
+            TopLevelCommand::Tui(TuiLaunch::ContinuePicker)
+        );
+    }
+
+    #[test]
+    fn parses_last_flag() {
+        assert_eq!(
+            parse_top_level(["--last".to_string()].into_iter()).unwrap(),
+            TopLevelCommand::Tui(TuiLaunch::Last)
+        );
+    }
+
+    #[test]
+    fn continue_and_last_are_exclusive() {
+        assert!(parse_top_level(["--continue".to_string(), "--last".to_string()].into_iter()).is_err());
     }
 
     #[test]

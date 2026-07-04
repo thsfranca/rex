@@ -202,10 +202,20 @@ Auto-restart of a crashed daemon is attempted once with operator confirmation ([
 
 ## Session model
 
+| Command | Behavior |
+|---------|----------|
+| `rex` | New harness session; empty transcript |
+| `rex --continue` | Picker over **closed** sessions (title + relative time); Enter hydrates transcript |
+| `rex --last` | Resume newest **closed** session that is not locked open elsewhere |
+
+**Session naming:** `.rex/sessions/{id}.meta.json` holds a display title (≤48 chars). First operator prompt sets a prompt-derived fallback immediately; agent turns may call broker `session.set_title`; ask mode uses daemon KEEP-or-rename every `cli.ui.session_title_refresh_turns` (default **3**) when no tool update ran. Title appears in the Global Header (`text.secondary`); harness id only under `?`.
+
+**Persistence:** append-only `.rex/sessions/{id}.jsonl` (ADR 0040); closed index `.rex/closed_sessions.json` (newest first, cap 32); open lock `.rex/sessions/.locks/{id}.lock` (PID file).
+
 | Capability | Behavior |
 |------------|----------|
 | New chat | Clean visual slate; daemon injects **`ProjectMemoryRetrieval`** from prior sessions (v2) |
-| Resume | Load transcript from local storage; repopulate Activity and Output panes |
+| Resume | `FetchSessionEvents` hydrate into transcript; activity timeline starts empty for the resumed view |
 | Branch | Duplicate transcript to a chosen node; new correlation **`turn_id`** with daemon |
 
 ## NDJSON parity

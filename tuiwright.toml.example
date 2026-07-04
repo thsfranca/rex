@@ -1,0 +1,21 @@
+# Copy to repo-root tuiwright.toml (local, untracked). Restart tuiwright MCP after edits.
+#
+# Launches rex from fixtures/tui_probe/workspace with isolated REX_ROOT so the
+# repo-root .rex/config.json does not override probe settings.
+
+[launch]
+command = "sh"
+args = [
+  "-c",
+  "cd fixtures/tui_probe/workspace && REX_ROOT=\"$PWD/../rex_root\" exec \"$OLDPWD/target/debug/rex\"",
+]
+
+[launch.env]
+# Optional monochrome acceptance (S8): uncomment for one full matrix run.
+# NO_COLOR = "1"
+
+[size]
+cols = 120
+rows = 40
+
+baseline_dir = ".tuiwright/baselines"
