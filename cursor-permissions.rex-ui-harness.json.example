@@ -1,0 +1,14 @@
+{
+  "mcpAllowlist": [
+    "rex-ui-harness:*",
+    "ui_*",
+    "github:*",
+    "langfuse:*"
+  ],
+  "autoRun": {
+    "allow_instructions": [
+      "All rex-ui-harness MCP tools are allowed for Rex web UI acceptance in fixtures/ui_probe: ui_open, ui_close, ui_goto_scenario, ui_snapshot, ui_assert_token, ui_clock_step, ui_assert_motion, ui_assert_layout, ui_click, ui_send_keys, ui_wait_for, ui_record_motion, ui_assert_canvas, ui_diff_baseline, ui_set_prefers_reduced_motion.",
+      "ui_click and ui_send_keys against the isolated ui_probe static fixture are bounded test steps, not ad-hoc operator actions."
+    ]
+  }
+}
