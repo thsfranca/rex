@@ -184,11 +184,6 @@ impl AppState {
         self.push_activity(format!("✖ {message}"), None);
     }
 
-    pub fn spinner_frame(&self) -> char {
-        const FRAMES: &[char] = &['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-        FRAMES[(self.tick as usize) % FRAMES.len()]
-    }
-
     pub fn humanize_tool_phase(name: &str, phase: &str) -> (String, Option<String>) {
         let detail = Some(format!("{name} · {phase}"));
         let summary = match phase {
