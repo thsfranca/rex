@@ -156,7 +156,7 @@ Hard conflicts (**C***) and resolutions recorded in ADRs.
 | **C1** | Thin `client_hints` vs extension embedding full selection in prompt | **Partial (R019):** extension sends CLI hint flags; daemon strips trailing `File:/Selection:` when hints are set. Selection **range** on wire deferred (`selection_text` today). |
 | **C2** | Retrieve-on-demand vs agent `fs.read` tools | Daemon injects **initial** snapshot; broker tools for **deltas** only |
 | **C3** | Assemble once vs LangGraph multi-step loop | **Once per turn start**; intra-turn state in sidecar scratch |
-| **C4** | No daemon transcript vs LTM ingestion | LTM ingests **exported events** / extracted facts, not UI transcript DB |
+| **C4** | No daemon transcript vs LTM ingestion | LTM ingests **exported events** / extracted facts, not UI transcript DB. **Operational harness session transcript** (per `harness_session_id`, [ADR 0040](architecture/decisions/0040-harness-session-transcript-authority.md)) is allowed for agent context and is **not** an LTM ingestion source. |
 | **C5** | Large layered prompts vs retrieval/memory/knowledge | `ContextBudgetAllocator` with stage caps (table above) |
 | **C6** | Git Copilot-style files vs Rex bundles | Single ingestion path per source; dedupe by content hash ([ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md)) |
 | **C7** | Drift `fail-closed` (agent) vs `prefer-git` (ask) | Intentional per-mode policy |

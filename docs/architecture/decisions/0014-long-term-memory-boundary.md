@@ -11,7 +11,7 @@ Long-running agent sessions pressure context windows. Products like Mem0 extract
 
 1. **Scope:** **Workspace-bound** project memory — facts and fingerprints useful across sessions, not full chat logs.
 2. **Split:** **Episodic** (session/tool traces, time-bounded) vs **semantic** (durable preferences, decisions, repo facts).
-3. **Ingestion sources:** Exported events from extension or sidecar (tool summaries, operator-approved files), optional structured imports — **not** a daemon-owned transcript database.
+3. **Ingestion sources:** Exported events from extension or sidecar (tool summaries, operator-approved files), optional structured imports — **not** harness session operational transcripts ([ADR 0040](0040-harness-session-transcript-authority.md)).
 4. **Pipeline hook:** `ProjectMemoryRetrieval` runs after layered prompts and knowledge, before lexical retrieval; budget **10%** of context tokens by default.
 5. **Storage (implementation bet):** `sqlite` or files under operator data dir; vector index optional behind economics gate.
 6. **Compaction / forgetting:** Explicit policies (TTL, max entries per workspace, summarization) — separate from per-turn extractive compression (**T6**).
@@ -28,6 +28,7 @@ Long-running agent sessions pressure context windows. Products like Mem0 extract
 
 - [ADR 0015](0015-agent-knowledge-bundles.md) — Stable curated knowledge vs session-derived memory
 - [LONG_TERM_MEMORY.md](../../LONG_TERM_MEMORY.md)
+- [ADR 0040](0040-harness-session-transcript-authority.md) — harness session transcript vs LTM
 
 ## Market benchmark
 

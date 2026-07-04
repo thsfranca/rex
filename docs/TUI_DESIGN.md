@@ -22,6 +22,7 @@ The character grid is a high-fidelity canvas. Product-grade means calm density, 
 |-----------|------------|
 | **Quiet Chrome, Loud Content** | Hairlines and dim dividers only. Near-monochrome base; one accent used sparingly. Transcript dominates. |
 | **Organic Choreography** | Time-based slide, fade, coalesce, dissolve. Motion guides the eye; it is not decoration alone. |
+| **Continuous feedback during work** | While async harness work runs, the UI must animate (flux on active hairline). Static wait fails review. |
 | **Calm Density** | Hierarchy via typography and luminance, not endless boxes. |
 | **Progressive Insight** | Protocol ephemera (`model=`, tool tags, raw JSON) stay hidden until `?`, focus, or expand. |
 | **Symbolic Purity** | Health and phase use glyphs **and** semantic color (color-not-only). |
@@ -189,10 +190,20 @@ All colors in implementation code must resolve through these tokens (or a thin m
 | Approval open | dissolve (backdrop) + slide_in (modal) | 350ms | QuadInOut | Backdrop + modal |
 | Approval close | coalesce (backdrop) + slide_out (modal) | 250ms | QuadIn | Backdrop + modal |
 | Error | hsl_shift_fg toward error | 300ms | Linear | Affected header/region |
+| History fetch | flux on transcript hairline | Continuous | Linear | Transcript hairline |
 
 **Indeterminate work:** flux/braille wave on the **active component’s top hairline**, not a lone spinner cell.
 
 **Mediocre Blink** (single-cell caret toggle or lone spinner as the only cue) **fails** this system.
+
+### In-flight operations invariant
+
+While **any** async harness work is in flight (daemon ensure, live stream, incremental or retroactive history fetch, approval with pending backend), the TUI **must** show choreographed motion — typically braille flux on the **active region hairline** — at **15–30 FPS**. A **static screen** during known async work **fails review** (extends Mediocre Blink: static wait is equally invalid).
+
+| Phase | Frame rate | Rule |
+|-------|------------|------|
+| **Idle** (no in-flight work) | **0 fps** | Dirty-flag paint only; Quiet ≥300ms for tuiwright |
+| **In-flight work** | **15–30 fps** | `motion.animating()` or flux active until complete or error |
 
 ## Interaction states
 
@@ -201,6 +212,7 @@ All colors in implementation code must resolve through these tokens (or a thin m
 | Idle | Calm transcript; muted timeline; composer focused |
 | Ensuring daemon | Working glyph; optional connect fade |
 | Streaming | Transcript updates; timeline tasks; flux on active hairline |
+| Fetching history | Flux on transcript hairline; footer “Loading…”; optional dim on unfetched rows |
 | Approval required | Modal + dimmed backdrop; human-first copy |
 | Error | Error token on affected region; status line message |
 | Terminal too small | Micro overlay only |
@@ -219,6 +231,7 @@ Implementation PRs (**R080**, **R081**) must pass **all** items. Any failure rej
 | 6 | Spatial permanence | Layout jitter or scroll loss across breakpoints |
 | 7 | Environmental purity | New cosmetic env vars or cosmetic-only CLI flags |
 | 8 | Computational integrity | Cannot sustain ~15–30 FPS while streaming without pegging CPU |
+| 9 | In-flight motion | ensure / stream / history fetch leaves UI static with no region animation |
 
 ## Validation
 
@@ -228,8 +241,8 @@ Implementation PRs (**R080**, **R081**) must pass **all** items. Any failure rej
 | Run | `rex` |
 | Agent live probe | tuiwright MCP: `tui_open` → `tui_wait_for` / `tui_send_keys` → `tui_snapshot` (**text**) → `tui_close` |
 | Breakpoints | `tui_resize` then text snapshot at narrow / standard / wide |
-| Motion | Sequential text snapshots while streaming or opening approval — must show **region** change, not one-cell flicker |
-| Design review | Apply **tui-design** skill (clutter audit, responsive floor) against this document |
+| Motion | Sequential text snapshots while streaming, fetching history, or opening approval — must show **region** change, not one-cell flicker |
+| Design review | Apply **tui-design** skill (clutter audit, responsive floor, in-flight motion) against this document |
 
 A Rex **headless** NDJSON-replay / ANSI-snapshot adapter remains **Won't** ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md#testing-strategy)).
 

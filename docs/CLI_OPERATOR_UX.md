@@ -351,7 +351,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`**.
 ### R081 — TUI motion
 
 - Implement choreography table (tachyonfx region effects, flux hairlines) per [TUI_DESIGN.md](TUI_DESIGN.md).
-- Mediocre blink fails review.
+- Mediocre blink and **static wait during in-flight work** fail review ([TUI_DESIGN.md](TUI_DESIGN.md) § In-flight operations invariant).
 
 ## Prioritization
 
