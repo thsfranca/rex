@@ -214,7 +214,7 @@ Auto-restart of a crashed daemon is attempted once with operator confirmation ([
 | Command | Behavior |
 |---------|----------|
 | `rex` | New harness session; empty transcript |
-| `rex --continue` | Picker over **closed** sessions (title + relative time); Enter hydrates transcript |
+| `rex --continue` | Horizontal **carousel** picker over **closed** sessions (title + relative time); spring focus transition (**R093**); Enter hydrates transcript |
 | `rex --last` | Resume newest **closed** session that is not locked open elsewhere |
 
 **Session naming:** `.rex/sessions/{id}.meta.json` holds a display title (≤48 chars). First operator prompt sets a prompt-derived fallback immediately; agent turns may call broker `session.set_title`; ask mode uses daemon KEEP-or-rename every `cli.ui.session_title_refresh_turns` (default **3**) when no tool update ran. Title appears in the Global Header (`text.secondary`); harness id only under `?`.

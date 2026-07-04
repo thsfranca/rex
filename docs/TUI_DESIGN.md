@@ -54,7 +54,11 @@ Configuration remains **`REX_ROOT`** plus JSON only. Implementation must not inv
 
 ## Current debt
 
-**R080** and **R081** are implemented and MCP-validated. Motion uses region buffer post-process after widgets draw (tachyonfx-equivalent; tachyonfx 0.25 targets `ratatui-core` and is not type-compatible with ratatui 0.29). Idle paints only when dirty so tuiwright Quiet (≥300ms) succeeds. Do not reintroduce blink-only activity cues, titled-box wireframe chrome, always-on idle redraw, or ad-hoc colors outside the token map.
+**R080** and **R081** are implemented and MCP-validated. **R090–R096** (visual identity v2) are **Planned** — see [Visual identity v2](#visual-identity-v2) and [Implementation roadmap](#implementation-roadmap).
+
+Baseline motion uses region buffer post-process (tachyonfx-equivalent; tachyonfx 0.25 targets `ratatui-core` and is not type-compatible with ratatui 0.29). Idle paints only when dirty so tuiwright Quiet (≥300ms) succeeds. Known gaps until **R091+**: dash hairline flux instead of Braille, binary FPS poll, no effect graph or dirty rects.
+
+Do not reintroduce blink-only activity cues, titled-box wireframe chrome, always-on idle redraw, or ad-hoc colors outside the token map.
 
 ## Layout system
 
@@ -95,18 +99,17 @@ Panels must not reorder on focus. Focus uses **hairline.focus** (and weight), no
 ○ Ready                                                   [?]
 ```
 
-**Session picker** (`rex --continue`) — full-screen list before chat; closed sessions only:
+**Session picker v2** (`rex --continue`) — horizontal carousel; centered session at full weight, adjacent sessions fade:
 
 ```text
 ● workspace ○
-Recent chats
-  Fix autostart lock reclaim                         2h ago
-  Add session resume picker                          yesterday
+        ◁  Fix autostart lock reclaim  ▷
+              2h ago · yesterday
 ────────────────────────────────────────────────────────────
-↑↓ select · Enter open · Esc quit                         [?]
+← → select · Enter open · Esc quit                        [?]
 ```
 
-Rules: title `text.primary` (selected: `text.accent`); relative `closed_at` suffix `text.tertiary` (hidden below 80 cols); no harness ids in default view; `fade_in` on mount (~400ms); after Enter, **History fetch** flux on transcript hairline until hydrate completes.
+Rules: carousel uses Braille half-blocks for adjacent scale; spring focus transition (**R093**); relative timestamps `text.tertiary`.
 
 **Streaming** — transcript grows; timeline shows human task phrases; status shows working:
 
@@ -192,14 +195,37 @@ All colors in implementation code must resolve through these tokens (or a thin m
 
 ## Motion system
 
-### Runtime
+### Runtime (tiered frame budget)
 
-- Continuous frame loop while effects run; idle blocks on `crossterm` poll.
-- Target **15–30 FPS** while animating.
-- Render widgets first; apply **tachyonfx** (or equivalent) post-process on the buffer with **region** targeting (`CellFilter` or equivalent).
-- Wrap frame dispatch in synchronized output (`CSI ?2026`) — Rex default `cli.ui.sync_output`.
+Decouple the animation clock from NDJSON ingestion. The compositor scheduler selects poll interval:
+
+| Tier | FPS | Poll ms | Enter | Exit |
+|------|-----|---------|-------|------|
+| **Idle** | 0 | block on I/O | no in-flight work, no active effects | input or NDJSON |
+| **Ambient** | 15 | 66.6 | streaming / daemon work | complete + 2 s |
+| **Active** | 30 | 33.3 | keystroke / scroll / focus | 2 s idle |
+| **Cinematic** | 60 | 16.6 | modal spring, banner drop | max 750 ms |
+
+- Render widgets first; **EffectGraph** post-process on the buffer with region targeting.
+- Wrap **damage regions** in synchronized output (`CSI ?2026`) when `cli.ui.sync_output` — not necessarily full frames.
 - UI thread stays decoupled from the NDJSON consumer task.
-- **No new environment variables.**
+- **Reflow guard:** pause ambient/cinematic tiers when layout exceeds 16 ms; resume when stable.
+- **No new environment variables.** Harness determinism via probe **fixture context** (`REX_ROOT` + cwd) — [ADR 0041](architecture/decisions/0041-tui-hybrid-compositor-and-tiered-frame-budget.md).
+
+### Effect graph registry
+
+| Trigger | Node | Duration | Easing / physics | Region |
+|---------|------|----------|------------------|--------|
+| Daemon connect | `fade_in` | 400ms | QuadOut | Viewport |
+| Stream start | `slide_in` | 250ms | SineOut | Transcript block |
+| Token streaming | `braille_flux` | Continuous | Linear sweep | Hairline + tail |
+| Timeline task add | `coalesce` | 300ms | BounceOut | Timeline row |
+| Approval open | `spring_in` + `hsl_dim` | 350ms | RK4 + HSL | Modal + backdrop |
+| Approval close | `spring_out` | 250ms | RK4 | Modal + backdrop |
+| Error | `hsl_shift` + `banner_drop` | 300ms | Linear + spring | Header |
+| History fetch | `braille_flux` | Continuous | Linear | Transcript hairline |
+| Composer typing | `edge_glow` | While typing | HSL fade | Composer cells |
+| Timeline focus | `expand_card` | 200ms | QuadOut | Inline card |
 
 ### Choreography (normative)
 
@@ -207,25 +233,57 @@ All colors in implementation code must resolve through these tokens (or a thin m
 |---------|--------|----------|--------|--------|
 | Daemon connect | fade_in | 400ms | QuadOut | Viewport |
 | Stream start | slide_in (bottom) | 250ms | SineOut | New transcript block |
-| Token streaming | Braille flux / sweep on trailing edge | Continuous | Linear | Incoming text edge + active hairline |
+| Token streaming | Braille flux on trailing edge | Continuous | Linear | Incoming text edge + active hairline |
 | Timeline task add | coalesce | 300ms | BounceOut | New timeline row |
-| Approval open | dissolve (backdrop) + slide_in (modal) | 350ms | QuadInOut | Backdrop + modal |
-| Approval close | coalesce (backdrop) + slide_out (modal) | 250ms | QuadIn | Backdrop + modal |
-| Error | hsl_shift_fg toward error | 300ms | Linear | Affected header/region |
-| History fetch | flux on transcript hairline | Continuous | Linear | Transcript hairline |
+| Approval open | spring_in (backdrop hsl_dim) | 350ms | RK4 | Backdrop + modal |
+| Approval close | spring_out | 250ms | RK4 | Backdrop + modal |
+| Error | hsl_shift + banner_drop | 300ms | Linear + spring | Header hairline |
+| History fetch | Braille flux on transcript hairline | Continuous | Linear | Transcript hairline |
 
-**Indeterminate work:** flux/braille wave on the **active component’s top hairline**, not a lone spinner cell.
+**Indeterminate work:** Braille flux on the **active component’s top hairline**, not a lone spinner cell or dash sweep.
 
 **Mediocre Blink** (single-cell caret toggle or lone spinner as the only cue) **fails** this system.
 
 ### In-flight operations invariant
 
-While **any** async harness work is in flight (daemon ensure, live stream, incremental or retroactive history fetch, approval with pending backend), the TUI **must** show choreographed motion — typically braille flux on the **active region hairline** — at **15–30 FPS**. A **static screen** during known async work **fails review** (extends Mediocre Blink: static wait is equally invalid).
+While **any** async harness work is in flight (daemon ensure, live stream, incremental or retroactive history fetch, approval with pending backend), the TUI **must** show choreographed motion — typically Braille flux on the **active region hairline** — at **Ambient tier (15 FPS)** minimum. A **static screen** during known async work **fails review**.
 
-| Phase | Frame rate | Rule |
-|-------|------------|------|
+| Phase | Tier | Rule |
+|-------|------|------|
 | **Idle** (no in-flight work) | **0 fps** | Dirty-flag paint only; Quiet ≥300ms for tuiwright |
-| **In-flight work** | **15–30 fps** | `motion.animating()` or flux active until complete or error |
+| **In-flight work** | **Ambient–Active** | Effect graph active until complete or error |
+
+## Visual identity v2
+
+Advanced motion and color beyond R081 baseline:
+
+| Element | Specification |
+|---------|---------------|
+| **Braille flux** | U+2800–U+28FF sweep on active hairlines; low-contrast tertiary in peripheral vision |
+| **HSL ambient** | Truecolor token interpolation for error wash, approval dim, composer edge glow |
+| **Spring modals** | RK4 damped harmonic for approval and banners; block glyphs (▆ ▃ _) at cell boundaries for motion blur |
+| **Session carousel** | Horizontal picker; adjacent sessions scale/fade via Braille half-blocks |
+| **Expandable cards** | Focus timeline chip → push-down card with JSON/diff; replaces binary `?` as primary inspect path |
+| **Diff scrubbing** | Horizontal keys in approval modal interpolate green/red line intensity through change chunks |
+| **Momentum scroll** | EMA velocity + friction on transcript history (**Could**, after viewport cache) |
+
+## Guardrails
+
+- Ease-out curves for ambient motion; no bounce on idle states.
+- Cinematic tier capped at **750 ms** per trigger; auto-decay to Active/Ambient.
+- Sync output wraps **damage only**; disabled during rapid composer typing.
+- Prolonged operator + daemon inactivity → all motion decays to **Idle** static.
+- Pause decorative motion during markdown reflow spikes.
+
+## Competitive benchmarks
+
+| Scenario | Market baseline | Rex target |
+|----------|-----------------|------------|
+| Cold start | >2000ms JS warmup | <250ms interactive composer |
+| Long stream reflow | Stutter, dropped input | Layout cache; <5ms echo |
+| Approval | Y/n in log | Spring modal + diff scrub |
+| Session resume | CLI flags only | Visual carousel picker |
+| Error recovery | Traceback in prompt | Semantic banner + hsl shift |
 
 ## Interaction states
 
@@ -241,7 +299,7 @@ While **any** async harness work is in flight (daemon ensure, live stream, incre
 
 ## Implementation acceptance checklist
 
-Implementation PRs (**R080**, **R081**) must pass **all** items. Any failure rejects the PR.
+Implementation PRs (**R090–R096**) must pass **all** items. Any failure rejects the PR.
 
 | # | Criterion | Fail if |
 |---|-----------|---------|
@@ -249,11 +307,14 @@ Implementation PRs (**R080**, **R081**) must pass **all** items. Any failure rej
 | 2 | Semantic token purity | Hardcoded colors outside the token map |
 | 3 | Motion interpolation | Instant pop; no time-based region effects for listed triggers |
 | 4 | Progressive disclosure | Protocol tags or tool ids in default idle/streaming views |
-| 5 | Tear-free frames | `?2026` not wrapping frame dispatch when sync_output is on |
+| 5 | Tear-free frames | Sync not wrapping damage when sync_output is on |
 | 6 | Spatial permanence | Layout jitter or scroll loss across breakpoints |
 | 7 | Environmental purity | New cosmetic env vars or cosmetic-only CLI flags |
-| 8 | Computational integrity | Cannot sustain ~15–30 FPS while streaming without pegging CPU |
+| 8 | Computational integrity | Cannot sustain Ambient tier while streaming without pegging CPU |
 | 9 | In-flight motion | ensure / stream / history fetch leaves UI static with no region animation |
+| 10 | Braille flux | Dash-only hairline sweep as primary activity cue |
+| 11 | Compositor tiers | Binary poll only; no Idle/Ambient/Active/Cinematic scheduler |
+| 12 | Harness determinism | Probe cannot step animation clock for mid-frame snapshots |
 
 ## Validation
 
@@ -264,6 +325,7 @@ Implementation PRs (**R080**, **R081**) must pass **all** items. Any failure rej
 | Agent live probe | tuiwright MCP: `tui_open` → `tui_wait_for` / `tui_send_keys` → `tui_snapshot` (**text**) → `tui_close` |
 | Breakpoints | `tui_resize` when it settles, else `tui_close` + `tui_open` at target cols; text snapshot at narrow / standard / wide |
 | Motion | `tui_record_start` + sequential text snapshots while streaming; Braille hairlines need `.cast` or PNG review |
+| Stepped motion | Harness probe: PTY clock step → mid-spring text snapshot ([fixtures/tui_probe/README.md](../fixtures/tui_probe/README.md)) |
 | Design review | Apply **tui-design** skill (clutter audit, responsive floor, in-flight motion) against this document |
 
 A Rex **headless** NDJSON-replay / ANSI-snapshot adapter remains **Won't** ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md#testing-strategy)).
@@ -272,13 +334,21 @@ A Rex **headless** NDJSON-replay / ANSI-snapshot adapter remains **Won't** ([TER
 
 | ID | Scope | Status |
 |----|-------|--------|
-| **R082** | This design system | **Done** (this document) |
-| **R080** | Layout + tokens (chat-primary, breakpoints, progressive insight) | **Done** |
+| **R082** | This design system (baseline) | **Done** |
+| **R080** | Layout + tokens | **Done** |
 | **R081** | Motion (choreography, flux hairlines) | **Done** |
+| **R090** | Advanced visual identity design system (docs v2) | **Planned** |
+| **R091** | Hybrid compositor + tiered frame budget | **Planned** |
+| **R092** | Braille flux + HSL ambient motion | **Planned** |
+| **R093** | Cinematic surfaces (springs, carousel, banners) | **Planned** |
+| **R094** | Single-surface expandable cards + diff scrub | **Planned** |
+| **R095** | Dirty-rect diffing + smart sync | **Planned** |
+| **R096** | Deterministic tuiwright motion baselines | **Planned** |
 
 ## Related
 
 - [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md)
 - [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md)
 - [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md)
+- [ADR 0041](architecture/decisions/0041-tui-hybrid-compositor-and-tiered-frame-budget.md)
 - [CONFIGURATION.md](CONFIGURATION.md) (`cli.ui.enabled`, `cli.ui.sync_output`)
