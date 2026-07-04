@@ -196,8 +196,10 @@ impl AppState {
         (summary, detail)
     }
 
-    pub fn approval_summary(_pending: &PendingApproval) -> String {
-        "Allow this action to continue?".to_string()
+    pub fn approval_summary(pending: &PendingApproval) -> String {
+        // Human-first permission copy; tool ids stay in detail for disclose.
+        let action = human_tool_action(&pending.name);
+        format!("Agent requests permission to continue ({action}).")
     }
 }
 
