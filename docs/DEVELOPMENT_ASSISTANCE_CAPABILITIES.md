@@ -1,5 +1,9 @@
 # Development assistance capabilities (design hub)
 
+
+> Role: explanation | Status: design accepted | Audience: contributors | Read when: turn context and pipeline ownership
+> Prefer: ## Purpose
+
 **Status:** **design accepted** — interfaces and ADRs 0011–0017 record decisions; implementation follows [ROADMAP.md](ROADMAP.md) **R015–R022** (product agent program).
 
 Canonical **integrator** for what REX owns when assisting software development with a supervised agent (`rex-agent`). Economics levers and the full matrix live in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md); this hub owns **ownership**, **turn contract**, **budget pipeline**, and **conflict resolutions**.

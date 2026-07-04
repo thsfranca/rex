@@ -1,5 +1,14 @@
 # Rex TUI design system
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: TUI acceptance criteria
+> Prefer: ## Purpose
+
+
+## Summary
+
+Product-grade terminal UI design system: layout, typography, motion, and tuiwright acceptance gates for the `rex` harness.
+
 **Status:** `design accepted` (**R082**) — implementation **R080** (layout + tokens) and **R081** (motion) **Done** (validated with live tuiwright MCP text snapshots on the workspace debug binary).
 
 **Product hub:** [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) (operator path and lifecycle). **Architecture:** [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).

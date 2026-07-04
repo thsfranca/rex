@@ -1,5 +1,9 @@
 # Sidecar runtime (design hub)
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: sidecar spawn and broker API
+> Prefer: ## Purpose
+
 Canonical design for Rex **sidecar agents**: a **supervised separate process** on the same Mac as `rex-daemon`, **not** a VM. The **IDE development assistant depends on this process** for agent behavior — see [MVP_SPEC.md](MVP_SPEC.md). **Implementation:** supervisor, `rex.sidecar.v1`, brokered HTTP inference, and `BrokerReadFile` are **implemented** — configure via JSON (`sidecars` in `$REX_ROOT/config.json`) — [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Role in the architecture
@@ -97,7 +101,7 @@ Minimum to satisfy [MVP_SPEC.md](MVP_SPEC.md):
 | Inference broker RPC | Folded into `RunTurn` or separate `RequestInference` — implementation choice |
 | Tool broker RPC | `RequestTool` with capability `fs.read` for MVP |
 
-Proto package **`rex.sidecar.v1`** — broker RPCs on the sidecar socket; **`SidecarObservabilityService`** on daemon UDS lands in a dedicated implementation PR. See [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md).
+Proto package **`rex.sidecar.v1`** — broker RPCs on the sidecar socket; **`SidecarObservabilityService`** on daemon UDS lands in a dedicated implementation PR. See [OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md).
 
 ## Observability (sidecar → daemon)
 
@@ -109,7 +113,7 @@ Sidecars produce custom metrics **through the daemon**, not via a separate obser
 
 Broker RPCs (`RunTurn`, inference, tools) stay on the **sidecar control-plane socket**; observability RPCs use **daemon UDS** only — [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md).
 
-Operator setup: [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md).
+Operator setup: [OBSERVABILITY_INTEGRATIONS.md](historical/OBSERVABILITY_INTEGRATIONS.md).
 
 ## Plugin manifest (intent)
 
@@ -149,6 +153,6 @@ Full program: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md).
 ## Related
 
 - [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [POLICY_ENGINE.md](POLICY_ENGINE.md)
-- [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) · [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md)
+- [OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md) · [OBSERVABILITY_INTEGRATIONS.md](historical/OBSERVABILITY_INTEGRATIONS.md) · [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md)
 - [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md) · [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md)
 - [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) · [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) · [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md) · [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md)

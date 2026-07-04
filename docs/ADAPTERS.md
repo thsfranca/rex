@@ -1,5 +1,14 @@
 # Inference adapters
 
+
+> Role: reference | Status: active | Audience: contributors | Read when: inference adapter capabilities
+> Prefer: ## HTTP OpenAI-compatible
+
+
+## Summary
+
+Reference for `InferenceRuntime` profiles, adapter capabilities, and broker HTTP/OpenAI-compat behavior.
+
 Pluggable backends behind **`InferenceRuntime`** (daemon `adapters` + `http_openai_compat` modules). The daemon remains **transport- and stream-authoritative**. Adapters emit **chunks** ending in a single **`done`** semantics or map failures to observable terminal errors ([MVP_SPEC.md](MVP_SPEC.md), NDJSON facade).
 
 Product stance: **`rex-daemon` owns economics, policy, and brokering** ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)); the **agent loop** runs in a **sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Adapters are **broker mechanisms** — they produce completion streams when the daemon fulfills a sidecar inference request (or in harness-only direct paths).

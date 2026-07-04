@@ -115,6 +115,9 @@ impl RexConfig {
             context: ContextConfig {
                 max_prompt_tokens: 512,
                 max_context_tokens: 192,
+                advisory_intent_enabled: default_advisory_intent_enabled(),
+                paths: Vec::new(),
+                knowledge_enabled: default_knowledge_enabled(),
             },
             cache: CacheConfig {
                 bypass: Some(false),
@@ -538,6 +541,20 @@ pub struct ContextConfig {
     pub max_prompt_tokens: usize,
     #[serde(default)]
     pub max_context_tokens: usize,
+    #[serde(default = "default_advisory_intent_enabled")]
+    pub advisory_intent_enabled: Option<bool>,
+    #[serde(default)]
+    pub paths: Vec<String>,
+    #[serde(default = "default_knowledge_enabled")]
+    pub knowledge_enabled: Option<bool>,
+}
+
+fn default_advisory_intent_enabled() -> Option<bool> {
+    Some(true)
+}
+
+fn default_knowledge_enabled() -> Option<bool> {
+    Some(true)
 }
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]

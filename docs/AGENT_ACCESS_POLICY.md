@@ -1,5 +1,9 @@
 # Agent environment access policy (design hub)
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: access policy and sandbox
+> Prefer: ## Purpose
+
 Canonical **architecture-level** design for how Rex constrains **agent workloads** in the **sidecar process**. Phase 1 scope requires **at least one brokered capability** ([MVP_SPEC.md](MVP_SPEC.md)). **Done:** [V1_0.md](V1_0.md) **RC-05** (protected-path read/list via **R012**); mode × capability matrix and write/exec policy via **R020** ([ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md)). Aligns with [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) and [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md).
 
 ## MVP broker scope (Phase 1)

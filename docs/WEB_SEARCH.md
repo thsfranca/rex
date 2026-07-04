@@ -1,5 +1,9 @@
 # Web search (design hub)
 
+
+> Role: explanation | Status: planned | Audience: contributors | Read when: web search capability sidecar
+> Prefer: ## Purpose
+
 Canonical design for the **`web.search`** broker tool: live web grounding via a **SearXNG capability sidecar**, routed through `rex-daemon` policy. See [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md) for the host/capability sidecar model.
 
 ## Purpose

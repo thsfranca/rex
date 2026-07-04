@@ -81,6 +81,28 @@ Use this flow before creating or materially editing a doc:
 - Use tables for comparisons, options, and mappings.
 - Use numbered lists only for ordered procedures.
 
+## Agent retrieval entrypoints
+
+- **Task router:** [AGENTS.md](AGENTS.md) — load one primary doc per contributor or agent task; avoid pulling the full [README.md](README.md) index.
+- **Machine index:** root [llms.txt](../llms.txt) and [manifest.yaml](manifest.yaml) — role, status, and section anchors for retrieval-sized slices.
+
+## Retrieval header (required on feature hubs)
+
+Place a blockquote immediately after the title on every **feature-area hub** and on docs listed in [manifest.yaml](manifest.yaml):
+
+```markdown
+> Role: explanation | Status: active | Audience: contributors | Read when: designing sidecar spawn
+> Prefer: ## Boundaries
+```
+
+| Field | Values |
+|-------|--------|
+| **Role** | `tutorial`, `how-to`, `explanation`, `reference` (Diátaxis) |
+| **Status** | `active`, `planned`, `design accepted`, `cancelled`, `superseded` |
+| **Audience** | `operators`, `contributors`, `agents`, or combinations |
+| **Read when** | One line: task or decision that warrants opening this file |
+| **Prefer** | Stable `##` section anchor to load first |
+
 ## Documentation scope and size (agents and retrieval)
 
 Keep each document **focused**: one dominant topic per file where practical. Prefer **hub-and-spoke** (this file’s feature hubs + links) over **monolithic** pages that mix unrelated concerns—large mixed-topic files dilute retrieval for humans and for tools that chunk by section.

@@ -1,5 +1,14 @@
 # Agent graph architecture (token-efficient sidecar)
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: sidecar graph token efficiency
+> Prefer: ## Purpose
+
+
+## Summary
+
+Token-efficient sidecar graph: prefix immutability, compaction, diff-only writes, and subagent model cascade.
+
 ## Purpose
 
 Define the **target** LangGraph topology for `rex-agent`: Orchestrator plus **Viewer** and **Editor** subgraphs, broker-only inference, intra-turn scratch compaction, and diff-only writes. Shipped **R018** remains a monolithic ReAct loop until **R027–R033** land incrementally.

@@ -6,32 +6,9 @@
 
 ## Release criteria status
 
-Canonical definitions and evidence: **[V1_0.md](V1_0.md)**. Update status there first, then this mirror.
+Canonical **RC-* definitions, evidence, and status** live only in **[V1_0.md](V1_0.md)**. Update that hub first; this roadmap tracks open work IDs (**R***, **LF-***) toward closure — not a duplicate criteria table.
 
-| ID | Status |
-|----|--------|
-| RC-01 | Met |
-| RC-02 | Met |
-| RC-03 | Met |
-| RC-04 | Met |
-| RC-05 | Met |
-| RC-06 | Met |
-| RC-07 | Met |
-| RC-08 | Met |
-| RC-09 | Met |
-| RC-10 | Met |
-| RC-S3 | Superseded | Rex-owned store/Grafana — cancelled; see [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) |
-| RC-S4 | Cancelled | CHCE mmap **R043–R049** |
-| RC-S5 | Cancelled | Sidecar store API + SSE **R050–R051** |
-| **RC-LF1** | Not met | LangFuse Cloud receives Rex economics export — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) |
-
-### Should criteria (not blocking `1.0.0`)
-
-| ID | Status | Notes |
-|----|--------|-------|
-| RC-S1 | Met | CLI `--model` on `complete` — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) |
-| RC-S2 | Met | Long-session extension stress — cancel returns UI to idle |
-| RC-S6 | Met | Opt-in live LLM economics smoke (**R039–R040**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
+**v1.0 today:** **Not Met** — Must **RC-LF1** open ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)).
 
 ## Theme order (dependency mental model)
 
@@ -112,7 +89,7 @@ Superseded by LangFuse-primary stance ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGR
 | Former RC / ID | Status |
 |----------------|--------|
 | **RC-S3** | **Superseded** |
-| **RC-S4**, **R043–R049** | **Cancelled** — [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| **RC-S4**, **R043–R049** | **Cancelled** — [CHCE_ROADMAP.md](historical/CHCE_ROADMAP.md) |
 | **RC-S5**, **R050–R051** | **Cancelled** |
 | **R052–R054** | **Cancelled** |
 
@@ -165,6 +142,7 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 | **R014** | Unified `rex` CLI | Done |
 | **R015** | JSON config + `rex proto install` | Done |
 | **R082** | Config surface cleanup (JSON-only; sole product env **`REX_ROOT`**; dead key removal) | **Should** — Done (docs, schema, operator template) — [CONFIGURATION.md](CONFIGURATION.md) |
+| **R083** | Doc agent retrieval structure (AGENTS router, manifest, historical lane) | **Should** — **Done** — [AGENTS.md](AGENTS.md), [manifest.yaml](manifest.yaml) |
 | **R016** | Multi-active sidecar broadcast | Could — deferred |
 | **R017–R038** | Product agent program | **Done** — see [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) |
 | **R023–R025** | Supply chain / SAST / Ruff | **Done** |
@@ -191,8 +169,8 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 | **MCP in sidecar** | Deferred | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 | **Capability sidecar fleet + web search** | After **RC-LF1** headroom | [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md), [WEB_SEARCH.md](WEB_SEARCH.md) |
 | **LangFuse integration** | **Deferred** until **R072–R073** | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) |
-| ~~**Rex-owned observability suite**~~ | **Cancelled** — removal **LF-R01** | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) (superseded) |
-| ~~**CHCE mmap program**~~ | **Cancelled** | [CHCE_ROADMAP.md](CHCE_ROADMAP.md) |
+| ~~**Rex-owned observability suite**~~ | **Cancelled** — removal **LF-R01** | [OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md) (superseded) |
+| ~~**CHCE mmap program**~~ | **Cancelled** | [CHCE_ROADMAP.md](historical/CHCE_ROADMAP.md) |
 
 **CI:** [CI.md](CI.md) — **RC-10** Met; live smoke **R039** Met; **R040** open.
 

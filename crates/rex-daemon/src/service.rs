@@ -776,6 +776,7 @@ impl RexService for RexDaemonService {
         let injected_files = build_injected_files_manifest(
             context_request.active_file_path.as_deref(),
             &pipeline_result.injected_context,
+            &pipeline_result.injected_paths,
         );
         let sidecar_live = self.sidecar_live_stream_active();
         let lookup_key = match &decision {

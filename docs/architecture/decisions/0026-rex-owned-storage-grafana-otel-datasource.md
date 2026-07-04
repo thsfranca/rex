@@ -6,7 +6,7 @@
 
 ## Context
 
-[ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) established **`rex-obs-store`** under `$REX_ROOT` when observability is enabled. [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) and [OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md) described **BYOT** as the default visualization path: operator-run collectors, PromQL/Loki/Tempo backends, and optional OTLP export to external stacks.
+[ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) established **`rex-obs-store`** under `$REX_ROOT` when observability is enabled. [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) and [OBSERVABILITY_INTEGRATIONS.md](../../historical/OBSERVABILITY_INTEGRATIONS.md) described **BYOT** as the default visualization path: operator-run collectors, PromQL/Loki/Tempo backends, and optional OTLP export to external stacks.
 
 Product direction now requires:
 
@@ -26,7 +26,7 @@ Partial Phase 2 code may still export OTLP when `observability.otlp.endpoint` is
 
 3. **Rex Grafana OTel datasource (planned)** — Grafana panels use a **Rex datasource plugin** that calls the Rex read API and presents **OpenTelemetry-shaped** metrics, traces, and logs. No SQLite file datasource, Prometheus scrape, or Mimir/Loki bridges for the primary path.
 
-4. **Read API contract (planned)** — Loopback-only by default: catalog (`gen_ai.*`, `rex.*`), historical stream query, rollups, live SSE (or gRPC stream) for in-flight economics. Paths and OpenAPI/proto land in implementation PRs; hub documents intent in [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md).
+4. **Read API contract (planned)** — Loopback-only by default: catalog (`gen_ai.*`, `rex.*`), historical stream query, rollups, live SSE (or gRPC stream) for in-flight economics. Paths and OpenAPI/proto land in implementation PRs; hub documents intent in [OBSERVABILITY_AND_ECONOMICS.md](../../historical/OBSERVABILITY_AND_ECONOMICS.md).
 
 5. **Optional OTLP interop (Could)** — `observability.otlp.*` may replicate aggregates to operator backends; not required when observability is enabled and not used by bundled Grafana.
 
@@ -45,7 +45,7 @@ Partial Phase 2 code may still export OTLP when `observability.otlp.endpoint` is
 
 ## Implementation status (2026-06)
 
-Canonical hub: [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md).
+Canonical hub: [OBSERVABILITY_AND_ECONOMICS.md](../../historical/OBSERVABILITY_AND_ECONOMICS.md).
 
 | Item | Status |
 |------|--------|
@@ -53,7 +53,7 @@ Canonical hub: [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMIC
 | Rex Grafana OTel datasource plugin | **Shipped** — `integrations/grafana-rex-otel/` |
 | `rex obs up` + provisioning templates | **Shipped** — operator supplies Grafana binary from PATH or vendor dir |
 | Default preset dashboards | **Shipped** — `templates/obs/` |
-| CHCE mmap engine (`engine=mmap`) | **Planned** — [CHCE_ROADMAP.md](../../CHCE_ROADMAP.md) |
+| CHCE mmap engine (`engine=mmap`) | **Planned** — [CHCE_ROADMAP.md](../../historical/CHCE_ROADMAP.md) |
 | SSE live subscribe | **Planned** — Phase 6 |
 | `SidecarObservabilityService` | **Planned** |
 
@@ -62,5 +62,5 @@ Decision bullets above record acceptance-time intent; this section tracks shippe
 ## Related
 
 - [ADR 0010](0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](0025-dual-economics-store-engines.md)
-- [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md) · [OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md) · [CONFIGURATION.md](../../CONFIGURATION.md)
+- [OBSERVABILITY_AND_ECONOMICS.md](../../historical/OBSERVABILITY_AND_ECONOMICS.md) · [OBSERVABILITY_INTEGRATIONS.md](../../historical/OBSERVABILITY_INTEGRATIONS.md) · [CONFIGURATION.md](../../CONFIGURATION.md)
 - [README.md](README.md) (index)

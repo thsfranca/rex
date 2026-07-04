@@ -1,5 +1,14 @@
 # CLI operator UX — design hub
 
+
+> Role: explanation | Status: active | Audience: operators | Read when: terminal operator UX
+> Prefer: ## Purpose
+
+
+## Summary
+
+Bare `rex` opens a terminal workspace; the CLI ensures the daemon, streams NDJSON internally, and presents operation feedback. Design hubs cover lifecycle, TUI acceptance, and harness architecture.
+
 **Status:** `design accepted` — **R071** / **R075** / **R072** / **R073** / **R080** / **R081** implemented; **R082** TUI design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R074** Could ([ROADMAP.md](ROADMAP.md)). Architecture: [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
 
 ## Purpose

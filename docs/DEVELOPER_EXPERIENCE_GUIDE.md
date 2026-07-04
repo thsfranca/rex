@@ -1,5 +1,9 @@
 # Developer Experience Guide For REX
 
+
+> Role: how-to | Status: active | Audience: contributors | Read when: contributor workflow
+> Prefer: ## 1) Project purpose
+
 This guide defines how to develop REX with AI assistance and how to design plugin-facing changes without breaking contracts.
 
 ## 1) Project purpose and architecture in 2 minutes
@@ -173,6 +177,21 @@ Post-v1.0 gates: supply chain audit (**R023**) runs in `./scripts/ci/run_rust_ve
 python3 -m pip install "ruff>=0.8"
 python3 -m ruff check sidecars/rex-agent/src sidecars/rex-agent/tests
 ```
+
+### Agent context budget (AI assistants)
+
+When using AI tools on this repo:
+
+- Start from [AGENTS.md](AGENTS.md) or root [llms.txt](../llms.txt) — load **one task route**, not the full [README.md](README.md) index.
+- Machine catalog: [manifest.yaml](manifest.yaml) (`role`, `status`, `summary_heading`, `advisory_bundle`).
+- Cancelled programs live under [historical/](historical/) — exclude from default retrieval.
+- Keep editor **alwaysApply** rules minimal; use agent-requestable rules for doc-authoring norms. Product policy lives in `docs/`, not duplicated in rules.
+
+Daemon injection (when running `rex` in a workspace with `docs/manifest.yaml`):
+
+- **R066** `context.paths[]` — bounded pre-inject paths; see [PROJECT_CONTEXT_PATHS.md](PROJECT_CONTEXT_PATHS.md).
+- **R067** advisory bundle — short prompts matching advisory intent load manifest `advisory_bundle` paths.
+- **KnowledgeRetrieval v1** — hub `## Summary` slices under 15% context budget; pointer in [AGENTS.md](AGENTS.md#bundle-pointer-knowledgeretrieval).
 
 ### Documentation conventions
 

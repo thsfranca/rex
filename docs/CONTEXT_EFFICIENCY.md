@@ -1,5 +1,14 @@
 # Context Efficiency Architecture
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: token economics levers
+> Prefer: ## Economics lever matrix
+
+
+## Summary
+
+Defines token-budget controls, retrieval/compression in `rex-daemon`, and the economics lever matrix mapping Rex modules to cost techniques (cache, routing, graph compaction, knowledge).
+
 This guide defines how REX reduces token usage and local compute for coding workflows.
 
 **Hub:** Canonical **economics lever matrix** ([below](#economics-lever-matrix-rex-vs-product-techniques)) + system views in [ARCHITECTURE.md](ARCHITECTURE.md). **ADR** rationale: [architecture/decisions/](architecture/decisions/).
@@ -23,7 +32,7 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 |-----------|-------------------|---------------|--------------------|--------|
 | Model routing / escalation cascade | Daemon chooses backend + model hint before adapter | `routing::decide_route` (env today); logs `route=` | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) | **partial** (env hook) |
 | Adaptive retrieval gate | Skip indexer for short prompts, `[[retrieve:off]]`, or focused-behavior snapshot; log `retrieval=ran\|skipped` | `plugins::should_skip_retrieval` | [CONFIGURATION.md](CONFIGURATION.md) prompt directives | **implemented** (heuristic) |
-| Advisory intent retrieval (**R067**) | Force retrieval or fixed priority doc bundle when prompt matches advisory patterns (bypasses ≤48 char skip) | `plugins::advisory_intent` + `ContextPipeline` | This doc — [Advisory intent retrieval](#advisory-intent-retrieval-r067) | **planned** |
+| Advisory intent retrieval (**R067**) | Force retrieval or fixed priority doc bundle when prompt matches advisory patterns (bypasses ≤48 char skip) | `plugins::advisory_intent` + `ContextPipeline` + `docs/manifest.yaml` | This doc — [Advisory intent retrieval](#advisory-intent-retrieval-r067) | **implemented** |
 | Context compaction — verbatim-safe packing | Query-ranked extractive line packing (`compression_strategy=extractive_query`) | `ExtractiveContextCompressor` in `plugins.rs` | Responsibility map below | **implemented** (extractive) |
 | Context compaction — learned / small-model | Optional compressor stage or sidecar ML | Context pipeline compressor hooks | Evidence-informed defaults | **planned** |
 | Layered response cache — L1 exact | In-process LRU keyed by adapter, model, mode, schema, workspace | L1 cache + policy engine — [CACHING.md](CACHING.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | implemented (ask) |
@@ -40,7 +49,7 @@ Single authoritative mapping. **`Status`** reflects code or documented design in
 | Batching / async doc jobs | Lower priority vs interactive latency | Future RPC/job | [ROADMAP.md](ROADMAP.md) | **planned** |
 | Project memory — decisions + repo fingerprints | Reduce chat-history token pressure | `ProjectMemoryRetrieval` stage | [ADR 0014](architecture/decisions/0014-long-term-memory-boundary.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) | **design accepted** |
 | Bounded FTS5 session memory (terminal harness) | Retrieve capped fragments per turn; avoid unbounded context stuffing | Daemon SQLite in **`.rex/`**; TUI stateless | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), **R076** | **design accepted** |
-| Agent knowledge retrieval | Curated design/agent reference; budgeted inject vs repo markdown sprawl | `KnowledgeRetrieval` stage | [ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md), [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) | **design accepted** |
+| Agent knowledge retrieval | Curated design/agent reference; budgeted inject vs repo markdown sprawl | `KnowledgeRetrieval` stage | [ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md), [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) | **partial** (v1 summary inject) |
 | Economics validation harness | Prove token/cost deltas (paid API + local OSS) vs baseline | Benchmark / CI smoke | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) | **partial** (live smoke **R039** Met; LangFuse datasets **LF-F04** planned) |
 | MCP / standard tool interoperability | MCP **primarily** in **isolated sidecar**; host reach **brokered**; lazy tool discovery | Sidecar envelope + daemon broker | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) | **design accepted** — implementation deferred |
 | Human approvals + sandbox for tools | Extension modes today; daemon `ApprovalGate`; `AccessPolicy` broker | [ADR 0013](architecture/decisions/0013-access-policy-broker-completion.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [ROADMAP.md](ROADMAP.md) **R020** | **implemented** — JSON `agent.approvals_enabled`; mode × capability matrix + write/exec (**R020** Done) |
@@ -142,7 +151,7 @@ Broker RPCs log `broker.inference=*` and `broker.access_policy=*` separately.
 
 ### Planned per-turn economics fields (design)
 
-Extend the stream-start line when stages ship ([OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md)):
+Extend the stream-start line when stages ship ([OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md), [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md)):
 
 | Field | Meaning |
 |-------|---------|
@@ -155,7 +164,7 @@ Extend the stream-start line when stages ship ([OBSERVABILITY_AND_ECONOMICS.md](
 
 ## Advisory intent retrieval (R067)
 
-**Status:** planned — **Should**
+**Status:** **implemented** — **Should**
 
 ### Problem
 

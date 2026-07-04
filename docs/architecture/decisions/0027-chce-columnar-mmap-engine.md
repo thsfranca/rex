@@ -7,7 +7,7 @@
 
 [ADR 0025](0025-dual-economics-store-engines.md) establishes dual store engines: SQLite default and mmap opt-in on macOS. The prior mmap format draft described row-oriented musli records with `F_FULLFSYNC`. Deep research (2026-06-07) evaluated embedded SQL, cloud TSDBs, LSM KV, and columnar file formats against Rex constraints (hot-path latency, disk budget, programmatic API, Grafana loopback reads).
 
-The research recommends **CHCE** — a Custom Hybrid Columnar-mmap Engine: lock-free ring buffer ingest, 16 KB columnar pages, global dictionary sidecar, zone-map skipping, and phased compression. Format detail lives in [OBS_STORE_MMAP_FORMAT.md](../../OBS_STORE_MMAP_FORMAT.md).
+The research recommends **CHCE** — a Custom Hybrid Columnar-mmap Engine: lock-free ring buffer ingest, 16 KB columnar pages, global dictionary sidecar, zone-map skipping, and phased compression. Format detail lives in [OBS_STORE_MMAP_FORMAT.md](../../historical/OBS_STORE_MMAP_FORMAT.md).
 
 ## Decision
 
@@ -19,7 +19,7 @@ The research recommends **CHCE** — a Custom Hybrid Columnar-mmap Engine: lock-
 
 4. **Global dictionary** — categorical strings map through mmap sidecar `obs/store.dict` (u16 ordinals), not per-page inline dictionaries.
 
-5. **Live tail** — `LiveRingBuffer` plus read API **SSE** (`GET /v1/metrics/stream`) with cursor merge semantics ([OBS_READ_API.md](../../OBS_READ_API.md)); ships in hub Phase 6, designed now to avoid rework.
+5. **Live tail** — `LiveRingBuffer` plus read API **SSE** (`GET /v1/metrics/stream`) with cursor merge semantics ([OBS_READ_API.md](../../historical/OBS_READ_API.md)); ships in hub Phase 6, designed now to avoid rework.
 
 6. **Compression tiers** — v1: dictionary + TSZ timestamps + Zstd config snapshots + plain floats; v2: ALP for `elapsed_ms`, FastLanes/Gorilla for integers and time columns. Promote v2 only when v1 benchmarks miss targets.
 
@@ -40,4 +40,4 @@ The research recommends **CHCE** — a Custom Hybrid Columnar-mmap Engine: lock-
 ## Related
 
 - [ADR 0025](0025-dual-economics-store-engines.md) · [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md)
-- [OBS_STORE_MMAP_FORMAT.md](../../OBS_STORE_MMAP_FORMAT.md) · [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md)
+- [OBS_STORE_MMAP_FORMAT.md](../../historical/OBS_STORE_MMAP_FORMAT.md) · [OBSERVABILITY_AND_ECONOMICS.md](../../historical/OBSERVABILITY_AND_ECONOMICS.md)

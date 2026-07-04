@@ -1,5 +1,9 @@
 # Policy engine (design hub)
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: daemon policy pipeline
+> Prefer: ## Purpose
+
 How **`rex-daemon`** centralizes **policy** (what must hold) separate from **mechanism** (how it is enforced). Covers **shipped** seams today, including the **access-policy broker** for sidecar tool RPCs (RC-05 Met).
 
 ## Policy vs mechanism

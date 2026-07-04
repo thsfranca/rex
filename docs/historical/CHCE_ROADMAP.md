@@ -1,3 +1,5 @@
+> Status: cancelled | Do not use for active product decisions.
+
 # CHCE observability store — delivery program
 
 > **Status: Cancelled (2026-06-09).** Superseded by **LangFuse Cloud** as primary observability — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). **R043–R054** cancelled; **RC-S4** cancelled. Remaining code removed in **LF-R01**. Content below is **historical** only.
@@ -12,7 +14,7 @@ CHCE is an **observability** feature: daemon economics telemetry persistence and
 
 ## Problem
 
-[OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) Phase **2b** calls for a macOS opt-in **mmap** engine alongside the shipped **SQLite** default ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)). CHCE spans multiple subsystems (`LiveRingBuffer`, `AppendCoordinator`, `ColumnarCodec`, `DictionaryManager`, `MmapPaginator`) and hub phases **2b / 6 / 7**. Ordered slices **R043–R054** were listed in [ROADMAP.md](ROADMAP.md) (now **cancelled**).
+[OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) Phase **2b** calls for a macOS opt-in **mmap** engine alongside the shipped **SQLite** default ([ADR 0025](../architecture/decisions/0025-dual-economics-store-engines.md)). CHCE spans multiple subsystems (`LiveRingBuffer`, `AppendCoordinator`, `ColumnarCodec`, `DictionaryManager`, `MmapPaginator`) and hub phases **2b / 6 / 7**. Ordered slices **R043–R054** were listed in [ROADMAP.md](ROADMAP.md) (now **cancelled**).
 
 ## Prioritization (cancelled 2026-06-09)
 
@@ -237,4 +239,4 @@ All must pass before JSON default changes from `sqlite` to `mmap` (**R054**):
 - [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) — validation program (**R039–R042**)
 - [CONFIGURATION.md](CONFIGURATION.md) — `observability.store.*`
 - [ERROR_HANDLING.md](ERROR_HANDLING.md) — store error codes
-- [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) · [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)
+- [ADR 0025](../architecture/decisions/0025-dual-economics-store-engines.md) · [ADR 0027](../architecture/decisions/0027-chce-columnar-mmap-engine.md)

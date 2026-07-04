@@ -1,3 +1,5 @@
+> Status: cancelled | Do not use for active product decisions.
+
 # Rex observability read API
 
 > **Status: Cancelled (2026-06-09).** Product UI path is **LangFuse Cloud** — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). This contract is **historical**; code removed in **LF-R01**.
@@ -6,7 +8,7 @@
 
 **Status:** **cancelled**
 
-**Hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **Integrations:** [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) · **ADRs:** [0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md), [0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)
+**Hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **Integrations:** [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) · **ADRs:** [0026](../architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md), [0027](../architecture/decisions/0027-chce-columnar-mmap-engine.md)
 
 ## Purpose
 
@@ -105,4 +107,4 @@ rex obs up # read API + Grafana provisioning
 
 - [CONFIGURATION.md — Observability](CONFIGURATION.md#observability)
 - [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) — CHCE read path
-- [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) — instrument names
+- [ADR 0020](../architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) — instrument names

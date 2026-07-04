@@ -15,7 +15,7 @@ Long-running agent sessions pressure context windows. Products like Mem0 extract
 4. **Pipeline hook:** `ProjectMemoryRetrieval` runs after layered prompts and knowledge, before lexical retrieval; budget **10%** of context tokens by default.
 5. **Storage (implementation bet):** `sqlite` or files under operator data dir; vector index optional behind economics gate.
 6. **Compaction / forgetting:** Explicit policies (TTL, max entries per workspace, summarization) — separate from per-turn extractive compression (**T6**).
-7. **No new `rex.v1` RPC** until a versioned migration and benchmark proof of **net token reduction** ([OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md)).
+7. **No new `rex.v1` RPC** until a versioned migration and benchmark proof of **net token reduction** ([OBSERVABILITY_AND_ECONOMICS.md](../../historical/OBSERVABILITY_AND_ECONOMICS.md)).
 8. **Hub:** [LONG_TERM_MEMORY.md](../../LONG_TERM_MEMORY.md) lists remaining implementation bets; accepted boundaries are in this ADR.
 
 ## Consequences

@@ -1,0 +1,30 @@
+# Rex
+
+> Local AI runtime: daemon owns streaming, policy, caches, and context pipeline; thin CLI/TUI clients.
+
+## Agent entry
+
+- [docs/AGENTS.md](docs/AGENTS.md): task router — load one doc per task
+- [docs/manifest.yaml](docs/manifest.yaml): machine catalog (role, status, topics)
+
+## Core reference
+
+- [docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md): stable error codes and messages
+- [docs/NDJSON_STREAM.md](docs/NDJSON_STREAM.md): CLI NDJSON contract
+- [docs/CONFIGURATION.md](docs/CONFIGURATION.md): JSON config keys and precedence
+- [docs/PURPOSE_AND_PRINCIPLES.md](docs/PURPOSE_AND_PRINCIPLES.md): project intent
+
+## Architecture
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): system description
+- [docs/MVP_SPEC.md](docs/MVP_SPEC.md): Phase 1 scope
+- [docs/CONTEXT_EFFICIENCY.md](docs/CONTEXT_EFFICIENCY.md): token economics matrix
+
+## Contributing
+
+- [docs/DEVELOPER_EXPERIENCE_GUIDE.md](docs/DEVELOPER_EXPERIENCE_GUIDE.md): workflow and gates
+- [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md): writing norms
+
+## Optional
+
+- [docs/README.md](docs/README.md): full human index (avoid loading whole file for single tasks)

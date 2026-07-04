@@ -1,10 +1,14 @@
 # LangFuse integration (design hub)
 
+
+> Role: explanation | Status: active | Audience: operators | Read when: LangFuse observability export
+> Prefer: ## Purpose
+
 **Diátaxis role:** explanation — LangFuse Cloud as **primary** observability and evaluation platform for Rex.
 
 **Status:** **design accepted** (docs pivot 2026-06); implementation **planned** pending [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md).
 
-**Supersedes (product direction):** Rex-owned observability store, bundled Grafana suite, CHCE mmap program — see cancelled hubs [CHCE_ROADMAP.md](CHCE_ROADMAP.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md). ADRs [0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [0025](architecture/decisions/0025-dual-economics-store-engines.md), [0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md), [0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) remain **Accepted** in Git until **LF-D10** lands a supersession ADR.
+**Supersedes (product direction):** Rex-owned observability store, bundled Grafana suite, CHCE mmap program — see cancelled hubs [CHCE_ROADMAP.md](historical/CHCE_ROADMAP.md), [OBSERVABILITY_INTEGRATIONS.md](historical/OBSERVABILITY_INTEGRATIONS.md). ADRs [0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [0025](architecture/decisions/0025-dual-economics-store-engines.md), [0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md), [0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) remain **Accepted** in Git until **LF-D10** lands a supersession ADR.
 
 ## Purpose
 
@@ -19,7 +23,7 @@ Aligns with [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md): local infere
 | **LangFuse Cloud** | **Default** — EU, US, JP, or HIPAA regions per operator account |
 | **Self-hosted LangFuse** | **Out of default scope** — competes with local model resources on Mac |
 | **Secrets** | LangFuse public/secret keys via env or OS keychain — **not** committed JSON |
-| **Offline** | Stdout economics grep when Cloud unreachable ([OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) phase 0) |
+| **Offline** | Stdout economics grep when Cloud unreachable ([OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md) phase 0) |
 
 ## Prioritization
 
