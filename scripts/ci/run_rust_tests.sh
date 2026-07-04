@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=scripts/ci/workspace_excludes.sh
+source "${ROOT_DIR}/scripts/ci/workspace_excludes.sh"
+
 mkdir -p ci-observability
 result="success"
 fail_code="-"
@@ -21,10 +25,10 @@ cargo build -p rex-sidecar-stub --locked
 cargo build -p rex --locked
 if command -v cargo-nextest >/dev/null 2>&1; then
   echo "::notice::Using cargo-nextest (CI or local install)."
-  test_cmd=(cargo nextest run --workspace --all-targets --locked)
+  test_cmd=(cargo nextest run --workspace --all-targets --locked $(ci_workspace_excludes))
 else
   echo "::notice::Using cargo test (install cargo-nextest for faster runs)."
-  test_cmd=(cargo test --workspace --all-targets --locked)
+  test_cmd=(cargo test --workspace --all-targets --locked $(ci_workspace_excludes))
 fi
 if ! "${test_cmd[@]}" 2>&1 | tee "ci-observability/test.log"; then
   result="failure"

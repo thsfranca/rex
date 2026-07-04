@@ -25,7 +25,7 @@ Canonical **purpose and operating principles** (single source of truth): **[docs
 ## Project status
 
 - **Experimental scope:** APIs, docs, and behavior can change as the study evolves; use this workspace for learning and prototypes, not production SLAs.
-- **Local operator path:** **clone → configure HTTP backend → daemon (sidecar) → CLI NDJSON stream** — [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). Product shape: [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md).
+- **Local operator path:** **clone → configure HTTP backend → daemon (sidecar) → desktop app or CLI NDJSON stream** — [`docs/OPERATOR_UX.md`](docs/OPERATOR_UX.md), `./scripts/verify_mvp_local.sh` ([`docs/CI.md`](docs/CI.md)). Product shape: [`docs/MVP_SPEC.md`](docs/MVP_SPEC.md).
 - **Done / v1.0:** [`docs/V1_0.md`](docs/V1_0.md) (**RC-*** release criteria, **`1.0.0`** tag gate) — **not Met** until observability **RC-LF1** (LangFuse Cloud export) closes; [`docs/ROADMAP.md`](docs/ROADMAP.md) tracks open gaps; [`docs/LANGFUSE_INTEGRATION.md`](docs/LANGFUSE_INTEGRATION.md) is the observability hub.
 - **Product agent (partial — shipped):** [`docs/AGENT_DELIVERY_ROADMAP.md`](docs/AGENT_DELIVERY_ROADMAP.md) — **`rex-agent`** (**R017–R019** Done); daemon prerequisites **R020–R022** Done; JSON config (**R015**) and unified **`rex`** CLI (**R014**) shipped. **`rex config init`** writes the **rex-agent** operator template; **`rex-sidecar-stub`** remains the CI harness default.
 - Engineering focus: **stream reliability** plus **stable NDJSON** across CLI and automation.
@@ -39,10 +39,10 @@ Linear recipe from a clone to a working **rex complete** stream (requires **HTTP
 1. **Build** the Rust workspace: `cargo build --workspace`.
 2. **Install** `rex` on PATH — [`scripts/install-cli.sh`](scripts/install-cli.sh).
 3. **Configure** brokered HTTP in `$REX_ROOT/config.json` — run `rex config init` (rex-agent + mock web search by default), then edit `inference.openai_compat` — [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md).
-4. **Run** `rex` — opens the terminal UI and ensures a detached daemon (**R071**). Socket defaults to `/tmp/rex.sock` unless overridden in JSON — [`docs/CLI_OPERATOR_UX.md`](docs/CLI_OPERATOR_UX.md).
+4. **Run** `rex` — opens the **desktop web UI** (Tauri) and ensures a detached daemon. Socket defaults to `/tmp/rex.sock` unless overridden in JSON — [`docs/OPERATOR_UX.md`](docs/OPERATOR_UX.md).
 5. **Verify** sidecar health in daemon logs and brokered `fs.read` via a prompt containing `__rex_read:<path>`.
 
-Details: [docs/CLI_OPERATOR_UX.md](docs/CLI_OPERATOR_UX.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
+Details: [docs/OPERATOR_UX.md](docs/OPERATOR_UX.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
 
 ## Why this shape
 
@@ -51,7 +51,7 @@ REX keeps clients thin and centralizes model/runtime policy in one daemon bounda
 | Component | Role |
 |---|---|
 | Daemon | Own inference orchestration, stream lifecycle, and future scheduling and system policy. |
-| Clients | Own UX only (terminal, scripts) and speak one protocol. |
+| Clients | Own UX only (desktop app, scripts) and speak one protocol. |
 | Protocol | gRPC over UDS for typed, local, low-latency calls. |
 
 ## Quickstart

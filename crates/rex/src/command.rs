@@ -3,8 +3,8 @@ pub enum TopLevelCommand {
     Help,
     /// Detached process entry used by auto-start.
     InternalDaemon,
-    /// Interactive terminal workspace (bare `rex`).
-    Tui(rex_cli::TuiLaunch),
+    /// Interactive desktop workspace (bare `rex`).
+    Desktop(rex_cli::DesktopLaunch),
     Config(Vec<String>),
     Proto(Vec<String>),
     Sidecar(Vec<String>),
@@ -33,13 +33,13 @@ pub fn parse_top_level(args: impl Iterator<Item = String>) -> Result<TopLevelCom
     match positional.first().map(|s| s.as_str()) {
         None => {
             let launch = if last_flag {
-                rex_cli::TuiLaunch::Last
+                rex_cli::DesktopLaunch::Last
             } else if continue_flag {
-                rex_cli::TuiLaunch::ContinuePicker
+                rex_cli::DesktopLaunch::ContinuePicker
             } else {
-                rex_cli::TuiLaunch::New
+                rex_cli::DesktopLaunch::New
             };
-            Ok(TopLevelCommand::Tui(launch))
+            Ok(TopLevelCommand::Desktop(launch))
         }
         Some("-h") | Some("--help") | Some("help") => Ok(TopLevelCommand::Help),
         Some(INTERNAL_DAEMON_ARG) => Ok(TopLevelCommand::InternalDaemon),
@@ -73,20 +73,20 @@ Usage:
   rex gateway <init|doctor>
   rex omlx <init|doctor>
 
-Open the interactive terminal workspace (default), resume a closed session, or run setup and doctor commands."
+Open the interactive desktop workspace (default), resume a closed session, or run setup and doctor commands."
     );
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rex_cli::TuiLaunch;
+    use rex_cli::DesktopLaunch;
 
     #[test]
-    fn bare_rex_opens_tui() {
+    fn bare_rex_opens_desktop() {
         assert_eq!(
             parse_top_level(std::iter::empty()).unwrap(),
-            TopLevelCommand::Tui(TuiLaunch::New)
+            TopLevelCommand::Desktop(DesktopLaunch::New)
         );
     }
 
@@ -94,7 +94,7 @@ mod tests {
     fn parses_continue_flag() {
         assert_eq!(
             parse_top_level(["--continue".to_string()].into_iter()).unwrap(),
-            TopLevelCommand::Tui(TuiLaunch::ContinuePicker)
+            TopLevelCommand::Desktop(DesktopLaunch::ContinuePicker)
         );
     }
 
@@ -102,7 +102,7 @@ mod tests {
     fn parses_last_flag() {
         assert_eq!(
             parse_top_level(["--last".to_string()].into_iter()).unwrap(),
-            TopLevelCommand::Tui(TuiLaunch::Last)
+            TopLevelCommand::Desktop(DesktopLaunch::Last)
         );
     }
 

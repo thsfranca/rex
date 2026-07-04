@@ -200,9 +200,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 async function handleTool(name, args) {
     switch (name) {
-        case "ui_open":
+        case "ui_open": {
+            const native = args.native === true;
+            if (native) {
+                return {
+                    ok: false,
+                    error: "Native WKWebView mode requires tauri-plugin-playwright (W109). Use browser fixture mode.",
+                };
+            }
             await openSession(config, { headless: args.headless !== false });
-            return { ok: true, baseUrl: config.baseUrl };
+            return { ok: true, baseUrl: config.baseUrl, mode: "browser" };
+        }
         case "ui_close":
             await closeSession();
             return { ok: true };

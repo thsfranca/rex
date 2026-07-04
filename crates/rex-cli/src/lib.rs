@@ -3,13 +3,10 @@ mod domain;
 mod error;
 mod harness_session;
 pub mod lock_util;
-mod probe_context;
 mod session_meta;
 pub mod session_resume;
-mod transport;
-mod tui;
+pub mod transport;
 
-use std::process::ExitCode;
 use std::time::Duration;
 
 use rex_proto::rex::v1::{GetSystemStatusRequest, GetSystemStatusResponse};
@@ -19,24 +16,14 @@ use crate::transport::connect_client;
 
 pub use daemon_lifecycle::ensure_daemon_ready;
 pub use error::CliError;
+pub use harness_session::{insert_metadata as insert_harness_session_metadata, new_harness_session_id};
 pub use lock_util::PidLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TuiLaunch {
+pub enum DesktopLaunch {
     New,
     ContinuePicker,
     Last,
-}
-
-/// Run the interactive terminal workspace (product entry).
-pub async fn run_tui_main(launch: TuiLaunch) -> ExitCode {
-    match tui::run_tui(launch).await {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(err) => {
-            eprintln!("Error: {}", err.operator_message());
-            ExitCode::from(1)
-        }
-    }
 }
 
 /// Ensure the daemon is up, then return `GetSystemStatus` (for integration tests).

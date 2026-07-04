@@ -32,7 +32,7 @@ Match each document to **one primary reader need**. Full role lists live in [doc
 
 | Mode | Reader need | What to write | Rex examples | Do not |
 |------|-------------|---------------|--------------|--------|
-| **Tutorial** | Learn by doing; first success | Step-by-step path to a working outcome; assume little context | [README.md](../README.md) quickstart, [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Dump API tables, ADR history, or full architecture |
+| **Tutorial** | Learn by doing; first success | Step-by-step path to a working outcome; assume little context | [README.md](../README.md) quickstart, [OPERATOR_UX.md](OPERATOR_UX.md) | Dump API tables, ADR history, or full architecture |
 | **How-to** | Accomplish a specific task | Goal-oriented recipe; prerequisites + ordered steps | [RELEASE.md](RELEASE.md), [CI.md](CI.md), [CONFIGURATION.md](CONFIGURATION.md) | Teach fundamentals or restate full feature design |
 | **Explanation** | Understand why and how things fit | Design intent, boundaries, trade-offs, hub-level bets | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), feature hubs, [ARCHITECTURE.md](ARCHITECTURE.md) | Replace reference catalogs or operator runbooks |
 | **Reference** | Look up facts quickly | Accurate, complete, scannable facts; structure mirrors the thing described | [ADAPTERS.md](ADAPTERS.md), [NDJSON_STREAM.md](NDJSON_STREAM.md), `proto/rex/v1/rex.proto` | Narrative onboarding or undecided design bets |
@@ -46,7 +46,7 @@ Use this flow before creating or materially editing a doc:
 3. **Cross-feature policy or ownership** → [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md).
 4. **Feature shape, bets, or interface intent** → **one** feature hub under `docs/` (see [Feature-area hubs](#feature-area-hubs)).
 5. **Operator or contributor task** → **how-to** doc (release, CI, configuration, dependencies, …).
-6. **Onboarding / first run** → top-level [README.md](../README.md) quickstart or [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md).
+6. **Onboarding / first run** → top-level [README.md](../README.md) quickstart or [OPERATOR_UX.md](OPERATOR_UX.md).
 7. **Unsure** → add a row to [docs/README.md](README.md) repository map only after the doc exists; pick the closest mode above.
 
 ## When to create vs update
