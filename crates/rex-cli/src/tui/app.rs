@@ -88,8 +88,8 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
         }
 
         let animating = app.motion.animating();
-        if animating || (was_animating && !animating) {
-            // Continuous frames while motion runs; one settle frame when it ends.
+        if app.motion.wants_paint() || (was_animating && !animating) {
+            // Paint when a region effect advances; one settle frame when motion ends.
             needs_draw = true;
         }
         was_animating = animating;
@@ -104,7 +104,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                 );
             }
             terminal
-                .draw(|f| ui::draw(f, &app))
+                .draw(|f| ui::draw(f, &mut app))
                 .map_err(|e| e.to_string())?;
             if sync_output {
                 let _ = crossterm::execute!(
@@ -112,8 +112,8 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                     crossterm::terminal::EndSynchronizedUpdate
                 );
             }
-            // Stay dirty only while animating (~15–30 FPS via poll_ms).
-            needs_draw = app.motion.animating();
+            // Only repaint when the next effect step changes a region (keeps Quiet windows).
+            needs_draw = app.motion.wants_paint();
         }
 
         if let Some(rx) = stream_rx.as_mut() {
