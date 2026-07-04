@@ -20,7 +20,7 @@ pub async fn run(args: impl Iterator<Item = String>) -> ExitCode {
             print_usage();
             ExitCode::SUCCESS
         }
-        Ok(TopLevelCommand::Daemon) => match rex_daemon::run_daemon().await {
+        Ok(TopLevelCommand::InternalDaemon) => match rex_daemon::run_daemon().await {
             Ok(()) => ExitCode::SUCCESS,
             Err(err) => {
                 eprintln!("Error: {err}");

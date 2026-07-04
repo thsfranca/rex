@@ -36,7 +36,8 @@ impl CliError {
     pub fn daemon_unavailable_manual(socket_path: &str) -> Self {
         Self::DaemonUnavailable {
             socket_path: socket_path.to_string(),
-            suffix: "; run `rex daemon` or remove --no-daemon-autostart to auto-start".to_string(),
+            suffix: "; enable `daemon.auto_start` or remove --no-daemon-autostart, then run `rex`"
+                .to_string(),
         }
     }
 

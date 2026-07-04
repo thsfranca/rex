@@ -119,7 +119,7 @@ fn status_autostarts_daemon_with_managed_omlx() {
     let output = Command::new(cargo_bin("rex"))
         .current_dir(guard._dir.path())
         .env(REX_ROOT_ENV, guard._dir.path())
-        .args(["status"])
+        .args(["__rex_internal_status"])
         .output()
         .expect("run rex status");
 
@@ -160,7 +160,7 @@ fn status_autostart_fails_when_omlx_command_missing() {
     let output = Command::new(cargo_bin("rex"))
         .current_dir(dir.path())
         .env(REX_ROOT_ENV, dir.path())
-        .args(["status"])
+        .args(["__rex_internal_status"])
         .output()
         .expect("run rex status");
 

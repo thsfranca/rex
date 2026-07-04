@@ -14,7 +14,7 @@ The interactive TUI (bare **`rex`** / **`rex tui`**) is the product usage path a
 
 | Component | Responsibility |
 |---|---|
-| `rex` | Unified CLI: bare entry / `tui` (product), `daemon`, `status`, setup commands (**R073** / **R080–R081** shipped). |
+| `rex` | Unified CLI: bare entry / `tui` (product), setup/doctor commands (**R073** / **R080–R081** shipped). |
 | `rex-daemon` | Model/agent **policy trajectory**, adapters, caches, **`StreamInference`** lifecycle, queues. |
 | `rex-proto` | `rex.v1` gRPC contract. |
 | `rex-config` | JSON config load/merge (`$REX_ROOT/config.json`). |
@@ -41,10 +41,9 @@ rex config init
 # Edit $REX_ROOT/config.json — inference.openai_compat + sidecars.active=agent (binary rex-agent)
 rex config validate
 cargo build --workspace
-rex          # interactive terminal workspace (default)
+rex          # interactive terminal workspace (default; auto-starts daemon)
 rex tui      # same as bare rex
-rex daemon   # debug / foreground; auto-start default — docs/CLI_OPERATOR_UX.md
-rex status
+rex config init
 ```
 
 **Current focus:** TUI design system **R080–R081** Done — [TUI_DESIGN.md](TUI_DESIGN.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Auto-start **R071** shipped. Opt out with **`daemon.auto_start: false`** or **`--no-daemon-autostart`**. Install with **`./scripts/install-cli.sh`**. Agent live validation: tuiwright MCP text snapshots — see [TUI_DESIGN.md](TUI_DESIGN.md#validation).
