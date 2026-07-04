@@ -1,17 +1,18 @@
-//! Pre-chat closed-session picker (`rex --continue`).
+//! Pre-chat closed-session picker (`rex --continue`) — horizontal carousel.
 
 use std::io;
 use std::time::Duration;
 
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use ratatui::backend::CrosstermBackend;
-use ratatui::layout::{Alignment, Constraint, Direction, Layout};
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{List, ListItem, Paragraph};
+use ratatui::widgets::Paragraph;
 use ratatui::Terminal;
 
 use crate::session_resume::{format_relative_closed_at, ClosedSessionItem};
 
+use super::compositor::carousel_adjacent_glyph;
 use super::motion::MotionState;
 use super::theme::Theme;
 
@@ -111,15 +112,17 @@ fn picker_loop(
                     KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                         return Ok(None)
                     }
-                    KeyCode::Up | KeyCode::Char('k') => {
+                    KeyCode::Up | KeyCode::Char('k') | KeyCode::Left => {
                         if selected > 0 {
                             selected -= 1;
+                            motion.on_composer_input();
                             needs_draw = true;
                         }
                     }
-                    KeyCode::Down | KeyCode::Char('j') => {
+                    KeyCode::Down | KeyCode::Char('j') | KeyCode::Right => {
                         if selected + 1 < sessions.len() {
                             selected += 1;
+                            motion.on_composer_input();
                             needs_draw = true;
                         }
                     }
@@ -156,7 +159,6 @@ fn draw_picker(
         .direction(Direction::Vertical)
         .constraints([
             Constraint::Length(1),
-            Constraint::Length(1),
             Constraint::Min(3),
             Constraint::Length(1),
         ])
@@ -172,43 +174,60 @@ fn draw_picker(
     ]);
     frame.render_widget(Paragraph::new(header), chunks[0]);
 
-    frame.render_widget(
-        Paragraph::new("Recent chats").style(theme.text_tertiary()),
-        chunks[1],
-    );
+    if sessions.is_empty() {
+        frame.render_widget(
+            Paragraph::new("No closed sessions").style(theme.text_tertiary()),
+            chunks[1],
+        );
+    } else {
+        let prev = selected.checked_sub(1);
+        let next = selected.checked_add(1).filter(|&i| i < sessions.len());
+        let cur = &sessions[selected];
+        let time = format_relative_closed_at(&cur.closed_at);
+        let mut spans = vec![
+            Span::styled("◁ ", theme.text_tertiary()),
+        ];
+        if let Some(p) = prev {
+            spans.push(Span::styled(
+                format!("{} ", carousel_adjacent_glyph(0.3)),
+                theme.text_tertiary(),
+            ));
+            spans.push(Span::styled(
+                format!("{} ", sessions[p].title),
+                theme.text_tertiary(),
+            ));
+        }
+        spans.push(Span::styled(cur.title.clone(), theme.text_accent()));
+        if let Some(n) = next {
+            spans.push(Span::styled(
+                format!(" {}", sessions[n].title),
+                theme.text_tertiary(),
+            ));
+            spans.push(Span::styled(
+                format!("{}", carousel_adjacent_glyph(0.3)),
+                theme.text_tertiary(),
+            ));
+        }
+        spans.push(Span::styled(" ▷", theme.text_tertiary()));
+        frame.render_widget(
+            Paragraph::new(Line::from(spans)).alignment(Alignment::Center),
+            chunks[1],
+        );
+        frame.render_widget(
+            Paragraph::new(time).style(theme.text_tertiary()).alignment(Alignment::Center),
+            Rect {
+                x: chunks[1].x,
+                y: chunks[1].y.saturating_add(2),
+                width: chunks[1].width,
+                height: 1,
+            },
+        );
+    }
 
-    let show_time = area.width >= 80;
-    let items: Vec<ListItem> = sessions
-        .iter()
-        .enumerate()
-        .map(|(idx, item)| {
-            let title_style = if idx == selected {
-                theme.text_accent()
-            } else {
-                theme.text_primary()
-            };
-            let time_suffix = if show_time {
-                format!(
-                    "  {}",
-                    format_relative_closed_at(&item.closed_at)
-                )
-            } else {
-                String::new()
-            };
-            ListItem::new(Line::from(vec![
-                Span::styled(item.title.clone(), title_style),
-                Span::styled(time_suffix, theme.text_tertiary()),
-            ]))
-        })
-        .collect();
-
-    let list = List::new(items).highlight_style(theme.text_accent());
-    frame.render_widget(list, chunks[2]);
-
-    let footer = Paragraph::new("↑↓ select · Enter open · Esc quit                         [?]")
+    let footer = Paragraph::new("← → select · Enter open · Esc quit                        [?]")
         .style(theme.text_tertiary())
         .alignment(Alignment::Left);
-    frame.render_widget(footer, chunks[3]);
+    frame.render_widget(footer, chunks[2]);
 
-    motion.process(frame.buffer_mut(), &theme);
+    motion.process(frame.buffer_mut(), theme);
 }

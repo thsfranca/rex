@@ -13,6 +13,7 @@ pub use dirty::DirtyTracker;
 pub use effects::Regions;
 pub use frame_budget::{FrameBudget, FrameTier};
 pub use spring::SpringState;
+pub use braille::carousel_adjacent_glyph;
 
 use std::time::Duration;
 
