@@ -20,6 +20,7 @@ mod policy;
 mod routing;
 mod runtime;
 mod session_store;
+mod session_title;
 mod service;
 mod settings;
 mod sidecar_client;

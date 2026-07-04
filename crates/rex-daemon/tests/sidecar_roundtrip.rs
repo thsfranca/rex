@@ -131,6 +131,7 @@ async fn sidecar_health_and_run_turn_roundtrip() {
                 context_revision: String::new(),
             },
             Vec::new(),
+            "",
         )
         .await
         .expect("run turn")
@@ -178,6 +179,7 @@ async fn sidecar_run_turn_stream_yields_incremental_chunks() {
                 context_revision: String::new(),
             },
             Vec::new(),
+            "",
         )
         .await
         .expect("run turn stream");

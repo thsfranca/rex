@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
     Arc, Mutex,
@@ -10,7 +11,8 @@ use rex_proto::rex::v1::rex_service_server::RexService;
 use rex_proto::rex::v1::{
     BrokerExecShellRequest, BrokerExecShellResponse, BrokerInferenceRequest,
     BrokerInferenceResponse, BrokerListDirRequest, BrokerListDirResponse, BrokerReadFileRequest,
-    BrokerReadFileResponse, BrokerSavePlanRequest, BrokerSavePlanResponse, BrokerWebSearchRequest,
+    BrokerReadFileResponse, BrokerSavePlanRequest, BrokerSavePlanResponse,
+    BrokerSetSessionTitleRequest, BrokerSetSessionTitleResponse, BrokerWebSearchRequest,
     BrokerWebSearchResponse, BrokerWorkspaceSearchRequest, BrokerWorkspaceSearchResponse,
     BrokerWriteFileRequest, BrokerWriteFileResponse, GetSystemStatusRequest,
     GetSystemStatusResponse, RespondToToolApprovalRequest, RespondToToolApprovalResponse,
@@ -22,6 +24,7 @@ use tokio::time::{sleep, Duration};
 use tokio_stream::Stream;
 use tonic::{Request, Response, Status};
 
+use crate::access_policy::evaluate_session_set_title;
 use crate::activity::ActivityTracker;
 use crate::adapters::InferenceRuntime;
 #[cfg(test)]
@@ -45,6 +48,7 @@ use crate::policy::{CacheDecision, CacheDecisionState, PolicyEngine, PolicyReque
 use crate::routing::decide_route;
 use crate::settings;
 use crate::session_store::{HarnessSessionStore, SessionStoreError};
+use crate::session_title::{apply_tool_title, maybe_refresh_title_fallback, title_from_prompt};
 use crate::sidecar_client::{
     connect_sidecar, continue_turn_stream, map_sidecar_to_inference_chunks, run_turn_collect,
     run_turn_stream,
@@ -65,6 +69,7 @@ pub struct RexDaemonService {
     sidecar: SharedSupervisor,
     activity: Arc<ActivityTracker>,
     session_store: Arc<HarnessSessionStore>,
+    title_tool_called: Arc<Mutex<HashMap<String, bool>>>,
     pub(crate) observability: Option<Arc<crate::observability::ObservabilityRuntime>>,
 }
 
@@ -92,6 +97,7 @@ impl RexDaemonService {
             sidecar,
             activity,
             session_store: Arc::new(HarnessSessionStore::new()),
+            title_tool_called: Arc::new(Mutex::new(HashMap::new())),
             observability: observability_from_settings(),
         }
     }
@@ -104,6 +110,7 @@ impl RexDaemonService {
         inference_runtime: &str,
         correlation: &TurnCorrelation,
         injected_files: Vec<String>,
+        harness_session_id: &str,
     ) -> Result<Vec<Result<StreamInferenceResponse, Status>>, Status> {
         if parse_harness_only().is_some() || !self.sidecar.host_config().enabled {
             return Ok(self.runtime.build_chunks(effective_prompt).await);
@@ -123,6 +130,7 @@ impl RexDaemonService {
             model,
             correlation,
             injected_files,
+            harness_session_id,
         )
         .await
         .map_err(|e| Status::internal(format!("sidecar RunTurn failed: {e}")))?;
@@ -304,6 +312,59 @@ impl RexService for RexDaemonService {
                 }))
             }
         }
+    }
+
+    async fn broker_set_session_title(
+        &self,
+        request: Request<BrokerSetSessionTitleRequest>,
+    ) -> Result<Response<BrokerSetSessionTitleResponse>, Status> {
+        let _work = self.activity.track_work();
+        ensure_workspace_configured()?;
+        let harness_session_id = extract_harness_session_id(request.metadata());
+        if harness_session_id.is_empty() {
+            return Ok(Response::new(BrokerSetSessionTitleResponse {
+                ok: false,
+                error: "harness session id required".to_string(),
+            }));
+        }
+        let inner = request.into_inner();
+        let mode = normalize_mode(&inner.mode);
+        println!("broker.access_policy=evaluate capability=session.set_title mode={mode}");
+        match evaluate_session_set_title(&mode) {
+            crate::access_policy::AccessDecision::Allow => {}
+            crate::access_policy::AccessDecision::Deny(deny) => {
+                println!(
+                    "broker.access_policy=deny capability=session.set_title mode={mode} code={} subject={} error={}",
+                    deny.code, inner.title, deny.message
+                );
+                return Ok(Response::new(BrokerSetSessionTitleResponse {
+                    ok: false,
+                    error: deny.message,
+                }));
+            }
+        }
+        let mut meta = self
+            .session_store
+            .read_meta(&harness_session_id)
+            .map_err(session_store_to_status)?;
+        if let Err(err) = apply_tool_title(&mut meta, &inner.title) {
+            return Ok(Response::new(BrokerSetSessionTitleResponse {
+                ok: false,
+                error: err.to_string(),
+            }));
+        }
+        self.session_store
+            .write_meta(&harness_session_id, &meta)
+            .map_err(session_store_to_status)?;
+        self.title_tool_called
+            .lock()
+            .expect("title tool lock")
+            .insert(harness_session_id, true);
+        println!("broker.access_policy=allow capability=session.set_title mode={mode}");
+        Ok(Response::new(BrokerSetSessionTitleResponse {
+            ok: true,
+            error: String::new(),
+        }))
     }
 
     async fn broker_write_file(
@@ -695,6 +756,20 @@ impl RexService for RexDaemonService {
                 &prompt,
                 &correlation.turn_id,
             );
+            if let Ok(mut meta) = self.session_store.read_meta(&harness_session_id) {
+                if meta.title.is_empty() {
+                    let fallback = title_from_prompt(&prompt);
+                    if !fallback.is_empty() {
+                        meta.title = fallback;
+                        meta.title_source = "prompt".to_string();
+                        let _ = self.session_store.write_meta(&harness_session_id, &meta);
+                    }
+                }
+            }
+            self.title_tool_called
+                .lock()
+                .expect("title tool lock")
+                .insert(harness_session_id.clone(), false);
         }
         let effective_model = model.clone();
         let correlation_for_sidecar = correlation.clone();
@@ -729,6 +804,7 @@ impl RexService for RexDaemonService {
                         inference_runtime,
                         &correlation_for_sidecar,
                         injected_files.clone(),
+                        &harness_session_id,
                     )
                     .await?;
                 if let Some(to_store) = l1_cachable_responses(&built) {
@@ -743,6 +819,7 @@ impl RexService for RexDaemonService {
                     inference_runtime,
                     &correlation_for_sidecar,
                     injected_files.clone(),
+                    &harness_session_id,
                 )
                 .await?
             };
@@ -787,6 +864,8 @@ impl RexService for RexDaemonService {
         let activity_for_stream = self.activity.clone();
         let session_store = self.session_store.clone();
         let session_id_for_log = harness_session_id.clone();
+        let title_tool_called = self.title_tool_called.clone();
+        let effective_model_for_title = effective_model.clone();
         let economics_draft = observability.as_ref().map(|obs| StreamEconomicsDraft {
             snapshot_id: obs.snapshot_id().to_string(),
             request_id,
@@ -832,6 +911,7 @@ impl RexService for RexDaemonService {
                         &effective_model,
                         &correlation_for_sidecar,
                         injected_files_for_sidecar.clone(),
+                        &session_id_for_log,
                     )
                     .await
                 } else {
@@ -957,6 +1037,32 @@ impl RexService for RexDaemonService {
                     let ctx = terminal_otlp_ctx(ttft_ms, &draft, None);
                     obs.record_terminal_async(draft, "done", elapsed_ms, chunk_count, ctx);
                 }
+                let sid = session_id_for_log.clone();
+                if !sid.is_empty() {
+                    let tool_called = title_tool_called
+                        .lock()
+                        .expect("title tool lock")
+                        .remove(&sid)
+                        .unwrap_or(false);
+                    if !tool_called {
+                        let store = session_store.clone();
+                        let model_for_title = effective_model_for_title.clone();
+                        let refresh = settings::get()
+                            .effective
+                            .cli
+                            .ui
+                            .session_title_refresh_turns;
+                        tokio::spawn(async move {
+                            maybe_refresh_title_fallback(
+                                &store,
+                                &sid,
+                                &model_for_title,
+                                refresh,
+                            )
+                            .await;
+                        });
+                    }
+                }
             } else {
                 println!(
                     "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=incomplete stream.terminal=missing_done chunks_sent={chunk_count} elapsed_ms={elapsed_ms}",
@@ -1036,6 +1142,7 @@ fn session_store_to_status(err: SessionStoreError) -> Status {
         SessionStoreError::WorkspaceNotConfigured => Status::failed_precondition(
             "could not resolve workspace from current working directory",
         ),
+        SessionStoreError::InvalidTitle => Status::invalid_argument("invalid session title"),
         SessionStoreError::Io(err) => Status::internal(format!("session store io error: {err}")),
     }
 }

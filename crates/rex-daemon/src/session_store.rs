@@ -11,10 +11,38 @@ const SESSIONS_DIR: &str = "sessions";
 const DEFAULT_FETCH_LIMIT: u32 = 50;
 const MAX_FETCH_LIMIT: u32 = 200;
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct SessionMeta {
+    pub title: String,
+    #[serde(default = "default_title_source")]
+    pub title_source: String,
+    #[serde(default)]
+    pub updated_at: String,
+    #[serde(default)]
+    pub completed_turns: u32,
+}
+
+fn default_title_source() -> String {
+    "prompt".to_string()
+}
+
+impl Default for SessionMeta {
+    fn default() -> Self {
+        Self {
+            title: String::new(),
+            title_source: default_title_source(),
+            updated_at: String::new(),
+            completed_turns: 0,
+        }
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum SessionStoreError {
     #[error("invalid harness session id")]
     InvalidSessionId,
+    #[error("invalid session title")]
+    InvalidTitle,
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
     #[error("workspace root not configured")]
@@ -165,6 +193,81 @@ impl HarnessSessionStore {
             return Ok(String::new());
         }
         Ok(lines.join("\n"))
+    }
+
+    pub fn read_meta(&self, harness_session_id: &str) -> Result<SessionMeta, SessionStoreError> {
+        let session_id = harness_session_id.trim();
+        if session_id.is_empty() {
+            return Ok(SessionMeta::default());
+        }
+        let path = self.session_meta_path(session_id)?;
+        let _guard = self.inner.lock().expect("session store mutex");
+        if !path.is_file() {
+            return Ok(SessionMeta::default());
+        }
+        let contents = std::fs::read_to_string(&path)?;
+        serde_json::from_str(&contents).map_err(|err| {
+            SessionStoreError::Io(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                err.to_string(),
+            ))
+        })
+    }
+
+    pub fn write_meta(&self, harness_session_id: &str, meta: &SessionMeta) -> Result<(), SessionStoreError> {
+        let session_id = harness_session_id.trim();
+        if session_id.is_empty() {
+            return Ok(());
+        }
+        let path = self.session_meta_path(session_id)?;
+        let _guard = self.inner.lock().expect("session store mutex");
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let line = serde_json::to_string(meta).map_err(|err| {
+            SessionStoreError::Io(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                err.to_string(),
+            ))
+        })?;
+        std::fs::write(path, format!("{line}\n"))?;
+        Ok(())
+    }
+
+    pub fn session_log_exists(&self, harness_session_id: &str) -> Result<bool, SessionStoreError> {
+        let path = self.session_log_path(harness_session_id)?;
+        Ok(path.is_file())
+    }
+
+    pub fn recent_transcript_excerpt(
+        &self,
+        harness_session_id: &str,
+        max_events: u32,
+    ) -> Result<String, SessionStoreError> {
+        let page = self.fetch_events(harness_session_id, 0, 0, max_events.max(1))?;
+        if page.events.is_empty() {
+            return Ok(String::new());
+        }
+        let mut lines = Vec::new();
+        for event in page.events {
+            match event.event.as_str() {
+                "operator_prompt" => lines.push(format!("User: {}", event.text.trim())),
+                "chunk" if !event.text.is_empty() => lines.push(format!("Assistant: {}", event.text.trim())),
+                _ => {}
+            }
+        }
+        Ok(lines.join("\n"))
+    }
+
+    pub fn session_meta_path(&self, harness_session_id: &str) -> Result<PathBuf, SessionStoreError> {
+        let workspace = crate::settings::get()
+            .resolve_workspace_root()
+            .map_err(|_| SessionStoreError::WorkspaceNotConfigured)?;
+        let safe = sanitize_session_id(harness_session_id)?;
+        Ok(workspace
+            .join(".rex")
+            .join(SESSIONS_DIR)
+            .join(format!("{safe}.meta.json")))
     }
 
     fn session_log_path(&self, harness_session_id: &str) -> Result<PathBuf, SessionStoreError> {
@@ -375,5 +478,19 @@ mod tests {
         assert_eq!(page.events.len(), 2);
         assert!(page.has_more_before);
         assert_eq!(page.events[0].sequence, 2);
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn meta_roundtrip_and_prompt_title() {
+        let (_guard, store) = store_test_env();
+        let mut meta = SessionMeta::default();
+        meta.title = "Fix locks".to_string();
+        meta.title_source = "prompt".to_string();
+        meta.completed_turns = 2;
+        store.write_meta("hs-meta", &meta).expect("write");
+        let read = store.read_meta("hs-meta").expect("read");
+        assert_eq!(read.title, "Fix locks");
+        assert_eq!(read.completed_turns, 2);
     }
 }

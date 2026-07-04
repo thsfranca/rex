@@ -89,6 +89,9 @@ mod tool_approval;
 #[path = "../src/session_store.rs"]
 mod session_store;
 #[allow(dead_code)]
+#[path = "../src/session_title.rs"]
+mod session_title;
+#[allow(dead_code)]
 #[path = "../src/service.rs"]
 mod service;
 #[path = "../src/sidecar_client.rs"]
@@ -337,6 +340,7 @@ async fn agent_sidecar_health_and_broker_error_without_daemon() {
                 context_revision: String::new(),
             },
             Vec::new(),
+            "",
         )
         .await
         .expect("run turn")

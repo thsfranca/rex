@@ -117,6 +117,7 @@ Documented for broker responses and future structured fields; **not** in `error_
 | `path_empty` | Empty path on fs operation | daemon broker |
 | `plan_save_denied` | `plan.save` not allowed in current mode | daemon broker |
 | `plan_path_invalid` | `plan.save` path outside `.rex/plans/*.md` or malformed | daemon broker |
+| `session_title_failed` | LLM title refresh failed (daemon log; non-fatal to operator) | daemon |
 
 ## Economics store codes (removed)
 

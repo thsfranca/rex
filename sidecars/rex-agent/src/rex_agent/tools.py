@@ -25,6 +25,7 @@ TOOL_LIST = "fs.list"
 TOOL_WRITE = "fs.write"
 TOOL_EXEC = "exec.shell"
 TOOL_PLAN_SAVE = "plan.save"
+TOOL_SESSION_SET_TITLE = "session.set_title"
 TOOL_WEB_SEARCH = "web.search"
 TOOL_WORKSPACE_SEARCH = "workspace.search"
 
@@ -68,10 +69,10 @@ AGENT_PROMPT_SLICE = (
 )
 
 TOOLS_BY_MODE: dict[str, frozenset[str]] = {
-    "ask": frozenset({TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH, TOOL_WORKSPACE_SEARCH}),
-    "plan": frozenset({TOOL_READ, TOOL_LIST, TOOL_PLAN_SAVE, TOOL_WORKSPACE_SEARCH}),
+    "ask": frozenset({TOOL_READ, TOOL_LIST, TOOL_WEB_SEARCH, TOOL_WORKSPACE_SEARCH, TOOL_SESSION_SET_TITLE}),
+    "plan": frozenset({TOOL_READ, TOOL_LIST, TOOL_PLAN_SAVE, TOOL_WORKSPACE_SEARCH, TOOL_SESSION_SET_TITLE}),
     "agent": frozenset(
-        {TOOL_READ, TOOL_LIST, TOOL_WRITE, TOOL_EXEC, TOOL_WORKSPACE_SEARCH}
+        {TOOL_READ, TOOL_LIST, TOOL_WRITE, TOOL_EXEC, TOOL_WORKSPACE_SEARCH, TOOL_SESSION_SET_TITLE}
     ),
 }
 
@@ -136,6 +137,7 @@ TOOL_DESCRIPTIONS: dict[str, str] = {
     TOOL_PLAN_SAVE: "Save a markdown plan under .rex/plans/",
     TOOL_WEB_SEARCH: "Search the web for up-to-date information",
     TOOL_WORKSPACE_SEARCH: "Search workspace paths by basename or file content",
+    TOOL_SESSION_SET_TITLE: "Set a short chat title when the topic materially changes",
 }
 
 TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
@@ -200,6 +202,16 @@ TOOL_SCHEMAS: dict[str, dict[str, Any]] = {
             },
         },
         "required": ["query"],
+    },
+    TOOL_SESSION_SET_TITLE: {
+        "type": "object",
+        "properties": {
+            "title": {
+                "type": "string",
+                "description": "Short chat title (max 48 characters)",
+            },
+        },
+        "required": ["title"],
     },
 }
 
@@ -923,6 +935,13 @@ def execute_tool(
         if not content.strip():
             return False, "plan.save requires content", False, False
         ok, msg = client.save_plan(path, content, mode)
+        return ok, msg if ok else msg, False, False
+
+    if tool == TOOL_SESSION_SET_TITLE:
+        title = str(args.get("title", "")).strip()
+        if not title:
+            return False, "session.set_title requires title", False, False
+        ok, msg = client.set_session_title(title, mode)
         return ok, msg if ok else msg, False, False
 
     return False, f"Unknown tool: {tool}", False, False

@@ -616,6 +616,12 @@ pub struct CliUiConfig {
     pub enabled: String,
     #[serde(default = "default_true")]
     pub sync_output: bool,
+    #[serde(default = "default_session_title_refresh_turns")]
+    pub session_title_refresh_turns: u32,
+}
+
+fn default_session_title_refresh_turns() -> u32 {
+    3
 }
 
 fn default_cli_ui_enabled() -> String {
@@ -627,6 +633,7 @@ impl Default for CliUiConfig {
         Self {
             enabled: default_cli_ui_enabled(),
             sync_output: true,
+            session_title_refresh_turns: default_session_title_refresh_turns(),
         }
     }
 }
@@ -748,6 +755,7 @@ mod cli_config_tests {
         assert!(ui.should_use_tui(true, false));
         assert!(!ui.should_use_tui(false, false));
         assert!(!ui.should_use_tui(true, true));
+        assert_eq!(ui.session_title_refresh_turns, 3);
     }
 }
 

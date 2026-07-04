@@ -9,6 +9,7 @@ use super::motion::MotionState;
 use super::theme::Theme;
 use super::viewport::ViewportCache;
 use crate::harness_session;
+use crate::session_meta::read_meta;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SessionPhase {
@@ -88,6 +89,8 @@ pub struct AppState {
     pub motion: MotionState,
     /// Per-terminal harness session; scopes daemon prefix/L1 caches (parallel harness).
     pub harness_session_id: String,
+    /// Human-readable session title (header chrome; from `.meta.json`).
+    pub session_title: String,
     pub viewport: ViewportCache,
     /// Lines scrolled up from the transcript bottom (0 = pinned to tail).
     pub transcript_scroll: u16,
@@ -118,9 +121,17 @@ impl AppState {
             status_message: None,
             motion: MotionState::default(),
             harness_session_id: harness_session::new_harness_session_id(),
+            session_title: String::new(),
             viewport: ViewportCache::default(),
             transcript_scroll: 0,
             needs_viewport_sync: false,
+        }
+    }
+
+    pub fn refresh_session_title(&mut self, workspace: &Path) {
+        let meta = read_meta(workspace, &self.harness_session_id);
+        if !meta.title.is_empty() {
+            self.session_title = meta.title;
         }
     }
 

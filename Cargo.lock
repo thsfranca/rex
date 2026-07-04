@@ -1641,6 +1641,7 @@ dependencies = [
  "rex-config",
  "rex-proto",
  "rex-stream-ui",
+ "serde",
  "serde_json",
  "serial_test",
  "tempfile",

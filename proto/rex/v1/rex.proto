@@ -20,6 +20,8 @@ service RexService {
  rpc RespondToToolApproval(RespondToToolApprovalRequest) returns (RespondToToolApprovalResponse);
  // Harness session log pagination (ADR 0040).
  rpc FetchSessionEvents(FetchSessionEventsRequest) returns (FetchSessionEventsResponse);
+ // Harness session display title (operator metadata; harness_session_id via metadata).
+ rpc BrokerSetSessionTitle(BrokerSetSessionTitleRequest) returns (BrokerSetSessionTitleResponse);
 }
 
 message GetSystemStatusRequest {}
@@ -263,4 +265,15 @@ message FetchSessionEventsResponse {
  bool has_more_before = 2;
  bool has_more_after = 3;
  uint64 head_sequence = 4;
+}
+
+message BrokerSetSessionTitleRequest {
+ string title = 1;
+ // Optional. Empty normalizes to "ask" on the daemon.
+ string mode = 2;
+}
+
+message BrokerSetSessionTitleResponse {
+ bool ok = 1;
+ string error = 2;
 }
