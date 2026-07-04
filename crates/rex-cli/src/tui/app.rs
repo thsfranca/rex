@@ -142,6 +142,16 @@ async fn run_app(
             needs_draw = app.motion.wants_paint();
         }
 
+        let momentum = app.motion.decay_scroll_momentum();
+        if momentum != 0 {
+            if momentum > 0 {
+                app.scroll_transcript_down(momentum as u16);
+            } else {
+                app.scroll_transcript_up((-momentum) as u16);
+            }
+            needs_draw = true;
+        }
+
         if let Some(rx) = stream_rx.as_mut() {
             let mut got_update = false;
             while let Ok(update) = rx.try_recv() {
@@ -190,12 +200,14 @@ async fn run_app(
                     match key.code {
                         KeyCode::PageUp => {
                             app.motion.on_input();
+                            app.motion.apply_scroll_momentum(-3);
                             app.scroll_transcript_up(3);
                             start_retroactive_fetch(&mut app, &mut history_rx).await;
                             dirty = true;
                         }
                         KeyCode::PageDown => {
                             app.motion.on_input();
+                            app.motion.apply_scroll_momentum(3);
                             app.scroll_transcript_down(3);
                             dirty = true;
                         }
