@@ -2,7 +2,7 @@
 
 **Status: Should program complete — `rex-agent` shipped; harness default unchanged.** **`rex-agent`** implements LangGraph ReAct with broker-only LLM and tools (**R018**). CI and harness still default to **`rex-sidecar-stub`**. Operator settings use **JSON config** only; sole product env var **`REX_ROOT`** ([CONFIGURATION.md](CONFIGURATION.md), **R082**). **Could** follow-ups only: **R016**, **R033**, **R036**, **R056**, **R055** — see [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
 
-**Current focus:** Implement TUI motion — **R081** — [TUI_DESIGN.md](TUI_DESIGN.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md). LangFuse (**RC-LF1**) unblocked for discovery scheduling.
+**Current focus:** TUI design system **R080–R081** Done. LangFuse (**RC-LF1**) unblocked for discovery scheduling.
 
 ## Problem
 
@@ -105,7 +105,7 @@ Extension defaults: **`rex`** + `["daemon"]` for auto-start. Compatibility shims
 
 ## CLI operator UX (R071–R082)
 
-**Status:** partial — **R071** / **R075** / **R072** / **R073** / **R082** / **R080** Done; **R081** Open. Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Design system: [TUI_DESIGN.md](TUI_DESIGN.md). Architecture: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Decisions: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
+**Status:** partial — **R071** / **R075** / **R072** / **R073** / **R082** / **R080** / **R081** Done. Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Design system: [TUI_DESIGN.md](TUI_DESIGN.md). Architecture: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Decisions: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
 Terminal operators use Rex as the **primary surface** without a dedicated foreground **`rex daemon`** session. **`rex complete --format ndjson`** remains the automation and CI contract ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)).
 
@@ -117,7 +117,7 @@ Terminal operators use Rex as the **primary surface** without a dedicated foregr
 | **R073** | Full terminal UI + approval modals | Should | R072 | **Done** |
 | **R082** | TUI product design system (docs) | Should | R073 | **Done** — [TUI_DESIGN.md](TUI_DESIGN.md) |
 | **R080** | TUI presentation (layout + tokens) | Should | R082 | **Done** |
-| **R081** | TUI motion (choreography) | Should | R080 | **Open** — blink-only fails review |
+| **R081** | TUI motion (choreography) | Should | R080 | **Done** |
 | — | Headless TUI adapter (external agent harness replay/snapshot) | **Won't** | — | Not required — live PTY verification is enough ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md#testing-strategy), [ROADMAP.md](ROADMAP.md)) |
 | **R074** | Optional LLM narrator | Could | R073 | Off by default; prefer after **R080** |
 | **R076** | Daemon-owned LSP diagnostics | Could | R073 | Later v2 |

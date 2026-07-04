@@ -149,6 +149,7 @@ impl AppState {
             summary: summary.into(),
             detail,
         });
+        self.motion.on_timeline_add();
         if self.activity.len() > 200 {
             let drain = self.activity.len() - 200;
             self.activity.drain(0..drain);
@@ -185,7 +186,7 @@ impl AppState {
         self.session = SessionPhase::Error;
         self.status_message = Some(message.clone());
         self.push_activity(format!("✖ {message}"), None);
-        self.motion.on_stream_end();
+        self.motion.on_error();
     }
 
     pub fn humanize_tool_phase(name: &str, phase: &str) -> (String, Option<String>) {
