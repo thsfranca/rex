@@ -38,6 +38,26 @@ Requires **Run Mode** enabled in Cursor Settings → Agents → Approvals & Exec
 
 Copy `tuiwright.toml.example` → repo-root `tuiwright.toml` and set `launch.command` / wrapper if your debug binary path differs. **Restart tuiwright MCP** after edits.
 
+## Stepped motion (deterministic harness)
+
+When `rex` runs in the **tuiwright probe fixture** (launch wrapper sets `REX_ROOT` to `fixtures/tui_probe/rex_root` and cwd to `fixtures/tui_probe/workspace`), the compositor uses a **stepped animation clock**. No extra env vars — only `REX_ROOT` and process cwd.
+
+| Action | Effect |
+|--------|--------|
+| **F12** in probe TUI | +16 ms animation time per press |
+| Stable session id | Fixed `hs-probe` while in fixture context (also masked by `ignore_patterns`) |
+
+Example acceptance sequence:
+
+```
+tui_open
+tui_send_keys keys="F12,F12,F12"
+tui_snapshot format=text
+tui_diff baseline="connect-fade-mid"
+```
+
+Baselines `connect-fade-mid` and `approval-spring-mid` capture stepped frames; create with `create_if_missing: true` on first run.
+
 ## Baselines
 
 Layout snapshots live in `.tuiwright/baselines/` (repo root). Names:
@@ -49,6 +69,8 @@ Layout snapshots live in `.tuiwright/baselines/` (repo root). Names:
 | `breakpoint-90` | S3 standard width |
 | `breakpoint-70` | S3 narrow (timeline unmounted) |
 | `micro-55` | S3 micro overlay |
+| `connect-fade-mid` | Stepped clock mid connect fade (F12 × N) |
+| `approval-spring-mid` | Stepped clock mid approval spring |
 
 First acceptance run: `tui_diff` with `create_if_missing: true` per baseline. Configure `[diff.ignore_patterns]` in `tuiwright.toml` (see example) so harness session ids and semver do not fail baselines. Help-expanded footer shows workspace **basename** only (not absolute path). Refresh baselines intentionally when layout changes; prefer `tui_assert` bundles for semantic leaks.
 
