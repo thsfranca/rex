@@ -200,8 +200,8 @@ API keys remain in daemon. **`Ctrl+M`** overlay sends configuration override via
 | NDJSON fixtures | Pipe `fixtures/ndjson_contract/*.ndjson` through consumer |
 | TUI snapshots | **`ratatui`** buffer snapshots vs expected ASCII |
 | Parity | Same fixtures assert pipe and TUI consumer produce equivalent tool truncation |
-| Agent-driven live TUI | External live harness (**tuiwright** MCP): `tui_open` → keys / wait → `tui_snapshot` with **text** format → `tui_close`. Prefer text over image/both on MCP stdio. Sufficient for agent iteration on `rex tui` ([CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#visual-identity-and-operator-presentation-r079r081)) |
-| Presentation / motion (**R080–R081**) | Resize + text snapshot at narrow/medium/wide; sequential snapshots while streaming to observe glyph change (motion) |
+| Agent-driven live TUI | External live harness (**tuiwright** MCP): `tui_open` → keys / wait → `tui_snapshot` with **text** format → `tui_close`. Prefer text over image/both on MCP stdio ([TUI_DESIGN.md](TUI_DESIGN.md#validation)) |
+| Presentation / motion (**R080–R081**) | Must pass [TUI_DESIGN.md](TUI_DESIGN.md) acceptance; sequential snapshots must show **region** change (not one-cell blink) |
 
 **Out of scope:** a Rex **headless** TUI adapter (NDJSON replay + ANSI snapshot command for external harnesses). Live PTY validation is enough; that adapter is **not** a Rex requirement ([ROADMAP.md](ROADMAP.md) — **Won't**).
 
