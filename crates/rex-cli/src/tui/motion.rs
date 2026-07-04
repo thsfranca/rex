@@ -207,7 +207,7 @@ mod tests {
         m.composer_hairline = Rect::new(0, 0, 10, 1);
         m.on_stream_start();
         let mut buf = Buffer::empty(Rect::new(0, 0, 10, 1));
-        let theme = Theme::default_adaptive();
+        let theme = Theme::truecolor_for_test();
         m.step_probe_clock(100);
         m.process(&mut buf, &theme);
         let has_braille = (0..10).any(|x| {
