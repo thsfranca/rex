@@ -76,19 +76,21 @@ Use these as short confidence cues when ranking optimization proposals:
 
 **Context:** Streaming/agent Must **RC-01–RC-10** are **Met** ([V1_0.md](V1_0.md)). **v1.0 not Met** — observability Must **RC-LF1** (**Not met**) blocks the **`1.0.0` git tag**. Product agent program (**R013–R038**) is **Done**. In-repo extension removed ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)); terminal harness is the **primary operator surface**.
 
-**Focus pivot:** Terminal harness program **R072** → **R073** supersedes LangFuse discovery sequencing until harness MVP lands. Hubs: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
+**Focus pivot:** Terminal harness program **R072** → **R073** landed; **R080** / **R081** re-implementation to product bar is current focus ([TUI_DESIGN.md](TUI_DESIGN.md)). Hubs: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
 **Ordering method:** MoSCoW bucket first; **R-ICE** (Impact × Confidence × Ease, 1–5) for **Should** ties; [tie-breakers](#tie-breakers-rex-specific) for blast radius and CI cost.
 
 | Rank | ID / theme | MoSCoW | R-ICE | RC-* | Blast | Rationale |
 |------|------------|--------|-------|------|-------|-----------|
-| 1 | Terminal harness design docs + **ADR 0039** | **Must** | **75** (5×5×3) | — | docs | Locks architecture before **R072** code |
-| 2 | **R072** — NDJSON core + messaging + **mdstream** | **Must** (program) | **70** | — | cli | Primary surface legibility — [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) |
-| 3 | **R073** — full TUI + approval modals | **Should** | **65** | — | cli | Terminal-first MVP after **R072** |
-| 4 | **R074** — optional LLM narrator | **Could** | **35** | — | cli | After TUI stable |
-| 5 | **R067** — advisory intent retrieval | **Should** | **50** | — | daemon | Short-prompt context — parallel when capacity allows |
-| 6 | **R069** — remove tool step caps | **Should** | **55** | — | sidecar | [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) |
-| 7 | **R040** — nightly live-smoke workflow | **Should** | **60** | RC-S6 | CI only | Informational tier |
+| 1 | **R080** — TUI presentation (layout + tokens) | **Should** | **70** (5×4×3.5) | — | cli | Product bar; premature Done — [TUI_DESIGN.md](TUI_DESIGN.md) |
+| 2 | **R081** — TUI motion (choreography) | **Should** | **65** (5×4×3) | — | cli | tachyonfx region effects; live MCP frames |
+| 3 | Terminal harness design docs + **ADR 0039** | **Must** | **75** (5×5×3) | — | docs | **Done** — locks architecture |
+| 4 | **R072** — NDJSON core + messaging + **mdstream** | **Must** (program) | **70** | — | cli | **Done** |
+| 5 | **R073** — full TUI + approval modals | **Should** | **65** | — | cli | **Done** |
+| 6 | **R074** — optional LLM narrator | **Could** | **35** | — | cli | After **R080** / **R081** product-accepted |
+| 7 | **R067** — advisory intent retrieval | **Should** | **50** | — | daemon | Short-prompt context — parallel when capacity allows |
+| 8 | **R069** — remove tool step caps | **Should** | **55** | — | sidecar | [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) |
+| 9 | **R040** — nightly live-smoke workflow | **Should** | **60** | RC-S6 | CI only | Informational tier |
 
 **Deferred (until R072–R073 land):** **LF-D01** → **LF-D02** → **LF-R01** → **LF-F01** — LangFuse program; **RC-LF1** remains **Not met**. See [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md).
 

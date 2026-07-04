@@ -14,7 +14,7 @@ The interactive TUI (bare **`rex`**) is the product usage path and consumes the 
 
 | Component | Responsibility |
 |---|---|
-| `rex` | Unified CLI: bare entry opens the TUI (product); setup/doctor commands (**R073** / **R080–R081** shipped). |
+| `rex` | Unified CLI: bare entry opens the TUI (product); setup/doctor commands (**R073** shipped; **R080–R081** presentation/motion **Open**). |
 | `rex-daemon` | Model/agent **policy trajectory**, adapters, caches, **`StreamInference`** lifecycle, queues. |
 | `rex-proto` | `rex.v1` gRPC contract. |
 | `rex-config` | JSON config load/merge (`$REX_ROOT/config.json`). |
@@ -45,7 +45,7 @@ rex             # interactive terminal workspace (ensures daemon)
 rex config init
 ```
 
-**Current focus:** TUI design system **R080–R081** Done — [TUI_DESIGN.md](TUI_DESIGN.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Running **`rex`** always ensures the daemon (**R071**). Install with **`./scripts/install-cli.sh`**. Agent live validation: tuiwright MCP text snapshots — see [TUI_DESIGN.md](TUI_DESIGN.md#validation).
+**Current focus:** TUI design system **R080–R081** re-implementation — [TUI_DESIGN.md](TUI_DESIGN.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Running **`rex`** always ensures the daemon (**R071**). Install with **`./scripts/install-cli.sh`**. Agent live validation: tuiwright MCP text snapshots — see [TUI_DESIGN.md](TUI_DESIGN.md#validation).
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Configure **`sidecars`** and **`inference.openai_compat`** in JSON ([CONFIGURATION.md](CONFIGURATION.md)); legacy `REX_*` tuning env vars are ignored. CI may use `sidecars.harness: "direct"` (harness only).
 
