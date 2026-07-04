@@ -18,6 +18,8 @@ service RexService {
  // Sidecar broker: OpenAI-compatible HTTP inference (daemon executes backend).
  rpc BrokerInference(BrokerInferenceRequest) returns (BrokerInferenceResponse);
  rpc RespondToToolApproval(RespondToToolApprovalRequest) returns (RespondToToolApprovalResponse);
+ // Harness session log pagination (ADR 0040).
+ rpc FetchSessionEvents(FetchSessionEventsRequest) returns (FetchSessionEventsResponse);
 }
 
 message GetSystemStatusRequest {}
@@ -231,4 +233,34 @@ message RespondToToolApprovalRequest {
 message RespondToToolApprovalResponse {
  bool ok = 1;
  string error = 2;
+}
+
+message FetchSessionEventsRequest {
+ string harness_session_id = 1;
+ // Retroactive: return events with sequence < before_sequence (0 = unset).
+ uint64 before_sequence = 2;
+ // Incremental: return events with sequence > after_sequence (0 = unset).
+ uint64 after_sequence = 3;
+ uint32 limit = 4;
+}
+
+message SessionEvent {
+ uint64 sequence = 1;
+ string event = 2;
+ string text = 3;
+ string turn_id = 4;
+ string tool_name = 5;
+ string phase = 6;
+ string summary = 7;
+ string detail = 8;
+ string tool_call_id = 9;
+ uint64 elapsed_ms = 10;
+ bool done = 11;
+}
+
+message FetchSessionEventsResponse {
+ repeated SessionEvent events = 1;
+ bool has_more_before = 2;
+ bool has_more_after = 3;
+ uint64 head_sequence = 4;
 }

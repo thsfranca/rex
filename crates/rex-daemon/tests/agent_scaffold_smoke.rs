@@ -85,6 +85,9 @@ mod runtime;
 #[path = "../src/tool_approval.rs"]
 mod tool_approval;
 #[allow(dead_code)]
+#[path = "../src/session_store.rs"]
+mod session_store;
+#[allow(dead_code)]
 #[path = "../src/service.rs"]
 mod service;
 #[path = "../src/sidecar_client.rs"]

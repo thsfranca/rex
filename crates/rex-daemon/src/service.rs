@@ -14,6 +14,7 @@ use rex_proto::rex::v1::{
     BrokerWebSearchResponse, BrokerWorkspaceSearchRequest, BrokerWorkspaceSearchResponse,
     BrokerWriteFileRequest, BrokerWriteFileResponse, GetSystemStatusRequest,
     GetSystemStatusResponse, RespondToToolApprovalRequest, RespondToToolApprovalResponse,
+    FetchSessionEventsRequest, FetchSessionEventsResponse,
     StreamInferenceRequest, StreamInferenceResponse, WebSearchResult,
     WorkspaceSearchKind as ProtoWorkspaceSearchKind,
 };
@@ -43,6 +44,7 @@ use crate::plugins::{
 use crate::policy::{CacheDecision, CacheDecisionState, PolicyEngine, PolicyRequest};
 use crate::routing::decide_route;
 use crate::settings;
+use crate::session_store::{HarnessSessionStore, SessionStoreError};
 use crate::sidecar_client::{
     connect_sidecar, continue_turn_stream, map_sidecar_to_inference_chunks, run_turn_collect,
     run_turn_stream,
@@ -62,6 +64,7 @@ pub struct RexDaemonService {
     approval_gate: Arc<dyn ApprovalGate>,
     sidecar: SharedSupervisor,
     activity: Arc<ActivityTracker>,
+    session_store: Arc<HarnessSessionStore>,
     pub(crate) observability: Option<Arc<crate::observability::ObservabilityRuntime>>,
 }
 
@@ -88,6 +91,7 @@ impl RexDaemonService {
             approval_gate,
             sidecar,
             activity,
+            session_store: Arc::new(HarnessSessionStore::new()),
             observability: observability_from_settings(),
         }
     }
@@ -500,6 +504,29 @@ impl RexService for RexDaemonService {
         }))
     }
 
+    async fn fetch_session_events(
+        &self,
+        request: Request<FetchSessionEventsRequest>,
+    ) -> Result<Response<FetchSessionEventsResponse>, Status> {
+        self.activity.record_client_contact();
+        let inner = request.into_inner();
+        let page = self
+            .session_store
+            .fetch_events(
+                &inner.harness_session_id,
+                inner.before_sequence,
+                inner.after_sequence,
+                inner.limit,
+            )
+            .map_err(session_store_to_status)?;
+        Ok(Response::new(FetchSessionEventsResponse {
+            events: page.events,
+            has_more_before: page.has_more_before,
+            has_more_after: page.has_more_after,
+            head_sequence: page.head_sequence,
+        }))
+    }
+
     type StreamInferenceStream =
         std::pin::Pin<Box<dyn Stream<Item = Result<StreamInferenceResponse, Status>> + Send>>;
 
@@ -653,7 +680,22 @@ impl RexService for RexDaemonService {
             }
         }
         let mut l1_state: Option<&'static str> = None;
-        let effective_prompt = pipeline_result.effective_prompt.clone();
+        let mut effective_prompt = pipeline_result.effective_prompt.clone();
+        if !harness_session_id.is_empty() {
+            if let Ok(prefix) = self
+                .session_store
+                .history_prefix_for_prompt(&harness_session_id)
+            {
+                if !prefix.is_empty() {
+                    effective_prompt = format!("{prefix}\n\n{effective_prompt}");
+                }
+            }
+            let _ = self.session_store.append_operator_prompt(
+                &harness_session_id,
+                &prompt,
+                &correlation.turn_id,
+            );
+        }
         let effective_model = model.clone();
         let correlation_for_sidecar = correlation.clone();
         let injected_files = build_injected_files_manifest(
@@ -743,6 +785,8 @@ impl RexService for RexDaemonService {
         let injected_files_for_sidecar = injected_files.clone();
         let observability = self.observability.clone();
         let activity_for_stream = self.activity.clone();
+        let session_store = self.session_store.clone();
+        let session_id_for_log = harness_session_id.clone();
         let economics_draft = observability.as_ref().map(|obs| StreamEconomicsDraft {
             snapshot_id: obs.snapshot_id().to_string(),
             request_id,
@@ -818,6 +862,7 @@ impl RexService for RexDaemonService {
                                 done_seen = true;
                             }
                             observe_agent_loop_terminal(&mut agent_loop_terminal, &chunk);
+                            let _ = session_store.append_stream_chunk(&session_id_for_log, &chunk);
                             yield Ok(chunk);
                         }
                         Err(err) => {
@@ -864,6 +909,7 @@ impl RexService for RexDaemonService {
                                 done_seen = true;
                             }
                             let terminal = chunk.done;
+                            let _ = session_store.append_stream_chunk(&session_id_for_log, &chunk);
                             yield Ok(chunk);
                             if !terminal {
                                 sleep(Duration::from_millis(STREAM_CHUNK_DELAY_MS)).await;
@@ -979,6 +1025,18 @@ fn log_broker_access_policy_deny(capability: &str, mode: &str, subject: &str, er
         println!(
             "broker.access_policy=deny capability={capability} mode={mode} subject={subject} error={err}"
         );
+    }
+}
+
+fn session_store_to_status(err: SessionStoreError) -> Status {
+    match err {
+        SessionStoreError::InvalidSessionId => {
+            Status::invalid_argument("invalid harness session id")
+        }
+        SessionStoreError::WorkspaceNotConfigured => Status::failed_precondition(
+            "workspace root not configured (set workspace.root in .rex/config.json)",
+        ),
+        SessionStoreError::Io(err) => Status::internal(format!("session store io error: {err}")),
     }
 }
 

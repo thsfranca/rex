@@ -1679,6 +1679,7 @@ dependencies = [
  "rex-config",
  "rex-proto",
  "rex-sidecar-stub",
+ "serde",
  "serde_json",
  "serial_test",
  "tempfile",

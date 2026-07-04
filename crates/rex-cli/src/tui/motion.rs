@@ -33,13 +33,17 @@ struct Cue {
 pub struct MotionState {
     cues: Vec<Cue>,
     flux_active: bool,
+    history_fetch_active: bool,
     flux_started: Instant,
     /// Last hairline head cell painted (flux only paints when this advances).
     flux_head: Option<u16>,
+    /// Which hairline region receives braille flux.
+    flux_on_transcript: bool,
     pub approval_visible: bool,
     /// Regions updated each draw before effects run.
     pub viewport: Rect,
     pub transcript: Rect,
+    pub transcript_hairline: Rect,
     pub timeline: Rect,
     pub composer_hairline: Rect,
     pub header: Rect,
@@ -55,11 +59,14 @@ impl Default for MotionState {
                 duration: Duration::from_millis(400),
             }],
             flux_active: false,
+            history_fetch_active: false,
             flux_started: now,
             flux_head: None,
+            flux_on_transcript: false,
             approval_visible: false,
             viewport: Rect::default(),
             transcript: Rect::default(),
+            transcript_hairline: Rect::default(),
             timeline: Rect::default(),
             composer_hairline: Rect::default(),
             header: Rect::default(),
@@ -119,7 +126,9 @@ impl MotionState {
 
     /// True while any effect should drive a higher frame rate.
     pub fn animating(&self) -> bool {
-        self.flux_active || self.cues.iter().any(|c| Self::progress(c) < 1.0)
+        self.flux_active
+            || self.history_fetch_active
+            || self.cues.iter().any(|c| Self::progress(c) < 1.0)
     }
 
     /// Whether the next loop iteration should paint (region actually changes).
@@ -128,10 +137,15 @@ impl MotionState {
         if self.cues.iter().any(|c| Self::progress(c) < 1.0) {
             return true;
         }
-        if !self.flux_active {
+        if !self.flux_active && !self.history_fetch_active {
             return false;
         }
-        let width = self.composer_hairline.width.max(1);
+        let area = if self.flux_on_transcript {
+            self.transcript_hairline
+        } else {
+            self.composer_hairline
+        };
+        let width = area.width.max(1);
         // One cell every 400ms → ≥300ms quiet windows between paints.
         let head = ((self.flux_started.elapsed().as_millis() / 400) as u16) % width;
         self.flux_head != Some(head)
@@ -140,14 +154,32 @@ impl MotionState {
     pub fn on_stream_start(&mut self) {
         self.push_cue(CueKind::StreamSlide, 250);
         self.flux_active = true;
+        self.flux_on_transcript = false;
         self.flux_started = Instant::now();
         self.flux_head = None;
     }
 
     pub fn on_stream_end(&mut self) {
         self.flux_active = false;
-        self.flux_head = None;
+        if !self.history_fetch_active {
+            self.flux_head = None;
+        }
         self.cues.retain(|c| !matches!(c.kind, CueKind::StreamSlide));
+    }
+
+    pub fn on_history_fetch_start(&mut self) {
+        self.history_fetch_active = true;
+        self.flux_on_transcript = true;
+        self.flux_started = Instant::now();
+        self.flux_head = None;
+    }
+
+    pub fn on_history_fetch_end(&mut self) {
+        self.history_fetch_active = false;
+        if !self.flux_active {
+            self.flux_on_transcript = false;
+            self.flux_head = None;
+        }
     }
 
     pub fn on_timeline_add(&mut self) {
@@ -285,9 +317,12 @@ impl MotionState {
             }
         }
 
-        if self.flux_active {
-            // Sweep on composer hairline (multi-cell region, not one-cell blink).
-            let area = self.composer_hairline;
+        if self.flux_active || self.history_fetch_active {
+            let area = if self.flux_on_transcript {
+                self.transcript_hairline
+            } else {
+                self.composer_hairline
+            };
             if area.width > 0 {
                 let head = ((self.flux_started.elapsed().as_millis() / 400) as u16) % area.width;
                 self.flux_head = Some(head);
@@ -386,6 +421,19 @@ mod tests {
         assert!(m.animating());
         m.on_error();
         assert!(m.animating());
+    }
+
+    #[test]
+    fn history_fetch_enables_transcript_flux() {
+        let mut m = MotionState::default();
+        m.cues.clear();
+        m.transcript_hairline = Rect::new(0, 0, 8, 1);
+        m.on_history_fetch_start();
+        assert!(m.history_fetch_active);
+        assert!(m.flux_on_transcript);
+        assert!(m.animating());
+        m.on_history_fetch_end();
+        assert!(!m.history_fetch_active);
     }
 
     #[test]
