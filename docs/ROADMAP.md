@@ -41,7 +41,7 @@ flowchart LR
  langfuseImpl --> v1
 ```
 
-**Current focus:** TUI design system **R080–R081** Done ([TUI_DESIGN.md](TUI_DESIGN.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md)); [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
+**Current focus:** TUI visual identity v2 **R090–R096** Planned ([TUI_DESIGN.md](TUI_DESIGN.md), [ADR 0041](architecture/decisions/0041-tui-hybrid-compositor-and-tiered-frame-budget.md)); baseline **R080–R081** Done.
 
 ## Now — stable baseline
 
@@ -65,6 +65,7 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 | 5 | **R080** — TUI presentation (layout + tokens) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
 | 6 | **R081** — TUI motion (choreography) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
 | 6b | Session naming + `rex --continue` / `rex --last` | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#session-model), [ADR 0040](architecture/decisions/0040-harness-session-transcript-authority.md) | **Done** |
+| 6c | **R090–R096** — TUI visual identity v2 (compositor, Braille, cinematic surfaces) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md), [ADR 0041](architecture/decisions/0041-tui-hybrid-compositor-and-tiered-frame-budget.md) | **Planned** |
 | 7 | **R074** — optional LLM status narrator | **Could** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Open — prefer **after R080** |
 | 5 | **R067** — intent-aware retrieval for short prompts | **Should** | — | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) | Open |
 | 6 | **R068** — ask answer-first prompt policy | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |

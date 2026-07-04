@@ -49,7 +49,7 @@ rex             # interactive terminal workspace (ensures daemon)
 rex config init
 ```
 
-**Current focus:** TUI design system **R080–R081** Done — [TUI_DESIGN.md](TUI_DESIGN.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Running **`rex`** always ensures the daemon (**R071**). Install with **`./scripts/install-cli.sh`**. Agent live validation: tuiwright MCP text snapshots on the workspace debug binary first — see [TUI_DESIGN.md](TUI_DESIGN.md#validation).
+**Current focus:** TUI visual identity v2 **R090–R096** Planned — [TUI_DESIGN.md](TUI_DESIGN.md), [ADR 0041](architecture/decisions/0041-tui-hybrid-compositor-and-tiered-frame-budget.md). Baseline **R080–R081** Done. Running **`rex`** always ensures the daemon (**R071**). Install with **`./scripts/install-cli.sh`**. Agent live validation: tuiwright MCP text snapshots on the workspace debug binary first — see [TUI_DESIGN.md](TUI_DESIGN.md#validation).
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Configure **`sidecars`** and **`inference.openai_compat`** in JSON ([CONFIGURATION.md](CONFIGURATION.md)); legacy `REX_*` tuning env vars are ignored. CI may use `sidecars.harness: "direct"` (harness only).
 
