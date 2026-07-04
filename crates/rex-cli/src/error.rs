@@ -20,20 +20,8 @@ pub enum CliError {
         socket_path: String,
         suffix: String,
     },
-    #[error("daemon interrupted the stream before completion")]
-    StreamInterrupted,
-    #[error("daemon stream ended without completion marker")]
-    StreamIncomplete,
-    #[error("sidecar required but unavailable: {detail}")]
-    SidecarUnavailable { detail: String },
-    #[error("inference runtime not configured: {detail}")]
-    InferenceConfig { detail: String },
-    #[error("failed to write NDJSON to stdout: {0}")]
+    #[error("failed to write to stdout: {0}")]
     Stdout(#[from] io::Error),
-    #[error("agent execution requires approval; re-run with --approval-id <id> or --yes")]
-    ApprovalRequired,
-    #[error("agent execution approval denied")]
-    ApprovalDenied,
     #[error("workspace root not configured; set workspace.root in .rex/config.json or enable harness cwd fallback")]
     WorkspaceNotConfigured,
     #[error("daemon at {socket_path} is bound to {reported}; expected {expected}; restart the daemon for this workspace")]

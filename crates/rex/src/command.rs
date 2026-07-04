@@ -21,11 +21,10 @@ pub fn parse_top_level(mut args: impl Iterator<Item = String>) -> Result<TopLeve
             rest.extend(args);
             Ok(TopLevelCommand::Cli(rest))
         }
-        Some("complete") => {
-            let mut rest = vec!["complete".to_string()];
-            rest.extend(args);
-            Ok(TopLevelCommand::Cli(rest))
-        }
+        Some("complete") => Err(
+            "`rex complete` was removed. Open the interactive workspace with `rex` or `rex tui`."
+                .to_string(),
+        ),
         Some("tui") => {
             let mut rest = vec!["tui".to_string()];
             rest.extend(args);
@@ -48,7 +47,6 @@ Usage:
   rex tui [ --no-daemon-autostart ]
   rex daemon
   rex status
-  rex complete \"<prompt>\" [--format text|ndjson] [--model <id>] [--mode ask|plan|agent] [--approval-id <id>] [--trace-id <id>] [--no-ui]
   rex config <init|show|path|validate>
   rex proto <install|path|doctor>
   rex sidecar <list|init|doctor>

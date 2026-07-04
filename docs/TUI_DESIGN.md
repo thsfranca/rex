@@ -8,7 +8,7 @@ This document is the **acceptance gate** for presentation and motion work on `re
 
 ## Product intent
 
-Operators run **`rex tui`** (or TTY **`rex complete`** when the TUI is enabled) and enter an **immersive agent workspace** in the terminal.
+Operators run bare **`rex`** or **`rex tui`** and enter an **immersive agent workspace** in the terminal.
 
 - The **transcript** is the stage: conversation and streamed markdown.
 - **Chrome is infrastructure:** it orients and signals without competing for attention.
