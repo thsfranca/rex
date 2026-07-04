@@ -1,6 +1,6 @@
 # CLI operator UX — design hub
 
-**Status:** `design accepted` — **R071** / **R075** / **R072** / **R073** implemented; **R082** TUI design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R080** / **R081** **Open** (skeleton only; not product-accepted); **R074** Could ([ROADMAP.md](ROADMAP.md)). Architecture: [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
+**Status:** `design accepted` — **R071** / **R075** / **R072** / **R073** / **R080** / **R081** implemented; **R082** TUI design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R074** Could ([ROADMAP.md](ROADMAP.md)). Architecture: [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
 
 ## Purpose
 
@@ -55,14 +55,14 @@ Operators run **`cd ~/projects/my-app && rex`** and enter an immersive terminal 
 |------------|-----------|--------|
 | Daemon start | Auto-start shipped (**R071**) | Done |
 | Per-workspace routing | **R075** Done | Done |
-| Lifecycle feedback | Compact glyphs; still thin chrome | Product design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R080** Open |
-| Stream progress | Activity list + output in titled boxes | Chat-primary transcript + timeline; human phrases (**R080** Open) |
-| Interactive session | Bare **`rex`** (**R073**) | Done; presentation **R080** Open; motion **R081** Open |
+| Lifecycle feedback | Compact glyphs; still thin chrome | Product design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R080** Done |
+| Stream progress | Activity list + output in titled boxes | Chat-primary transcript + timeline; human phrases (**R080** Done) |
+| Interactive session | Bare **`rex`** (**R073**) | Done; presentation **R080** Done; motion **R081** Done |
 | Markdown output | Incremental **mdstream** path | Done |
-| Tool approval | Modal present | Human-first copy per design system (**R080** Open) |
+| Tool approval | Modal present | Human-first copy per design system (**R080** Done) |
 | Friendly status | Minimal structured copy | Progressive insight; optional narrator (**R074**) |
-| Layout density | Dual titled boxes; partial responsive | Design system breakpoints (**R080** Open) |
-| Motion | Blink caret / lone spinner (fails design bar) | Choreographed region effects (**R081** Open) |
+| Layout density | Dual titled boxes; partial responsive | Design system breakpoints (**R080** Done) |
+| Motion | Blink caret / lone spinner (fails design bar) | Choreographed region effects (**R081** Done) |
 
 ## Boundaries
 
@@ -171,8 +171,8 @@ Canonical product design for the **`rex`** TUI presentation and motion: **[TUI_D
 | ID | Scope | Status |
 |----|-------|--------|
 | **R082** | Product design system (principles, tokens, layout, choreography, acceptance) | **Done** |
-| **R080** | Layout + tokens implementation | **Open** |
-| **R081** | Motion (region effects, flux hairlines) | **Open** |
+| **R080** | Layout + tokens implementation | **Done** |
+| **R081** | Motion (region effects, flux hairlines) | **Done** |
 
 Presentation and motion meet [TUI_DESIGN.md](TUI_DESIGN.md). Do not reintroduce blink-only cues or titled-box wireframe chrome.
 
@@ -361,12 +361,12 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`**.
 | R072 messaging + NDJSON core | **Must** (program) | **Done** |
 | R073 TUI + approvals | **Should** | **Done** |
 | R082 TUI design system | **Should** | **Done** — [TUI_DESIGN.md](TUI_DESIGN.md) |
-| R080 presentation | **Should** | **Open** |
-| R081 motion | **Should** | **Open** |
+| R080 presentation | **Should** | **Done** |
+| R081 motion | **Should** | **Done** |
 | R074 narrator | **Could** | After R073; prefer after R080 disclosure rules |
 | R076–R078 daemon intelligence | **Could** / **Later** | After TUI MVP |
 
-**Current program focus:** [ROADMAP.md](ROADMAP.md) — TUI design system **R080–R081** re-implementation to product bar. LangFuse discovery unblocked for scheduling; **RC-LF1** remains **Not met**.
+**Current program focus:** [ROADMAP.md](ROADMAP.md) — TUI design system **R080–R081** Done. LangFuse discovery unblocked for scheduling; **RC-LF1** remains **Not met**.
 
 ## Open questions
 

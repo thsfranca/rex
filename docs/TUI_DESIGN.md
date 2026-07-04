@@ -1,6 +1,6 @@
 # Rex TUI design system
 
-**Status:** `design accepted` (**R082**) — implementation **R080** (layout + tokens) and **R081** (motion) **Open** (skeleton only; not product-accepted).
+**Status:** `design accepted` (**R082**) — implementation **R080** (layout + tokens) and **R081** (motion) **Done** (validated with live tuiwright MCP text snapshots on the workspace debug binary).
 
 **Product hub:** [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) (operator path and lifecycle). **Architecture:** [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
@@ -44,7 +44,7 @@ Configuration remains **`REX_ROOT`** plus JSON only. Implementation must not inv
 
 ## Current debt
 
-**R080** and **R081** were marked Done prematurely. Shipped code is a layout/token skeleton plus cheap timers (header dim, hairline on/off, spacer “slide”, modal size toggle) — not product-grade presentation or tachyonfx region motion. Re-implementation must pass this document’s acceptance checklist and **live tuiwright MCP** text snapshots (idle breakpoints; sequential frames for motion). Do not reintroduce blink-only activity cues, titled-box wireframe chrome, or ad-hoc colors outside the token map.
+**R080** and **R081** are implemented and MCP-validated. Motion uses region buffer post-process after widgets draw (tachyonfx-equivalent; tachyonfx 0.25 targets `ratatui-core` and is not type-compatible with ratatui 0.29). Idle paints only when dirty so tuiwright Quiet (≥300ms) succeeds. Do not reintroduce blink-only activity cues, titled-box wireframe chrome, always-on idle redraw, or ad-hoc colors outside the token map.
 
 ## Layout system
 
@@ -238,8 +238,8 @@ A Rex **headless** NDJSON-replay / ANSI-snapshot adapter remains **Won't** ([TER
 | ID | Scope | Status |
 |----|-------|--------|
 | **R082** | This design system | **Done** (this document) |
-| **R080** | Layout + tokens (chat-primary, breakpoints, progressive insight) | **Open** |
-| **R081** | Motion (choreography, flux hairlines) | **Open** |
+| **R080** | Layout + tokens (chat-primary, breakpoints, progressive insight) | **Done** |
+| **R081** | Motion (choreography, flux hairlines) | **Done** |
 
 ## Related
 
