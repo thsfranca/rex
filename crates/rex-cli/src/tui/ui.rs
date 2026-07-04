@@ -2,12 +2,13 @@
 //!
 //! Regions and breakpoints follow `docs/TUI_DESIGN.md` (spatial permanence).
 
-use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use mdstream::BlockKind;
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap};
 use ratatui::Frame;
 
-use super::state::{AppState, FocusPane, SessionPhase};
+use super::state::{AppState, FocusPane, SessionPhase, TranscriptRole};
 
 /// Micro profile: below this width, show “too small” only.
 const MICRO_COLS: u16 = 60;
@@ -142,10 +143,7 @@ fn draw_body(frame: &mut Frame, area: Rect, app: &AppState) {
         Some(tl_w) => {
             let cols = Layout::default()
                 .direction(Direction::Horizontal)
-                .constraints([
-                    Constraint::Min(10),
-                    Constraint::Length(tl_w),
-                ])
+                .constraints([Constraint::Min(10), Constraint::Length(tl_w)])
                 .split(area);
             let transcript = pad_rect(cols[0], pad, 0);
             draw_transcript(frame, transcript, app);
@@ -173,104 +171,227 @@ fn draw_timeline(frame: &mut Frame, area: Rect, app: &AppState) {
     let focused = focused || app.motion.timeline_coalesce_active();
     // Progressive disclosure: technical detail only on `?` or timeline focus.
     let disclose = app.help_expanded || app.focus == FocusPane::Activity;
-    let items: Vec<ListItem> = app
-        .activity
-        .iter()
-        .map(|item| {
+
+    let mut items: Vec<ListItem> = vec![ListItem::new(Span::styled(
+        "○ Timeline".to_string(),
+        app.theme.text_tertiary(),
+    ))];
+
+    if app.timeline_idle() {
+        items.push(ListItem::new(Span::styled(
+            "  No active tasks".to_string(),
+            app.theme.text_tertiary(),
+        )));
+    } else {
+        for item in &app.activity {
             let line = if disclose {
                 if let Some(detail) = &item.detail {
-                    format!("{}  ({})", item.summary, detail)
+                    format!("  {}  ({})", item.summary, detail)
                 } else {
-                    item.summary.clone()
+                    format!("  {}", item.summary)
                 }
             } else {
-                item.summary.clone()
+                format!("  {}", item.summary)
             };
-            ListItem::new(Span::styled(line, app.theme.text_tertiary()))
-        })
-        .collect();
-    // Left hairline only — no titled box (Quiet Chrome).
+            items.push(ListItem::new(Span::styled(line, app.theme.text_tertiary())));
+        }
+    }
+
+    // Left hairline only — no titled box (Quiet Chrome). Raised surface.
     let list = List::new(items).block(
         Block::default()
             .borders(Borders::LEFT)
-            .border_style(app.theme.hairline(focused)),
+            .border_style(app.theme.hairline(focused))
+            .style(app.theme.surface_raised()),
     );
     frame.render_widget(list, area);
 }
 
 fn draw_transcript(frame: &mut Frame, area: Rect, app: &AppState) {
-    let text = app.output_lines.join("");
-    let lines = transcript_lines(&text, app);
+    let lines = transcript_lines(app);
     let widget = Paragraph::new(lines).wrap(Wrap { trim: false });
     frame.render_widget(widget, area);
 }
 
-/// Transcript as the stage: message separation and code left accent bar.
-/// No blink caret or lone spinner cell.
-fn transcript_lines(text: &str, app: &AppState) -> Vec<Line<'static>> {
+/// Transcript as the stage: role labels, message separation, code left accent bar.
+fn transcript_lines(app: &AppState) -> Vec<Line<'static>> {
     let mut lines: Vec<Line<'static>> = Vec::new();
-    if text.is_empty() {
+
+    if app.messages.is_empty() && app.session != SessionPhase::Streaming {
+        // Idle wireframe: calm stage with operator role cue.
+        lines.push(Line::from(Span::styled(
+            "[Operator]".to_string(),
+            app.theme.text_tertiary(),
+        )));
         return lines;
     }
 
-    let mut in_code = false;
-    let paragraphs: Vec<&str> = text.split("\n\n").collect();
-    for (pi, para) in paragraphs.iter().enumerate() {
-        for line in para.lines() {
-            let trimmed = line.trim_start();
-            if trimmed.starts_with("```") {
-                in_code = !in_code;
-                lines.push(Line::from(Span::styled(
-                    line.to_string(),
-                    app.theme.text_tertiary(),
-                )));
-                continue;
-            }
-            if in_code {
-                lines.push(Line::from(vec![
-                    Span::styled("▌".to_string(), app.theme.text_accent()),
-                    Span::styled(format!(" {line}"), app.theme.text_secondary()),
-                ]));
-            } else {
-                lines.push(Line::from(Span::styled(
-                    line.to_string(),
-                    app.theme.text_secondary(),
-                )));
-            }
-        }
-        if pi + 1 < paragraphs.len() {
+    for (i, msg) in app.messages.iter().enumerate() {
+        let label = match msg.role {
+            TranscriptRole::Operator => "[Operator]",
+            TranscriptRole::Agent => "[Agent]",
+        };
+        lines.push(Line::from(Span::styled(
+            label.to_string(),
+            app.theme.text_tertiary(),
+        )));
+        lines.extend(render_message_body(&msg.body, msg.role, app));
+        if i + 1 < app.messages.len() || app.session == SessionPhase::Streaming {
             lines.push(Line::from(""));
         }
     }
+
+    if app.session == SessionPhase::Streaming {
+        lines.push(Line::from(Span::styled(
+            "[Agent]".to_string(),
+            app.theme.text_tertiary(),
+        )));
+        let blocks = app.agent_markdown_blocks();
+        if blocks.is_empty() {
+            lines.push(Line::from(Span::styled(
+                "…".to_string(),
+                app.theme.text_tertiary(),
+            )));
+        } else {
+            for (kind, text) in blocks {
+                lines.extend(render_md_block(kind, &text, app));
+            }
+        }
+    }
+
     lines
+}
+
+fn render_message_body(
+    body: &str,
+    role: TranscriptRole,
+    app: &AppState,
+) -> Vec<Line<'static>> {
+    match role {
+        TranscriptRole::Operator => body
+            .lines()
+            .map(|line| {
+                Line::from(Span::styled(
+                    line.to_string(),
+                    app.theme.text_primary(),
+                ))
+            })
+            .collect(),
+        TranscriptRole::Agent => {
+            // Finalized agent text: treat as markdown-ish blocks split on blank lines.
+            let mut lines = Vec::new();
+            let mut in_code = false;
+            for para in body.split("\n\n") {
+                for line in para.lines() {
+                    let trimmed = line.trim_start();
+                    if trimmed.starts_with("```") {
+                        in_code = !in_code;
+                        lines.push(Line::from(Span::styled(
+                            line.to_string(),
+                            app.theme.text_tertiary(),
+                        )));
+                        continue;
+                    }
+                    if in_code {
+                        lines.push(code_line(line, app));
+                    } else {
+                        lines.push(Line::from(Span::styled(
+                            line.to_string(),
+                            app.theme.text_secondary(),
+                        )));
+                    }
+                }
+                lines.push(Line::from(""));
+            }
+            if lines.last().is_some_and(|l| l.spans.is_empty()) {
+                lines.pop();
+            }
+            lines
+        }
+    }
+}
+
+fn render_md_block(kind: BlockKind, text: &str, app: &AppState) -> Vec<Line<'static>> {
+    match kind {
+        BlockKind::CodeFence => {
+            let mut lines = Vec::new();
+            for (i, line) in text.lines().enumerate() {
+                let trimmed = line.trim_start();
+                if i == 0 || trimmed.starts_with("```") {
+                    lines.push(Line::from(Span::styled(
+                        line.to_string(),
+                        app.theme.text_tertiary(),
+                    )));
+                } else {
+                    lines.push(code_line(line, app));
+                }
+            }
+            lines.push(Line::from(""));
+            lines
+        }
+        BlockKind::Heading => text
+            .lines()
+            .map(|line| {
+                Line::from(Span::styled(
+                    line.to_string(),
+                    app.theme.text_primary(),
+                ))
+            })
+            .chain(std::iter::once(Line::from("")))
+            .collect(),
+        _ => text
+            .lines()
+            .map(|line| {
+                Line::from(Span::styled(
+                    line.to_string(),
+                    app.theme.text_secondary(),
+                ))
+            })
+            .chain(std::iter::once(Line::from("")))
+            .collect(),
+    }
+}
+
+fn code_line(line: &str, app: &AppState) -> Line<'static> {
+    Line::from(vec![
+        Span::styled("▌".to_string(), app.theme.text_accent()),
+        Span::styled(format!(" {line}"), app.theme.text_secondary()),
+    ])
 }
 
 fn draw_composer(frame: &mut Frame, area: Rect, app: &AppState) {
     let focused = app.focus == FocusPane::Composer;
-    // Accent prompt glyph; mode name text only when disclosed (`?`).
-    let mut spans = vec![Span::styled("❯ ".to_string(), app.theme.text_accent())];
-    if app.help_expanded {
-        spans.push(Span::styled(
-            format!("{} ", app.mode),
+    let line = if app.session == SessionPhase::Streaming {
+        Line::from(Span::styled(
+            "[ Agent is typing… ]".to_string(),
             app.theme.text_tertiary(),
-        ));
-    }
-    // Stream slide cue: brief leading spacer while slide window is active.
-    if app.motion.stream_slide_active() {
-        spans.insert(0, Span::styled(" ".to_string(), app.theme.text_tertiary()));
-    }
-    spans.push(if app.composer.is_empty() {
-        Span::styled("Type your prompt…".to_string(), app.theme.text_tertiary())
+        ))
     } else {
-        Span::styled(app.composer.clone(), app.theme.text_primary())
-    });
-    let line = Line::from(spans);
+        let mut spans = vec![Span::styled("❯ ".to_string(), app.theme.text_accent())];
+        if app.help_expanded {
+            spans.push(Span::styled(
+                format!("{} ", app.mode),
+                app.theme.text_tertiary(),
+            ));
+        }
+        // Stream slide cue: brief leading spacer while slide window is active.
+        if app.motion.stream_slide_active() {
+            spans.insert(0, Span::styled(" ".to_string(), app.theme.text_tertiary()));
+        }
+        spans.push(if app.composer.is_empty() {
+            Span::styled("Type your prompt…".to_string(), app.theme.text_tertiary())
+        } else {
+            Span::styled(app.composer.clone(), app.theme.text_primary())
+        });
+        Line::from(spans)
+    };
     // Flux on active hairline while streaming (not a lone blink cell).
     let hairline_on = focused || app.motion.flux_hairline_on();
     let composer = Paragraph::new(line).block(
         Block::default()
             .borders(Borders::TOP)
-            .border_style(app.theme.hairline(hairline_on)),
+            .border_style(app.theme.hairline(hairline_on))
+            .style(app.theme.surface_raised()),
     );
     frame.render_widget(composer, area);
 }
@@ -280,21 +401,28 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &AppState) {
     let line = if app.help_expanded {
         let path = &app.workspace_root;
         let ver = &app.daemon_version;
-        format!(
-            "↵ submit  esc cancel  ⇧⇥ mode  ? less  ^y bypass  ^c×2 quit  ·  {path}  ·  v{ver}"
-        )
+        Line::from(Span::styled(
+            format!(
+                "↵ submit  esc cancel  ⇧⇥ mode  ? less  ^y bypass  ^c×2 quit  ·  {path}  ·  v{ver}"
+            ),
+            app.theme.text_tertiary(),
+        ))
     } else if let Some(msg) = &app.status_message {
-        msg.clone()
+        Line::from(Span::styled(msg.clone(), app.theme.text_tertiary()))
     } else {
-        let phase = match app.session {
-            SessionPhase::Idle => "○ Ready",
-            SessionPhase::Streaming => "● Working…",
-            SessionPhase::Error => "✖ Error",
+        let (glyph, label, style) = match app.session {
+            SessionPhase::Idle => ("○", "Ready", app.theme.status_idle()),
+            SessionPhase::Streaming => ("●", "Working…", app.theme.status_working()),
+            SessionPhase::Error => ("✖", "Error", app.theme.status_error()),
         };
-        format!("{phase}  [?]")
+        Line::from(vec![
+            Span::styled(format!("{glyph} "), style),
+            Span::styled(format!("{label}  "), app.theme.text_tertiary()),
+            Span::styled("[?]".to_string(), app.theme.text_tertiary()),
+        ])
     };
     frame.render_widget(
-        Paragraph::new(line).style(app.theme.text_tertiary()),
+        Paragraph::new(line).alignment(Alignment::Left),
         area,
     );
 }
@@ -381,9 +509,30 @@ mod tests {
     }
 
     #[test]
-    fn transcript_code_uses_accent_bar() {
+    fn idle_transcript_shows_operator_cue() {
         let app = AppState::new("/tmp/ws".into(), "m".into(), "1".into());
-        let lines = transcript_lines("hello\n\n```\ncode\n```\n", &app);
+        let lines = transcript_lines(&app);
+        let joined: String = lines
+            .iter()
+            .map(|l| {
+                l.spans
+                    .iter()
+                    .map(|s| s.content.as_ref())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(joined.contains("[Operator]"));
+        assert!(!joined.contains("model="));
+        assert!(!joined.contains("mode="));
+    }
+
+    #[test]
+    fn transcript_code_uses_accent_bar() {
+        let mut app = AppState::new("/tmp/ws".into(), "m".into(), "1".into());
+        app.submit_prompt("q".into());
+        app.append_output("```\ncode\n```\n");
+        let lines = transcript_lines(&app);
         let joined: String = lines
             .iter()
             .map(|l| {
@@ -396,16 +545,15 @@ mod tests {
             .join("\n");
         assert!(joined.contains('▌'));
         assert!(joined.contains("code"));
+        assert!(joined.contains("[Agent]"));
     }
 
     #[test]
-    fn transcript_has_no_blink_caret() {
+    fn transcript_has_no_blink_caret_on_plain_text() {
         let mut app = AppState::new("/tmp/ws".into(), "m".into(), "1".into());
-        app.session = SessionPhase::Streaming;
-        app.tick = 1;
+        app.submit_prompt("q".into());
         app.append_output("hi");
-        let text = app.output_lines.join("");
-        let lines = transcript_lines(&text, &app);
+        let lines = transcript_lines(&app);
         let joined: String = lines
             .iter()
             .map(|l| {
@@ -416,7 +564,7 @@ mod tests {
             })
             .collect::<Vec<_>>()
             .join("");
-        assert!(!joined.contains('▌') || joined == "hi");
-        assert_eq!(joined, "hi");
+        assert!(joined.contains("hi"));
+        assert!(!joined.contains('▌'));
     }
 }

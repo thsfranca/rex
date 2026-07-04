@@ -6,12 +6,10 @@
 use ratatui::style::{Color, Modifier, Style};
 
 /// Palette used by the TUI. Colors enhance glyphs; monochrome remains usable.
-///
-/// Surface and idle tokens are part of the design map; later presentation PRs
-/// consume them (layout, approval overlay). Allow unused until those land.
 #[derive(Debug, Clone, Copy)]
-#[allow(dead_code)]
 pub struct Theme {
+    /// Transcript background (transparent / reset per design tokens).
+    #[allow(dead_code)]
     pub surface_base: Color,
     pub surface_raised: Color,
     pub surface_overlay: Color,
@@ -131,17 +129,14 @@ impl Theme {
         Style::default().fg(self.text_accent)
     }
 
-    #[allow(dead_code)]
     pub fn surface_raised(self) -> Style {
         Style::default().bg(self.surface_raised)
     }
 
-    #[allow(dead_code)]
     pub fn surface_overlay(self) -> Style {
         Style::default().bg(self.surface_overlay)
     }
 
-    #[allow(dead_code)]
     pub fn surface_dimmed(self) -> Style {
         Style::default().bg(self.surface_dimmed)
     }
@@ -170,7 +165,6 @@ impl Theme {
         Style::default().fg(self.status_working)
     }
 
-    #[allow(dead_code)]
     pub fn status_idle(self) -> Style {
         Style::default().fg(self.status_idle)
     }

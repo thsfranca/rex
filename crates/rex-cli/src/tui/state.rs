@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use mdstream::{DocumentState, MdStream, Options};
 use rex_stream_ui::TurnPhase;
 
 use super::motion::MotionState;
@@ -31,6 +32,18 @@ impl FocusPane {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TranscriptRole {
+    Operator,
+    Agent,
+}
+
+#[derive(Debug, Clone)]
+pub struct TranscriptMessage {
+    pub role: TranscriptRole,
+    pub body: String,
+}
+
 #[derive(Debug, Clone)]
 pub struct PendingApproval {
     pub tool_call_id: String,
@@ -55,7 +68,11 @@ pub struct AppState {
     pub mode: String,
     pub composer: String,
     pub activity: Vec<ActivityItem>,
-    pub output_lines: Vec<String>,
+    /// Completed transcript turns (operator prompts + finalized agent replies).
+    pub messages: Vec<TranscriptMessage>,
+    /// Incremental markdown for the in-flight agent reply.
+    md_stream: MdStream,
+    md_doc: DocumentState,
     pub session: SessionPhase,
     pub turn_phase: TurnPhase,
     pub bypass: bool,
@@ -77,11 +94,10 @@ impl AppState {
             daemon_version,
             mode: "ask".to_string(),
             composer: String::new(),
-            activity: vec![ActivityItem {
-                summary: "○ No active tasks".to_string(),
-                detail: None,
-            }],
-            output_lines: Vec::new(),
+            activity: Vec::new(),
+            messages: Vec::new(),
+            md_stream: MdStream::new(Options::default()),
+            md_doc: DocumentState::new(),
             session: SessionPhase::Idle,
             turn_phase: TurnPhase::Idle,
             bypass: false,
@@ -127,6 +143,10 @@ impl AppState {
         }
     }
 
+    pub fn timeline_idle(&self) -> bool {
+        self.activity.is_empty()
+    }
+
     pub fn cycle_mode(&mut self) {
         self.mode = match self.mode.as_str() {
             "ask" => "plan".to_string(),
@@ -156,15 +176,56 @@ impl AppState {
         }
     }
 
+    /// Commit operator prompt and start agent markdown stream.
+    pub fn submit_prompt(&mut self, prompt: String) {
+        self.messages.push(TranscriptMessage {
+            role: TranscriptRole::Operator,
+            body: prompt,
+        });
+        self.reset_agent_markdown();
+        self.begin_stream();
+    }
+
     pub fn append_output(&mut self, text: &str) {
         if text.is_empty() {
             return;
         }
-        if let Some(last) = self.output_lines.last_mut() {
-            last.push_str(text);
-        } else {
-            self.output_lines.push(text.to_string());
+        let _ = self.md_doc.apply(self.md_stream.append(text));
+    }
+
+    /// Snapshot of committed + pending markdown blocks for the live agent reply.
+    pub fn agent_markdown_blocks(&self) -> Vec<(mdstream::BlockKind, String)> {
+        let mut blocks = Vec::new();
+        for b in self.md_doc.committed() {
+            blocks.push((b.kind, b.display_or_raw().to_string()));
         }
+        if let Some(p) = self.md_doc.pending() {
+            blocks.push((p.kind, p.display_or_raw().to_string()));
+        }
+        blocks
+    }
+
+    fn reset_agent_markdown(&mut self) {
+        self.md_stream = MdStream::new(Options::default());
+        self.md_doc = DocumentState::new();
+    }
+
+    fn finalize_agent_markdown(&mut self) {
+        let _ = self.md_doc.apply(self.md_stream.finalize());
+        let body = self
+            .md_doc
+            .committed()
+            .iter()
+            .map(|b| b.display_or_raw().to_string())
+            .collect::<Vec<_>>()
+            .join("\n\n");
+        if !body.trim().is_empty() {
+            self.messages.push(TranscriptMessage {
+                role: TranscriptRole::Agent,
+                body,
+            });
+        }
+        self.reset_agent_markdown();
     }
 
     pub fn begin_stream(&mut self) {
@@ -175,7 +236,16 @@ impl AppState {
         self.motion.on_stream_start();
     }
 
+    /// Discard in-flight agent markdown (cancel / interrupt).
+    pub fn cancel_stream(&mut self) {
+        self.reset_agent_markdown();
+        self.session = SessionPhase::Idle;
+        self.turn_phase = TurnPhase::Idle;
+        self.motion.on_stream_end();
+    }
+
     pub fn end_stream_ok(&mut self) {
+        self.finalize_agent_markdown();
         self.session = SessionPhase::Idle;
         self.turn_phase = TurnPhase::Idle;
         self.push_activity("✓ Done", None);
@@ -183,6 +253,7 @@ impl AppState {
     }
 
     pub fn end_stream_error(&mut self, message: String) {
+        self.finalize_agent_markdown();
         self.session = SessionPhase::Error;
         self.status_message = Some(message.clone());
         self.push_activity(format!("✖ {message}"), None);
@@ -247,5 +318,38 @@ mod tests {
         assert_eq!(last.summary, "▸ Working…");
         assert_eq!(last.detail.as_deref(), Some("ask"));
         assert!(!last.summary.contains("mode="));
+    }
+
+    #[test]
+    fn idle_timeline_starts_empty() {
+        let app = AppState::new("/tmp/ws".into(), "m".into(), "1".into());
+        assert!(app.timeline_idle());
+        assert!(app.messages.is_empty());
+    }
+
+    #[test]
+    fn submit_prompt_records_operator_turn() {
+        let mut app = AppState::new("/tmp/ws".into(), "m".into(), "1".into());
+        app.submit_prompt("hello".into());
+        assert_eq!(app.messages.len(), 1);
+        assert_eq!(app.messages[0].role, TranscriptRole::Operator);
+        assert_eq!(app.messages[0].body, "hello");
+        assert_eq!(app.session, SessionPhase::Streaming);
+    }
+
+    #[test]
+    fn append_output_feeds_mdstream() {
+        let mut app = AppState::new("/tmp/ws".into(), "m".into(), "1".into());
+        app.submit_prompt("q".into());
+        app.append_output("# Title\n\n");
+        app.append_output("body\n");
+        let blocks = app.agent_markdown_blocks();
+        assert!(!blocks.is_empty());
+        let joined: String = blocks
+            .iter()
+            .map(|(_, t)| t.as_str())
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(joined.contains("Title") || joined.contains("body"));
     }
 }
