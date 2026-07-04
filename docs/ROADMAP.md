@@ -87,6 +87,7 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 | 4 | **R082** — TUI product design system (docs) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
 | 5 | **R080** — TUI presentation (layout + tokens) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
 | 6 | **R081** — TUI motion (choreography) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
+| 6b | Session naming + `rex --continue` / `rex --last` | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#session-model), [ADR 0040](architecture/decisions/0040-harness-session-transcript-authority.md) | **Done** |
 | 7 | **R074** — optional LLM status narrator | **Could** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Open — prefer **after R080** |
 | 5 | **R067** — intent-aware retrieval for short prompts | **Should** | — | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) | Open |
 | 6 | **R068** — ask answer-first prompt policy | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |

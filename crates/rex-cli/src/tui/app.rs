@@ -18,15 +18,18 @@ use crate::transport::connect_client;
 
 use super::approval::respond_to_tool_approval;
 
-use super::history_fetch::{spawn_incremental_fetch, spawn_retroactive_fetch, HistoryFetchUpdate};
+use super::history_fetch::{
+    fetch_full_session_history, spawn_incremental_fetch, spawn_retroactive_fetch, HistoryFetchUpdate,
+};
 use super::state::{AppState, PendingApproval, SessionPhase};
 use super::stream_task::{spawn_stream_task, StreamUpdate};
 use super::ui;
 use super::viewport::DEFAULT_FETCH_LIMIT;
+use crate::tui::TuiRunConfig;
 
-pub async fn run() -> Result<(), String> {
+pub async fn run(config: TuiRunConfig) -> Result<(), String> {
     let mut terminal = setup_terminal()?;
-    let result = run_app(&mut terminal).await;
+    let result = run_app(&mut terminal, config).await;
     teardown_terminal(&mut terminal)?;
     result
 }
@@ -64,13 +67,33 @@ fn teardown_terminal(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> R
     terminal.show_cursor().map_err(|e| e.to_string())
 }
 
-async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<(), String> {
+async fn run_app(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    config: TuiRunConfig,
+) -> Result<(), String> {
     let status = fetch_status().await.map_err(|e| e.to_string())?;
-    let mut app = AppState::new(
+    let mut app = AppState::from_run_config(
         status.workspace_root,
         status.active_model_id,
         status.daemon_version,
+        config.harness_session_id,
+        config.session_title,
     );
+    if config.resume {
+        app.status_message = Some("Fetching history…".to_string());
+        terminal
+            .draw(|f| ui::draw(f, &mut app))
+            .map_err(|e| e.to_string())?;
+        let events = fetch_full_session_history(&app.harness_session_id)
+            .await
+            .map_err(|e| e.to_string())?;
+        if events.is_empty() {
+            return Err("session transcript could not be restored".to_string());
+        }
+        app.restore_from_events(&events);
+        app.status_message = None;
+    }
+    let _session_lock = config.session_lock;
     let mut stream_rx: Option<Receiver<StreamUpdate>> = None;
     let mut history_rx: Option<Receiver<HistoryFetchUpdate>> = None;
     // Paint only when dirty. Idle with no changes must not write CSI (tuiwright Quiet ≥300ms).

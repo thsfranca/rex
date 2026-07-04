@@ -128,11 +128,37 @@ impl AppState {
         }
     }
 
+    pub fn from_run_config(
+        workspace_root: String,
+        model_id: String,
+        daemon_version: String,
+        harness_session_id: String,
+        session_title: String,
+    ) -> Self {
+        let mut state = Self::new(workspace_root, model_id, daemon_version);
+        state.harness_session_id = harness_session_id;
+        state.session_title = session_title;
+        state
+    }
+
     pub fn refresh_session_title(&mut self, workspace: &Path) {
         let meta = read_meta(workspace, &self.harness_session_id);
         if !meta.title.is_empty() {
             self.session_title = meta.title;
         }
+    }
+
+    pub fn restore_from_events(&mut self, events: &[rex_proto::rex::v1::SessionEvent]) {
+        use super::viewport::events_to_messages;
+        self.messages = events_to_messages(events);
+        if let Some(last) = events.last() {
+            self.viewport.head_sequence = last.sequence;
+            self.viewport.newest_sequence = last.sequence;
+            if let Some(first) = events.first() {
+                self.viewport.oldest_loaded_sequence = first.sequence;
+            }
+        }
+        self.transcript_scroll = 0;
     }
 
     pub fn workspace_basename(&self) -> &str {
@@ -390,5 +416,34 @@ mod tests {
             .collect::<Vec<_>>()
             .join("\n");
         assert!(joined.contains("Title") || joined.contains("body"));
+    }
+
+    #[test]
+    fn restore_from_events_rebuilds_messages() {
+        use rex_proto::rex::v1::SessionEvent;
+        let mut app = AppState::new("/tmp/ws".into(), "m".into(), "1".into());
+        let events = vec![
+            SessionEvent {
+                sequence: 1,
+                event: "operator_prompt".to_string(),
+                text: "hello".to_string(),
+                ..Default::default()
+            },
+            SessionEvent {
+                sequence: 2,
+                event: "chunk".to_string(),
+                text: "hi".to_string(),
+                ..Default::default()
+            },
+            SessionEvent {
+                sequence: 3,
+                event: "done".to_string(),
+                text: String::new(),
+                ..Default::default()
+            },
+        ];
+        app.restore_from_events(&events);
+        assert_eq!(app.messages.len(), 2);
+        assert_eq!(app.viewport.newest_sequence, 3);
     }
 }
