@@ -1,6 +1,6 @@
 # CLI operator UX — design hub
 
-**Status:** `design accepted` — **R071** / **R075** / **R072** / **R073** / **R080** implemented; **R082** TUI design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R081** motion Open; **R074** Could ([ROADMAP.md](ROADMAP.md)). Architecture: [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
+**Status:** `design accepted` — **R071** / **R075** / **R072** / **R073** / **R080** / **R081** implemented; **R082** TUI design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R074** Could ([ROADMAP.md](ROADMAP.md)). Architecture: [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
 
 ## Purpose
 
@@ -55,14 +55,14 @@ Operators run **`cd ~/projects/my-app && rex`** (or **`rex tui`**) and enter an 
 |------------|-----------|--------|
 | Daemon start | Auto-start shipped (**R071**) | Done |
 | Per-workspace routing | **R075** Done | Done |
-| Lifecycle feedback | Compact glyphs; still thin chrome | Product design system ([TUI_DESIGN.md](TUI_DESIGN.md)); implement **R080** |
-| Stream progress | Activity list + output in titled boxes | Chat-primary transcript + timeline; human phrases (**R080**) |
-| Interactive session | **`rex tui`** + TTY-delegating **`complete`** (**R073**) | Done (shell); presentation **R080** Done; motion **R081** Open |
+| Lifecycle feedback | Compact glyphs; still thin chrome | Product design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R080** Done |
+| Stream progress | Activity list + output in titled boxes | Chat-primary transcript + timeline; human phrases (**R080** Done) |
+| Interactive session | **`rex tui`** + TTY-delegating **`complete`** (**R073**) | Done (shell); presentation **R080** Done; motion **R081** Done |
 | Markdown output | Incremental **mdstream** path | Done |
 | Tool approval | Modal present | Human-first copy per design system (**R080**) |
 | Friendly status | Minimal structured copy | Progressive insight; optional narrator (**R074**) |
-| Layout density | Dual titled boxes; partial responsive | Design system breakpoints (**R080**) |
-| Motion | Blink caret / lone spinner (fails design bar) | Choreographed region effects (**R081**) |
+| Layout density | Dual titled boxes; partial responsive | Design system breakpoints (**R080** Done) |
+| Motion | Blink caret / lone spinner (fails design bar) | Choreographed region effects (**R081** Done) |
 
 ## Boundaries
 
@@ -175,9 +175,9 @@ Canonical product design for **`rex tui`** presentation and motion: **[TUI_DESIG
 |----|-------|--------|
 | **R082** | Product design system (principles, tokens, layout, choreography, acceptance) | **Done** |
 | **R080** | Layout + tokens implementation | **Done** |
-| **R081** | Motion (tachyonfx region effects, flux hairlines) | **Open** — after **R080**; blink-only fails review |
+| **R081** | Motion (region effects, flux hairlines) | **Done** |
 
-Shipped chrome after early presentation work remains **current debt** (see Current debt in [TUI_DESIGN.md](TUI_DESIGN.md)): titled boxes, mediocre blink caret/spinner. Implementation must meet the design bar, not polish debt in place.
+Presentation and motion meet [TUI_DESIGN.md](TUI_DESIGN.md). Do not reintroduce blink-only cues or titled-box wireframe chrome.
 
 Validate with `./scripts/install-cli.sh`, `rex tui`, and tuiwright MCP text snapshots (sequential frames must show **region** change). Headless NDJSON-replay adapter remains **Won't**.
 
@@ -378,11 +378,11 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 | R073 TUI + approvals | **Should** | **Done** |
 | R082 TUI design system | **Should** | **Done** — [TUI_DESIGN.md](TUI_DESIGN.md) |
 | R080 presentation | **Should** | **Done** |
-| R081 motion | **Should** | **Open** — after R080 |
+| R081 motion | **Should** | **Done** |
 | R074 narrator | **Could** | After R073; prefer after R080 disclosure rules |
 | R076–R078 daemon intelligence | **Could** / **Later** | After TUI MVP |
 
-**Current program focus:** [ROADMAP.md](ROADMAP.md) — implement TUI design system (**R080** → **R081**). LangFuse discovery unblocked for scheduling; **RC-LF1** remains **Not met**.
+**Current program focus:** [ROADMAP.md](ROADMAP.md) — TUI design system **R080–R081** Done; sole entry and CLI surface cleanup. LangFuse discovery unblocked for scheduling; **RC-LF1** remains **Not met**.
 
 ## Open questions
 

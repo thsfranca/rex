@@ -1,6 +1,6 @@
 # Rex TUI design system
 
-**Status:** `design accepted` (**R082**) — implementation **R080** (layout + tokens) **Done**; **R081** (motion) **Open** and gated on this document.
+**Status:** `design accepted` (**R082**) — implementation **R080** (layout + tokens) and **R081** (motion) **Done**.
 
 **Product hub:** [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) (operator path and lifecycle). **Architecture:** [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
@@ -44,7 +44,7 @@ Configuration remains **`REX_ROOT`** plus JSON only. Implementation must not inv
 
 ## Current debt
 
-**R080 presentation** is implemented (tokens, regions/breakpoints, transcript-primary, timeline disclosure, composer/footer, human-first approval). Remaining debt is **motion only** (**R081**): choreographed region effects and flux hairlines; blink-only activity cues must not return.
+**R080** and **R081** are implemented. Do not reintroduce blink-only activity cues, titled-box wireframe chrome, or ad-hoc colors outside the token map.
 
 ## Layout system
 
@@ -239,7 +239,7 @@ A Rex **headless** NDJSON-replay / ANSI-snapshot adapter remains **Won't** ([TER
 |----|-------|--------|
 | **R082** | This design system | **Done** (this document) |
 | **R080** | Layout + tokens (chat-primary, breakpoints, progressive insight) | **Done** |
-| **R081** | Motion (tachyonfx choreography, flux hairlines) | **Open** — after R080; must pass acceptance |
+| **R081** | Motion (choreography, flux hairlines) | **Done** |
 
 ## Related
 

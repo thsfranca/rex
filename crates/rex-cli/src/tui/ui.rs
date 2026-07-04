@@ -90,7 +90,9 @@ fn timeline_width(width: u16) -> Option<u16> {
 fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
     // Connect fade: use tertiary styles until fade completes.
     let faded_in = app.motion.connect_fade_progress() >= 1.0;
-    let phase_style = if !faded_in {
+    let phase_style = if app.motion.error_shift_active() {
+        app.theme.status_error()
+    } else if !faded_in {
         app.theme.text_tertiary()
     } else {
         match app.session {
@@ -167,8 +169,10 @@ fn pad_rect(area: Rect, pad_x: u16, pad_y: u16) -> Rect {
 
 fn draw_timeline(frame: &mut Frame, area: Rect, app: &AppState) {
     let focused = app.focus == FocusPane::Activity;
+    // Coalesce cue: emphasize hairline when a timeline row was just added.
+    let focused = focused || app.motion.timeline_coalesce_active();
     // Progressive disclosure: technical detail only on `?` or timeline focus.
-    let disclose = app.help_expanded || focused;
+    let disclose = app.help_expanded || app.focus == FocusPane::Activity;
     let items: Vec<ListItem> = app
         .activity
         .iter()
@@ -299,7 +303,13 @@ fn draw_approval_modal(frame: &mut Frame, app: &AppState) {
     let Some(pending) = app.pending_approval.as_ref() else {
         return;
     };
-    let area = centered_rect(60, 40, frame.area());
+    // Opening slide: slightly smaller modal; closing uses dimmed-only flash.
+    let (pct_x, pct_y) = if app.motion.approval_opening() {
+        (50, 34)
+    } else {
+        (60, 40)
+    };
+    let area = centered_rect(pct_x, pct_y, frame.area());
     // Dimmed backdrop token, then single-hairline modal (no deep border stacks).
     frame.render_widget(
         Block::default().style(app.theme.surface_dimmed()),

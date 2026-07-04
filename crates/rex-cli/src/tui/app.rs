@@ -140,6 +140,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                         if app.pending_approval.is_some() =>
                     {
                         if let Some(pending) = app.pending_approval.take() {
+                            app.motion.on_approval_close();
                             let token = pending.approval_token.clone();
                             let tool_call_id = pending.tool_call_id.clone();
                             match respond_to_tool_approval(&token, &tool_call_id, true).await {
@@ -155,6 +156,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                         if app.pending_approval.is_some() =>
                     {
                         if let Some(pending) = app.pending_approval.take() {
+                            app.motion.on_approval_close();
                             let token = pending.approval_token.clone();
                             let tool_call_id = pending.tool_call_id.clone();
                             let _ = respond_to_tool_approval(&token, &tool_call_id, false).await;
@@ -227,6 +229,7 @@ fn apply_stream_update(app: &mut AppState, update: StreamUpdate) {
                                 detail: card.detail.clone(),
                                 approval_token: token,
                             });
+                            app.motion.on_approval_open();
                             app.status_message = Some("A approve · D deny".to_string());
                         }
                     }
