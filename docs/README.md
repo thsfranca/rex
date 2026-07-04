@@ -64,6 +64,7 @@ Before adding or materially editing a doc under `docs/`:
 | [ERROR_HANDLING.md](ERROR_HANDLING.md) | Error codes, human-readable messages, CI guidelines gate |
 | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Plan mode tools, stream contract, broker plan.save |
 | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Terminal operator path and daemon lifecycle UX — **product hub** |
+| [TUI_DESIGN.md](TUI_DESIGN.md) | Product-grade `rex tui` design system — **acceptance gate** (**R082**) |
 | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | Terminal harness technical architecture — **design spoke** (**R072–R073**) |
 | [RELEASE.md](RELEASE.md) | Core release automation |
 | [CI.md](CI.md) | Automation gates |
@@ -86,7 +87,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Layered cache policy | [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | Routing / optional gateway stance | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), economics rows in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
 | CLI transport + NDJSON contract | [NDJSON_STREAM.md](NDJSON_STREAM.md), [ERROR_HANDLING.md](ERROR_HANDLING.md), [ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md) |
-| CLI operator UX (terminal TUI, auto-start) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md) |
+| CLI operator UX (terminal TUI, auto-start) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TUI_DESIGN.md](TUI_DESIGN.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md) |
 | Operation feedback (live stream) | [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md), [ADR 0030](architecture/decisions/0030-incremental-run-turn-streaming.md), [ADR 0031](architecture/decisions/0031-ask-mode-research-broker.md) |
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 | Agent knowledge for AI sessions (planned) | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
