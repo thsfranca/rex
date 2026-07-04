@@ -16,7 +16,7 @@ pub fn draw(frame: &mut Frame, app: &AppState) {
     if area.width < MIN_COLS || area.height < MIN_ROWS {
         frame.render_widget(
             Paragraph::new("Terminal too small — resize to continue.")
-                .style(app.theme.warning()),
+                .style(app.theme.status_warning()),
             area,
         );
         return;
@@ -46,9 +46,9 @@ pub fn draw(frame: &mut Frame, app: &AppState) {
 
 fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
     let phase_style = match app.session {
-        SessionPhase::Idle => app.theme.success(),
-        SessionPhase::Streaming => app.theme.accent(),
-        SessionPhase::Error => app.theme.error(),
+        SessionPhase::Idle => app.theme.status_success(),
+        SessionPhase::Streaming => app.theme.status_working(),
+        SessionPhase::Error => app.theme.status_error(),
     };
     let phase = if app.session == SessionPhase::Streaming {
         Span::styled(format!("{} ", app.spinner_frame()), phase_style)
@@ -58,11 +58,11 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
 
     let mut spans = vec![
         phase,
-        Span::styled(app.workspace_basename(), app.theme.bright()),
-        Span::styled(format!(" {} ", app.mode_glyph()), app.theme.accent()),
+        Span::styled(app.workspace_basename(), app.theme.text_primary()),
+        Span::styled(format!(" {} ", app.mode_glyph()), app.theme.text_accent()),
     ];
     if app.bypass {
-        spans.push(Span::styled("⚡", app.theme.warning()));
+        spans.push(Span::styled("⚡", app.theme.status_warning()));
     }
     if app.help_expanded {
         spans.push(Span::styled(
@@ -72,7 +72,7 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
                 app.mode,
                 app.model_id
             ),
-            app.theme.muted(),
+            app.theme.text_tertiary(),
         ));
     }
 
@@ -115,15 +115,15 @@ fn draw_activity(frame: &mut Frame, area: Rect, app: &AppState) {
             } else {
                 item.summary.clone()
             };
-            ListItem::new(Span::styled(line, app.theme.text()))
+            ListItem::new(Span::styled(line, app.theme.text_tertiary()))
         })
         .collect();
     let title = if focused { " · " } else { " " };
     let list = List::new(items).block(
         Block::default()
             .borders(Borders::ALL)
-            .border_style(app.theme.border(focused))
-            .title(Span::styled(title, app.theme.muted())),
+            .border_style(app.theme.hairline(focused))
+            .title(Span::styled(title, app.theme.text_tertiary())),
     );
     frame.render_widget(list, area);
 }
@@ -136,12 +136,12 @@ fn draw_output(frame: &mut Frame, area: Rect, app: &AppState, pane: FocusPane) {
     }
     let title = if focused { " · " } else { " " };
     let widget = Paragraph::new(text)
-        .style(app.theme.text())
+        .style(app.theme.text_secondary())
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(app.theme.border(focused))
-                .title(Span::styled(title, app.theme.muted())),
+                .border_style(app.theme.hairline(focused))
+                .title(Span::styled(title, app.theme.text_tertiary())),
         )
         .wrap(Wrap { trim: false });
     frame.render_widget(widget, area);
@@ -150,17 +150,17 @@ fn draw_output(frame: &mut Frame, area: Rect, app: &AppState, pane: FocusPane) {
 fn draw_composer(frame: &mut Frame, area: Rect, app: &AppState) {
     let focused = app.focus == FocusPane::Composer;
     let line = Line::from(vec![
-        Span::styled(format!("{} ", app.mode_glyph()), app.theme.accent()),
+        Span::styled(format!("{} ", app.mode_glyph()), app.theme.text_accent()),
         if app.composer.is_empty() {
-            Span::styled("Type your prompt…", app.theme.muted())
+            Span::styled("Type your prompt…", app.theme.text_tertiary())
         } else {
-            Span::styled(app.composer.as_str(), app.theme.text())
+            Span::styled(app.composer.as_str(), app.theme.text_primary())
         },
     ]);
     let composer = Paragraph::new(line).block(
         Block::default()
             .borders(Borders::ALL)
-            .border_style(app.theme.border(focused)),
+            .border_style(app.theme.hairline(focused)),
     );
     frame.render_widget(composer, area);
 }
@@ -178,7 +178,7 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &AppState) {
         "↵  esc  ⇧⇥  ?".to_string()
     };
     frame.render_widget(
-        Paragraph::new(line).style(app.theme.muted()),
+        Paragraph::new(line).style(app.theme.text_tertiary()),
         area,
     );
 }
@@ -195,12 +195,15 @@ fn draw_approval_modal(frame: &mut Frame, app: &AppState) {
         body.push_str(&format!("\n\n{} · {}", pending.name, pending.detail));
     }
     let modal = Paragraph::new(body)
-        .style(app.theme.text())
+        .style(app.theme.text_primary())
         .block(
             Block::default()
                 .borders(Borders::ALL)
-                .border_style(app.theme.border(true))
-                .title(Span::styled(" ◎ ", app.theme.warning().add_modifier(Modifier::BOLD))),
+                .border_style(app.theme.hairline(true))
+                .title(Span::styled(
+                    " ◎ ",
+                    app.theme.status_warning().add_modifier(Modifier::BOLD),
+                )),
         )
         .wrap(Wrap { trim: false });
     frame.render_widget(modal, area);
