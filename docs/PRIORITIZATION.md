@@ -76,15 +76,15 @@ Use these as short confidence cues when ranking optimization proposals:
 
 **Context:** Streaming/agent Must **RC-01–RC-10** are **Met** ([V1_0.md](V1_0.md)). **v1.0 not Met** — observability Must **RC-LF1** (**Not met**) blocks the **`1.0.0` git tag**. Product agent program (**R013–R038**) is **Done**. In-repo extension removed ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)); terminal harness is the **primary operator surface**.
 
-**Focus pivot:** Terminal harness program **R072** → **R073** landed; **R080** / **R081** product-accepted ([TUI_DESIGN.md](TUI_DESIGN.md)). Hubs: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
+**Focus pivot (2026-07-04):** Web desktop harness **W100+** replaces terminal visual identity **R090–R096** ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)). Hubs: [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md).
 
 **Ordering method:** MoSCoW bucket first; **R-ICE** (Impact × Confidence × Ease, 1–5) for **Should** ties; [tie-breakers](#tie-breakers-rex-specific) for blast radius and CI cost.
 
 | Rank | ID / theme | MoSCoW | R-ICE | RC-* | Blast | Rationale |
 |------|------------|--------|-------|------|-------|-----------|
-| 1 | **R080** — TUI presentation (layout + tokens) | **Should** | **70** (5×4×3.5) | — | cli | **Done** — [TUI_DESIGN.md](TUI_DESIGN.md) |
-| 2 | **R081** — TUI motion (choreography) | **Should** | **65** (5×4×3) | — | cli | **Done** — region buffer effects; live MCP |
-| 3 | Terminal harness design docs + **ADR 0039** | **Must** | **75** (5×5×3) | — | docs | **Done** — locks architecture |
+| 1 | **W101–W104** — Web UI MVP (shell, chat, CLI, TUI removal) | **Must** | **75** (5×5×3) | — | desktop | Primary operator surface pivot |
+| 2 | **W100** — rex-ui-harness MCP | **Must** | **70** | — | harness | **Done** |
+| 3 | **W105–W108** — Motion, approval, session picker, WebGL | **Should** | **65** | — | desktop | After MVP merged |
 | 4 | **R072** — NDJSON core + messaging + **mdstream** | **Must** (program) | **70** | — | cli | **Done** |
 | 5 | **R073** — full TUI + approval modals | **Should** | **65** | — | cli | **Done** |
 | 6 | **R074** — optional LLM narrator | **Could** | **35** | — | cli | After **R080** / **R081** product-accepted |
