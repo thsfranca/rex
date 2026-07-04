@@ -2,32 +2,39 @@
 
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
 
 use assert_cmd::cargo::cargo_bin;
 use rex_config::{DaemonSocketScope, RexConfig, REX_ROOT_ENV};
 use serial_test::serial;
 use tempfile::TempDir;
 
+fn set_rex_bin_env() {
+    std::env::set_var("CARGO_BIN_EXE_rex", cargo_bin("rex"));
+}
+
 struct RexRootGuard {
     _dir: TempDir,
     prev_rex_root: Option<String>,
+    prev_cwd: PathBuf,
 }
 
 impl RexRootGuard {
     fn new() -> Self {
         let dir = TempDir::new().expect("temp rex root");
         let prev_rex_root = std::env::var(REX_ROOT_ENV).ok();
+        let prev_cwd = std::env::current_dir().expect("cwd");
         std::env::set_var(REX_ROOT_ENV, dir.path());
         Self {
             _dir: dir,
             prev_rex_root,
+            prev_cwd,
         }
     }
 }
 
 impl Drop for RexRootGuard {
     fn drop(&mut self) {
+        let _ = std::env::set_current_dir(&self.prev_cwd);
         match &self.prev_rex_root {
             Some(v) => std::env::set_var(REX_ROOT_ENV, v),
             None => std::env::remove_var(REX_ROOT_ENV),
@@ -67,9 +74,10 @@ fn write_project(root: &TempDir, name: &str, workspace_root: &PathBuf) -> PathBu
     proj
 }
 
-#[test]
+#[tokio::test]
 #[serial]
-fn two_projects_get_distinct_daemon_sockets_and_workspace_status() {
+async fn two_projects_get_distinct_daemon_sockets_and_workspaces() {
+    set_rex_bin_env();
     let guard = RexRootGuard::new();
     let global = per_workspace_global_config();
     fs::write(
@@ -80,38 +88,17 @@ fn two_projects_get_distinct_daemon_sockets_and_workspace_status() {
 
     let proj_a = write_project(&guard._dir, "proj-a", &guard._dir.path().join("proj-a"));
     let proj_b = write_project(&guard._dir, "proj-b", &guard._dir.path().join("proj-b"));
-
-    let status_a = Command::new(cargo_bin("rex"))
-        .current_dir(&proj_a)
-        .env(REX_ROOT_ENV, guard._dir.path())
-        .args(["__rex_internal_status"])
-        .output()
-        .expect("status a");
-    assert!(
-        status_a.status.success(),
-        "proj-a status failed: {}",
-        String::from_utf8_lossy(&status_a.stderr)
-    );
-
-    let status_b = Command::new(cargo_bin("rex"))
-        .current_dir(&proj_b)
-        .env(REX_ROOT_ENV, guard._dir.path())
-        .args(["__rex_internal_status"])
-        .output()
-        .expect("status b");
-    assert!(
-        status_b.status.success(),
-        "proj-b status failed: {}",
-        String::from_utf8_lossy(&status_b.stderr)
-    );
-
-    let stdout_a = String::from_utf8_lossy(&status_a.stdout);
-    let stdout_b = String::from_utf8_lossy(&status_b.stdout);
     let root_a = proj_a.canonicalize().unwrap_or_else(|_| proj_a.clone());
     let root_b = proj_b.canonicalize().unwrap_or_else(|_| proj_b.clone());
-    assert!(stdout_a.contains(&format!("workspace_root: {}", root_a.display())));
-    assert!(stdout_b.contains(&format!("workspace_root: {}", root_b.display())));
-    assert_ne!(stdout_a, stdout_b);
+
+    std::env::set_current_dir(&proj_a).expect("chdir a");
+    let status_a = rex_cli::system_status().await.expect("ensure proj-a");
+    assert_eq!(status_a.workspace_root, root_a.display().to_string());
+
+    std::env::set_current_dir(&proj_b).expect("chdir b");
+    let status_b = rex_cli::system_status().await.expect("ensure proj-b");
+    assert_eq!(status_b.workspace_root, root_b.display().to_string());
+    assert_ne!(status_a.workspace_root, status_b.workspace_root);
 
     let sockets_dir = guard._dir.path().join("sockets");
     let entries: Vec<_> = fs::read_dir(&sockets_dir)

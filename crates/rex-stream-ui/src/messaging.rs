@@ -4,7 +4,6 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LifecyclePhase {
     ProbeSuccess,
-    ProbeFailNoAutostart,
     StartingSpawn,
     PollWaiting,
     Ready,
@@ -20,9 +19,6 @@ impl OperatorMessaging {
     pub fn lifecycle_message(phase: LifecyclePhase, context: &LifecycleContext<'_>) -> String {
         match phase {
             LifecyclePhase::ProbeSuccess => "Ready — connected to Rex".to_string(),
-            LifecyclePhase::ProbeFailNoAutostart => {
-                "Rex is not running. Enable `daemon.auto_start` and run `rex`".to_string()
-            }
             LifecyclePhase::StartingSpawn => "Starting Rex…".to_string(),
             LifecyclePhase::PollWaiting => "Waiting for Rex to become ready…".to_string(),
             LifecyclePhase::Ready => "Rex is ready".to_string(),
@@ -107,7 +103,7 @@ impl OperatorMessaging {
 
     pub fn error_hint(code: &str, message: &str) -> String {
         let hint = match code.trim() {
-            "daemon_unavailable" => "Daemon is not reachable — enable auto-start and run `rex`",
+            "daemon_unavailable" => "Daemon is not reachable — run `rex`",
             "sidecar_unavailable" => {
                 "Sidecar is not running — check `rex sidecar doctor`"
             }

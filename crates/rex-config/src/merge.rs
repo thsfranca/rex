@@ -55,10 +55,6 @@ impl LoadedConfig {
         &self.resolved_daemon_socket
     }
 
-    pub fn daemon_auto_start(&self) -> bool {
-        self.effective.daemon.auto_start_enabled()
-    }
-
     pub fn daemon_ready_timeout_secs(&self) -> u64 {
         let secs = self.effective.daemon.ready_timeout_secs;
         if secs == 0 {
@@ -220,9 +216,6 @@ fn merge_daemon(base: &mut crate::model::DaemonConfig, overlay: crate::model::Da
         if !socket.is_empty() {
             base.socket = Some(socket);
         }
-    }
-    if overlay.auto_start.is_some() {
-        base.auto_start = overlay.auto_start;
     }
     if overlay.socket_scope.is_some() {
         base.socket_scope = overlay.socket_scope;

@@ -74,7 +74,6 @@ impl RexConfig {
             daemon: DaemonConfig {
                 socket: Some(DEFAULT_DAEMON_SOCKET.to_string()),
                 socket_scope: Some(DaemonSocketScope::Global),
-                auto_start: Some(true),
                 ready_timeout_secs: DEFAULT_DAEMON_READY_TIMEOUT_SECS,
                 idle_shutdown_secs: None,
                 log_path: String::new(),
@@ -232,9 +231,6 @@ pub struct DaemonConfig {
     /// When unset, effective default is [`DaemonSocketScope::PerWorkspace`].
     #[serde(default)]
     pub socket_scope: Option<DaemonSocketScope>,
-    /// When `None`, effective default is **true** (auto-start on).
-    #[serde(default)]
-    pub auto_start: Option<bool>,
     #[serde(default = "default_daemon_ready_timeout_secs")]
     pub ready_timeout_secs: u64,
     /// Shutdown after this many seconds without work and without status contact.
@@ -251,7 +247,6 @@ impl Default for DaemonConfig {
         Self {
             socket: None,
             socket_scope: None,
-            auto_start: None,
             ready_timeout_secs: DEFAULT_DAEMON_READY_TIMEOUT_SECS,
             idle_shutdown_secs: None,
             log_path: String::new(),
@@ -260,10 +255,6 @@ impl Default for DaemonConfig {
 }
 
 impl DaemonConfig {
-    pub fn auto_start_enabled(&self) -> bool {
-        self.auto_start.unwrap_or(true)
-    }
-
     pub fn effective_socket_scope(&self) -> DaemonSocketScope {
         self.socket_scope.unwrap_or(DaemonSocketScope::PerWorkspace)
     }

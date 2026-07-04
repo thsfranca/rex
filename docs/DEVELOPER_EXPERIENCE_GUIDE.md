@@ -10,11 +10,11 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 
 REX provides a local AI runtime with one daemon as the **system authority** for **streaming contracts, adapter policy, caches, pipelines, and the agent/economics roadmap** ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). Isolated **agent runtime environments** (when implemented) remain **supervised and policy-bound** to the daemon—see [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). **Sidecar ↔ daemon** integration uses a **dedicated brokered API**, not **`rex.v1`** — [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
-The interactive TUI (bare **`rex`** / **`rex tui`**) is the product usage path and consumes the NDJSON event contract **internally** per **[ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)** and **[ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md)**. Public **`rex complete`** is removed. Optional unary **`rex.v1`** over UDS supports control-plane calls.
+The interactive TUI (bare **`rex`**) is the product usage path and consumes the NDJSON event contract **internally** per **[ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)** and **[ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md)**. Optional unary **`rex.v1`** over UDS supports control-plane calls.
 
 | Component | Responsibility |
 |---|---|
-| `rex` | Unified CLI: bare entry / `tui` (product), setup/doctor commands (**R073** / **R080–R081** shipped). |
+| `rex` | Unified CLI: bare entry opens the TUI (product); setup/doctor commands (**R073** / **R080–R081** shipped). |
 | `rex-daemon` | Model/agent **policy trajectory**, adapters, caches, **`StreamInference`** lifecycle, queues. |
 | `rex-proto` | `rex.v1` gRPC contract. |
 | `rex-config` | JSON config load/merge (`$REX_ROOT/config.json`). |
@@ -41,12 +41,11 @@ rex config init
 # Edit $REX_ROOT/config.json — inference.openai_compat + sidecars.active=agent (binary rex-agent)
 rex config validate
 cargo build --workspace
-rex          # interactive terminal workspace (default; auto-starts daemon)
-rex tui      # same as bare rex
+rex             # interactive terminal workspace (ensures daemon)
 rex config init
 ```
 
-**Current focus:** TUI design system **R080–R081** Done — [TUI_DESIGN.md](TUI_DESIGN.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Auto-start **R071** shipped. Opt out with **`daemon.auto_start: false`** or **`--no-daemon-autostart`**. Install with **`./scripts/install-cli.sh`**. Agent live validation: tuiwright MCP text snapshots — see [TUI_DESIGN.md](TUI_DESIGN.md#validation).
+**Current focus:** TUI design system **R080–R081** Done — [TUI_DESIGN.md](TUI_DESIGN.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Running **`rex`** always ensures the daemon (**R071**). Install with **`./scripts/install-cli.sh`**. Agent live validation: tuiwright MCP text snapshots — see [TUI_DESIGN.md](TUI_DESIGN.md#validation).
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Configure **`sidecars`** and **`inference.openai_compat`** in JSON ([CONFIGURATION.md](CONFIGURATION.md)); legacy `REX_*` tuning env vars are ignored. CI may use `sidecars.harness: "direct"` (harness only).
 
@@ -71,7 +70,7 @@ The Phase 1 product path requires a **supervised sidecar** for assistant modes �
 
 Product settings are **JSON only**; the sole product env var is **`REX_ROOT`** — [CONFIGURATION.md](CONFIGURATION.md).
 
-**Managed gateway (`inference.gateway.mode: managed`):** `rex gateway init`, set keys in `$REX_ROOT/gateway/.env`, `rex gateway doctor`, then `rex status` — [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
+**Managed gateway (`inference.gateway.mode: managed`):** `rex gateway init`, set keys in `$REX_ROOT/gateway/.env`, `rex gateway doctor`, then `rex` — [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design).
 
 ### Mac local MLX via managed oMLX
 
@@ -91,7 +90,6 @@ Product settings are **JSON only**; the sole product env var is **`REX_ROOT`** �
  }
  },
  "daemon": {
- "auto_start": true,
  "ready_timeout_secs": 45
  },
  "sidecars": { "active": "agent", "required": true }

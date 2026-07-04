@@ -30,7 +30,7 @@ Former tuning names (if present in the environment) are **ignored** with a start
 | Built-in defaults | Used when a JSON field is unset. |
 | `$REX_ROOT/config.json` | User defaults: daemon socket, sidecars, inference, workspace, broker, agent. |
 | `.rex/config.json` | Optional project overrides (walked from cwd upward). |
-| CLI flags (partial) | `rex complete` accepts `--model`, `--mode`, `--approval-id`, `--yes`, `--verbose`, `--trace-id`, `--active-file`, `--language-id`, `--selection-text` per invocation. `rex status` and `rex complete` accept **`--no-daemon-autostart`**. Trace correlation uses **`--trace-id`**. |
+| CLI flags (partial) | Product entry is bare **`rex`** (no per-invocation daemon opt-out). |
 
 **Layout root:** `$REX_ROOT` defaults to `~/.rex` when unset. Run `rex config init` to create the layout and operator template `config.json` (**`sidecars.active: agent`**, **`rex-agent`** enabled, **`search.enabled: true`** with **`search.provider: mock`**). Operators typically edit only **`inference.openai_compat`** for a live backend. CI and harness tests use explicit stub configs or `RexConfig::defaults` in code — not the init template.
 
@@ -42,7 +42,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 
 | Section | Keys | Purpose |
 |---------|------|---------|
-| `daemon` | `socket`, `socket_scope`, `auto_start`, `ready_timeout_secs`, `idle_shutdown_secs`, `log_path` | Daemon UDS path; **`socket_scope`** (`per_workspace` default, or `global` for legacy single socket); **auto-start on by default** (**R071**); readiness poll budget; idle auto-shutdown (**default 300s**, **`0`** disables); detached daemon log file. Per-workspace scope derives `$REX_ROOT/sockets/ws-<hash>.sock` from `workspace.root` — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), idle shutdown — [ADR 0037](architecture/decisions/0037-daemon-idle-shutdown.md). |
+| `daemon` | `socket`, `socket_scope`, `ready_timeout_secs`, `idle_shutdown_secs`, `log_path` | Daemon UDS path; **`socket_scope`** (`per_workspace` default, or `global` for legacy single socket); CLI always ensures the daemon (**R071**); readiness poll budget; idle auto-shutdown (**default 300s**, **`0`** disables); detached daemon log file. Per-workspace scope derives `$REX_ROOT/sockets/ws-<hash>.sock` from `workspace.root` — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), idle shutdown — [ADR 0037](architecture/decisions/0037-daemon-idle-shutdown.md). |
 | `sidecars` | `active`, `host`, `required`, `harness`, `list[]`, `capabilities[]` | Host sidecar (`list[]` entry named by `host` or `active`); optional capability fleet (`capabilities[]` with `provides`, `socket`, `binary`); `harness: "direct"` skips spawn (CI/tests). |
 | `inference` | `runtime`, `openai_compat`, `gateway`, `omlx`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. Managed gateway/oMLX inject `openai_compat.base_url` — see below. |
 | `workspace` | `root`, `indexer`, `allow_cwd_fallback` | Broker root and lexical indexer (`workspace` or `seeded`). Product path requires non-empty `root` (not `"."`). Harness/CI: `workspace.allow_cwd_fallback: true` in JSON. |
@@ -110,44 +110,41 @@ When `observability.enabled` is `true`, the daemon emits economics on **stdout**
 
 Legacy `store`, `read_api`, `ui`, and `custom_sidecar_metrics` keys in older config files are ignored at load time.
 
-## CLI daemon auto-start (**R071** — implemented)
+## CLI daemon ensure (**R071** — implemented)
 
 Design hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md).
 
+Running **`rex`** always ensures a daemon: probe UDS, spawn a detached process when needed, poll **`GetSystemStatus`** until ready.
+
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `daemon.auto_start` | **`true`** | CLI spawns detached `rex daemon` when socket is missing |
 | `daemon.ready_timeout_secs` | `10` | Readiness poll budget after spawn |
 | `daemon.idle_shutdown_secs` | **`300`** | Shutdown after this many seconds without work and without status contact; **`0`** disables |
 | `daemon.log_path` | `$REX_ROOT/daemon.log` | Detached daemon stdout/stderr |
 
-Opt out: `"auto_start": false` in merged JSON or **`--no-daemon-autostart`**. Extension **`rex.daemonAutoStart`** defaults **on** — [ROADMAP.md](ROADMAP.md).
-
-When **`inference.omlx.mode: managed`** or **`inference.gateway.mode: managed`**, the autostarted daemon also starts and health-checks that managed inference child before binding the UDS socket. Raise **`daemon.ready_timeout_secs`** if the managed child startup budget (for example oMLX **`startup_timeout_secs`**, default 30) exceeds the default ready poll (**10s**).
+When **`inference.omlx.mode: managed`** or **`inference.gateway.mode: managed`**, the ensured daemon also starts and health-checks that managed inference child before binding the UDS socket. Raise **`daemon.ready_timeout_secs`** if the managed child startup budget (for example oMLX **`startup_timeout_secs`**, default 30) exceeds the default ready poll (**10s**).
 
 ### CLI operator UX (`cli.ui` — implemented)
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `cli.ui.enabled` | `"auto"` | TUI on TTY: `auto` \| `true` \| `false` |
 | `cli.ui.sync_output` | `true` | Emit terminal `?2026` synchronized output when supported |
 
 Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
-**Module map:** Daemon: `settings`, `adapters`, `http_openai_compat`, `approvals`, `l1_cache`, stream service. CLI: `transport` (config socket), `runtime` (`--trace-id`).
+**Module map:** Daemon: `settings`, `adapters`, `http_openai_compat`, `approvals`, `l1_cache`, stream service. CLI: `transport` (config socket), TUI ensure path.
 
 ## Operator quick start (daemon + brokered HTTP)
 
-The product path requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Bootstrap JSON; **`rex status`** / **`rex complete`** auto-start the daemon by default (**R071**):
+The product path requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Bootstrap JSON; **`rex`** ensures the daemon (**R071**):
 
 ```bash
 rex config init
 # Edit $REX_ROOT/config.json — set inference.openai_compat.base_url and model; enable sidecars.list[].enabled
 rex config validate
-rex status # starts detached daemon when needed
+rex
 ```
 
-Foreground **`rex daemon`** remains for debugging. Opt out with **`daemon.auto_start: false`** or **`--no-daemon-autostart`**.
 
 For **Anthropic, OpenAI, and local Ollama** via one broker URL, use the [Inference Gateway](#inference-gateway-design) (`managed` or `external`) or the [LiteLLM operator profile](#operator-profile-litellm-anthropic-and-other-providers) below.
 

@@ -21,7 +21,7 @@ Operators also lacked a distinct signal for “daemon up but not doing work” v
 
 4. **Client FSM:** shared states become **`unavailable` → `starting` → `ready` | `idle`**. `ensureRunning` treats **`ready` and `idle`** as satisfied (daemon reachable).
 
-5. **Auto-start unchanged:** clients may spawn a fresh daemon after idle shutdown via existing `daemon.auto_start` behavior.
+5. **Ensure unchanged:** clients spawn a fresh daemon after idle shutdown when they next ensure readiness.
 
 ## Consequences
 

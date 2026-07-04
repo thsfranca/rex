@@ -2,12 +2,15 @@
 
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
 
 use assert_cmd::cargo::cargo_bin;
 use rex_config::{DaemonSocketScope, RexConfig, REX_ROOT_ENV};
 use serial_test::serial;
 use tempfile::TempDir;
+
+fn set_rex_bin_env() {
+    std::env::set_var("CARGO_BIN_EXE_rex", cargo_bin("rex"));
+}
 
 fn mock_autostart_config(socket_path: &str) -> RexConfig {
     let mut cfg = RexConfig::defaults();
@@ -25,6 +28,7 @@ fn mock_autostart_config(socket_path: &str) -> RexConfig {
 struct RexRootGuard {
     _dir: TempDir,
     prev_rex_root: Option<String>,
+    prev_cwd: PathBuf,
     socket_path: PathBuf,
 }
 
@@ -43,10 +47,13 @@ impl RexRootGuard {
         )
         .expect("write config");
         let prev_rex_root = std::env::var(REX_ROOT_ENV).ok();
+        let prev_cwd = std::env::current_dir().expect("cwd");
         std::env::set_var(REX_ROOT_ENV, dir.path());
+        std::env::set_current_dir(dir.path()).expect("chdir");
         Self {
             _dir: dir,
             prev_rex_root,
+            prev_cwd,
             socket_path,
         }
     }
@@ -55,6 +62,7 @@ impl RexRootGuard {
 impl Drop for RexRootGuard {
     fn drop(&mut self) {
         let _ = fs::remove_file(&self.socket_path);
+        let _ = std::env::set_current_dir(&self.prev_cwd);
         match &self.prev_rex_root {
             Some(v) => std::env::set_var(REX_ROOT_ENV, v),
             None => std::env::remove_var(REX_ROOT_ENV),
@@ -62,86 +70,19 @@ impl Drop for RexRootGuard {
     }
 }
 
-#[test]
+#[tokio::test]
 #[serial]
-fn status_autostarts_detached_daemon_by_default() {
+async fn ensure_starts_detached_daemon() {
+    set_rex_bin_env();
     let guard = RexRootGuard::new();
     assert!(!guard.socket_path.exists());
 
-    let output = Command::new(cargo_bin("rex"))
-        .current_dir(guard._dir.path())
-        .env(REX_ROOT_ENV, guard._dir.path())
-        .args(["__rex_internal_status"])
-        .output()
-        .expect("run internal status");
+    rex_cli::ensure_daemon_ready()
+        .await
+        .expect("ensure daemon");
 
-    assert!(
-        output.status.success(),
-        "internal status failed: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
     assert!(
         guard.socket_path.exists(),
-        "daemon socket should exist after auto-start"
+        "daemon socket should exist after ensure"
     );
-    assert!(output.stdout.windows(15).any(|w| w == b"daemon_version:"));
-}
-
-#[test]
-#[serial]
-fn status_no_autostart_flag_fails_when_daemon_missing() {
-    let guard = RexRootGuard::new();
-    assert!(!guard.socket_path.exists());
-
-    let output = Command::new(cargo_bin("rex"))
-        .current_dir(guard._dir.path())
-        .env(REX_ROOT_ENV, guard._dir.path())
-        .args(["__rex_internal_status", "--no-daemon-autostart"])
-        .output()
-        .expect("run internal status");
-
-    assert!(!output.status.success());
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(
-        stderr.contains("daemon is unavailable"),
-        "expected daemon_unavailable message, got: {stderr}"
-    );
-    assert!(!guard.socket_path.exists());
-}
-
-#[test]
-#[serial]
-fn config_auto_start_false_skips_spawn() {
-    let dir = TempDir::new().expect("temp rex root");
-    let socket_path = dir.path().join("rex-optout.sock");
-    let mut cfg = mock_autostart_config(
-        socket_path
-            .to_str()
-            .expect("socket path must be utf-8"),
-    );
-    cfg.daemon.auto_start = Some(false);
-    fs::write(
-        dir.path().join("config.json"),
-        serde_json::to_string_pretty(&cfg).expect("serialize config"),
-    )
-    .expect("write config");
-
-    let prev_rex_root = std::env::var(REX_ROOT_ENV).ok();
-    std::env::set_var(REX_ROOT_ENV, dir.path());
-
-    let output = Command::new(cargo_bin("rex"))
-        .current_dir(dir.path())
-        .env(REX_ROOT_ENV, dir.path())
-        .args(["__rex_internal_status"])
-        .output()
-        .expect("run internal status");
-
-    if let Some(v) = prev_rex_root {
-        std::env::set_var(REX_ROOT_ENV, v);
-    } else {
-        std::env::remove_var(REX_ROOT_ENV);
-    }
-
-    assert!(!output.status.success());
-    assert!(!socket_path.exists());
 }

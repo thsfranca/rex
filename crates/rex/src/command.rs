@@ -1,9 +1,10 @@
 #[derive(Debug, PartialEq, Eq)]
 pub enum TopLevelCommand {
     Help,
-    /// Detached auto-start / internal only — not a public operator command.
+    /// Detached process entry used by auto-start.
     InternalDaemon,
-    Cli(Vec<String>),
+    /// Interactive terminal workspace (bare `rex`).
+    Tui,
     Config(Vec<String>),
     Proto(Vec<String>),
     Sidecar(Vec<String>),
@@ -11,40 +12,14 @@ pub enum TopLevelCommand {
     Omlx(Vec<String>),
 }
 
-/// Argv used by TUI auto-start to spawn a detached daemon process.
+/// Argv for auto-start when spawning a detached daemon process.
 pub const INTERNAL_DAEMON_ARG: &str = "__rex_internal_daemon";
-
-/// Argv for integration tests that need ensure+status without a public `status` command.
-pub const INTERNAL_STATUS_ARG: &str = "__rex_internal_status";
 
 pub fn parse_top_level(mut args: impl Iterator<Item = String>) -> Result<TopLevelCommand, String> {
     match args.next().as_deref() {
-        // Bare `rex` opens the TUI (primary product entry).
-        None => Ok(TopLevelCommand::Cli(vec!["tui".to_string()])),
+        None => Ok(TopLevelCommand::Tui),
         Some("-h") | Some("--help") | Some("help") => Ok(TopLevelCommand::Help),
         Some(INTERNAL_DAEMON_ARG) => Ok(TopLevelCommand::InternalDaemon),
-        Some(INTERNAL_STATUS_ARG) => {
-            let mut rest = vec!["status".to_string()];
-            rest.extend(args);
-            Ok(TopLevelCommand::Cli(rest))
-        }
-        Some("daemon") => Err(
-            "`rex daemon` was removed. Open the interactive workspace with `rex` or `rex tui` (daemon auto-starts)."
-                .to_string(),
-        ),
-        Some("status") => Err(
-            "`rex status` was removed. Health and phase appear in the TUI (`rex` / `rex tui`)."
-                .to_string(),
-        ),
-        Some("complete") => Err(
-            "`rex complete` was removed. Open the interactive workspace with `rex` or `rex tui`."
-                .to_string(),
-        ),
-        Some("tui") => {
-            let mut rest = vec!["tui".to_string()];
-            rest.extend(args);
-            Ok(TopLevelCommand::Cli(rest))
-        }
         Some("config") => Ok(TopLevelCommand::Config(args.collect())),
         Some("proto") => Ok(TopLevelCommand::Proto(args.collect())),
         Some("sidecar") => Ok(TopLevelCommand::Sidecar(args.collect())),
@@ -59,7 +34,6 @@ pub fn print_usage() {
         "\
 Usage:
   rex
-  rex tui [ --no-daemon-autostart ]
   rex config <init|show|path|validate>
   rex proto <install|path|doctor>
   rex sidecar <list|init|doctor>
@@ -78,7 +52,7 @@ mod tests {
     fn bare_rex_opens_tui() {
         assert_eq!(
             parse_top_level(std::iter::empty()).unwrap(),
-            TopLevelCommand::Cli(vec!["tui".to_string()])
+            TopLevelCommand::Tui
         );
     }
 
@@ -88,16 +62,6 @@ mod tests {
             parse_top_level(["--help".to_string()].into_iter()).unwrap(),
             TopLevelCommand::Help
         );
-    }
-
-    #[test]
-    fn rejects_public_daemon_and_status() {
-        assert!(parse_top_level(["daemon".to_string()].into_iter())
-            .unwrap_err()
-            .contains("removed"));
-        assert!(parse_top_level(["status".to_string()].into_iter())
-            .unwrap_err()
-            .contains("removed"));
     }
 
     #[test]
@@ -111,6 +75,7 @@ mod tests {
     #[test]
     fn rejects_unknown_top_level() {
         assert!(parse_top_level(["wat".to_string()].into_iter()).is_err());
+        assert!(parse_top_level(["tui".to_string()].into_iter()).is_err());
     }
 
     #[test]

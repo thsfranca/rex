@@ -4,11 +4,11 @@
 
 **Product hub:** [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) (operator path and lifecycle). **Architecture:** [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
-This document is the **acceptance gate** for presentation and motion work on `rex tui`. Pull requests that implement blink-only motion, code-like chrome, or wireframe overload **fail review** against this system.
+This document is the **acceptance gate** for presentation and motion work on the **`rex`** TUI. Pull requests that implement blink-only motion, code-like chrome, or wireframe overload **fail review** against this system.
 
 ## Product intent
 
-Operators run bare **`rex`** or **`rex tui`** and enter an **immersive agent workspace** in the terminal.
+Operators run bare **`rex`** and enter an **immersive agent workspace** in the terminal.
 
 - The **transcript** is the stage: conversation and streamed markdown.
 - **Chrome is infrastructure:** it orients and signals without competing for attention.
@@ -225,7 +225,7 @@ Implementation PRs (**R080**, **R081**) must pass **all** items. Any failure rej
 | Step | Method |
 |------|--------|
 | Install | `./scripts/install-cli.sh` |
-| Run | `rex tui` |
+| Run | `rex` |
 | Agent live probe | tuiwright MCP: `tui_open` → `tui_wait_for` / `tui_send_keys` → `tui_snapshot` (**text**) → `tui_close` |
 | Breakpoints | `tui_resize` then text snapshot at narrow / standard / wide |
 | Motion | Sequential text snapshots while streaming or opening approval — must show **region** change, not one-cell flicker |

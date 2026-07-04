@@ -55,11 +55,11 @@ flowchart LR
 
 **NDJSON (CLI → extension):**
 
-> Sidecar is required for agent mode but is not running. Enable `sidecars` in `$REX_ROOT/config.json` (harness: `rex-sidecar-stub`; product: `rex-agent`) and start `rex daemon`. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md).
+> Sidecar is required for agent mode but is not running. Enable `sidecars` in `$REX_ROOT/config.json` (harness: `rex-sidecar-stub`; product: `rex-agent`) and run `rex`. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md).
 
 **Daemon unavailable (`CliError`):**
 
-> Daemon is unavailable at /tmp/rex.sock; run `rex daemon` and retry.
+> Daemon is unavailable at /tmp/rex.sock; run `rex`.
 
 **Broker policy deny:**
 
@@ -92,11 +92,11 @@ flowchart LR
 
 ## Error code catalog (NDJSON stream)
 
-**Machine-readable source:** [`fixtures/guidelines/error_codes.yaml`](../fixtures/guidelines/error_codes.yaml) — CI validates this file against this table and NDJSON fixtures. Update **yaml and this table together** when adding a stream code. The public `rex complete` NDJSON emit path (and `CliError` → `error.code` mapping) was removed; codes remain the stream-contract catalog for the TUI and fixtures.
+**Machine-readable source:** [`fixtures/guidelines/error_codes.yaml`](../fixtures/guidelines/error_codes.yaml) — CI validates this file against this table and NDJSON fixtures. Update **yaml and this table together** when adding a stream code. Codes are the stream-contract catalog for the TUI and fixtures.
 
 | Code | Meaning | Retry | Owner | Message template (operator-facing) |
 |------|---------|-------|-------|----------------------------------|
-| `daemon_unavailable` | Daemon not reachable | Yes | cli | Daemon is unavailable at {socket}; run `rex daemon` and retry. |
+| `daemon_unavailable` | Daemon not reachable | Yes | cli | Daemon is unavailable at {socket}; run `rex`. |
 | `workspace_not_configured` | Product path missing `workspace.root` | No | cli | Set `workspace.root` in `.rex/config.json` or enable harness cwd fallback. |
 | `workspace_mismatch` | Daemon bound to a different workspace | No | cli | Restart the daemon for this workspace; another project may be using a global daemon. |
 | `sidecar_unavailable` | Sidecar required but missing or unhealthy | No | cli | Sidecar is required but unavailable: {detail}. Enable sidecar supervision and ensure the sidecar binary is on PATH. |

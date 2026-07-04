@@ -13,7 +13,6 @@
     }
   },
   "daemon": {
-    "auto_start": true,
     "ready_timeout_secs": 90
   },
   "sidecars": {
