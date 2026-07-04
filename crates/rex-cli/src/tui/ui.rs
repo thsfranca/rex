@@ -18,7 +18,7 @@ const SHORT_HEIGHT: u16 = 24;
 const COMPOSER_DEFAULT_H: u16 = 3;
 const COMPOSER_SHORT_MAX_H: u16 = 5;
 
-pub fn draw(frame: &mut Frame, app: &AppState) {
+pub fn draw(frame: &mut Frame, app: &mut AppState) {
     let area = frame.area();
     if area.width < MICRO_COLS {
         let msg = format!(
@@ -45,6 +45,30 @@ pub fn draw(frame: &mut Frame, app: &AppState) {
         ])
         .split(area);
 
+    // Region targets for tachyonfx (post-process after widgets).
+    app.motion.viewport = area;
+    app.motion.header = chunks[0];
+    app.motion.composer_hairline = Rect {
+        x: chunks[2].x,
+        y: chunks[2].y,
+        width: chunks[2].width,
+        height: 1,
+    };
+    match timeline_width(chunks[1].width) {
+        None => {
+            app.motion.transcript = pad_rect(chunks[1], transcript_pad(chunks[1].width), 0);
+            app.motion.timeline = Rect::default();
+        }
+        Some(tl_w) => {
+            let cols = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Min(10), Constraint::Length(tl_w)])
+                .split(chunks[1]);
+            app.motion.transcript = pad_rect(cols[0], transcript_pad(chunks[1].width), 0);
+            app.motion.timeline = cols[1];
+        }
+    }
+
     draw_header(frame, chunks[0], app);
     draw_body(frame, chunks[1], app);
     draw_composer(frame, chunks[2], app);
@@ -52,6 +76,9 @@ pub fn draw(frame: &mut Frame, app: &AppState) {
     if app.pending_approval.is_some() {
         draw_approval_modal(frame, app);
     }
+
+    // Apply region effects on the rendered buffer (Quiet idle when no effects).
+    app.motion.process(frame.buffer_mut());
 }
 
 fn composer_height(total_h: u16, header_h: u16, footer_h: u16) -> u16 {
@@ -89,26 +116,15 @@ fn timeline_width(width: u16) -> Option<u16> {
 }
 
 fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
-    // Connect fade: use tertiary styles until fade completes.
-    let faded_in = app.motion.connect_fade_progress() >= 1.0;
-    let phase_style = if app.motion.error_shift_active() {
-        app.theme.status_error()
-    } else if !faded_in {
-        app.theme.text_tertiary()
-    } else {
-        match app.session {
-            SessionPhase::Idle => app.theme.status_success(),
-            SessionPhase::Streaming => app.theme.status_working(),
-            SessionPhase::Error => app.theme.status_error(),
-        }
+    let phase_style = match app.session {
+        SessionPhase::Idle => app.theme.status_success(),
+        SessionPhase::Streaming => app.theme.status_working(),
+        SessionPhase::Error => app.theme.status_error(),
     };
     // Calm status glyph only — no blink/spinner as primary activity signal.
+    // Connect fade / error shift are tachyonfx post-process on this region.
     let phase = Span::styled(format!("{} ", app.phase_glyph()), phase_style);
-    let name_style = if faded_in {
-        app.theme.text_primary()
-    } else {
-        app.theme.text_tertiary()
-    };
+    let name_style = app.theme.text_primary();
 
     let mut spans = vec![
         phase,
@@ -167,9 +183,8 @@ fn pad_rect(area: Rect, pad_x: u16, pad_y: u16) -> Rect {
 
 fn draw_timeline(frame: &mut Frame, area: Rect, app: &AppState) {
     let focused = app.focus == FocusPane::Activity;
-    // Coalesce cue: emphasize hairline when a timeline row was just added.
-    let focused = focused || app.motion.timeline_coalesce_active();
     // Progressive disclosure: technical detail only on `?` or timeline focus.
+    // Coalesce is a tachyonfx region effect on this area.
     let disclose = app.help_expanded || app.focus == FocusPane::Activity;
 
     let mut items: Vec<ListItem> = vec![ListItem::new(Span::styled(
@@ -374,10 +389,6 @@ fn draw_composer(frame: &mut Frame, area: Rect, app: &AppState) {
                 app.theme.text_tertiary(),
             ));
         }
-        // Stream slide cue: brief leading spacer while slide window is active.
-        if app.motion.stream_slide_active() {
-            spans.insert(0, Span::styled(" ".to_string(), app.theme.text_tertiary()));
-        }
         spans.push(if app.composer.is_empty() {
             Span::styled("Type your prompt…".to_string(), app.theme.text_tertiary())
         } else {
@@ -385,12 +396,11 @@ fn draw_composer(frame: &mut Frame, area: Rect, app: &AppState) {
         });
         Line::from(spans)
     };
-    // Flux on active hairline while streaming (not a lone blink cell).
-    let hairline_on = focused || app.motion.flux_hairline_on();
+    // Flux / stream slide are tachyonfx region effects (not blink or spacer hacks).
     let composer = Paragraph::new(line).block(
         Block::default()
             .borders(Borders::TOP)
-            .border_style(app.theme.hairline(hairline_on))
+            .border_style(app.theme.hairline(focused))
             .style(app.theme.surface_raised()),
     );
     frame.render_widget(composer, area);
@@ -431,13 +441,8 @@ fn draw_approval_modal(frame: &mut Frame, app: &AppState) {
     let Some(pending) = app.pending_approval.as_ref() else {
         return;
     };
-    // Opening slide: slightly smaller modal; closing uses dimmed-only flash.
-    let (pct_x, pct_y) = if app.motion.approval_opening() {
-        (50, 34)
-    } else {
-        (60, 40)
-    };
-    let area = centered_rect(pct_x, pct_y, frame.area());
+    // Modal geometry is stable; open/close motion is tachyonfx dissolve/slide.
+    let area = centered_rect(60, 40, frame.area());
     // Dimmed backdrop token, then single-hairline modal (no deep border stacks).
     frame.render_widget(
         Block::default().style(app.theme.surface_dimmed()),
