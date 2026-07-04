@@ -157,11 +157,13 @@ fn pad_rect(area: Rect, pad_x: u16, pad_y: u16) -> Rect {
 
 fn draw_timeline(frame: &mut Frame, area: Rect, app: &AppState) {
     let focused = app.focus == FocusPane::Activity;
+    // Progressive disclosure: technical detail only on `?` or timeline focus.
+    let disclose = app.help_expanded || focused;
     let items: Vec<ListItem> = app
         .activity
         .iter()
         .map(|item| {
-            let line = if app.help_expanded {
+            let line = if disclose {
                 if let Some(detail) = &item.detail {
                     format!("{}  ({})", item.summary, detail)
                 } else {

@@ -76,7 +76,7 @@ impl AppState {
             mode: "ask".to_string(),
             composer: String::new(),
             activity: vec![ActivityItem {
-                summary: "● Ready — type a prompt and press Enter".to_string(),
+                summary: "○ No active tasks".to_string(),
                 detail: None,
             }],
             output_lines: Vec::new(),
@@ -166,10 +166,8 @@ impl AppState {
     pub fn begin_stream(&mut self) {
         self.session = SessionPhase::Streaming;
         self.status_message = None;
-        self.push_activity(
-            format!("{} Working…", self.mode_glyph()),
-            Some(format!("mode={}", self.mode)),
-        );
+        // Protocol fields only in detail (progressive disclosure).
+        self.push_activity("▸ Working…".to_string(), Some(self.mode.clone()));
     }
 
     pub fn end_stream_ok(&mut self) {
@@ -185,18 +183,60 @@ impl AppState {
     }
 
     pub fn humanize_tool_phase(name: &str, phase: &str) -> (String, Option<String>) {
+        // Technical id only when disclosed (`?` / focus).
         let detail = Some(format!("{name} · {phase}"));
+        let action = human_tool_action(name);
         let summary = match phase {
-            "running" => "▸ Working on a change…".to_string(),
-            "completed" => "✓ Step finished".to_string(),
-            "failed" => "✖ Step failed".to_string(),
+            "running" => format!("▸ {action}…"),
+            "completed" => format!("✓ {action}"),
+            "failed" => format!("✖ {action} failed"),
             "approval_required" => "◎ Needs your approval".to_string(),
-            _ => format!("· {phase}"),
+            _ => format!("· {action}"),
         };
         (summary, detail)
     }
 
     pub fn approval_summary(_pending: &PendingApproval) -> String {
         "Allow this action to continue?".to_string()
+    }
+}
+
+fn human_tool_action(name: &str) -> &'static str {
+    let n = name.to_ascii_lowercase();
+    if n.contains("read") || n.contains("fs.read") || n.contains("file.read") {
+        "Reading file"
+    } else if n.contains("write") || n.contains("fs.write") || n.contains("file.write") {
+        "Writing file"
+    } else if n.contains("search") || n.contains("grep") || n.contains("find") {
+        "Searching"
+    } else if n.contains("shell") || n.contains("exec") || n.contains("command") {
+        "Running command"
+    } else if n.contains("plan") {
+        "Updating plan"
+    } else {
+        "Working on a change"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tool_summary_is_human_not_protocol() {
+        let (summary, detail) = AppState::humanize_tool_phase("fs.read", "running");
+        assert!(summary.contains("Reading file"));
+        assert!(!summary.contains("fs.read"));
+        assert!(detail.unwrap().contains("fs.read"));
+    }
+
+    #[test]
+    fn begin_stream_keeps_mode_in_detail_only() {
+        let mut app = AppState::new("/tmp/ws".into(), "m".into(), "1".into());
+        app.begin_stream();
+        let last = app.activity.last().unwrap();
+        assert_eq!(last.summary, "▸ Working…");
+        assert_eq!(last.detail.as_deref(), Some("ask"));
+        assert!(!last.summary.contains("mode="));
     }
 }
