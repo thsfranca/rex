@@ -186,6 +186,7 @@ def _initial_state(
     model: str,
     turn_id: str,
     injected_files: list[str] | None = None,
+    harness_session_id: str = "",
 ) -> AgentState:
     normalized = (mode or "ask").strip().lower() or "ask"
     return AgentState(
@@ -211,6 +212,7 @@ def _initial_state(
         workspace_explored=False,
         soft_cap_continued=False,
         injected_files=list(injected_files or []),
+        harness_session_id=harness_session_id or "",
     )
 
 
@@ -267,7 +269,10 @@ def run_turn(
     turn_id: str = "",
 ) -> tuple[str, list[str]]:
     state = _initial_state(prompt, mode, model, turn_id)
-    with BrokerClient(turn_id=turn_id or None) as client:
+    with BrokerClient(
+        turn_id=turn_id or None,
+        harness_session_id=state.get("harness_session_id") or None,
+    ) as client:
         token = _active_client.set(client)
         try:
             final = _invoke(state)
@@ -298,8 +303,11 @@ def stream_turn(
     model: str,
     turn_id: str = "",
     injected_files: list[str] | None = None,
+    harness_session_id: str = "",
 ) -> Iterator[StreamEvent]:
-    state = _initial_state(prompt, mode, model, turn_id, injected_files)
+    state = _initial_state(
+        prompt, mode, model, turn_id, injected_files, harness_session_id
+    )
     yield from _stream_agent_state(state, turn_id)
 
 
@@ -321,7 +329,10 @@ def _stream_agent_state(state: AgentState, turn_id: str) -> Iterator[StreamEvent
     started_at = monotonic_now()
     first_productive_at: float | None = None
 
-    with BrokerClient(turn_id=turn_id or None) as client:
+    with BrokerClient(
+        turn_id=turn_id or None,
+        harness_session_id=state.get("harness_session_id") or None,
+    ) as client:
         client_token = _active_client.set(client)
         sink_token = set_active_sink(sink)
         try:
@@ -354,7 +365,10 @@ def run_turn_with_events(
     turn_id: str = "",
 ) -> tuple[str, list[str], list[StreamEvent]]:
     state = _initial_state(prompt, mode, model, turn_id)
-    with BrokerClient(turn_id=turn_id or None) as client:
+    with BrokerClient(
+        turn_id=turn_id or None,
+        harness_session_id=state.get("harness_session_id") or None,
+    ) as client:
         token = _active_client.set(client)
         try:
             final = _invoke(state)

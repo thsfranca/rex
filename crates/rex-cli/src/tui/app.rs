@@ -13,6 +13,7 @@ use tokio::time::timeout;
 
 use crate::domain::REQUEST_TIMEOUT_SECONDS;
 use crate::error::CliError;
+use crate::session_meta::write_prompt_fallback_meta;
 use crate::transport::connect_client;
 
 use super::approval::respond_to_tool_approval;
@@ -271,6 +272,14 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                             let prompt = app.composer.trim().to_string();
                             if !prompt.is_empty() {
                                 app.composer.clear();
+                                let workspace_root = app.workspace_root.clone();
+                                let workspace = std::path::Path::new(&workspace_root);
+                                let _ = write_prompt_fallback_meta(
+                                    workspace,
+                                    &app.harness_session_id,
+                                    &prompt,
+                                );
+                                app.refresh_session_title(workspace);
                                 app.submit_prompt(prompt.clone());
                                 let trace_id = resolve_trace_id();
                                 let harness_session_id = app.harness_session_id.clone();
@@ -428,14 +437,22 @@ fn apply_stream_update(app: &mut AppState, update: StreamUpdate) {
                     }
                     UiEffect::PhaseChanged(phase) => app.turn_phase = phase,
                     UiEffect::Ignored => {}
-                    UiEffect::TerminalDone => app.end_stream_ok(),
+                    UiEffect::TerminalDone => {
+                        app.end_stream_ok();
+                        let ws = app.workspace_root.clone();
+                        app.refresh_session_title(std::path::Path::new(&ws));
+                    }
                     UiEffect::TerminalError { code, message } => {
                         app.end_stream_error(format!("{code}: {message}"));
                     }
                 }
             }
         }
-        StreamUpdate::Completed => app.end_stream_ok(),
+        StreamUpdate::Completed => {
+            app.end_stream_ok();
+            let ws = app.workspace_root.clone();
+            app.refresh_session_title(std::path::Path::new(&ws));
+        }
         StreamUpdate::Failed(msg) => app.end_stream_error(msg),
     }
 }

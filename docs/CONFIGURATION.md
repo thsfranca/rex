@@ -130,6 +130,7 @@ When **`inference.omlx.mode: managed`** or **`inference.gateway.mode: managed`**
 | Key | Default | Purpose |
 |-----|---------|---------|
 | `cli.ui.sync_output` | `true` | Emit terminal `?2026` synchronized output when supported |
+| `cli.ui.session_title_refresh_turns` | `3` | Daemon KEEP-or-rename title fallback cadence (completed operator turns) when the agent did not call `session.set_title` |
 
 Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 

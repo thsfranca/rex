@@ -34,6 +34,8 @@ message RunTurnRequest {
   string context_revision = 5;
   // Paths already present in daemon-assembled context (R065).
   repeated string injected_files = 7;
+  // Harness terminal session id (ADR 0040); scopes broker session title updates.
+  string harness_session_id = 8;
 }
 
 message ContinueTurnRequest {

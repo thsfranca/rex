@@ -53,7 +53,7 @@ Configuration remains **`REX_ROOT`** plus JSON only. Implementation must not inv
 
 | Region | Role |
 |--------|------|
-| **Global Header** | One row: workspace basename, health/phase glyph, mode glyph |
+| **Global Header** | One row: workspace basename, session title (when set), health/phase glyph, mode glyph |
 | **Transcript** | Dominant canvas: conversation and streamed markdown (`mdstream`) |
 | **Timeline** | Secondary rail: background tasks as human phrases (not tool tags) |
 | **Composer** | Bottom dock; grows upward within a height cap |
@@ -159,7 +159,7 @@ All colors in implementation code must resolve through these tokens (or a thin m
 
 | Component | Default | Disclosed (`?` / focus / expand) |
 |-----------|---------|----------------------------------|
-| **Header** | Workspace basename, health/phase glyph, mode glyph | Full path, model id, version, connection metrics |
+| **Header** | Workspace basename, session title (`text.secondary`, ≤48 chars), health/phase glyph, mode glyph | Full path, model id, version, harness session id |
 | **Transcript** | Streamed markdown; code blocks use left accent bar, not heavy outer boxes; blank line between messages | Optional raw toggle |
 | **Timeline** | Human phrases (“Reading source file”), staggered list | Inline expand: parameters, duration, technical id |
 | **Composer** | Accent prompt glyph; grows up within height cap; top hairline uses `hairline.focus` when focused | Mode name text |

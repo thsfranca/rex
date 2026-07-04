@@ -34,3 +34,4 @@ class AgentState(TypedDict):
     workspace_explored: bool
     soft_cap_continued: bool
     injected_files: list[str]
+    harness_session_id: str

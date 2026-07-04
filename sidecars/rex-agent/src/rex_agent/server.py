@@ -114,6 +114,7 @@ class AgentServicer(sidecar_pb2_grpc.SidecarServiceServicer):
                 request.model or "",
                 getattr(request, "turn_id", "") or "",
                 injected,
+                getattr(request, "harness_session_id", "") or "",
             ),
             getattr(request, "turn_id", "") or "",
         )

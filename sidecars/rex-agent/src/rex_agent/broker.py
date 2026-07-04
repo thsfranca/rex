@@ -134,10 +134,13 @@ def _daemon_channel(socket_path: str) -> grpc.Channel:
     return grpc.insecure_channel(target, options=options)
 
 
-def _metadata(turn_id: str | None) -> tuple[tuple[str, str], ...]:
+def _metadata(turn_id: str | None, harness_session_id: str | None = None) -> tuple[tuple[str, str], ...]:
+    items: list[tuple[str, str]] = []
     if turn_id and turn_id.strip():
-        return (("x-rex-turn-id", turn_id.strip()),)
-    return ()
+        items.append(("x-rex-turn-id", turn_id.strip()))
+    if harness_session_id and harness_session_id.strip():
+        items.append(("x-rex-harness-session-id", harness_session_id.strip()))
+    return tuple(items)
 
 
 @dataclass
@@ -149,11 +152,14 @@ class ShellResult:
 class BrokerClient:
     """One gRPC channel per turn; closes on exit."""
 
-    def __init__(self, turn_id: str | None = None) -> None:
+    def __init__(
+        self, turn_id: str | None = None, harness_session_id: str | None = None
+    ) -> None:
         self._socket = daemon_socket()
         self._channel = _daemon_channel(self._socket)
         self._stub = rex_pb2_grpc.RexServiceStub(self._channel)
         self._turn_id = turn_id
+        self._harness_session_id = harness_session_id or ""
         self._mode = "ask"
 
     def close(self) -> None:
@@ -188,7 +194,7 @@ class BrokerClient:
             response = self._stub.BrokerInference(
                 request,
                 timeout=broker_timeout_secs(),
-                metadata=_metadata(self._turn_id),
+                metadata=_metadata(self._turn_id, self._harness_session_id),
             )
         except grpc.RpcError as err:
             return legacy_inference_result(False, format_grpc_error(err))
@@ -212,7 +218,7 @@ class BrokerClient:
             response = self._stub.BrokerListDir(
                 request,
                 timeout=broker_timeout_secs(),
-                metadata=_metadata(self._turn_id),
+                metadata=_metadata(self._turn_id, self._harness_session_id),
             )
         except grpc.RpcError as err:
             return False, format_grpc_error(err)
@@ -242,7 +248,7 @@ class BrokerClient:
             response = self._stub.BrokerWriteFile(
                 request,
                 timeout=broker_timeout_secs(),
-                metadata=_metadata(self._turn_id),
+                metadata=_metadata(self._turn_id, self._harness_session_id),
             )
         except grpc.RpcError as err:
             return False, format_grpc_error(err)
@@ -262,13 +268,32 @@ class BrokerClient:
             response = self._stub.BrokerSavePlan(
                 request,
                 timeout=broker_timeout_secs(),
-                metadata=_metadata(self._turn_id),
+                metadata=_metadata(self._turn_id, self._harness_session_id),
             )
         except grpc.RpcError as err:
             return False, format_grpc_error(err)
         if response.ok:
             return True, "ok"
         return False, response.error or "broker save_plan failed"
+
+    def set_session_title(
+        self, title: str, mode: str | None = None
+    ) -> tuple[bool, str]:
+        request = rex_pb2.BrokerSetSessionTitleRequest(
+            title=title,
+            mode=mode or self._mode,
+        )
+        try:
+            response = self._stub.BrokerSetSessionTitle(
+                request,
+                timeout=broker_timeout_secs(),
+                metadata=_metadata(self._turn_id, self._harness_session_id),
+            )
+        except grpc.RpcError as err:
+            return False, format_grpc_error(err)
+        if response.ok:
+            return True, "ok"
+        return False, response.error or "broker set_session_title failed"
 
     def web_search(self, query: str, mode: str | None = None) -> tuple[bool, str]:
         request = rex_pb2.BrokerWebSearchRequest(
@@ -279,7 +304,7 @@ class BrokerClient:
             response = self._stub.BrokerWebSearch(
                 request,
                 timeout=broker_timeout_secs(),
-                metadata=_metadata(self._turn_id),
+                metadata=_metadata(self._turn_id, self._harness_session_id),
             )
         except grpc.RpcError as err:
             return False, format_grpc_error(err)
@@ -311,7 +336,7 @@ class BrokerClient:
             response = self._stub.BrokerWorkspaceSearch(
                 request,
                 timeout=broker_timeout_secs(),
-                metadata=_metadata(self._turn_id),
+                metadata=_metadata(self._turn_id, self._harness_session_id),
             )
         except grpc.RpcError as err:
             return False, format_grpc_error(err)
@@ -328,7 +353,7 @@ class BrokerClient:
             response = self._stub.BrokerExecShell(
                 request,
                 timeout=broker_timeout_secs(),
-                metadata=_metadata(self._turn_id),
+                metadata=_metadata(self._turn_id, self._harness_session_id),
             )
         except grpc.RpcError as err:
             return False, format_grpc_error(err)
@@ -343,7 +368,7 @@ class BrokerClient:
             response = self._stub.BrokerReadFile(
                 request,
                 timeout=broker_timeout_secs(),
-                metadata=_metadata(self._turn_id),
+                metadata=_metadata(self._turn_id, self._harness_session_id),
             )
         except grpc.RpcError as err:
             return False, format_grpc_error(err)

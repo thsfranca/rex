@@ -136,18 +136,26 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
     let mut spans = vec![
         phase,
         Span::styled(app.workspace_basename().to_string(), name_style),
-        Span::styled(format!(" {} ", app.mode_glyph()), app.theme.text_accent()),
     ];
+    if !app.session_title.is_empty() {
+        spans.push(Span::raw(" · "));
+        spans.push(Span::styled(
+            app.session_title.clone(),
+            app.theme.text_secondary(),
+        ));
+    }
+    spans.push(Span::styled(format!(" {} ", app.mode_glyph()), app.theme.text_accent()));
     if app.bypass {
         spans.push(Span::styled("⚡", app.theme.status_warning()));
     }
     if app.help_expanded {
         spans.push(Span::styled(
             format!(
-                "  {} · {} · {}",
+                "  {} · {} · {} · {}",
                 app.phase_label(),
                 app.mode,
-                app.model_id
+                app.model_id,
+                app.harness_session_id
             ),
             app.theme.text_tertiary(),
         ));

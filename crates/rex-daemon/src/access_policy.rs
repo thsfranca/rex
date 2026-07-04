@@ -27,6 +27,7 @@ pub enum BrokerCapability {
     ExecShell,
     WebSearch,
     WorkspaceSearch,
+    SessionSetTitle,
 }
 
 impl BrokerCapability {
@@ -39,6 +40,7 @@ impl BrokerCapability {
             Self::ExecShell => "exec.shell",
             Self::WebSearch => "web.search",
             Self::WorkspaceSearch => "workspace.search",
+            Self::SessionSetTitle => "session.set_title",
         }
     }
 }
@@ -96,6 +98,7 @@ pub fn evaluate_broker(
         BrokerCapability::ExecShell => AccessDecision::Allow,
         BrokerCapability::WebSearch => AccessDecision::Allow,
         BrokerCapability::WorkspaceSearch => AccessDecision::Allow,
+        BrokerCapability::SessionSetTitle => AccessDecision::Allow,
     }
 }
 
@@ -107,6 +110,7 @@ fn capability_allowed_in_mode(capability: BrokerCapability, mode: &str) -> bool 
         BrokerCapability::FsWrite | BrokerCapability::ExecShell => mode == "agent",
         BrokerCapability::PlanSave => mode == "plan",
         BrokerCapability::WebSearch => mode == "ask" && crate::settings::get().search_enabled(),
+        BrokerCapability::SessionSetTitle => true,
     }
 }
 
@@ -167,6 +171,11 @@ pub fn evaluate_fs_list(relative_path: &str, mode: &str) -> AccessDecision {
 /// Evaluate `fs.write` before host execution.
 pub fn evaluate_fs_write(relative_path: &str, mode: &str) -> AccessDecision {
     evaluate_broker(BrokerCapability::FsWrite, mode, Some(relative_path))
+}
+
+/// Evaluate `session.set_title` before host execution.
+pub fn evaluate_session_set_title(mode: &str) -> AccessDecision {
+    evaluate_broker(BrokerCapability::SessionSetTitle, mode, None)
 }
 
 /// Evaluate `exec.shell` before host execution.
