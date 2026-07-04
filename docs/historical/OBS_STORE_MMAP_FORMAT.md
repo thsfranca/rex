@@ -1,3 +1,5 @@
+> Status: cancelled | Do not use for active product decisions.
+
 # CHCE — columnar-mmap observability store (reference)
 
 > **Status: Cancelled (2026-06-09).** CHCE program **R043–R054** cancelled — [CHCE_ROADMAP.md](CHCE_ROADMAP.md). Observability → [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md).
@@ -6,7 +8,7 @@
 
 **Status:** **cancelled**
 
-**Hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **ADRs:** [0025](architecture/decisions/0025-dual-economics-store-engines.md), [0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) · **SQLite default:** [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md)
+**Hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) · **ADRs:** [0025](../architecture/decisions/0025-dual-economics-store-engines.md), [0027](../architecture/decisions/0027-chce-columnar-mmap-engine.md) · **SQLite default:** [ADR 0021](../architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md)
 
 ## Purpose
 
@@ -108,7 +110,7 @@ flowchart TB
 
 ## Logical data model
 
-Programmatic structs only — no SQL DDL. Shared logical schema with SQLite ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)).
+Programmatic structs only — no SQL DDL. Shared logical schema with SQLite ([ADR 0025](../architecture/decisions/0025-dual-economics-store-engines.md)).
 
 ### ConfigSnapshotRecord
 
@@ -120,7 +122,7 @@ Programmatic structs only — no SQL DDL. Shared logical schema with SQLite ([AD
 
 ### StreamEconomicsRecord
 
-Persisted at `stream.terminal`. **`trace_id` and `turn_id` stored in sparse secondary index**, not in dense metric columns ([ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)).
+Persisted at `stream.terminal`. **`trace_id` and `turn_id` stored in sparse secondary index**, not in dense metric columns ([ADR 0027](../architecture/decisions/0027-chce-columnar-mmap-engine.md)).
 
 ### Schema parity matrix
 
@@ -277,7 +279,7 @@ block-beta
 |-------|------|-------|
 | `committed_byte_len` | u64 LE | Valid file length; monotonic |
 
-**Write order:** append sealed 16 KB page → `msync` touched pages → update `committed_byte_len` (Release) → **`F_BARRIERFSYNC`** on fd ([ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)).
+**Write order:** append sealed 16 KB page → `msync` touched pages → update `committed_byte_len` (Release) → **`F_BARRIERFSYNC`** on fd ([ADR 0027](../architecture/decisions/0027-chce-columnar-mmap-engine.md)).
 
 **Recovery:** Map file; read backward from EOF; validate `CRC32_PAYLOAD`; on torn page, set `committed_byte_len` to last valid block start; `ftruncate`. Surface `store.recovery_failed` if no valid boundary ([ERROR_HANDLING.md](ERROR_HANDLING.md)).
 
@@ -344,7 +346,7 @@ Incompatible `format_version` → `store.format_version_unsupported`.
 
 ## Promotion gates (sqlite → mmap default)
 
-All must pass before JSON default changes ([ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md)):
+All must pass before JSON default changes ([ADR 0025](../architecture/decisions/0025-dual-economics-store-engines.md)):
 
 1. Harness parity — aggregates within tolerance vs SQLite
 2. Recovery fuzz — kill mid-append; truncate without prior commit loss

@@ -1,3 +1,5 @@
+> Status: cancelled | Do not use for active product decisions.
+
 # Observability integrations (bundled Grafana suite)
 
 > **Status: Cancelled (2026-06-09).** Rex-owned Grafana suite and `rex obs up` are **not** the product path. Use **[LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)** (LangFuse Cloud). Shipped code **removed in LF-R01**.
@@ -6,7 +8,7 @@
 
 **Status:** **cancelled** — superseded by LangFuse Cloud ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)).
 
-**Decision records:** [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md) · [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) · [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md) · **Design hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
+**Decision records:** [ADR 0010](../architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md) · [ADR 0020](../architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](../architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0025](../architecture/decisions/0025-dual-economics-store-engines.md) · [ADR 0026](../architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md) · [ADR 0027](../architecture/decisions/0027-chce-columnar-mmap-engine.md) · **Design hub:** [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
 
 ## Configuration surface
 
@@ -87,7 +89,7 @@ Grafana panels use a **Rex datasource plugin** — not Prometheus, Loki, Tempo, 
 | **Auth** | Loopback-only; no tokens in product JSON (local dev) |
 | **Metrics** | OTel-shaped series for `gen_ai.*` and `rex.*` ([metric catalog](#metric-catalog)) |
 | **Traces / logs** | OTel-shaped spans and log records when Phases 6+ land |
-| **Live data** | `GET /v1/metrics/stream` SSE with `cursor_commit_ms` merge — **planned** Phase 6 ([OBS_READ_API.md](OBS_READ_API.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)); plugin `"streaming": true` when shipped |
+| **Live data** | `GET /v1/metrics/stream` SSE with `cursor_commit_ms` merge — **planned** Phase 6 ([OBS_READ_API.md](OBS_READ_API.md), [ADR 0027](../architecture/decisions/0027-chce-columnar-mmap-engine.md)); plugin `"streaming": true` when shipped |
 | **Provisioning** | `$REX_ROOT/obs/grafana/provisioning/datasources/rex.yml` (planned) |
 
 **Not used:** PromQL, LogQL, TraceQL, OpenTelemetry Collector, Mimir, Loki, Tempo.
@@ -106,7 +108,7 @@ Dashboard UIDs and JSON land in implementation PRs.
 
 ## Metric catalog
 
-Stable instrument names for panels, store, and read API. See [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md).
+Stable instrument names for panels, store, and read API. See [ADR 0020](../architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md).
 
 ### OpenTelemetry GenAI
 
@@ -148,7 +150,7 @@ Stable instrument names for panels, store, and read API. See [ADR 0020](architec
 4. Optionally call `GetEconomicsSnapshot` for bounded recent summaries.
 5. Optionally call `ReportResourceStats` for self-reported CPU/memory.
 
-Broker RPCs remain on the sidecar control-plane socket; observability RPCs use **daemon UDS** only — [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md).
+Broker RPCs remain on the sidecar control-plane socket; observability RPCs use **daemon UDS** only — [ADR 0010](../architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md).
 
 ## CLI helpers (planned)
 
@@ -185,7 +187,7 @@ Not the product UI path. Use when replicating telemetry to an operator-managed b
 | OTLP export | Set `observability.otlp.endpoint`; daemon pushes to **your** collector |
 | External Grafana Cloud / Datadog | Collector or intake on operator side; API keys stay outside Rex JSON |
 
-Former BYOT bridge patterns (Collector + Mimir, Prometheus scrape, SQLite file datasource) are **deprecated** for the Rex product path per [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md).
+Former BYOT bridge patterns (Collector + Mimir, Prometheus scrape, SQLite file datasource) are **deprecated** for the Rex product path per [ADR 0026](../architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md).
 
 ## Related
 

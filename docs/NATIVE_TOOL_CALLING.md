@@ -1,5 +1,9 @@
 # Native broker tool calling (design hub)
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: native broker tool calling
+> Prefer: ## Purpose
+
 **Diátaxis role:** explanation — how Rex routes agent tool loops through provider-native `tools[]` / `tool_calls` on `BrokerInference`.
 
 **Status:** `complete` — **R038** shipped (daemon + sidecar + operator E2E script).

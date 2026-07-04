@@ -130,6 +130,21 @@ impl LoadedConfig {
         )
     }
 
+    pub fn advisory_intent_enabled(&self) -> bool {
+        self.effective
+            .context
+            .advisory_intent_enabled
+            .unwrap_or(true)
+    }
+
+    pub fn context_paths(&self) -> &[String] {
+        &self.effective.context.paths
+    }
+
+    pub fn knowledge_enabled(&self) -> bool {
+        self.effective.context.knowledge_enabled.unwrap_or(true)
+    }
+
     pub fn broker_shell_allowlist(&self) -> &[String] {
         &self.effective.broker.shell_allowlist
     }

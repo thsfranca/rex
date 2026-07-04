@@ -1,5 +1,9 @@
 # Economics validation program (design hub)
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: economics validation program
+> Prefer: ## Purpose
+
 **Diátaxis role:** explanation — how to prove Rex reduces cost without unacceptable quality loss.
 
 **Status:** **partial** — opt-in live smoke harness (**R039**) and nightly workflow (**R040**) **implemented**; powered statistical gates and run manifest (**R042**) remain **planned**.
@@ -176,13 +180,13 @@ Golden set: ~50 local repo tasks (SWE-bench Lite–style subset). **Control:** c
 | `task_success_rate` | Non-inferiority δ = 2.5pp (gates below) |
 | `prefix_hash` (SHA-256) | Identical across steps 1–12 per turn |
 
-**Prefix-hash CI spec (planned):** harness records SHA-256 of static prefix bytes before each `BrokerInference` in a fixture turn; fail build if hash differs between step 1 and step N (N ≤ `max_tool_steps`). Wire fields: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md).
+**Prefix-hash CI spec (planned):** harness records SHA-256 of static prefix bytes before each `BrokerInference` in a fixture turn; fail build if hash differs between step 1 and step N (N ≤ `max_tool_steps`). Wire fields: [OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md).
 
 **Cadence:** per-PR smoke uses mock/replay (no live LLM); powered agent-turn A/B on **release** or lever-change gates only — see [Cadence](#cadence).
 
 ## CHCE store benchmarks (mmap engine promotion)
 
-When `observability.store.engine=mmap` (CHCE) ships, these gates apply before default-engine promotion ([OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)):
+When `observability.store.engine=mmap` (CHCE) ships, these gates apply before default-engine promotion ([OBS_STORE_MMAP_FORMAT.md](historical/OBS_STORE_MMAP_FORMAT.md), [ADR 0027](architecture/decisions/0027-chce-columnar-mmap-engine.md)):
 
 | Benchmark | Target | Verification |
 |-----------|--------|--------------|
@@ -193,7 +197,7 @@ When `observability.store.engine=mmap` (CHCE) ships, these gates apply before de
 | Engine parity | Aggregates within tolerance vs SQLite | Same scenario on both engines |
 | Linux CI alignment | ELF page size 16384 when mmap crate builds | `check_elf_alignment.sh` |
 
-Harness should use a shared **store trait** and parity-check sqlite vs CHCE on macOS — design intent in [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md).
+Harness should use a shared **store trait** and parity-check sqlite vs CHCE on macOS — design intent in [OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md).
 
 ## Gaps (explicit)
 
@@ -206,8 +210,8 @@ Harness should use a shared **store trait** and parity-check sqlite vs CHCE on m
 
 | Doc | Relationship |
 |-----|----------------|
-| [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | Signal catalog, store |
-| [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | Bundled Grafana + Rex read API |
+| [OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md) | Signal catalog, store |
+| [OBSERVABILITY_INTEGRATIONS.md](historical/OBSERVABILITY_INTEGRATIONS.md) | Bundled Grafana + Rex read API |
 | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Economics harness row |
 | [ROADMAP.md](ROADMAP.md) | **R039–R042** live smoke phasing; **R038** native tools — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 | [CI.md](CI.md) | Three-tier validation model; RC-10 |

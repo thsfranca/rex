@@ -1,5 +1,9 @@
 # Long-term memory (design hub)
 
+
+> Role: explanation | Status: design accepted | Audience: contributors | Read when: long-term memory boundaries
+> Prefer: ## Purpose
+
 This document is the **single source** for Rex **long-term / project memory** as a **design bet**: hypothesis-level capabilities, optimization-first intent, and interface boundaries. Implementation today does **not** include a durable daemon memory store unless other docs explicitly say so.
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention. Other docs link here and avoid duplicating the bet list below.

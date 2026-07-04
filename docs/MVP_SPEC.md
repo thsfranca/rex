@@ -1,5 +1,9 @@
 # Phase 1 product architecture
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: Phase 1 product scope
+> Prefer: ## Purpose
+
 **Scope and shape** for the first REX product path (daemon-supervised sidecar, brokered HTTP, CLI thin client). **Done** is defined only in **[V1_0.md](V1_0.md)** (`RC-*` release criteria)—not in this file.
 
 ## Product goals
@@ -79,7 +83,7 @@ Canonical hub: [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). **Done** stat
 | **2** | Daemon OTLP → LangFuse Cloud (**LF-F01**, **RC-LF1**) | **planned** |
 | **3** | LiteLLM / sidecar / validation features (**LF-F02–LF-F07**) | **planned** |
 
-Rex-owned store, read API, Grafana suite, and CHCE (**R043–R054**) are **cancelled** — [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) (historical).
+Rex-owned store, read API, Grafana suite, and CHCE (**R043–R054**) are **cancelled** — [OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md) (historical).
 
 ## Out of scope (Phase 1 shape)
 

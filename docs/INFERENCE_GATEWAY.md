@@ -1,5 +1,9 @@
 # Inference Gateway
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: LiteLLM gateway design
+> Prefer: ## Scope
+
 **Status:** **implemented** — [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md). Daemon supervisor + `rex gateway init|doctor` + `$REX_ROOT/gateway/` templates.
 
 Canonical design for Rex’s **opt-in, daemon-controlled** LiteLLM (OpenAI-compat) server. Related: [ADAPTERS.md](ADAPTERS.md), [CONFIGURATION.md](CONFIGURATION.md#inference-gateway-design), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) (protocol adapter), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) (agent sidecar — separate feature).

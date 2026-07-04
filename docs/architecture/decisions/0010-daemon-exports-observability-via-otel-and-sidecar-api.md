@@ -34,7 +34,7 @@ Rejected alternatives considered:
  Sidecars call **`SidecarObservabilityService`** over the **daemon UDS** (`daemon.socket`), not the sidecar control-plane socket. RPCs: `RegisterMetric`, `RecordMetric`, `GetEconomicsSnapshot`, `ReportResourceStats`. The daemon aggregates sidecar points and exports them as `rex.sidecar.custom.*` on the same OTLP stream as daemon economics.
 
 3. **BYOT tooling** 
- Rex documents integration patterns only ([OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md)). Rex does not ship collectors, TSDBs, or dashboard servers.
+ Rex documents integration patterns only ([OBSERVABILITY_INTEGRATIONS.md](../../historical/OBSERVABILITY_INTEGRATIONS.md)). Rex does not ship collectors, TSDBs, or dashboard servers.
 
 4. **Primary contract: OTLP push** 
  OTLP is the primary interoperability surface. Optional Prometheus scrape from Rex is **deferred** unless an operator requests it.
@@ -57,15 +57,15 @@ Rejected alternatives considered:
 
 ## Implementation status (2026-06)
 
-Canonical hub: [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md).
+Canonical hub: [OBSERVABILITY_AND_ECONOMICS.md](../../historical/OBSERVABILITY_AND_ECONOMICS.md).
 
 | Item | Status |
 |------|--------|
 | SQLite `rex-obs-store` + OTLP export | **Shipped** |
-| Rex observability read API (historical query) | **Shipped** — [OBS_READ_API.md](../../OBS_READ_API.md) |
-| Grafana Rex OTel datasource plugin + `rex obs up` | **Shipped** — [OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md) |
+| Rex observability read API (historical query) | **Shipped** — [OBS_READ_API.md](../../historical/OBS_READ_API.md) |
+| Grafana Rex OTel datasource plugin + `rex obs up` | **Shipped** — [OBSERVABILITY_INTEGRATIONS.md](../../historical/OBSERVABILITY_INTEGRATIONS.md) |
 | `rex obs` CLI (`serve`, `up`, `down`, `doctor`, `catalog`) | **Shipped** |
-| CHCE mmap engine | **Planned** — [CHCE_ROADMAP.md](../../CHCE_ROADMAP.md), [ADR 0027](0027-chce-columnar-mmap-engine.md) |
+| CHCE mmap engine | **Planned** — [CHCE_ROADMAP.md](../../historical/CHCE_ROADMAP.md), [ADR 0027](0027-chce-columnar-mmap-engine.md) |
 | SSE live tail (read API) | **Planned** — Phase 6 |
 | `SidecarObservabilityService` on daemon UDS | **Planned** |
 
@@ -73,5 +73,5 @@ Canonical hub: [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMIC
 
 - [ADR 0001](0001-daemon-owns-agent-orchestration-and-economics.md) · [ADR 0008](0008-dedicated-sidecar-control-plane-api.md)
 - [ADR 0020](0020-otel-genai-semconv-with-rex-pipeline-metrics.md) · [ADR 0021](0021-rex-owned-economics-store-byot-visualization.md) · [ADR 0026](0026-rex-owned-storage-grafana-otel-datasource.md)
-- [OBSERVABILITY_AND_ECONOMICS.md](../../OBSERVABILITY_AND_ECONOMICS.md) · [OBSERVABILITY_INTEGRATIONS.md](../../OBSERVABILITY_INTEGRATIONS.md) · [CONFIGURATION.md](../../CONFIGURATION.md) · [SIDECAR_RUNTIME.md](../../SIDECAR_RUNTIME.md)
+- [OBSERVABILITY_AND_ECONOMICS.md](../../historical/OBSERVABILITY_AND_ECONOMICS.md) · [OBSERVABILITY_INTEGRATIONS.md](../../historical/OBSERVABILITY_INTEGRATIONS.md) · [CONFIGURATION.md](../../CONFIGURATION.md) · [SIDECAR_RUNTIME.md](../../SIDECAR_RUNTIME.md)
 - [README.md](README.md) (index)

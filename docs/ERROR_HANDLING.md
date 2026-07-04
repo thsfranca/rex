@@ -1,5 +1,9 @@
 # Error handling
 
+
+> Role: reference | Status: active | Audience: contributors | Read when: error codes and messages
+> Prefer: ## Error code catalog
+
 Canonical hub for **how Rex surfaces failures** across daemon, CLI, extension, sidecar, broker, and plugins. Wire shapes for the editor path live in [NDJSON_STREAM.md](NDJSON_STREAM.md); this document defines **principles**, **message quality**, **code taxonomy**, and **CI enforcement**.
 
 ## Purpose and audiences

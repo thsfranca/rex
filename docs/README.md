@@ -4,10 +4,55 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 
 | Role | Where to read |
 |------|----------------|
+| **Agent router** (task-scoped load) | [AGENTS.md](AGENTS.md), root [llms.txt](../llms.txt), [manifest.yaml](manifest.yaml) |
 | **Tutorials** (first success path) | [README.md](../README.md) quickstart, [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) |
-| **How-to** (task recipes) | [RELEASE.md](RELEASE.md), [CONFIGURATION.md](CONFIGURATION.md), [CI.md](CI.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
-| **Explanation** (design intent) | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), [V1_0.md](V1_0.md), [ARCHITECTURE.md](ARCHITECTURE.md), [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md), [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md), [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md), [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md), [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [MVP_SPEC.md](MVP_SPEC.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) |
-| **Reference** (narrow facts) | [ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [NDJSON_STREAM.md](NDJSON_STREAM.md), [ERROR_HANDLING.md](ERROR_HANDLING.md), [OBS_READ_API.md](OBS_READ_API.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), `proto/rex/v1/rex.proto`, [DOCUMENTATION.md](DOCUMENTATION.md) |
+
+### How-to (task recipes)
+
+| Doc | When to read |
+|-----|--------------|
+| [RELEASE.md](RELEASE.md) | Cut a release or tag |
+| [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md) | Operator daemon + inference setup |
+| [CI.md](CI.md) | CI workflows and local gates |
+| [DEPENDENCIES.md](DEPENDENCIES.md) | Toolchain prerequisites |
+
+### Explanation (design intent)
+
+| Doc | When to read |
+|-----|--------------|
+| [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) | Project intent and principles |
+| [V1_0.md](V1_0.md) | v1.0 release criteria |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture (SAD) |
+| [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) | Cross-cutting policies and doc layering |
+| [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) | LiteLLM gateway design |
+| [OMLX_INFERENCE.md](OMLX_INFERENCE.md) | oMLX local inference (Mac) |
+| [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | Sidecar spawn and broker API |
+| [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md) | Product agent program |
+| [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) | Token-efficient agent graph |
+| [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) | Access policy and sandbox |
+| [POLICY_ENGINE.md](POLICY_ENGINE.md) | Daemon policy pipeline |
+| [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Deferred VM/container catalog |
+| [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Token economics matrix |
+| [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) | Long-term memory design |
+| [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) | Agent knowledge bundles |
+| [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) | LangFuse observability |
+| [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | LangFuse discovery queue |
+| [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Economics validation program |
+| [MVP_SPEC.md](MVP_SPEC.md) | Phase 1 product scope |
+| [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Terminal operator UX |
+| [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | Terminal harness architecture |
+
+### Reference (narrow facts)
+
+| Doc | When to read |
+|-----|--------------|
+| [ADAPTERS.md](ADAPTERS.md) | Inference adapter capabilities |
+| [CACHING.md](CACHING.md) | Cache keys and policy |
+| [NDJSON_STREAM.md](NDJSON_STREAM.md) | NDJSON stream contract |
+| [ERROR_HANDLING.md](ERROR_HANDLING.md) | Error codes and messages |
+| [CONFIGURATION.md](CONFIGURATION.md) | JSON config keys and precedence |
+| `proto/rex/v1/rex.proto` | gRPC contract |
+| [DOCUMENTATION.md](DOCUMENTATION.md) | Writing norms |
 
 ## New documentation checklist
 
@@ -26,6 +71,8 @@ Before adding or materially editing a doc under `docs/`:
 | Path | Purpose |
 |------|---------|
 | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) | Project purpose and operating principles (canonical) |
+| [AGENTS.md](AGENTS.md) | Task router for AI assistants and contributors |
+| [manifest.yaml](manifest.yaml) | Machine-readable doc catalog (role, status, topics) |
 | [DOCUMENTATION.md](DOCUMENTATION.md) | Writing checklist + doc-type norms |
 | [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) | How to contribute and gate quality |
 | [KISS_CONFIG_SURFACE.md](KISS_CONFIG_SURFACE.md) | KISS guardrails for config keys and runtime binding |
@@ -54,13 +101,9 @@ Before adding or materially editing a doc under `docs/`:
 | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) | Agent-oriented project knowledge — **design hub** |
 | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) | LangFuse Cloud observability — **design hub** |
 | [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | LangFuse discovery tasks (**LF-D01–LF-D10**) |
-| [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | **Superseded** — signal catalog (historical) |
-| [CHCE_ROADMAP.md](CHCE_ROADMAP.md) | **Cancelled** — CHCE program (**R043–R054**) |
-| [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md) | **Cancelled** — CHCE format reference |
 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Economics validation program — **design hub** |
-| [OBS_READ_API.md](OBS_READ_API.md) | **Cancelled** — loopback read API (historical) |
-| [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) | **Cancelled** — bundled Grafana suite (historical) |
 | [CONFIGURATION.md](CONFIGURATION.md) | JSON config schema + deprecated `REX_*` catalog |
+| [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md) | Operator setup walkthroughs (how-to) |
 | [NDJSON_STREAM.md](NDJSON_STREAM.md) | NDJSON stream contract for CLI and automation |
 | [ERROR_HANDLING.md](ERROR_HANDLING.md) | Error codes, human-readable messages, CI guidelines gate |
 | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Plan mode tools, stream contract, broker plan.save |
@@ -71,6 +114,18 @@ Before adding or materially editing a doc under `docs/`:
 | [CI.md](CI.md) | Automation gates |
 | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | CI quality and security gates (**R023** Done; **R024–R026** planned) |
 | [DEPENDENCIES.md](DEPENDENCIES.md) | Toolchain prerequisites |
+
+## Historical (`docs/historical/`)
+
+Cancelled or superseded programs — see [historical/README.md](historical/README.md). Not listed in [manifest.yaml](manifest.yaml) active catalog.
+
+| Path | Purpose |
+|------|---------|
+| [historical/OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md) | **Superseded** — signal catalog |
+| [historical/CHCE_ROADMAP.md](historical/CHCE_ROADMAP.md) | **Cancelled** — CHCE program |
+| [historical/OBS_STORE_MMAP_FORMAT.md](historical/OBS_STORE_MMAP_FORMAT.md) | **Cancelled** — CHCE format |
+| [historical/OBS_READ_API.md](historical/OBS_READ_API.md) | **Cancelled** — loopback read API |
+| [historical/OBSERVABILITY_INTEGRATIONS.md](historical/OBSERVABILITY_INTEGRATIONS.md) | **Cancelled** — bundled Grafana suite |
 
 ## Feature-area hub map
 
@@ -93,7 +148,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 | Agent knowledge for AI sessions (planned) | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
 | LangFuse Cloud observability (primary) | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md), [CONFIGURATION.md](CONFIGURATION.md#observability), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md) |
-| Rex-owned observability suite (**cancelled**) | [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [CHCE_ROADMAP.md](CHCE_ROADMAP.md), [OBS_READ_API.md](OBS_READ_API.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md) |
+| Rex-owned observability suite (**cancelled**) | [historical/OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md), [historical/CHCE_ROADMAP.md](historical/CHCE_ROADMAP.md), [historical/OBS_READ_API.md](historical/OBS_READ_API.md), [historical/OBS_STORE_MMAP_FORMAT.md](historical/OBS_STORE_MMAP_FORMAT.md), [historical/OBSERVABILITY_INTEGRATIONS.md](historical/OBSERVABILITY_INTEGRATIONS.md) |
 | Native broker tool calling (**R038** **Done**) | [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md), [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) |
 | Economics validation + live LLM smoke (**R039–R042** planned) | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) |
 | MCP-style tool interoperability (design accepted) | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |

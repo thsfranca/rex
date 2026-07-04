@@ -1,7 +1,7 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use crate::adapters::AdapterCapabilities;
@@ -85,22 +85,25 @@ pub struct PipelineMetrics {
     pub behavior_decision: BehaviorDecision,
     pub retrieval: RetrievalDecision,
     pub compression_strategy: &'static str,
+    pub knowledge_status: &'static str,
 }
 
 #[derive(Debug, Clone)]
 pub struct PipelineResult {
     pub effective_prompt: String,
     pub injected_context: String,
+    pub injected_paths: Vec<String>,
     pub c1_stripped: bool,
     pub metrics: PipelineMetrics,
 }
 
-/// Paths already embedded in daemon context for sidecar skip logic (R065).
+/// Paths already embedded in daemon context for sidecar skip logic (R065 / R066).
 pub fn build_injected_files_manifest(
     active_file_path: Option<&str>,
     injected_context: &str,
+    configured_paths: &[String],
 ) -> Vec<String> {
-    let mut paths: Vec<String> = Vec::new();
+    let mut paths: Vec<String> = configured_paths.to_vec();
     if let Some(path) = active_file_path
         .map(str::trim)
         .filter(|value| !value.is_empty())
@@ -227,13 +230,16 @@ pub struct ExtractiveContextCompressor;
 
 const RETRIEVAL_SKIP_MAX_PROMPT_CHARS: usize = 48;
 
-const ADVISORY_BUNDLE_PATHS: &[&str] = &["docs/ROADMAP.md", "docs/PRIORITIZATION.md", "README.md"];
+const MAX_BYTES_PER_INJECTED_PATH: usize = 4096;
+const CONTEXT_PATHS_BUDGET_FRACTION: f32 = 0.30;
 
 pub fn should_skip_retrieval(request: &ContextRequest) -> bool {
     if request.retrieve_off {
         return true;
     }
-    if crate::advisory_intent::matches_advisory_intent(&request.prompt) {
+    if crate::settings::get().advisory_intent_enabled()
+        && crate::advisory_intent::matches_advisory_intent(&request.prompt)
+    {
         return false;
     }
     if request.prompt.chars().count() <= RETRIEVAL_SKIP_MAX_PROMPT_CHARS {
@@ -250,13 +256,38 @@ fn load_advisory_bundle(budget_tokens: usize) -> (String, usize, bool) {
         Ok(path) => path,
         Err(_) => return (String::new(), 0, false),
     };
+    let rel_paths = crate::doc_manifest::advisory_bundle_paths(&root);
+    load_path_bundle(&root, &rel_paths, budget_tokens)
+}
+
+fn load_context_paths(budget_tokens: usize) -> (String, usize, Vec<String>) {
+    let loaded = crate::settings::get();
+    let paths: Vec<String> = loaded.context_paths().to_vec();
+    if paths.is_empty() {
+        return (String::new(), 0, Vec::new());
+    }
+    let root = match loaded.resolve_workspace_root() {
+        Ok(path) => path,
+        Err(_) => return (String::new(), 0, Vec::new()),
+    };
+    let path_budget = ((budget_tokens as f32) * CONTEXT_PATHS_BUDGET_FRACTION).floor() as usize;
+    let (text, tokens, _) = load_path_bundle(&root, &paths, path_budget);
+    let injected: Vec<String> = paths
+        .iter()
+        .filter(|rel| root.join(rel).is_file())
+        .cloned()
+        .collect();
+    (text, tokens, injected)
+}
+
+fn load_path_bundle(root: &Path, rel_paths: &[String], budget_tokens: usize) -> (String, usize, bool) {
     let mut lines: Vec<String> = Vec::new();
-    for rel in ADVISORY_BUNDLE_PATHS {
+    for rel in rel_paths {
         let path = root.join(rel);
         let Ok(text) = fs::read_to_string(&path) else {
             continue;
         };
-        let snippet: String = text.chars().take(4096).collect();
+        let snippet: String = text.chars().take(MAX_BYTES_PER_INJECTED_PATH).collect();
         lines.push(format!("[{rel}] {snippet}"));
     }
     if lines.is_empty() {
@@ -418,6 +449,7 @@ impl ContextPipeline {
             return PipelineResult {
                 effective_prompt: bounded_prompt.clone(),
                 injected_context: String::new(),
+                injected_paths: Vec::new(),
                 c1_stripped,
                 metrics: PipelineMetrics {
                     prompt_tokens: estimate_tokens(&bounded_prompt),
@@ -429,6 +461,7 @@ impl ContextPipeline {
                     behavior_decision: decision,
                     retrieval: RetrievalDecision::Skipped,
                     compression_strategy: "none",
+                    knowledge_status: "off",
                 },
             };
         }
@@ -437,6 +470,7 @@ impl ContextPipeline {
             return PipelineResult {
                 effective_prompt: bounded_prompt.clone(),
                 injected_context: String::new(),
+                injected_paths: Vec::new(),
                 c1_stripped,
                 metrics: PipelineMetrics {
                     prompt_tokens: estimate_tokens(&bounded_prompt),
@@ -452,6 +486,7 @@ impl ContextPipeline {
                     behavior_decision: decision,
                     retrieval: RetrievalDecision::Skipped,
                     compression_strategy: "none",
+                    knowledge_status: "off",
                 },
             };
         }
@@ -462,6 +497,7 @@ impl ContextPipeline {
                 return PipelineResult {
                     effective_prompt: join_prompt_and_context(&bounded_prompt, &context),
                     injected_context: context.clone(),
+                    injected_paths: Vec::new(),
                     c1_stripped,
                     metrics: PipelineMetrics {
                         prompt_tokens: estimate_tokens(&bounded_prompt),
@@ -473,14 +509,23 @@ impl ContextPipeline {
                         behavior_decision: decision,
                         retrieval: RetrievalDecision::Skipped,
                         compression_strategy: "prefix_hit",
+                        knowledge_status: "off",
                     },
                 };
             }
         }
 
+        let (paths_context, paths_tokens, injected_paths) =
+            load_context_paths(self.budget.max_context_tokens);
+        let remaining_budget = self
+            .budget
+            .max_context_tokens
+            .saturating_sub(paths_tokens);
+
         let retrieval = if should_skip_retrieval(request) {
             RetrievalDecision::Skipped
-        } else if crate::advisory_intent::matches_advisory_intent(&bounded_prompt)
+        } else if crate::settings::get().advisory_intent_enabled()
+            && crate::advisory_intent::matches_advisory_intent(&bounded_prompt)
             && bounded_prompt.chars().count() <= RETRIEVAL_SKIP_MAX_PROMPT_CHARS
         {
             RetrievalDecision::AdvisoryBundle
@@ -492,14 +537,18 @@ impl ContextPipeline {
             query.push(' ');
             query.push_str(diagnostics);
         }
-        let (context, selected_tokens, truncated, candidate_count, compression_strategy) =
+        let (mut context, mut selected_tokens, truncated, candidate_count, compression_strategy) =
             if retrieval == RetrievalDecision::AdvisoryBundle {
-                let (bundle, tokens, trunc) = load_advisory_bundle(self.budget.max_context_tokens);
+                let root = crate::settings::get()
+                    .resolve_workspace_root()
+                    .unwrap_or_else(|_| PathBuf::from("."));
+                let bundle_len = crate::doc_manifest::advisory_bundle_paths(&root).len();
+                let (bundle, tokens, trunc) = load_advisory_bundle(remaining_budget);
                 (
                     bundle,
-                    tokens,
+                    paths_tokens + tokens,
                     trunc,
-                    ADVISORY_BUNDLE_PATHS.len(),
+                    bundle_len,
                     "advisory_bundle",
                 )
             } else if retrieval == RetrievalDecision::Ran {
@@ -508,24 +557,73 @@ impl ContextPipeline {
                     boost_active_file_candidate(&mut candidates, active);
                 }
                 let candidate_count = candidates.len();
-                let (ctx, tokens, trunc) =
-                    self.compressor
-                        .compress(&query, &candidates, self.budget.max_context_tokens);
+                let (ctx, tokens, trunc) = self.compressor.compress(
+                    &query,
+                    &candidates,
+                    remaining_budget,
+                );
                 let strategy = if candidates.is_empty() {
                     "none"
                 } else {
                     "extractive_query"
                 };
-                (ctx, tokens, trunc, candidate_count, strategy)
+                (
+                    ctx,
+                    paths_tokens + tokens,
+                    trunc,
+                    candidate_count,
+                    strategy,
+                )
             } else {
-                (String::new(), 0, false, 0, "none")
+                (
+                    String::new(),
+                    paths_tokens,
+                    false,
+                    0,
+                    if paths_context.is_empty() {
+                        "none"
+                    } else {
+                        "context_paths"
+                    },
+                )
             };
+
+        if !paths_context.is_empty() {
+            if context.is_empty() {
+                context = paths_context;
+            } else {
+                context = format!("{paths_context}\n{context}");
+            }
+        }
+
+        let knowledge_status = if crate::settings::get().knowledge_enabled() {
+            let root = crate::settings::get()
+                .resolve_workspace_root()
+                .unwrap_or_else(|_| PathBuf::from("."));
+            let knowledge = crate::knowledge::load_knowledge_context(
+                &root,
+                self.budget.max_context_tokens,
+            );
+            if !knowledge.text.is_empty() {
+                if context.is_empty() {
+                    context = knowledge.text;
+                } else {
+                    context = format!("{}\n{}", context, knowledge.text);
+                }
+                selected_tokens += knowledge.tokens;
+            }
+            knowledge.status
+        } else {
+            "off"
+        };
+
         if !request.cache_bypass {
             self.cache.put(cache_key, context.clone());
         }
         PipelineResult {
             effective_prompt: join_prompt_and_context(&bounded_prompt, &context),
             injected_context: context.clone(),
+            injected_paths,
             c1_stripped,
             metrics: PipelineMetrics {
                 prompt_tokens: estimate_tokens(&bounded_prompt),
@@ -545,6 +643,7 @@ impl ContextPipeline {
                 behavior_decision: decision,
                 retrieval,
                 compression_strategy,
+                knowledge_status,
             },
         }
     }
@@ -684,15 +783,16 @@ fn score_terms(query_terms: &[String], doc_terms: &[String]) -> usize {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use super::{
-        build_injected_files_manifest, stable_prefix_key, BehaviorSnapshot, CacheStatus,
-        ContextChunk, ContextPipeline, ContextRequest, ExtractiveContextCompressor,
+        build_injected_files_manifest, load_advisory_bundle, stable_prefix_key, BehaviorSnapshot,
+        CacheStatus, ContextChunk, ContextPipeline, ContextRequest, ExtractiveContextCompressor,
         LexicalWorkspaceIndexer, TokenBudget,
     };
     use crate::adapters::{AdapterCapabilities, RuntimeKind};
     use super::should_skip_retrieval;
     use std::fs;
-    use std::sync::Arc;
 
     fn test_pipeline() -> ContextPipeline {
         ContextPipeline::with_indexer(LexicalWorkspaceIndexer::default_seeded())
@@ -722,10 +822,15 @@ mod tests {
         let manifest = build_injected_files_manifest(
             Some("src/main.rs"),
             "[context]\n<<tool_result:fs.read>> README.md\n# rex",
+            &["docs/AGENTS.md".to_string()],
         );
         assert_eq!(
             manifest,
-            vec!["README.md".to_string(), "src/main.rs".to_string()]
+            vec![
+                "README.md".to_string(),
+                "docs/AGENTS.md".to_string(),
+                "src/main.rs".to_string()
+            ]
         );
     }
 
@@ -750,6 +855,32 @@ mod tests {
         );
         assert!(result.effective_prompt.chars().count() <= 16);
         crate::settings::reset_for_test();
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn advisory_intent_loads_manifest_bundle() {
+        let dir = std::env::temp_dir().join(format!("rex-adv-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("docs")).expect("mkdir docs");
+        fs::write(
+            dir.join("docs/manifest.yaml"),
+            "version: 1\ndocuments:\n  - path: docs/ROADMAP.md\n    role: explanation\n    status: active\n    advisory_bundle: true\n",
+        )
+        .expect("manifest");
+        fs::write(dir.join("docs/ROADMAP.md"), "# Roadmap\n\nPriorities here.").expect("roadmap");
+        let mut cfg = rex_config::RexConfig::defaults();
+        cfg.context.advisory_intent_enabled = Some(true);
+        let loaded = Arc::new(rex_config::LoadedConfig::for_test(dir.clone(), cfg));
+        crate::settings::init_for_test(loaded);
+        let prev = std::env::current_dir().expect("cwd");
+        std::env::set_current_dir(&dir).expect("chdir");
+        let (text, tokens, _) = load_advisory_bundle(512);
+        std::env::set_current_dir(prev).expect("restore cwd");
+        assert!(tokens > 0);
+        assert!(text.contains("Priorities here"));
+        crate::settings::reset_for_test();
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

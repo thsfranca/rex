@@ -1,6 +1,10 @@
 # Project context paths (design hub)
 
-**Status:** `planned` — **design deferred** (**R066**)
+
+> Role: explanation | Status: implemented | Audience: contributors | Read when: context path pre-injection R066
+> Prefer: ## Purpose
+
+**Status:** **implemented** — `context.paths[]` in JSON ([CONFIGURATION.md](CONFIGURATION.md)); bounded pre-inject per turn (**R066**)
 
 ## Purpose
 
@@ -12,18 +16,16 @@ Rex ask mode starts with the user prompt only. OpenCode loads files such as `Ope
 
 ## Scope
 
-**In (this hub stage):**
+**In (shipped v1):**
 
-- Roadmap placeholder (**R066**)
-- Problem statement and OpenCode reference path list
-- Boundary: daemon `ContextPipeline` owns assembly; sidecar consumes via `RunTurn.prompt` and `injected_files`
+- `context.paths[]` in JSON — relative paths under workspace root
+- Bounded read per turn (30% of `max_context_tokens`, 4096 bytes per path)
+- `injected_files` manifest for sidecar skip (**R065**)
 
-**Out (design deferred):**
+**Out (deferred):**
 
-- Operator-configurable path list and merge order
-- Budget shares vs layered prompts and lexical retrieval
-- Config schema (`context.paths[]`)
-- Whether paths are read once per workspace session or every turn
+- Session-once vs every-turn policy toggle
+- Merge order vs layered prompts (document precedence in hub only)
 
 ## Reference paths (OpenCode analogue)
 

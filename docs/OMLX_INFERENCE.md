@@ -1,5 +1,9 @@
 # oMLX local inference
 
+
+> Role: explanation | Status: implemented | Audience: operators | Read when: oMLX local inference on Mac
+> Prefer: ## Scope
+
 **Status:** **implemented** — managed supervisor, R071 autostart chain, `rex omlx init|doctor`, opt-in live E2E — [ADR 0033](architecture/decisions/0033-omlx-managed-local-inference.md).
 
 Canonical design for Rex’s **managed, daemon-controlled** [oMLX](https://github.com/jundot/omlx) server on **Apple Silicon** — OpenAI Chat Completions wire only. Related: [ADAPTERS.md](ADAPTERS.md), [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) (multi-provider cloud), [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md), [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) (agent sidecar — separate feature).

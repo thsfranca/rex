@@ -1,5 +1,9 @@
 # Operation feedback during daemon execution
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: live operation feedback stream
+> Prefer: ## Purpose
+
 **Status:** `implemented` (program tracked on [ROADMAP.md](ROADMAP.md) **R044**).
 
 ## Purpose

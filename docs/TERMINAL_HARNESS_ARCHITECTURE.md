@@ -1,5 +1,9 @@
 # Terminal harness architecture
 
+
+> Role: explanation | Status: design accepted | Audience: contributors | Read when: terminal harness architecture
+> Prefer: ## Purpose
+
 **Status:** `design accepted` — implementation **R072–R073** planned; v2 daemon intelligence **R076–R078** Later. Product UX: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision record: [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
 ## Purpose

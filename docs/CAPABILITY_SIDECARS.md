@@ -1,5 +1,9 @@
 # Capability sidecars (design hub)
 
+
+> Role: explanation | Status: planned | Audience: contributors | Read when: capability sidecar fleet
+> Prefer: ## Purpose
+
 Canonical design for **host sidecars** (prompt + tool loop) and **capability sidecars** (callable features) supervised by `rex-daemon`. See [DOCUMENTATION.md](DOCUMENTATION.md) for hub conventions.
 
 ## Purpose

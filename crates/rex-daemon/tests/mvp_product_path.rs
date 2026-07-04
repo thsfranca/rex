@@ -73,8 +73,14 @@ mod ollama_capability;
 #[path = "../src/otlp_metrics.rs"]
 mod otlp_metrics;
 #[allow(dead_code)]
+#[path = "../src/doc_manifest.rs"]
+mod doc_manifest;
+#[allow(dead_code)]
 #[path = "../src/plugins.rs"]
 mod plugins;
+#[allow(dead_code)]
+#[path = "../src/knowledge.rs"]
+mod knowledge;
 #[allow(dead_code)]
 #[path = "../src/policy.rs"]
 mod policy;

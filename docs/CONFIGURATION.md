@@ -1,5 +1,14 @@
 # REX configuration
 
+
+> Role: reference | Status: active | Audience: contributors | Read when: JSON config keys
+> Prefer: ## JSON configuration keys
+
+
+## Summary
+
+Canonical JSON config catalog under `$REX_ROOT`: precedence, key tables, and deprecated env policy. Operator walkthroughs live in CONFIGURATION_OPERATOR.md.
+
 This document is the **canonical** policy for how REX settings work: merged **JSON** under `$REX_ROOT`, optional project overrides, and partial CLI flags. See [ARCHITECTURE.md](ARCHITECTURE.md) for where the **daemon** applies inference and cache policy.
 
 ## Configuration surface
@@ -46,7 +55,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `sidecars` | `active`, `host`, `required`, `harness`, `list[]`, `capabilities[]` | Host sidecar (`list[]` entry named by `host` or `active`); optional capability fleet (`capabilities[]` with `provides`, `socket`, `binary`); `harness: "direct"` skips spawn (CI/tests). |
 | `inference` | `runtime`, `openai_compat`, `gateway`, `omlx`, `cursor_cli` | Broker backend: `mock`, `http-openai-compat`, `cursor-cli`. Managed gateway/oMLX inject `openai_compat.base_url` — see below. |
 | `workspace` | `indexer` | Lexical indexer mode (`workspace` or `seeded`). **Workspace root** is always canonical process **cwd** — not configurable ([ADR 0011](architecture/decisions/0011-workspace-binding-and-turn-context-authority.md)). |
-| `context` | `max_prompt_tokens`, `max_context_tokens` | Context pipeline budgets. |
+| `context` | `max_prompt_tokens`, `max_context_tokens`, `advisory_intent_enabled`, `paths[]` | Context pipeline budgets; advisory bundle toggle (**R067**); pre-inject paths (**R066**). |
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
 | `agent` | `approvals_enabled`, `tool_approvals_enabled`, `max_tools_per_step`, `deterministic_init_enabled`, `compaction_enabled`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gates; max batchable broker calls per LLM round (default **8**, **R057**); pre-LLM ask init (**R060**); intra-turn compaction (**R029**, default off); compaction threshold fraction (default **0.25**); goal-hint read pruning (**R031**, default off). |
@@ -56,7 +65,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 
 **Capability sidecar entry (`capabilities[]`):** `name`, `binary`, `enabled`, `socket`, `provides` (capability ids, e.g. `web.search`), optional `required`. Daemon spawns enabled entries alongside the host; invoke routing is **R056-2** — [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md).
 
-**Not implemented (do not set):** `context.advisory_intent_enabled` (**R067**), `broker.web_search`, `git.auto_commit_dirty` (**R077**), `cli.ui.narrator` (**R074**) — design only in linked hubs.
+**Not implemented (do not set):** `broker.web_search`, `git.auto_commit_dirty` (**R077**), `cli.ui.narrator` (**R074**) — design only in linked hubs.
 
 **Removed (R069 / ADR 0034 / R082):** `agent.max_tool_steps`, `agent.max_tool_steps_ask`, `agent.max_tool_steps_plan`, `agent.soft_cap_enabled`, `agent.soft_cap_fraction`, `agent.soft_cap_step_extension`, `observability.custom_sidecar_metrics` — ignored if present in older files.
 
@@ -136,221 +145,7 @@ Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md
 
 **Module map:** Daemon: `settings`, `adapters`, `http_openai_compat`, `approvals`, `l1_cache`, stream service. CLI: `transport` (config socket), TUI ensure path.
 
-## Operator quick start (daemon + brokered HTTP)
-
-The product path requires a **supervised sidecar** ([MVP_SPEC.md](MVP_SPEC.md)). Bootstrap JSON; **`rex`** ensures the daemon (**R071**):
-
-```bash
-rex config init
-# Edit $REX_ROOT/config.json — set inference.openai_compat.base_url and model; enable sidecars.list[].enabled
-rex config validate
-rex
-```
-
-
-For **Anthropic, OpenAI, and local Ollama** via one broker URL, use the [Inference Gateway](#inference-gateway-design) (`managed` or `external`) or the [LiteLLM operator profile](#operator-profile-litellm-anthropic-and-other-providers) below.
-
-Example HTTP backend (Ollama) in `$REX_ROOT/config.json`:
-
-```json
-"inference": {
- "runtime": "http-openai-compat",
- "openai_compat": {
- "base_url": "http://127.0.0.1:11434/v1",
- "model": "llama3.2",
- "native_tools": "auto"
- }
-}
-```
-
-**`inference.openai_compat.native_tools`** (**R038**): tri-state `auto` \| `true` \| `false`; schema default **`auto`** (omit field → `auto`). Controls whether daemon forwards OpenAI `tools[]` on `BrokerInference` vs interim JSON-in-text. **`auto`** probes Ollama `/api/show` for `tools` capability; direct Ollama is the reference path for agent tool calling — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md). `mock` / `cursor-cli` runtimes always use interim regardless of config.
-
-### `inference.openai_compat` keys
-
-| Key | Default | Purpose |
-|-----|---------|---------|
-| `base_url` | (none) | OpenAI-compat API root (for example `http://127.0.0.1:11434/v1`). Required when `runtime` is `http-openai-compat` unless a managed child (gateway or oMLX) injects URL — see [Effective `openai_compat.base_url`](#effective-openai_compatbase_url). |
-| `api_key` | (none) | Optional `Authorization: Bearer` token when `headers` does not already set `Authorization`. |
-| `model` | `gpt-4o-mini` | Default model id on chat/completions requests. |
-| `timeout_secs` | `120` | Upper bound for a single HTTP completion request. |
-| `native_tools` | `auto` | Tri-state native tool forwarding — see above. |
-| `headers` | `{}` | Optional map of extra HTTP request headers (for example `X-Api-Key`) sent on every broker inference POST. Project `.rex/config.json` overlay merges keys into global headers. Invalid names or values fail `rex config validate`. Rex always sets `Content-Type: application/json` after configured headers. |
-
-Example with custom auth header:
-
-```json
-"openai_compat": {
- "base_url": "https://my-gateway.example/v1",
- "model": "my-model",
- "headers": {
- "X-Api-Key": "secret-token"
- }
-}
-```
-
-CI and unit tests set `REX_ROOT` to a temp dir and write `config.json` with `inference.runtime: "mock"` and `sidecars.harness: "direct"` — see [CI.md](CI.md).
-
-## Inference Gateway (design)
-
-**Status:** **implemented** — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md). Bootstrap with `rex gateway init`; validate with `rex gateway doctor`.
-
-### Purpose
-
-Opt-in **`inference.gateway.mode: managed`** so `rex-daemon` spawns and controls a local LiteLLM proxy; **`external`** keeps an operator-run URL; **`disabled`** leaves gateway off (direct `openai_compat.base_url` or `mock`).
-
-### Example (`managed` — design intent)
-
-```json
-{
- "inference": {
- "runtime": "http-openai-compat",
- "gateway": {
- "mode": "managed",
- "port": 4000,
- "ollama": { "enabled": true, "api_base": "http://127.0.0.1:11434" }
- },
- "openai_compat": {
- "model": "claude-sonnet-4-20250514",
- "timeout_secs": 120
- }
- }
-}
-```
-
-Effective `openai_compat.base_url` becomes `http://127.0.0.1:4000/v1` when managed (unless override allowed). Secrets: `$REX_ROOT/gateway/.env` (gitignored). See hub for full field table and Ollama discovery template.
-
-## Inference oMLX
-
-**Status:** **implemented** — config schema, daemon supervisor, `rex omlx init|doctor`, opt-in live E2E — [OMLX_INFERENCE.md](OMLX_INFERENCE.md), [ADR 0033](architecture/decisions/0033-omlx-managed-local-inference.md).
-
-### Purpose
-
-Opt-in **`inference.omlx.mode: managed`** so `rex-daemon` spawns and controls a local oMLX server on Apple Silicon; **`external`** keeps an operator-run URL; **`disabled`** leaves oMLX lifecycle off (direct `openai_compat.base_url` or `mock`).
-
-Managed oMLX uses the **same broker API** as every other OpenAI-compat backend: Rex injects `inference.openai_compat.base_url` and calls `POST …/chat/completions` only. oMLX’s Anthropic Messages and other upstream APIs are **not** Rex surfaces.
-
-When `mode: managed`, the daemon supervisor spawns `omlx serve --port {port}` and optional `--model-dir {model_dir}` from **`inference.omlx.*` in JSON** — Rex does not configure oMLX via `OMLX_*` environment variables.
-
-### Example (`managed` — design intent)
-
-```json
-{
- "inference": {
- "runtime": "http-openai-compat",
- "omlx": {
- "mode": "managed",
- "port": 8000,
- "model": "qwen2.5-coder-32b"
- },
- "openai_compat": {
- "native_tools": "auto"
- }
- }
-}
-```
-
-### `inference.omlx` keys (intent)
-
-| Key | Default | Purpose |
-|-----|---------|---------|
-| `mode` | `disabled` | `disabled` \| `external` \| `managed` |
-| `port` | `8000` | Loopback port when `managed` |
-| `command` | `omlx` on PATH | Spawn command override |
-| `model_dir` | (none) | MLX weights directory |
-| `model` | (none) | Default model id when `openai_compat.model` unset |
-| `health_path` | `/v1/models` | Readiness probe path |
-| `discovery_on_ready` | `true` | Optional `GET /v1/models` after health |
-| `startup_timeout_secs` | `30` | Health wait budget |
-| `required` | `true` when `managed` | Daemon ready blocked if child fails |
-| `allow_url_override` | `false` | Allow non-empty `openai_compat.base_url` to override injection |
-
-Hub: [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
-
-## Effective `openai_compat.base_url`
-
-Rex resolves **one** broker URL for `http_openai_compat`. Managed gateway and managed oMLX are **lifecycle helpers** that inject into `openai_compat.base_url` — not separate Rex APIs.
-
-| Priority | Condition | Effective URL |
-|----------|-----------|---------------|
-| 1 | Non-empty `openai_compat.base_url` and managed `allow_url_override` on active managed child | Configured URL |
-| 2 | `inference.omlx.mode: managed` | `http://127.0.0.1:{omlx.port}/v1` |
-| 3 | `inference.gateway.mode: managed` | `http://127.0.0.1:{gateway.port}/v1` |
-| 4 | Otherwise | Configured `openai_compat.base_url` or broker error at request time |
-
-**Mutual exclusion:** `rex config validate` **fails** if both `inference.omlx.mode: managed` and `inference.gateway.mode: managed`. Enable at most one managed injector.
-
-Canonical table: [OMLX_INFERENCE.md](OMLX_INFERENCE.md#effective-openai_compatbase_url).
-
-## Operator profile: LiteLLM (Anthropic and other providers)
-
-**Status:** operator-ready on existing `http-openai-compat` runtime when gateway is **external**. Design: [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADAPTERS.md](ADAPTERS.md#multi-provider-gateway-via-litellm-default-api), [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md).
-
-Run LiteLLM (or your deployment) with Anthropic and OpenAI keys in **LiteLLM’s** config. Rex only needs the OpenAI-compat surface LiteLLM exposes.
-
-### Configuration
-
-Do not commit secrets. Anthropic API keys belong in LiteLLM configuration, not Rex `config.json`.
-
-```json
-{
- "inference": {
- "runtime": "http-openai-compat",
- "openai_compat": {
- "base_url": "http://127.0.0.1:4000/v1",
- "model": "claude-sonnet-4-20250514",
- "timeout_secs": 120
- }
- },
- "sidecars": {
- "active": "agent",
- "required": true,
- "list": [
- { "name": "agent", "binary": "rex-agent", "enabled": true, "socket": "/tmp/rex-sidecar.sock" }
- ]
- }
-}
-```
-
-`rex complete --model <id>` overrides the model sent on each request (LiteLLM uses it for routing).
-
-### Verification
-
-1. Confirm LiteLLM responds: `curl` against `{base_url}/chat/completions` per LiteLLM docs.
-2. Start daemon with sidecar enabled; `rex complete "hello" --format ndjson --model <litellm-model>`.
-3. On failure, see broker error intent in [ADAPTERS.md](ADAPTERS.md#broker-provider-errors-intent).
-
-## Layered prompts (design accepted)
-
-**Status:** **design accepted** — not shipped. [ADR 0012](architecture/decisions/0012-layered-prompt-assemblies.md). Hub: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md). Implementation: **R015**+.
-
-### Purpose
-
-Versioned **system / project prompt assemblies** assembled in the daemon so clients and sidecars do not duplicate long rule blocks on every request.
-
-### Scope
-
-| In (design stage) | Out (design stage) |
-|---|---|
-| Assembly versioning and merge order (system → project → mode) | Full prompt authoring UI in the extension |
-| Config keys or JSON section for assembly paths | Client-side prompt templating replacing daemon policy |
-| Daemon responsibility for final prompt sent to broker | Replacing [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) retrieval/compression pipeline |
-
-### Boundaries
-
-- **Policy / assembly:** daemon owns merge order and version bumps.
-- **Mechanism:** existing context pipeline and broker adapters unchanged until scheduled.
-- See [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) for doc precedence.
-
-### Interfaces (intent)
-
-- R015 JSON section `prompts`: `system`, `project` (path or glob-scoped files), `mode` overlays.
-- `prompt_assembly_revision` in L1 cache key with `context_revision` when retrieval ran ([CACHING.md](CACHING.md), [ADR 0012](architecture/decisions/0012-layered-prompt-assemblies.md)).
-- Default cap: 25% of `context.max_context_tokens` for assembled prompts (see capabilities hub budget table).
-
-### Cross-links
-
-- [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md)
-- [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) — economics matrix row
+Operator walkthroughs (bootstrap, gateway, oMLX, LiteLLM): [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md).
 
 ## CLI operation feedback
 
@@ -388,7 +183,7 @@ Product operators use **`rex-agent`**, a live `http-openai-compat` backend, and 
 ## Not implemented yet (roadmap)
 
 - Global CLI flags mirroring all JSON keys — partial today (`rex complete` flags only).
-- Layered prompt assemblies — see **Layered prompts** below.
+- Layered prompt assemblies — [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md#layered-prompts-design-accepted).
 
 ## See also
 
@@ -399,5 +194,5 @@ Product operators use **`rex-agent`**, a live `http-openai-compat` backend, and 
 - [CACHING.md](CACHING.md)
 - [NDJSON_STREAM.md](NDJSON_STREAM.md)
 - [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md)
-- [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md)
+- [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md)
 - [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md)

@@ -1,5 +1,14 @@
 # REX Architecture
 
+
+> Role: explanation | Status: active | Audience: contributors | Read when: system architecture overview
+> Prefer: ## Purpose
+
+
+## Summary
+
+REX is a local AI runtime: `rex-daemon` owns streaming, policy, caches, and context shaping; thin CLI/TUI clients use gRPC over UDS. The product path is a supervised sidecar agent with brokered HTTP inference.
+
 This document is the **software architecture description (SAD)** for REX: product goals, quality attributes, structural views, runtime behavior, security, and observability. Operational detail for inference adapters, caching keys, and pipeline contracts lives in [ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), and [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md). **Architecture Decision Records** live under [architecture/decisions/](architecture/decisions/).
 
 ## Purpose
@@ -163,7 +172,7 @@ Ownership of chat transcript, turn assembly (`TurnContext`), workspace binding, 
 
 ## Observability
 
-Full signal catalog, Rex-owned storage, bundled Grafana suite: [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](OBSERVABILITY_INTEGRATIONS.md), [CONFIGURATION.md](CONFIGURATION.md#observability), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md), [OBS_STORE_MMAP_FORMAT.md](OBS_STORE_MMAP_FORMAT.md). Economics validation program: [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). Agent knowledge retrieval metrics (planned): [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md).
+Full signal catalog, Rex-owned storage, bundled Grafana suite: [OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md), [OBSERVABILITY_INTEGRATIONS.md](historical/OBSERVABILITY_INTEGRATIONS.md), [CONFIGURATION.md](CONFIGURATION.md#observability), [ADR 0010](architecture/decisions/0010-daemon-exports-observability-via-otel-and-sidecar-api.md), [ADR 0020](architecture/decisions/0020-otel-genai-semconv-with-rex-pipeline-metrics.md), [ADR 0021](architecture/decisions/0021-rex-owned-economics-store-byot-visualization.md), [ADR 0025](architecture/decisions/0025-dual-economics-store-engines.md), [ADR 0026](architecture/decisions/0026-rex-owned-storage-grafana-otel-datasource.md), [OBS_STORE_MMAP_FORMAT.md](historical/OBS_STORE_MMAP_FORMAT.md). Economics validation program: [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). Agent knowledge retrieval metrics (planned): [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md).
 
 | Field / signal | Where | Purpose |
 |---|---|---|

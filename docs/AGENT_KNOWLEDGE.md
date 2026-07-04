@@ -1,5 +1,9 @@
 # Agent knowledge (design hub)
 
+
+> Role: explanation | Status: design accepted | Audience: contributors | Read when: agent knowledge bundles
+> Prefer: ## Purpose
+
 This document is the **single source** for Rex **agent-oriented project knowledge**: curated reference material for AI sessions, alternatives to proliferating repo markdown, and how **remote** sources relate to MCP. Implementation today does **not** include a Rex knowledge store unless other docs explicitly say so.
 
 See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention. Other docs link here and avoid duplicating the bet list below.
@@ -12,7 +16,7 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention
 
 ## Status
 
-**design accepted** — [ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md). Implementation deferred. Integrator: [DEVELOPMENT_ASSISTANCE_CAPABILITIES.md](DEVELOPMENT_ASSISTANCE_CAPABILITIES.md).
+**partial** — v1 ships manifest `## Summary` inject via `KnowledgeRetrieval` stage ([ADR 0015](architecture/decisions/0015-agent-knowledge-bundles.md)). Full store, drift CLI, and MCP transport deferred.
 
 ## Scope
 
@@ -160,7 +164,7 @@ Stream and tool contracts stay stable until a deliberate `rex.v1` or sidecar API
 | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Economics matrix — agent knowledge row |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System views and interoperability |
 | [ROADMAP.md](ROADMAP.md) | Parked theme — agent knowledge |
-| [OBSERVABILITY_AND_ECONOMICS.md](OBSERVABILITY_AND_ECONOMICS.md) | Metrics for knowledge retrieval stage |
+| [OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md) | Metrics for knowledge retrieval stage |
 
 ```mermaid
 flowchart LR

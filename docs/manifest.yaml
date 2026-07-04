@@ -1,0 +1,254 @@
+version: 1
+documents:
+  - path: docs/ADAPTERS.md
+    role: reference
+    status: active
+    topics:
+      - adapters
+    summary_heading: "## Summary"
+  - path: docs/AGENTS.md
+    role: reference
+    status: active
+    topics:
+      - agents
+  - path: docs/AGENT_ACCESS_POLICY.md
+    role: explanation
+    status: active
+    topics:
+      - agent-access-policy
+  - path: docs/AGENT_DELIVERY_ROADMAP.md
+    role: explanation
+    status: active
+    topics:
+      - agent-delivery-roadmap
+  - path: docs/AGENT_GRAPH_ARCHITECTURE.md
+    role: explanation
+    status: active
+    topics:
+      - agent-graph-architecture
+    summary_heading: "## Purpose"
+  - path: docs/AGENT_KNOWLEDGE.md
+    role: explanation
+    status: active
+    topics:
+      - agent-knowledge
+  - path: docs/AGENT_RUNTIME_ENVIRONMENT.md
+    role: explanation
+    status: active
+    topics:
+      - agent-runtime-environment
+  - path: docs/ARCHITECTURE.md
+    role: explanation
+    status: active
+    topics:
+      - architecture
+    summary_heading: "## Purpose"
+  - path: docs/ARCHITECTURE_GUIDELINES.md
+    role: explanation
+    status: active
+    topics:
+      - architecture-guidelines
+  - path: docs/CACHING.md
+    role: reference
+    status: active
+    topics:
+      - caching
+  - path: docs/CAPABILITY_SIDECARS.md
+    role: explanation
+    status: active
+    topics:
+      - capability-sidecars
+  - path: docs/CI.md
+    role: how-to
+    status: active
+    topics:
+      - ci
+  - path: docs/CI_QUALITY_GATES.md
+    role: explanation
+    status: active
+    topics:
+      - ci-quality-gates
+  - path: docs/CLI_OPERATOR_UX.md
+    role: explanation
+    status: active
+    topics:
+      - cli-operator-ux
+    summary_heading: "## Purpose"
+  - path: docs/CONFIGURATION.md
+    role: reference
+    status: active
+    topics:
+      - configuration
+    summary_heading: "## Configuration surface"
+  - path: docs/CONFIGURATION_OPERATOR.md
+    role: how-to
+    status: active
+    topics:
+      - configuration-operator
+    summary_heading: "## Operator quick start"
+  - path: docs/CONTEXT_EFFICIENCY.md
+    role: explanation
+    status: active
+    topics:
+      - context-efficiency
+    summary_heading: "## Scope"
+  - path: docs/DEPENDENCIES.md
+    role: how-to
+    status: active
+    topics:
+      - dependencies
+  - path: docs/DEVELOPER_EXPERIENCE_GUIDE.md
+    role: how-to
+    status: active
+    topics:
+      - developer-experience-guide
+  - path: docs/DEVELOPMENT_ASSISTANCE_CAPABILITIES.md
+    role: explanation
+    status: active
+    topics:
+      - development-assistance-capabilities
+  - path: docs/DOCUMENTATION.md
+    role: explanation
+    status: active
+    topics:
+      - documentation
+  - path: docs/ECONOMICS_VALIDATION.md
+    role: explanation
+    status: active
+    topics:
+      - economics-validation
+  - path: docs/ERROR_HANDLING.md
+    role: reference
+    status: active
+    topics:
+      - error-handling
+  - path: docs/INFERENCE_GATEWAY.md
+    role: explanation
+    status: active
+    topics:
+      - inference-gateway
+  - path: docs/KISS_CONFIG_SURFACE.md
+    role: explanation
+    status: active
+    topics:
+      - kiss-config-surface
+  - path: docs/LANGFUSE_DISCOVERY_ROADMAP.md
+    role: explanation
+    status: active
+    topics:
+      - langfuse-discovery-roadmap
+  - path: docs/LANGFUSE_INTEGRATION.md
+    role: explanation
+    status: active
+    topics:
+      - langfuse-integration
+  - path: docs/LONG_TERM_MEMORY.md
+    role: explanation
+    status: active
+    topics:
+      - long-term-memory
+  - path: docs/MVP_SPEC.md
+    role: explanation
+    status: active
+    topics:
+      - mvp-spec
+  - path: docs/NATIVE_TOOL_CALLING.md
+    role: explanation
+    status: active
+    topics:
+      - native-tool-calling
+  - path: docs/NDJSON_STREAM.md
+    role: reference
+    status: active
+    topics:
+      - ndjson-stream
+  - path: docs/OMLX_INFERENCE.md
+    role: explanation
+    status: active
+    topics:
+      - omlx-inference
+  - path: docs/OPERATION_FEEDBACK.md
+    role: explanation
+    status: active
+    topics:
+      - operation-feedback
+  - path: docs/PLANNING_TOOLS.md
+    role: reference
+    status: active
+    topics:
+      - planning-tools
+  - path: docs/PLUGIN_ROADMAP.md
+    role: explanation
+    status: active
+    topics:
+      - plugin-roadmap
+  - path: docs/POLICY_ENGINE.md
+    role: explanation
+    status: active
+    topics:
+      - policy-engine
+  - path: docs/PRIORITIZATION.md
+    role: explanation
+    status: active
+    topics:
+      - prioritization
+    advisory_bundle: true
+  - path: docs/PROJECT_CONTEXT_PATHS.md
+    role: explanation
+    status: active
+    topics:
+      - project-context-paths
+  - path: docs/PURPOSE_AND_PRINCIPLES.md
+    role: explanation
+    status: active
+    topics:
+      - purpose-and-principles
+  - path: docs/RELEASE.md
+    role: how-to
+    status: active
+    topics:
+      - release
+  - path: docs/ROADMAP.md
+    role: explanation
+    status: active
+    topics:
+      - roadmap
+    advisory_bundle: true
+  - path: docs/SIDECAR_RUNTIME.md
+    role: explanation
+    status: active
+    topics:
+      - sidecar-runtime
+  - path: docs/TERMINAL_HARNESS_ARCHITECTURE.md
+    role: explanation
+    status: active
+    topics:
+      - terminal-harness-architecture
+  - path: docs/TUI_DESIGN.md
+    role: explanation
+    status: active
+    topics:
+      - tui-design
+    summary_heading: "## Purpose"
+  - path: docs/V1_0.md
+    role: explanation
+    status: active
+    topics:
+      - v1-0
+  - path: docs/WEB_SEARCH.md
+    role: explanation
+    status: active
+    topics:
+      - web-search
+  - path: docs/research/GEMINI_DEEP_RESEARCH_PROMPT.md
+    role: explanation
+    status: active
+    topics:
+      - gemini-deep-research-prompt
+  - path: README.md
+    role: tutorial
+    status: active
+    topics:
+      - quickstart
+    summary_heading: "## Quickstart"
+    advisory_bundle: true
