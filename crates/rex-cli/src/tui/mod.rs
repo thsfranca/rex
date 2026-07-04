@@ -9,7 +9,6 @@ mod theme;
 mod ui;
 
 use std::io::{self, IsTerminal, Write};
-use std::process::ExitCode;
 
 use rex_stream_ui::{LifecycleContext, LifecyclePhase, OperatorMessaging};
 
@@ -40,25 +39,3 @@ pub async fn run_tui(no_daemon_autostart: bool) -> Result<(), CliError> {
     })
 }
 
-pub async fn run_tui_exit_code(no_daemon_autostart: bool) -> ExitCode {
-    match run_tui(no_daemon_autostart).await {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(err) => {
-            eprintln!("Error: {err}");
-            ExitCode::from(1)
-        }
-    }
-}
-
-/// Whether TTY `complete` should delegate to the TUI.
-pub fn should_delegate_tty_to_tui(no_ui: bool) -> bool {
-    if no_ui {
-        return false;
-    }
-    if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
-        return false;
-    }
-    rex_config::load_merged()
-        .map(|loaded| loaded.effective.cli.ui.should_use_tui(true, no_ui))
-        .unwrap_or(true)
-}

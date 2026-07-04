@@ -23,13 +23,13 @@ Constraints:
 
 2. **Extension alignment:** CLI and extension share lifecycle states **`unavailable` → `starting` → `ready`**, the same spawn command (**`rex daemon`**), and the same readiness probe. JSON **`daemon.auto_start`** is the canonical config key; **`rex.daemonAutoStart`** mirrors it for editor sessions.
 
-3. **Full terminal UI:** Interactive terminal sessions use a **multi-pane TUI** (**`rex tui`**, and TTY **`rex complete`** when **`cli.ui.enabled`** is **`auto`** or **`true`**). The TUI consumes the same NDJSON event stream internally as the extension subprocess path.
+3. **Full terminal UI:** Interactive terminal sessions use a **multi-pane TUI** (bare **`rex`** or **`rex tui`**). The TUI consumes the NDJSON event stream **internally**. Public **`rex complete`** is not a product surface.
 
 4. **Operator messaging (Must):** A structured mapping from lifecycle phases and NDJSON events to curated plain-language strings is **required** for the CLI operator program. This is the primary “friendly” layer—no LLM on the critical path.
 
 5. **LLM narrator (Could):** An optional post-turn natural-language summary may be added later (**R074**), off by default (config key not in schema until shipped).
 
-6. **Automation path preserved:** **`rex complete --format ndjson`** on non-TTY stdout remains the canonical extension, CI, and scripting contract. TUI must not alter NDJSON wire shape or break pipe consumers.
+6. **Internal stream contract:** The TUI consumes the NDJSON event stream in-process. Public **`rex complete`** is not a product surface; wire shape remains defined in [NDJSON_STREAM.md](../../NDJSON_STREAM.md) for internal consumers and fixtures.
 
 7. **Logs:** Auto-started daemons redirect stdout/stderr to **`daemon.log_path`** (default under layout root), not the operator’s interactive terminal. Foreground **`rex daemon`** remains for debugging.
 

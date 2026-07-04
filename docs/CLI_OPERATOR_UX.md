@@ -4,9 +4,9 @@
 
 ## Purpose
 
-Give **terminal operators** the **primary** Rex experience: a single command in a project directory provisions a per-workspace daemon and opens a responsive, keyboard-driven multi-pane workspace. The CLI **ensures the daemon when configured**, surfaces **legible operator messaging**, and preserves **`rex complete --format ndjson`** for automation and CI ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md), [NDJSON_STREAM.md](NDJSON_STREAM.md)).
+Give **terminal operators** the **primary** Rex experience: a single command in a project directory provisions a per-workspace daemon and opens a responsive, keyboard-driven multi-pane workspace. The CLI **ensures the daemon when configured** and surfaces **legible operator messaging**. The TUI consumes the NDJSON event stream **internally** ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md), [NDJSON_STREAM.md](NDJSON_STREAM.md)).
 
-**Primary surface:** multi-pane TUI for **`rex tui`** and TTY **`rex complete`**. Plain text and NDJSON pipe modes remain for scripts.
+**Primary surface:** multi-pane TUI via bare **`rex`** or **`rex tui`**. Public **`rex complete`** is removed.
 
 ## Language policy
 
@@ -57,7 +57,7 @@ Operators run **`cd ~/projects/my-app && rex`** (or **`rex tui`**) and enter an 
 | Per-workspace routing | **R075** Done | Done |
 | Lifecycle feedback | Compact glyphs; still thin chrome | Product design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R080** Done |
 | Stream progress | Activity list + output in titled boxes | Chat-primary transcript + timeline; human phrases (**R080** Done) |
-| Interactive session | **`rex tui`** + TTY-delegating **`complete`** (**R073**) | Done (shell); presentation **R080** Done; motion **R081** Done |
+| Interactive session | Bare **`rex`** / **`rex tui`** (**R073**) | Done; presentation **R080** Done; motion **R081** Done; **`complete`** removed |
 | Markdown output | Incremental **mdstream** path | Done |
 | Tool approval | Modal present | Human-first copy per design system (**R080**) |
 | Friendly status | Minimal structured copy | Progressive insight; optional narrator (**R074**) |
@@ -96,7 +96,7 @@ flowchart TB
 | CLI lifecycle | Probe, detached spawn, single-flight, readiness poll |
 | Operator messaging | Event → human string mapping; optional narrator hook |
 | CLI transport | Internal NDJSON consumer; pipe mode unchanged |
-| Automation clients | **`rex complete --format ndjson`** subprocess contract |
+| Automation clients | NDJSON event contract consumed **internally** by the TUI ([NDJSON_STREAM.md](NDJSON_STREAM.md)) |
 | Daemon / sidecar | Orchestration, streaming authority, broker policy ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)) |
 
 Technical detail: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
@@ -143,10 +143,8 @@ flowchart TB
 
 | Command | When |
 |---------|------|
-| **`rex tui`** | Primary interactive shell |
-| **`rex`** / **`rex complete`** on TTY without **`--format ndjson`** | Delegates to TUI when **`cli.ui.enabled`** is **`auto`** or **`true`** |
-| **`rex complete --format ndjson`** | Piped / CI / automation—no TUI ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)) |
-| **`rex complete --no-ui`** / **`--format text`** | Script-style plain output on TTY |
+| **`rex`** / **`rex tui`** | Sole interactive product entry |
+| **`rex complete`** | **Removed** — use the TUI |
 
 ### Keyboard map
 
@@ -213,7 +211,7 @@ Auto-restart of a crashed daemon is attempted once with operator confirmation ([
 
 ## NDJSON parity
 
-The TUI operates as a **deterministic projection** of the NDJSON state machine ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md)). Core parsing, truncation of large tool outputs, and terminal semantics must match **`rex complete --format ndjson`** consumers. Terminal-only features must not alter wire shape or break pipe consumers.
+The TUI operates as a **deterministic projection** of the NDJSON state machine ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md)). Core parsing and truncation of large tool outputs follow the internal stream contract ([NDJSON_STREAM.md](NDJSON_STREAM.md)).
 
 ## Operator messaging catalog (Must)
 
@@ -339,7 +337,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 
 ### R073 — Full terminal UI + approval modals (Phase 2–3)
 
-- **`rex tui`** opens multi-pane **`ratatui`** layout; TTY **`rex complete`** respects **`cli.ui.enabled`**.
+- Bare **`rex`** / **`rex tui`** opens multi-pane **`ratatui`** layout; public **`rex complete`** is removed.
 - Background tokio NDJSON consumer → **`mpsc`** → IMGUI draw loop; UI thread never blocks on I/O.
 - **`--format ndjson`** on non-TTY stdout unchanged.
 - Approval modals for **`fs.write`** / **`exec.shell`** with diff preview; keystrokes unblock daemon **`ApprovalGate`**.
