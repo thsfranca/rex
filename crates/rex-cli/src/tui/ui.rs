@@ -94,11 +94,8 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
         SessionPhase::Streaming => app.theme.status_working(),
         SessionPhase::Error => app.theme.status_error(),
     };
-    let phase = if app.session == SessionPhase::Streaming {
-        Span::styled(format!("{} ", app.spinner_frame()), phase_style)
-    } else {
-        Span::styled(format!("{} ", app.phase_glyph()), phase_style)
-    };
+    // Calm status glyph only — no blink/spinner as primary activity signal.
+    let phase = Span::styled(format!("{} ", app.phase_glyph()), phase_style);
 
     let mut spans = vec![
         phase,
@@ -186,17 +183,50 @@ fn draw_timeline(frame: &mut Frame, area: Rect, app: &AppState) {
 }
 
 fn draw_transcript(frame: &mut Frame, area: Rect, app: &AppState) {
-    let focused = app.focus == FocusPane::Output;
-    let mut text = app.output_lines.join("");
-    if app.session == SessionPhase::Streaming {
-        text.push_str(if app.tick % 2 == 0 { "▌" } else { " " });
-    }
-    // No outer box; focus is reserved for hairlines on adjacent chrome.
-    let _ = focused;
-    let widget = Paragraph::new(text)
-        .style(app.theme.text_secondary())
-        .wrap(Wrap { trim: false });
+    let text = app.output_lines.join("");
+    let lines = transcript_lines(&text, app);
+    let widget = Paragraph::new(lines).wrap(Wrap { trim: false });
     frame.render_widget(widget, area);
+}
+
+/// Transcript as the stage: message separation and code left accent bar.
+/// No blink caret or lone spinner cell.
+fn transcript_lines(text: &str, app: &AppState) -> Vec<Line<'static>> {
+    let mut lines: Vec<Line<'static>> = Vec::new();
+    if text.is_empty() {
+        return lines;
+    }
+
+    let mut in_code = false;
+    let paragraphs: Vec<&str> = text.split("\n\n").collect();
+    for (pi, para) in paragraphs.iter().enumerate() {
+        for line in para.lines() {
+            let trimmed = line.trim_start();
+            if trimmed.starts_with("```") {
+                in_code = !in_code;
+                lines.push(Line::from(Span::styled(
+                    line.to_string(),
+                    app.theme.text_tertiary(),
+                )));
+                continue;
+            }
+            if in_code {
+                lines.push(Line::from(vec![
+                    Span::styled("▌".to_string(), app.theme.text_accent()),
+                    Span::styled(format!(" {line}"), app.theme.text_secondary()),
+                ]));
+            } else {
+                lines.push(Line::from(Span::styled(
+                    line.to_string(),
+                    app.theme.text_secondary(),
+                )));
+            }
+        }
+        if pi + 1 < paragraphs.len() {
+            lines.push(Line::from(""));
+        }
+    }
+    lines
 }
 
 fn draw_composer(frame: &mut Frame, area: Rect, app: &AppState) {
@@ -305,5 +335,45 @@ mod tests {
         let h = composer_height(20, 1, 1);
         assert!(h <= COMPOSER_SHORT_MAX_H);
         assert!(h >= 1);
+    }
+
+    #[test]
+    fn transcript_code_uses_accent_bar() {
+        let app = AppState::new("/tmp/ws".into(), "m".into(), "1".into());
+        let lines = transcript_lines("hello\n\n```\ncode\n```\n", &app);
+        let joined: String = lines
+            .iter()
+            .map(|l| {
+                l.spans
+                    .iter()
+                    .map(|s| s.content.as_ref())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(joined.contains('▌'));
+        assert!(joined.contains("code"));
+    }
+
+    #[test]
+    fn transcript_has_no_blink_caret() {
+        let mut app = AppState::new("/tmp/ws".into(), "m".into(), "1".into());
+        app.session = SessionPhase::Streaming;
+        app.tick = 1;
+        app.append_output("hi");
+        let text = app.output_lines.join("");
+        let lines = transcript_lines(&text, &app);
+        let joined: String = lines
+            .iter()
+            .map(|l| {
+                l.spans
+                    .iter()
+                    .map(|s| s.content.as_ref())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("");
+        assert!(!joined.contains('▌') || joined == "hi");
+        assert_eq!(joined, "hi");
     }
 }
