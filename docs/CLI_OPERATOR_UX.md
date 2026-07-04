@@ -307,6 +307,8 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`**.
 - When the socket is missing, CLI always spawns a detached daemon (internal entry) and polls **`GetSystemStatus`** until ready or timeout.
 - Managed inference children start during daemon boot before the socket binds when configured.
 - Single-flight: concurrent CLI invocations do not spawn duplicate daemons.
+- **Parallel harness:** multiple bare **`rex`** terminals in the **same workspace** share **one** per-workspace daemon ([ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md)); each terminal may run an independent harness session (session isolation is a follow-up slice).
+- **Autostart lock:** the spawner holds a workspace-scoped lock file (PID recorded) until the daemon is ready; waiters poll without spawning. Stale locks are reclaimed when the recorded PID is no longer alive — not by file age alone.
 - CLI-spawned daemon survives CLI exit until idle shutdown; health and phase live in the TUI.
 - Error messages reference **`daemon.log_path`** on spawn/timeout failures.
 

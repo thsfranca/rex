@@ -328,6 +328,11 @@ mod tests {
             cfg.daemon.ready_timeout_secs,
             crate::model::DEFAULT_DAEMON_READY_TIMEOUT_SECS
         );
+        assert_eq!(cfg.daemon.socket_scope, None);
+        assert_eq!(
+            cfg.daemon.effective_socket_scope(),
+            crate::model::DaemonSocketScope::PerWorkspace
+        );
     }
 
     #[test]

@@ -73,7 +73,7 @@ impl RexConfig {
             version: 1,
             daemon: DaemonConfig {
                 socket: Some(DEFAULT_DAEMON_SOCKET.to_string()),
-                socket_scope: Some(DaemonSocketScope::Global),
+                socket_scope: None,
                 ready_timeout_secs: DEFAULT_DAEMON_READY_TIMEOUT_SECS,
                 idle_shutdown_secs: None,
                 log_path: String::new(),
