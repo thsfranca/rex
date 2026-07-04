@@ -123,8 +123,8 @@ async fn run_app(
 
         if needs_draw {
             app.tick = app.tick.wrapping_add(1);
-            // Tear-free frames: wrap each draw in synchronized output when enabled.
-            if sync_output {
+            let sync_this_frame = app.motion.sync_output_enabled(sync_output);
+            if sync_this_frame {
                 let _ = crossterm::execute!(
                     io::stdout(),
                     crossterm::terminal::BeginSynchronizedUpdate
@@ -133,13 +133,12 @@ async fn run_app(
             terminal
                 .draw(|f| ui::draw(f, &mut app))
                 .map_err(|e| e.to_string())?;
-            if sync_output {
+            if sync_this_frame {
                 let _ = crossterm::execute!(
                     io::stdout(),
                     crossterm::terminal::EndSynchronizedUpdate
                 );
             }
-            // Only repaint when the next effect step changes a region (keeps Quiet windows).
             needs_draw = app.motion.wants_paint();
         }
 
@@ -190,11 +189,13 @@ async fn run_app(
                     let mut dirty = false;
                     match key.code {
                         KeyCode::PageUp => {
+                            app.motion.on_input();
                             app.scroll_transcript_up(3);
                             start_retroactive_fetch(&mut app, &mut history_rx).await;
                             dirty = true;
                         }
                         KeyCode::PageDown => {
+                            app.motion.on_input();
                             app.scroll_transcript_down(3);
                             dirty = true;
                         }
@@ -241,10 +242,12 @@ async fn run_app(
                             dirty = true;
                         }
                         KeyCode::Tab => {
+                            app.motion.on_input();
                             app.cycle_focus();
                             dirty = true;
                         }
                         KeyCode::Char('?') => {
+                            app.motion.on_input();
                             app.toggle_help();
                             dirty = true;
                         }
@@ -321,11 +324,17 @@ async fn run_app(
                             }
                         }
                         KeyCode::Char(ch) if app.session == SessionPhase::Idle => {
+                            app.motion.on_composer_input();
                             app.composer.push(ch);
                             dirty = true;
                         }
                         KeyCode::Backspace if app.session == SessionPhase::Idle => {
+                            app.motion.on_composer_input();
                             app.composer.pop();
+                            dirty = true;
+                        }
+                        KeyCode::F(12) if crate::probe_context::is_tui_probe_fixture() => {
+                            app.motion.step_probe_clock(16);
                             dirty = true;
                         }
                         _ => {}

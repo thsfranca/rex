@@ -3,6 +3,7 @@ mod domain;
 mod error;
 mod harness_session;
 pub mod lock_util;
+mod probe_context;
 mod session_meta;
 pub mod session_resume;
 mod transport;

@@ -2,6 +2,7 @@
 
 mod app;
 mod approval;
+mod compositor;
 mod history_fetch;
 mod motion;
 mod session_picker;

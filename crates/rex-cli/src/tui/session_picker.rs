@@ -82,7 +82,8 @@ fn picker_loop(
         was_animating = animating;
 
         if needs_draw {
-            if sync_output {
+            let sync_this = motion.sync_output_enabled(sync_output);
+            if sync_this {
                 let _ = crossterm::execute!(
                     io::stdout(),
                     crossterm::terminal::BeginSynchronizedUpdate
@@ -93,13 +94,12 @@ fn picker_loop(
                     draw_picker(f, workspace_basename, sessions, selected, &theme, &mut motion)
                 })
                 .map_err(|e| e.to_string())?;
-            if sync_output {
+            if sync_this {
                 let _ = crossterm::execute!(
                     io::stdout(),
                     crossterm::terminal::EndSynchronizedUpdate
                 );
             }
-            // Only repaint when the next effect step changes a region (keeps Quiet windows).
             needs_draw = motion.wants_paint();
         }
 
@@ -210,5 +210,5 @@ fn draw_picker(
         .alignment(Alignment::Left);
     frame.render_widget(footer, chunks[3]);
 
-    motion.process(frame.buffer_mut());
+    motion.process(frame.buffer_mut(), &theme);
 }
