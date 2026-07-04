@@ -11,8 +11,7 @@ args = [
 ]
 
 [launch.env]
-# Stable harness session for tuiwright baselines (see fixtures/tui_probe/README.md).
-REX_HARNESS_SESSION_ID = "hs-probe"
+# Probe uses REX_ROOT + cwd only (see fixtures/tui_probe/README.md). No extra REX_* env vars.
 # Optional monochrome acceptance (S8): uncomment for one full matrix run.
 # NO_COLOR = "1"
 
@@ -26,3 +25,6 @@ baseline_dir = ".tuiwright/baselines"
 # Mask volatile chrome in tui_diff (session ids, semver).
 ignore_patterns = ["hs-\\S+", "v\\d+\\.\\d+\\.\\d+"]
 quiet_ms = 300
+
+# Stepped motion: send F12 in probe harness to advance animation clock 16ms per key.
+# Use tui_send_keys keys="F12" between snapshots for mid-animation baselines.
