@@ -7,6 +7,7 @@ use rex_stream_ui::TurnPhase;
 
 use super::motion::MotionState;
 use super::theme::Theme;
+use super::viewport::ViewportCache;
 use crate::harness_session;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -87,6 +88,10 @@ pub struct AppState {
     pub motion: MotionState,
     /// Per-terminal harness session; scopes daemon prefix/L1 caches (parallel harness).
     pub harness_session_id: String,
+    pub viewport: ViewportCache,
+    /// Lines scrolled up from the transcript bottom (0 = pinned to tail).
+    pub transcript_scroll: u16,
+    pub needs_viewport_sync: bool,
 }
 
 impl AppState {
@@ -113,6 +118,9 @@ impl AppState {
             status_message: None,
             motion: MotionState::default(),
             harness_session_id: harness_session::new_harness_session_id(),
+            viewport: ViewportCache::default(),
+            transcript_scroll: 0,
+            needs_viewport_sync: false,
         }
     }
 
@@ -254,6 +262,8 @@ impl AppState {
         self.turn_phase = TurnPhase::Idle;
         self.push_activity("✓ Done", None);
         self.motion.on_stream_end();
+        self.transcript_scroll = 0;
+        self.needs_viewport_sync = true;
     }
 
     pub fn end_stream_error(&mut self, message: String) {
@@ -276,6 +286,20 @@ impl AppState {
             _ => format!("· {action}"),
         };
         (summary, detail)
+    }
+
+    pub fn transcript_messages(&self) -> Vec<&TranscriptMessage> {
+        let mut out: Vec<&TranscriptMessage> = self.viewport.prefetch_older.iter().collect();
+        out.extend(self.messages.iter());
+        out
+    }
+
+    pub fn scroll_transcript_up(&mut self, lines: u16) {
+        self.transcript_scroll = self.transcript_scroll.saturating_add(lines);
+    }
+
+    pub fn scroll_transcript_down(&mut self, lines: u16) {
+        self.transcript_scroll = self.transcript_scroll.saturating_sub(lines);
     }
 
     pub fn approval_summary(pending: &PendingApproval) -> String {

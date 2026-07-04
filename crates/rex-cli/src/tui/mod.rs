@@ -2,11 +2,13 @@
 
 mod app;
 mod approval;
+mod history_fetch;
 mod motion;
 mod state;
 mod stream_task;
 mod theme;
 mod ui;
+mod viewport;
 
 use std::io::{self, IsTerminal, Write};
 

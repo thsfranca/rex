@@ -68,6 +68,13 @@ pub fn draw(frame: &mut Frame, app: &mut AppState) {
             app.motion.timeline = cols[1];
         }
     }
+    let t = app.motion.transcript;
+    app.motion.transcript_hairline = Rect {
+        x: t.x,
+        y: t.y,
+        width: t.width,
+        height: 1,
+    };
 
     draw_header(frame, chunks[0], app);
     draw_body(frame, chunks[1], app);
@@ -224,7 +231,14 @@ fn draw_timeline(frame: &mut Frame, area: Rect, app: &AppState) {
 
 fn draw_transcript(frame: &mut Frame, area: Rect, app: &AppState) {
     let lines = transcript_lines(app);
-    let widget = Paragraph::new(lines).wrap(Wrap { trim: false });
+    let line_count = lines.len() as u16;
+    let visible = area.height.max(1);
+    let max_scroll_from_bottom = line_count.saturating_sub(visible);
+    let scroll_from_top = max_scroll_from_bottom
+        .saturating_sub(app.transcript_scroll.min(max_scroll_from_bottom));
+    let widget = Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
+        .scroll((scroll_from_top, 0));
     frame.render_widget(widget, area);
 }
 
@@ -232,7 +246,10 @@ fn draw_transcript(frame: &mut Frame, area: Rect, app: &AppState) {
 fn transcript_lines(app: &AppState) -> Vec<Line<'static>> {
     let mut lines: Vec<Line<'static>> = Vec::new();
 
-    if app.messages.is_empty() && app.session != SessionPhase::Streaming {
+    if app.messages.is_empty()
+        && app.viewport.prefetch_older.is_empty()
+        && app.session != SessionPhase::Streaming
+    {
         // Idle wireframe: calm stage with operator role cue.
         lines.push(Line::from(Span::styled(
             "[Operator]".to_string(),
@@ -241,7 +258,8 @@ fn transcript_lines(app: &AppState) -> Vec<Line<'static>> {
         return lines;
     }
 
-    for (i, msg) in app.messages.iter().enumerate() {
+    let all = app.transcript_messages();
+    for (i, msg) in all.iter().enumerate() {
         let label = match msg.role {
             TranscriptRole::Operator => "[Operator]",
             TranscriptRole::Agent => "[Agent]",
@@ -251,7 +269,7 @@ fn transcript_lines(app: &AppState) -> Vec<Line<'static>> {
             app.theme.text_tertiary(),
         )));
         lines.extend(render_message_body(&msg.body, msg.role, app));
-        if i + 1 < app.messages.len() || app.session == SessionPhase::Streaming {
+        if i + 1 < all.len() || app.session == SessionPhase::Streaming {
             lines.push(Line::from(""));
         }
     }
@@ -416,6 +434,11 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &AppState) {
                 "↵ submit  esc cancel  ⇧⇥ mode  ? less  ^y bypass  ^c×2 quit  ·  {path}  ·  v{ver}"
             ),
             app.theme.text_tertiary(),
+        ))
+    } else if app.viewport.fetching_history {
+        Line::from(Span::styled(
+            "Loading earlier messages…".to_string(),
+            app.theme.status_working(),
         ))
     } else if let Some(msg) = &app.status_message {
         Line::from(Span::styled(msg.clone(), app.theme.text_tertiary()))

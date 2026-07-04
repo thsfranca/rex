@@ -17,9 +17,11 @@ use crate::transport::connect_client;
 
 use super::approval::respond_to_tool_approval;
 
+use super::history_fetch::{spawn_incremental_fetch, spawn_retroactive_fetch, HistoryFetchUpdate};
 use super::state::{AppState, PendingApproval, SessionPhase};
 use super::stream_task::{spawn_stream_task, StreamUpdate};
 use super::ui;
+use super::viewport::DEFAULT_FETCH_LIMIT;
 
 pub async fn run() -> Result<(), String> {
     let mut terminal = setup_terminal()?;
@@ -69,6 +71,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
         status.daemon_version,
     );
     let mut stream_rx: Option<Receiver<StreamUpdate>> = None;
+    let mut history_rx: Option<Receiver<HistoryFetchUpdate>> = None;
     // Paint only when dirty. Idle with no changes must not write CSI (tuiwright Quiet ≥300ms).
     let mut needs_draw = true;
     let mut was_animating = false;
@@ -127,6 +130,25 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
             }
         }
 
+        if let Some(rx) = history_rx.as_mut() {
+            let mut got_update = false;
+            while let Ok(update) = rx.try_recv() {
+                apply_history_update(&mut app, update);
+                got_update = true;
+            }
+            if got_update {
+                needs_draw = true;
+            }
+            if rx.is_closed() {
+                history_rx = None;
+            }
+        }
+
+        if app.needs_viewport_sync && history_rx.is_none() && !app.viewport.fetching_history {
+            app.needs_viewport_sync = false;
+            start_incremental_sync(&mut app, &mut history_rx).await;
+        }
+
         // ~30 FPS while motion cues run; idle blocks longer on poll (no paint unless dirty).
         let poll_ms = app.motion.poll_ms();
 
@@ -143,6 +165,28 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                 Event::Key(key) => {
                     let mut dirty = false;
                     match key.code {
+                        KeyCode::PageUp => {
+                            app.scroll_transcript_up(3);
+                            start_retroactive_fetch(&mut app, &mut history_rx).await;
+                            dirty = true;
+                        }
+                        KeyCode::PageDown => {
+                            app.scroll_transcript_down(3);
+                            dirty = true;
+                        }
+                        KeyCode::Char('k')
+                            if key.modifiers.contains(KeyModifiers::CONTROL) =>
+                        {
+                            app.scroll_transcript_up(1);
+                            start_retroactive_fetch(&mut app, &mut history_rx).await;
+                            dirty = true;
+                        }
+                        KeyCode::Char('j')
+                            if key.modifiers.contains(KeyModifiers::CONTROL) =>
+                        {
+                            app.scroll_transcript_down(1);
+                            dirty = true;
+                        }
                         KeyCode::Char('q') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                             break
                         }
@@ -271,6 +315,88 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
         }
     }
     Ok(())
+}
+
+fn apply_history_update(app: &mut AppState, update: HistoryFetchUpdate) {
+    match update {
+        HistoryFetchUpdate::Retroactive {
+            events,
+            has_more_before,
+            head_sequence,
+        } => {
+            let _ = app.viewport.merge_retroactive(events, has_more_before, head_sequence);
+            app.viewport.end_history_fetch();
+            app.motion.on_history_fetch_end();
+            if app.status_message.as_deref() == Some("Loading earlier messages…") {
+                app.status_message = None;
+            }
+        }
+        HistoryFetchUpdate::Incremental {
+            events,
+            has_more_after,
+            head_sequence,
+        } => {
+            app.viewport
+                .apply_incremental(events, has_more_after, head_sequence);
+            app.viewport.end_history_fetch();
+            app.motion.on_history_fetch_end();
+        }
+        HistoryFetchUpdate::Failed(msg) => {
+            app.viewport.end_history_fetch();
+            app.motion.on_history_fetch_end();
+            app.status_message = Some(msg);
+        }
+    }
+}
+
+async fn start_retroactive_fetch(
+    app: &mut AppState,
+    history_rx: &mut Option<Receiver<HistoryFetchUpdate>>,
+) {
+    if app.viewport.fetching_history || history_rx.is_some() {
+        return;
+    }
+    if app.session == SessionPhase::Streaming {
+        return;
+    }
+    if app.transcript_scroll == 0 {
+        return;
+    }
+    let can_fetch = app.viewport.has_more_before || app.viewport.head_sequence > 0;
+    if !can_fetch && app.viewport.oldest_loaded_sequence == 0 {
+        return;
+    }
+    app.viewport.begin_history_fetch();
+    app.motion.on_history_fetch_start();
+    app.status_message = Some("Loading earlier messages…".to_string());
+    let before = app.viewport.retroactive_cursor();
+    let harness = app.harness_session_id.clone();
+    match spawn_retroactive_fetch(harness, before, DEFAULT_FETCH_LIMIT).await {
+        Ok(rx) => *history_rx = Some(rx),
+        Err(err) => {
+            app.viewport.end_history_fetch();
+            app.motion.on_history_fetch_end();
+            app.status_message = Some(err.to_string());
+        }
+    }
+}
+
+async fn start_incremental_sync(
+    app: &mut AppState,
+    history_rx: &mut Option<Receiver<HistoryFetchUpdate>>,
+) {
+    if history_rx.is_some() || app.viewport.fetching_history {
+        app.needs_viewport_sync = true;
+        return;
+    }
+    let harness = app.harness_session_id.clone();
+    let after = app.viewport.newest_sequence;
+    match spawn_incremental_fetch(harness, after, DEFAULT_FETCH_LIMIT).await {
+        Ok(rx) => *history_rx = Some(rx),
+        Err(_) => {
+            app.needs_viewport_sync = true;
+        }
+    }
 }
 
 fn apply_stream_update(app: &mut AppState, update: StreamUpdate) {
