@@ -244,11 +244,35 @@ async fn run_app(
                         KeyCode::Tab => {
                             app.motion.on_input();
                             app.cycle_focus();
+                            if app.focus == super::state::FocusPane::Activity {
+                                app.motion.set_expanded_timeline(None);
+                            }
                             dirty = true;
                         }
                         KeyCode::Char('?') => {
                             app.motion.on_input();
                             app.toggle_help();
+                            dirty = true;
+                        }
+                        KeyCode::Enter
+                            if app.focus == super::state::FocusPane::Activity
+                                && app.pending_approval.is_none() =>
+                        {
+                            let idx = app.activity.len().saturating_sub(1);
+                            let cur = app.motion.expanded_timeline();
+                            app.motion.set_expanded_timeline(if cur == Some(idx) {
+                                None
+                            } else {
+                                Some(idx)
+                            });
+                            dirty = true;
+                        }
+                        KeyCode::Left if app.pending_approval.is_some() => {
+                            app.motion.diff_scrub_left();
+                            dirty = true;
+                        }
+                        KeyCode::Right if app.pending_approval.is_some() => {
+                            app.motion.diff_scrub_right();
                             dirty = true;
                         }
                         KeyCode::Char('a') | KeyCode::Char('A')
@@ -464,7 +488,9 @@ fn apply_stream_update(app: &mut AppState, update: StreamUpdate) {
                                 approval_token: token,
                             });
                             app.motion.on_approval_open();
-                            app.status_message = Some("A approve · D deny".to_string());
+                            app.motion.set_diff_scrub_bounds(5);
+                            app.status_message =
+                                Some("A approve · D deny · ←→ scrub".to_string());
                         }
                     }
                     UiEffect::PhaseChanged(phase) => app.turn_phase = phase,

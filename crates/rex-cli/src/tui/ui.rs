@@ -168,7 +168,7 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
     frame.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
-fn draw_body(frame: &mut Frame, area: Rect, app: &AppState) {
+fn draw_body(frame: &mut Frame, area: Rect, app: &mut AppState) {
     let pad = transcript_pad(area.width);
     match timeline_width(area.width) {
         None => {
@@ -200,11 +200,10 @@ fn pad_rect(area: Rect, pad_x: u16, pad_y: u16) -> Rect {
     }
 }
 
-fn draw_timeline(frame: &mut Frame, area: Rect, app: &AppState) {
+fn draw_timeline(frame: &mut Frame, area: Rect, app: &mut AppState) {
     let focused = app.focus == FocusPane::Activity;
-    // Progressive disclosure: technical detail only on `?` or timeline focus.
-    // Coalesce is a tachyonfx region effect on this area.
-    let disclose = app.help_expanded || app.focus == FocusPane::Activity;
+    let disclose = app.help_expanded || focused;
+    let expanded = app.motion.expanded_timeline();
 
     let mut items: Vec<ListItem> = vec![ListItem::new(Span::styled(
         "○ Timeline".to_string(),
@@ -217,7 +216,7 @@ fn draw_timeline(frame: &mut Frame, area: Rect, app: &AppState) {
             app.theme.text_tertiary(),
         )));
     } else {
-        for item in &app.activity {
+        for (idx, item) in app.activity.iter().enumerate() {
             let line = if disclose {
                 if let Some(detail) = &item.detail {
                     format!("  {}  ({})", item.summary, detail)
@@ -227,7 +226,20 @@ fn draw_timeline(frame: &mut Frame, area: Rect, app: &AppState) {
             } else {
                 format!("  {}", item.summary)
             };
-            items.push(ListItem::new(Span::styled(line, app.theme.text_tertiary())));
+            let style = if expanded == Some(idx) {
+                app.theme.text_accent()
+            } else {
+                app.theme.text_tertiary()
+            };
+            items.push(ListItem::new(Span::styled(line, style)));
+            if expanded == Some(idx) {
+                if let Some(detail) = &item.detail {
+                    items.push(ListItem::new(Span::styled(
+                        format!("    ↳ {detail}"),
+                        app.theme.text_secondary(),
+                    )));
+                }
+            }
         }
     }
 
@@ -472,21 +484,20 @@ fn draw_footer(frame: &mut Frame, area: Rect, app: &AppState) {
     );
 }
 
-fn draw_approval_modal(frame: &mut Frame, app: &AppState) {
+fn draw_approval_modal(frame: &mut Frame, app: &mut AppState) {
     let Some(pending) = app.pending_approval.as_ref() else {
         return;
     };
-    // Modal geometry is stable; open/close motion is tachyonfx dissolve/slide.
     let area = centered_rect(60, 40, frame.area());
-    // Dimmed backdrop token, then single-hairline modal (no deep border stacks).
     frame.render_widget(
         Block::default().style(app.theme.surface_dimmed()),
         frame.area(),
     );
     frame.render_widget(Clear, area);
     let summary = AppState::approval_summary(pending);
+    let scrub = app.motion.diff_scrub_index();
     let mut body = format!(
-        "◎ Action required\n\n{summary}\n\n[A] Approve   [D] Reject   [?] Details"
+        "◎ Action required\n\n{summary}\n\n←→ scrub diff ({scrub}) · [A] Approve · [D] Reject · [?] Details"
     );
     if app.help_expanded {
         body.push_str(&format!("\n\n{} · {}", pending.name, pending.detail));
@@ -501,6 +512,27 @@ fn draw_approval_modal(frame: &mut Frame, app: &AppState) {
         )
         .wrap(Wrap { trim: false });
     frame.render_widget(modal, area);
+
+    let diff_area = Rect {
+        x: area.x.saturating_add(2),
+        y: area.y.saturating_add(4),
+        width: area.width.saturating_sub(4),
+        height: 2,
+    };
+    let intensity = if app.motion.diff_scrub_max() == 0 {
+        0.5
+    } else {
+        scrub as f32 / app.motion.diff_scrub_max().max(1) as f32
+    };
+    use super::compositor::effects;
+    effects::apply_diff_scrub_line(frame.buffer_mut(), diff_area, true, intensity);
+    let removed = Rect {
+        x: diff_area.x,
+        y: diff_area.y.saturating_add(1),
+        width: diff_area.width,
+        height: 1,
+    };
+    effects::apply_diff_scrub_line(frame.buffer_mut(), removed, false, 1.0 - intensity);
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
