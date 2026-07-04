@@ -88,17 +88,28 @@ fn timeline_width(width: u16) -> Option<u16> {
 }
 
 fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
-    let phase_style = match app.session {
-        SessionPhase::Idle => app.theme.status_success(),
-        SessionPhase::Streaming => app.theme.status_working(),
-        SessionPhase::Error => app.theme.status_error(),
+    // Connect fade: use tertiary styles until fade completes.
+    let faded_in = app.motion.connect_fade_progress() >= 1.0;
+    let phase_style = if !faded_in {
+        app.theme.text_tertiary()
+    } else {
+        match app.session {
+            SessionPhase::Idle => app.theme.status_success(),
+            SessionPhase::Streaming => app.theme.status_working(),
+            SessionPhase::Error => app.theme.status_error(),
+        }
     };
     // Calm status glyph only — no blink/spinner as primary activity signal.
     let phase = Span::styled(format!("{} ", app.phase_glyph()), phase_style);
+    let name_style = if faded_in {
+        app.theme.text_primary()
+    } else {
+        app.theme.text_tertiary()
+    };
 
     let mut spans = vec![
         phase,
-        Span::styled(app.workspace_basename(), app.theme.text_primary()),
+        Span::styled(app.workspace_basename().to_string(), name_style),
         Span::styled(format!(" {} ", app.mode_glyph()), app.theme.text_accent()),
     ];
     if app.bypass {
@@ -240,17 +251,22 @@ fn draw_composer(frame: &mut Frame, area: Rect, app: &AppState) {
             app.theme.text_tertiary(),
         ));
     }
+    // Stream slide cue: brief leading spacer while slide window is active.
+    if app.motion.stream_slide_active() {
+        spans.insert(0, Span::styled(" ".to_string(), app.theme.text_tertiary()));
+    }
     spans.push(if app.composer.is_empty() {
         Span::styled("Type your prompt…".to_string(), app.theme.text_tertiary())
     } else {
         Span::styled(app.composer.clone(), app.theme.text_primary())
     });
     let line = Line::from(spans);
-    // Top hairline only; focus uses hairline.focus.
+    // Flux on active hairline while streaming (not a lone blink cell).
+    let hairline_on = focused || app.motion.flux_hairline_on();
     let composer = Paragraph::new(line).block(
         Block::default()
             .borders(Borders::TOP)
-            .border_style(app.theme.hairline(focused)),
+            .border_style(app.theme.hairline(hairline_on)),
     );
     frame.render_widget(composer, area);
 }
