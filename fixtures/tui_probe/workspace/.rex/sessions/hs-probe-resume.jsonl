@@ -1,3 +1,0 @@
-{"sequence":1,"event":"operator_prompt","text":"Fix autostart lock reclaim","turn_id":"turn-1"}
-{"sequence":2,"event":"chunk","text":"Here is a stub reply.","turn_id":"turn-1"}
-{"sequence":3,"event":"done","text":"","turn_id":"turn-1"}

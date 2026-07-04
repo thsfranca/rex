@@ -1,7 +1,9 @@
-# Terminal harness architecture
+# Terminal harness architecture (historical)
 
 
-> Role: explanation | Status: design accepted | Audience: contributors | Read when: terminal harness architecture
+> **Superseded** by [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md) ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)). Terminal harness code removed 2026-07.
+
+> Role: explanation | Status: historical | Audience: contributors | Read when: terminal harness history
 > Prefer: ## Purpose
 
 **Status:** `design accepted` — implementation **R072–R073** planned; v2 daemon intelligence **R076–R078** Later. Product UX: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision record: [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).

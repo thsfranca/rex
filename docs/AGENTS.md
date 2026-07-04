@@ -16,9 +16,8 @@ Machine catalog: [manifest.yaml](manifest.yaml). Human index: [README.md](README
 | Add or change error codes / CLI messages | [ERROR_HANDLING.md](ERROR_HANDLING.md) | [NDJSON_STREAM.md](NDJSON_STREAM.md) |
 | NDJSON stream / CLI transport contract | [NDJSON_STREAM.md](NDJSON_STREAM.md) | [ERROR_HANDLING.md](ERROR_HANDLING.md), [ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md) |
 | JSON config keys / env precedence | [CONFIGURATION.md](CONFIGURATION.md) | [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md), [KISS_CONFIG_SURFACE.md](KISS_CONFIG_SURFACE.md) |
-| Operator setup (daemon, LiteLLM, oMLX) | [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
-| TUI design / acceptance | [TUI_DESIGN.md](TUI_DESIGN.md) (historical) | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) |
-| Web UI design / acceptance | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md), [fixtures/ui_probe/README.md](../fixtures/ui_probe/README.md) |
+| Operator setup (daemon, LiteLLM, oMLX) | [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md) | [OPERATOR_UX.md](OPERATOR_UX.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
+| Web UI design / acceptance | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md), [WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md) |
 | Sidecar spawn / broker API | [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md) | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) |
 | Release / versioning | [RELEASE.md](RELEASE.md) | [V1_0.md](V1_0.md), [ROADMAP.md](ROADMAP.md) |
 | System architecture overview | [ARCHITECTURE.md](ARCHITECTURE.md) | [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md), [MVP_SPEC.md](MVP_SPEC.md) |

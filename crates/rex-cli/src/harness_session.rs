@@ -9,12 +9,9 @@ static SESSION_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Stable id for one bare-`rex` TUI process; sent on every `StreamInference` call.
 ///
-/// Inside the tuiwright probe fixture (see `tui::probe_context`), returns a fixed id so
+/// When `REX_HARNESS_SESSION_ID` is set (ui probe / harness), returns that fixed id.
 /// baselines stay stable. Otherwise generates a unique per-process id.
 pub fn new_harness_session_id() -> String {
-    if crate::probe_context::is_tui_probe_fixture() {
-        return "hs-probe".to_string();
-    }
     let seq = SESSION_COUNTER.fetch_add(1, Ordering::Relaxed);
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -38,11 +35,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn generates_unique_ids_outside_fixture() {
+    fn generates_unique_ids() {
         let a = new_harness_session_id();
         let b = new_harness_session_id();
-        if !crate::probe_context::is_tui_probe_fixture() {
-            assert_ne!(a, b);
-        }
+        assert_ne!(a, b);
     }
 }

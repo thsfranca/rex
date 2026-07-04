@@ -15,10 +15,10 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 | Phase | ID | Concern | Status |
 |-------|-----|---------|--------|
 | 0 | **W100** | rex-ui-harness MCP + static probe | **Done** |
-| 1 | **W101** | Tauri shell + `--rex-*` tokens | Planned |
-| 2 | **W102** | UDS bridge + simple streaming chat | Planned |
-| 3 | **W103** | `rex` launches desktop + menu bar | Planned |
-| 4 | **W104** | TUI removal | Planned |
+| 1 | **W101** | Tauri shell + `--rex-*` tokens | **Done** |
+| 2 | **W102** | UDS bridge + simple streaming chat | **Done** |
+| 3 | **W103** | `rex` launches desktop + menu bar | **Done** |
+| 4 | **W104** | TUI removal | **Done** |
 | 5 | **W105** | Motion v1 (Framer Motion tiers) | Planned |
 | 6 | **W106** | Approval modal + diff scrubber | Planned |
 | 7 | **W107** | Session picker carousel | Planned |
