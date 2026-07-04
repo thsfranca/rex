@@ -12,7 +12,9 @@ pub enum TopLevelCommand {
 
 pub fn parse_top_level(mut args: impl Iterator<Item = String>) -> Result<TopLevelCommand, String> {
     match args.next().as_deref() {
-        None | Some("-h") | Some("--help") | Some("help") => Ok(TopLevelCommand::Help),
+        // Bare `rex` opens the TUI (primary product entry).
+        None => Ok(TopLevelCommand::Cli(vec!["tui".to_string()])),
+        Some("-h") | Some("--help") | Some("help") => Ok(TopLevelCommand::Help),
         Some("daemon") => Ok(TopLevelCommand::Daemon),
         Some("status") => {
             let mut rest = vec!["status".to_string()];
@@ -42,9 +44,10 @@ pub fn print_usage() {
     eprintln!(
         "\
 Usage:
+  rex
+  rex tui [ --no-daemon-autostart ]
   rex daemon
   rex status
-  rex tui [ --no-daemon-autostart ]
   rex complete \"<prompt>\" [--format text|ndjson] [--model <id>] [--mode ask|plan|agent] [--approval-id <id>] [--trace-id <id>] [--no-ui]
   rex config <init|show|path|validate>
   rex proto <install|path|doctor>
@@ -52,7 +55,7 @@ Usage:
   rex gateway <init|doctor>
   rex omlx <init|doctor>
 
-Run the local daemon, query status, or stream a completion via the daemon UDS API."
+Open the interactive terminal workspace (default), or run setup and operational commands."
     );
 }
 
@@ -73,6 +76,14 @@ mod tests {
         assert_eq!(
             parse_top_level(["--help".to_string()].into_iter()).unwrap(),
             TopLevelCommand::Help
+        );
+    }
+
+    #[test]
+    fn bare_rex_opens_tui() {
+        assert_eq!(
+            parse_top_level(std::iter::empty()).unwrap(),
+            TopLevelCommand::Cli(vec!["tui".to_string()])
         );
     }
 
