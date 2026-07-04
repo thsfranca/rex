@@ -120,6 +120,7 @@ Human responsibilities:
 AI responsibilities:
 - Draft focused code/doc updates.
 - Keep changes aligned with existing contracts and rules.
+- Apply [KISS config surface](KISS_CONFIG_SURFACE.md) before adding JSON keys or dual product/harness modes.
 - Produce explicit verification steps.
 - Follow [ADR 0006](architecture/decisions/0006-gitignored-temp-tracking-sequential-handoffs.md) for repo-touching plans: keep a gitignored root `TEMP_*.md` record and, for sequential tasks, include **handoff instructions** (**purpose of the whole slice**, preferred response formats, and structure) for the next session.
 
@@ -154,6 +155,7 @@ Or run the full Rust CI path (includes audit):
 
 Use this review checklist before accepting AI-generated changes:
 - Scope: one primary concern per PR.
+- KISS: simpler config/runtime option stated before new keys ([KISS_CONFIG_SURFACE.md](KISS_CONFIG_SURFACE.md)).
 - Contract safety: no accidental `rex.v1` breaking changes.
 - Reliability: failure paths are explicit and testable; error messages follow [ERROR_HANDLING.md](ERROR_HANDLING.md).
 - Documentation: setup/behavior changes are documented.
