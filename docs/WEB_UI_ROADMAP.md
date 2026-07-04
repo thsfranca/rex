@@ -23,7 +23,7 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 | 6 | **W106** | Approval modal + diff scrubber | Planned |
 | 7 | **W107** | Session picker carousel | Planned |
 | 8 | **W108** | Canvas/WebGL cinematic tier (regl) | Planned |
-| 9 | **W109** | tauri-plugin-playwright native harness | Planned |
+| 9 | **W109** | tauri-plugin-playwright native harness | **Done** (desktop default in rex-ui-harness) |
 | 10 | **W110** | macOS signing + auto-update CI | Planned |
 
 ## Phase detail

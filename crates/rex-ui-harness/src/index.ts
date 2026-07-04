@@ -17,6 +17,21 @@ import {
   gotoScenario,
   openSession,
 } from "./session.js";
+import {
+  pageCanvasHash,
+  pageClick,
+  pageClockStep,
+  pageCssTokenAssert,
+  pageEmulateReducedMotion,
+  pageFocus,
+  pageLayout,
+  pagePress,
+  pageScreenshot,
+  pageSnapshotTree,
+  pageType,
+  pageWaitForSelector,
+  pageWaitForText,
+} from "./page.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = findRepoRoot(process.cwd());
@@ -45,10 +60,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
     {
       name: "ui_open",
-      description: "Launch Playwright browser session against the probe fixture.",
+      description:
+        "Launch Rex UI session. Default on macOS: real Tauri app + daemon (desktop). Use mode=static for HTML fixture.",
       inputSchema: {
         type: "object",
-        properties: { headless: { type: "boolean", default: true } },
+        properties: {
+          headless: { type: "boolean", default: true, description: "Static fixture only" },
+          mode: {
+            type: "string",
+            enum: ["desktop", "static"],
+            description: "desktop = Tauri + UDS daemon; static = HTML probe fixture",
+          },
+        },
       },
     },
     {
@@ -217,16 +240,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function handleTool(name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
     case "ui_open": {
-      const native = args.native === true;
-      if (native) {
-        return {
-          ok: false,
-          error:
-            "Native WKWebView mode requires tauri-plugin-playwright (W109). Use browser fixture mode.",
-        };
-      }
-      await openSession(config, { headless: args.headless !== false });
-      return { ok: true, baseUrl: config.baseUrl, mode: "browser" };
+      const modeArg = args.mode as "desktop" | "static" | undefined;
+      const mode = modeArg ?? (args.native === true ? "desktop" : undefined);
+      const opened = await openSession(config, {
+        headless: args.headless !== false,
+        mode,
+      });
+      return {
+        ok: true,
+        mode: opened.mode,
+        rex_root: opened.mode === "desktop" ? config.rexRoot : undefined,
+        baseUrl: opened.mode === "static" ? config.baseUrl : undefined,
+      };
     }
     case "ui_close":
       await closeSession();
@@ -235,47 +260,42 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       await gotoScenario(String(args.scenario));
       return { ok: true, scenario: args.scenario };
     case "ui_snapshot": {
-      const { page } = getSession();
-      const tree = await page.locator("body").ariaSnapshot();
-      const payload: Record<string, unknown> = { tree };
+      const s = getSession();
+      const tree = await pageSnapshotTree(s);
+      const payload: Record<string, unknown> = { tree, mode: s.mode };
       if (args.screenshot) {
-        payload.screenshot_base64 = (await page.screenshot()).toString("base64");
+        payload.screenshot_base64 = (await pageScreenshot(s)).toString("base64");
       }
       return payload;
     }
     case "ui_assert_token": {
-      const { page } = getSession();
+      const s = getSession();
       const selector = String(args.selector);
       const token = String(args.token);
       const property = String(args.property);
       const maxDelta = Number(args.max_delta_e ?? 2.3);
-      const actual = await page.evaluate(
-        ({ sel, prop }) => {
-          const el = document.querySelector(sel);
-          if (!el) throw new Error(`Missing selector: ${sel}`);
-          const style = getComputedStyle(el);
-          if (prop === "color") return style.color;
-          if (prop === "background-color") return style.backgroundColor;
-          if (prop === "border-color") return style.borderColor;
-          return style.color;
-        },
-        { sel: selector, prop: property }
-      );
-      const expected = await page.evaluate((t) => {
-        return getComputedStyle(document.documentElement).getPropertyValue(t).trim();
-      }, token);
-      const delta = ciede2000(parseCssColor(String(actual)), parseCssColor(expected));
+      const { actual, expected } = await pageCssTokenAssert(s, selector, token, property);
+      const delta = ciede2000(parseCssColor(actual), parseCssColor(expected));
       const pass = delta <= maxDelta;
       return { pass, delta_e: delta, actual, expected, token, max_delta_e: maxDelta };
     }
     case "ui_clock_step": {
-      const { page } = getSession();
-      await page.clock.fastForward(Number(args.duration_ms));
+      const s = getSession();
+      await pageClockStep(s, Number(args.duration_ms));
       return { ok: true, advanced_ms: args.duration_ms };
     }
     case "ui_assert_motion": {
-      const { page } = getSession();
+      const s = getSession();
       const region = String(args.region);
+      if (s.mode === "desktop") {
+        return {
+          pass: false,
+          skipped: true,
+          reason: "ui_assert_motion requires static fixture (Playwright clock)",
+          region,
+        };
+      }
+      const { page } = s as { page: import("playwright").Page };
       const before = await page.locator(region).screenshot();
       await page.clock.fastForward(Number(args.min_duration_ms ?? 150));
       const mid = await page.locator(region).screenshot();
@@ -285,18 +305,9 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return { pass: diff, effect: args.effect, region };
     }
     case "ui_assert_layout": {
-      const { page } = getSession();
+      const s = getSession();
       const selector = String(args.selector);
-      const layout = await page.evaluate((sel) => {
-        const el = document.querySelector(sel);
-        if (!el) throw new Error(`Missing: ${sel}`);
-        const s = getComputedStyle(el);
-        return {
-          display: s.display,
-          flexDirection: s.flexDirection,
-          gridTemplateColumns: s.gridTemplateColumns,
-        };
-      }, selector);
+      const layout = await pageLayout(s, selector);
       const checks: Record<string, boolean> = {};
       if (args.display) checks.display = layout.display === args.display;
       if (args.flex_direction)
@@ -307,24 +318,30 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return { pass, layout, checks };
     }
     case "ui_click": {
-      const { page } = getSession();
-      await page.click(String(args.selector));
+      const s = getSession();
+      await pageClick(s, String(args.selector));
       return { ok: true };
     }
     case "ui_send_keys": {
-      const { page } = getSession();
+      const s = getSession();
       const keys = String(args.keys);
       if (args.selector) {
-        await page.focus(String(args.selector));
+        await pageFocus(s, String(args.selector));
       }
-      await page.keyboard.type(keys);
+      if (keys.includes("{Enter}")) {
+        const text = keys.replaceAll("{Enter}", "");
+        if (text) await pageType(s, text);
+        await pagePress(s, "Enter");
+      } else {
+        await pageType(s, keys);
+      }
       return { ok: true };
     }
     case "ui_wait_for": {
-      const { page } = getSession();
+      const s = getSession();
       const timeout = Number(args.timeout_ms ?? 10000);
-      if (args.selector) await page.waitForSelector(String(args.selector), { timeout });
-      if (args.text) await page.getByText(String(args.text)).waitFor({ timeout });
+      if (args.selector) await pageWaitForSelector(s, String(args.selector), timeout);
+      if (args.text) await pageWaitForText(s, String(args.text), timeout);
       return { ok: true };
     }
     case "ui_record_motion": {
@@ -332,39 +349,29 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       if (args.action === "start") {
         s.recording = true;
         s.motionFrames = [];
-        const { page } = s;
-        s.motionFrames.push(await page.screenshot());
+        s.motionFrames.push(await pageScreenshot(s));
         return { ok: true, recording: true };
       }
       s.recording = false;
       return { ok: true, frame_count: s.motionFrames.length, recording: false };
     }
     case "ui_assert_canvas": {
-      const { page } = getSession();
+      const s = getSession();
       const selector = String(args.selector ?? "#ambient");
-      const hash1 = await page.evaluate((sel) => {
-        const c = document.querySelector(sel) as HTMLCanvasElement;
-        const ctx = c.getContext("2d");
-        return ctx?.getImageData(0, 0, c.width, c.height).data.join(",").slice(0, 500);
-      }, selector);
-      await page.clock.fastForward(100);
-      await page.evaluate(() => {
-        requestAnimationFrame(() => {});
-      });
-      await page.clock.fastForward(50);
-      const hash2 = await page.evaluate((sel) => {
-        const c = document.querySelector(sel) as HTMLCanvasElement;
-        const ctx = c.getContext("2d");
-        return ctx?.getImageData(0, 0, c.width, c.height).data.join(",").slice(0, 500);
-      }, selector);
+      if (s.mode === "desktop") {
+        return { pass: false, skipped: true, reason: "no canvas tier in desktop MVP" };
+      }
+      const hash1 = await pageCanvasHash(s, selector);
+      await pageClockStep(s, 100);
+      const hash2 = await pageCanvasHash(s, selector);
       const changed = hash1 !== hash2;
       return { pass: changed, hash1_preview: hash1?.slice(0, 32), hash2_preview: hash2?.slice(0, 32) };
     }
     case "ui_diff_baseline": {
-      const { page } = getSession();
+      const s = getSession();
       const name = String(args.name);
       const baselinePath = path.join(config.baselineDir, `${name}.png`);
-      const current = await page.screenshot();
+      const current = await pageScreenshot(s);
       if (!fs.existsSync(baselinePath)) {
         fs.mkdirSync(config.baselineDir, { recursive: true });
         fs.writeFileSync(baselinePath, current);
@@ -378,8 +385,8 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
       return { pass: equal, diffBounds, diffClusters };
     }
     case "ui_set_prefers_reduced_motion": {
-      const { page } = getSession();
-      await page.emulateMedia({ reducedMotion: args.enabled ? "reduce" : "no-preference" });
+      const s = getSession();
+      await pageEmulateReducedMotion(s, args.enabled === true);
       return { ok: true, reduced_motion: args.enabled };
     }
     default:

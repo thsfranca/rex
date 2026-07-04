@@ -26,6 +26,7 @@ export function Composer({ disabled }: Props) {
       <div className="composer-row">
         <textarea
           id="composer-input"
+          data-testid="composer-input"
           rows={2}
           placeholder="Message Rex…"
           value={value}

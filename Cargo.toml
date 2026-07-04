@@ -8,6 +8,7 @@ members = [
   "crates/rex",
   "crates/rex-sidecar-stub",
   "crates/rex-capability-mock",
+  "crates/rex-desktop",
 ]
 resolver = "2"
 

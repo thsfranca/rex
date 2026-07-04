@@ -14,6 +14,10 @@ path = "src/main.rs"
 name = "rex_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+default = []
+e2e-testing = []
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -27,6 +31,7 @@ rex-cli = { path = "../rex-cli" }
 rex-proto = { path = "../rex-proto" }
 rex-stream-ui = { path = "../rex-stream-ui", features = ["grpc"] }
 thiserror = "2"
+tauri-plugin-playwright = "0.4"
 
 [package.metadata.tauri.bundle]
 active = true

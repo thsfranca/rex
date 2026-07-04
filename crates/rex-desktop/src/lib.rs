@@ -41,13 +41,26 @@ async fn submit_prompt(
 }
 
 pub fn build_app() -> tauri::Builder<tauri::Wry> {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![ensure_daemon, submit_prompt])
         .setup(|app| {
             let app_menu = build_menu(app)?;
             app.set_menu(app_menu)?;
             Ok(())
-        })
+        });
+
+    #[cfg(feature = "e2e-testing")]
+    {
+        builder = builder.plugin(tauri_plugin_playwright::init_with_config(
+            tauri_plugin_playwright::PluginConfig::new().socket_path(playwright_socket_path()),
+        ));
+    }
+
+    builder
+}
+
+fn playwright_socket_path() -> String {
+    std::env::var("TAURI_PLAYWRIGHT_SOCKET").unwrap_or_else(|_| "/tmp/rex-playwright.sock".into())
 }
 
 fn build_menu(app: &tauri::App) -> tauri::Result<Menu<tauri::Wry>> {
