@@ -2,6 +2,7 @@
 
 mod app;
 mod approval;
+mod motion;
 mod state;
 mod stream_task;
 mod theme;

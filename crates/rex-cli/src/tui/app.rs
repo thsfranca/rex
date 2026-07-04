@@ -72,9 +72,25 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
 
     loop {
         app.tick = app.tick.wrapping_add(1);
+        // Tear-free frames: wrap each draw in synchronized output when enabled.
+        let sync = rex_config::load_merged()
+            .map(|c| c.effective.cli.ui.sync_output)
+            .unwrap_or(true);
+        if sync {
+            let _ = crossterm::execute!(
+                io::stdout(),
+                crossterm::terminal::BeginSynchronizedUpdate
+            );
+        }
         terminal
             .draw(|f| ui::draw(f, &app))
             .map_err(|e| e.to_string())?;
+        if sync {
+            let _ = crossterm::execute!(
+                io::stdout(),
+                crossterm::terminal::EndSynchronizedUpdate
+            );
+        }
 
         if let Some(rx) = stream_rx.as_mut() {
             while let Ok(update) = rx.try_recv() {
@@ -82,11 +98,8 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
             }
         }
 
-        let poll_ms = if app.session == SessionPhase::Streaming {
-            80
-        } else {
-            120
-        };
+        // ~30 FPS while motion cues run; idle blocks longer on poll.
+        let poll_ms = app.motion.poll_ms();
 
         if event::poll(Duration::from_millis(poll_ms)).map_err(|e| e.to_string())? {
             if let Event::Key(key) = event::read().map_err(|e| e.to_string())? {
@@ -101,6 +114,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                         if app.session == SessionPhase::Streaming {
                             stream_rx = None;
                             app.session = SessionPhase::Idle;
+                            app.motion.on_stream_end();
                             app.status_message = Some("Turn canceled".to_string());
                         }
                     }
@@ -109,6 +123,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                         if app.session == SessionPhase::Streaming {
                             stream_rx = None;
                             app.session = SessionPhase::Idle;
+                            app.motion.on_stream_end();
                             app.status_message = Some("Turn canceled".to_string());
                         }
                     }

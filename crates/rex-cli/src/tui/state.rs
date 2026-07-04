@@ -4,6 +4,7 @@ use std::path::Path;
 
 use rex_stream_ui::TurnPhase;
 
+use super::motion::MotionState;
 use super::theme::Theme;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,6 +66,7 @@ pub struct AppState {
     pub theme: Theme,
     pub tick: u64,
     pub status_message: Option<String>,
+    pub motion: MotionState,
 }
 
 impl AppState {
@@ -90,6 +92,7 @@ impl AppState {
             theme: Theme::default_adaptive(),
             tick: 0,
             status_message: None,
+            motion: MotionState::default(),
         }
     }
 
@@ -168,18 +171,21 @@ impl AppState {
         self.status_message = None;
         // Protocol fields only in detail (progressive disclosure).
         self.push_activity("▸ Working…".to_string(), Some(self.mode.clone()));
+        self.motion.on_stream_start();
     }
 
     pub fn end_stream_ok(&mut self) {
         self.session = SessionPhase::Idle;
         self.turn_phase = TurnPhase::Idle;
         self.push_activity("✓ Done", None);
+        self.motion.on_stream_end();
     }
 
     pub fn end_stream_error(&mut self, message: String) {
         self.session = SessionPhase::Error;
         self.status_message = Some(message.clone());
         self.push_activity(format!("✖ {message}"), None);
+        self.motion.on_stream_end();
     }
 
     pub fn humanize_tool_phase(name: &str, phase: &str) -> (String, Option<String>) {
