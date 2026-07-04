@@ -1,5 +1,6 @@
 # Editor / AI local config (not shared; keep rules in user or machine-local editor config)
 .cursor/
+.obsidian/
 
 docs/research/
 
