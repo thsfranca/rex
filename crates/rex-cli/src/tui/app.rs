@@ -229,7 +229,15 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                                 app.composer.clear();
                                 app.submit_prompt(prompt.clone());
                                 let trace_id = resolve_trace_id();
-                                match spawn_stream_task(prompt, app.mode.clone(), trace_id).await {
+                                let harness_session_id = app.harness_session_id.clone();
+                                match spawn_stream_task(
+                                    prompt,
+                                    app.mode.clone(),
+                                    trace_id,
+                                    harness_session_id,
+                                )
+                                .await
+                                {
                                     Ok(rx) => stream_rx = Some(rx),
                                     Err(err) => app.end_stream_error(err.to_string()),
                                 }
