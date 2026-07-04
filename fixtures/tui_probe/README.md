@@ -50,11 +50,23 @@ Layout snapshots live in `.tuiwright/baselines/` (repo root). Names:
 | `breakpoint-70` | S3 narrow (timeline unmounted) |
 | `micro-55` | S3 micro overlay |
 
-First acceptance run: `tui_diff` with `create_if_missing: true` per baseline. Refresh intentionally when layout changes — paths and version strings in baselines may drift; prefer stable region checks via `tui_assert` for leaks.
+First acceptance run: `tui_diff` with `create_if_missing: true` per baseline. Configure `[diff.ignore_patterns]` in `tuiwright.toml` (see example) so harness session ids and semver do not fail baselines. Help-expanded footer shows workspace **basename** only (not absolute path). Refresh baselines intentionally when layout changes; prefer `tui_assert` bundles for semantic leaks.
+
+### S3 breakpoints (width)
+
+rmux single-pane `tui_resize` may not change window dimensions on all hosts. When resize does not settle, use the reopen fallback per width:
+
+```
+tui_close
+tui_open cols=90 rows=40
+tui_wait_for text="Ready"
+```
+
+Repeat for 70 and 55, then restore `120×40` before later scenarios.
 
 ## Recordings
 
-Motion review (S6): `tui_record_start` → interact → `tui_record_stop` → optional `tui_to_gif` (requires `agg`). Recordings go under `.tuiwright/recordings/` (gitignored).
+Motion review (S6 / hairline flux): `tui_record_start` → submit mock prompt → two `tui_snapshot format=text` while streaming → `tui_record_stop`. Text snapshots alone cannot verify Braille flux; review the `.cast` file or optional `tui_to_gif`. Recordings go under `.tuiwright/recordings/` (gitignored).
 
 ## Monochrome pass (optional S8)
 

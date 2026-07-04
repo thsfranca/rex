@@ -11,6 +11,8 @@ args = [
 ]
 
 [launch.env]
+# Stable harness session for tuiwright baselines (see fixtures/tui_probe/README.md).
+REX_HARNESS_SESSION_ID = "hs-probe"
 # Optional monochrome acceptance (S8): uncomment for one full matrix run.
 # NO_COLOR = "1"
 
@@ -19,3 +21,8 @@ cols = 120
 rows = 40
 
 baseline_dir = ".tuiwright/baselines"
+
+[diff]
+# Mask volatile chrome in tui_diff (session ids, semver).
+ignore_patterns = ["hs-\\S+", "v\\d+\\.\\d+\\.\\d+"]
+quiet_ms = 300

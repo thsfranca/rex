@@ -253,8 +253,8 @@ Implementation PRs (**R080**, **R081**) must pass **all** items. Any failure rej
 | Install | `./scripts/install-cli.sh` |
 | Run | `rex` |
 | Agent live probe | tuiwright MCP: `tui_open` → `tui_wait_for` / `tui_send_keys` → `tui_snapshot` (**text**) → `tui_close` |
-| Breakpoints | `tui_resize` then text snapshot at narrow / standard / wide |
-| Motion | Sequential text snapshots while streaming, fetching history, or opening approval — must show **region** change, not one-cell flicker |
+| Breakpoints | `tui_resize` when it settles, else `tui_close` + `tui_open` at target cols; text snapshot at narrow / standard / wide |
+| Motion | `tui_record_start` + sequential text snapshots while streaming; Braille hairlines need `.cast` or PNG review |
 | Design review | Apply **tui-design** skill (clutter audit, responsive floor, in-flight motion) against this document |
 
 A Rex **headless** NDJSON-replay / ANSI-snapshot adapter remains **Won't** ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md#testing-strategy)).

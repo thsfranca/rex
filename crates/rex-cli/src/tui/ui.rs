@@ -435,11 +435,11 @@ fn draw_composer(frame: &mut Frame, area: Rect, app: &AppState) {
 fn draw_footer(frame: &mut Frame, area: Rect, app: &AppState) {
     // Minimal key glyphs by default; full help, path, version on `?`.
     let line = if app.help_expanded {
-        let path = &app.workspace_root;
+        let name = app.workspace_basename();
         let ver = &app.daemon_version;
         Line::from(Span::styled(
             format!(
-                "↵ submit  esc cancel  ⇧⇥ mode  ? less  ^y bypass  ^c×2 quit  ·  {path}  ·  v{ver}"
+                "↵ submit  esc cancel  ⇧⇥ mode  ? less  ^y bypass  ^c×2 quit  ·  {name}  ·  v{ver}"
             ),
             app.theme.text_tertiary(),
         ))
