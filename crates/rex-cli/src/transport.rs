@@ -26,7 +26,7 @@ pub async fn connect_client(
             if is_daemon_unavailable_error(&source.to_string()) {
                 CliError::DaemonUnavailable {
                     socket_path: socket_path.clone(),
-                    suffix: "; run `rex daemon` or remove --no-daemon-autostart to auto-start"
+                    suffix: "; enable `daemon.auto_start` or remove --no-daemon-autostart, then run `rex`"
                         .to_string(),
                 }
             } else {

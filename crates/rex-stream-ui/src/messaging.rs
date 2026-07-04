@@ -21,7 +21,7 @@ impl OperatorMessaging {
         match phase {
             LifecyclePhase::ProbeSuccess => "Ready — connected to Rex".to_string(),
             LifecyclePhase::ProbeFailNoAutostart => {
-                "Rex is not running. Enable `daemon.auto_start` or run `rex daemon`".to_string()
+                "Rex is not running. Enable `daemon.auto_start` and run `rex`".to_string()
             }
             LifecyclePhase::StartingSpawn => "Starting Rex…".to_string(),
             LifecyclePhase::PollWaiting => "Waiting for Rex to become ready…".to_string(),
@@ -107,7 +107,7 @@ impl OperatorMessaging {
 
     pub fn error_hint(code: &str, message: &str) -> String {
         let hint = match code.trim() {
-            "daemon_unavailable" => "Daemon is not reachable — run `rex daemon` or enable auto-start",
+            "daemon_unavailable" => "Daemon is not reachable — enable auto-start and run `rex`",
             "sidecar_unavailable" => {
                 "Sidecar is not running — check `rex sidecar doctor`"
             }

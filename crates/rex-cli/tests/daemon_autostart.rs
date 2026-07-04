@@ -71,13 +71,13 @@ fn status_autostarts_detached_daemon_by_default() {
     let output = Command::new(cargo_bin("rex"))
         .current_dir(guard._dir.path())
         .env(REX_ROOT_ENV, guard._dir.path())
-        .args(["status"])
+        .args(["__rex_internal_status"])
         .output()
-        .expect("run rex status");
+        .expect("run internal status");
 
     assert!(
         output.status.success(),
-        "status failed: {}",
+        "internal status failed: {}",
         String::from_utf8_lossy(&output.stderr)
     );
     assert!(
@@ -96,9 +96,9 @@ fn status_no_autostart_flag_fails_when_daemon_missing() {
     let output = Command::new(cargo_bin("rex"))
         .current_dir(guard._dir.path())
         .env(REX_ROOT_ENV, guard._dir.path())
-        .args(["status", "--no-daemon-autostart"])
+        .args(["__rex_internal_status", "--no-daemon-autostart"])
         .output()
-        .expect("run rex status");
+        .expect("run internal status");
 
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -132,9 +132,9 @@ fn config_auto_start_false_skips_spawn() {
     let output = Command::new(cargo_bin("rex"))
         .current_dir(dir.path())
         .env(REX_ROOT_ENV, dir.path())
-        .args(["status"])
+        .args(["__rex_internal_status"])
         .output()
-        .expect("run rex status");
+        .expect("run internal status");
 
     if let Some(v) = prev_rex_root {
         std::env::set_var(REX_ROOT_ENV, v);

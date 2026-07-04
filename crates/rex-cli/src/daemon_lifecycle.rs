@@ -205,7 +205,7 @@ fn spawn_detached_daemon(loaded: &LoadedConfig, log_path: &Path) -> Result<(), C
         .map_err(|source| CliError::daemon_spawn_failed(log_path, source.to_string()))?;
 
     std::process::Command::new(rex_binary)
-        .arg("daemon")
+        .arg("__rex_internal_daemon")
         .stdin(Stdio::null())
         .stdout(Stdio::from(log_file))
         .stderr(Stdio::from(stderr))

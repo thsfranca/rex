@@ -84,7 +84,7 @@ fn two_projects_get_distinct_daemon_sockets_and_workspace_status() {
     let status_a = Command::new(cargo_bin("rex"))
         .current_dir(&proj_a)
         .env(REX_ROOT_ENV, guard._dir.path())
-        .args(["status"])
+        .args(["__rex_internal_status"])
         .output()
         .expect("status a");
     assert!(
@@ -96,7 +96,7 @@ fn two_projects_get_distinct_daemon_sockets_and_workspace_status() {
     let status_b = Command::new(cargo_bin("rex"))
         .current_dir(&proj_b)
         .env(REX_ROOT_ENV, guard._dir.path())
-        .args(["status"])
+        .args(["__rex_internal_status"])
         .output()
         .expect("status b");
     assert!(
