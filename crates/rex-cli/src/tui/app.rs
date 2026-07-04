@@ -79,6 +79,14 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
         .unwrap_or(true);
 
     loop {
+        // Prefer size polling over Resize events alone (some hosts omit events).
+        if let Ok(size) = terminal.size() {
+            if size.width != last_size.width || size.height != last_size.height {
+                last_size = size;
+                needs_draw = true;
+            }
+        }
+
         let animating = app.motion.animating();
         if animating || (was_animating && !animating) {
             // Continuous frames while motion runs; one settle frame when it ends.
@@ -146,8 +154,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                             app.status_message = Some("Press Ctrl+C again to exit".to_string());
                             if app.session == SessionPhase::Streaming {
                                 stream_rx = None;
-                                app.session = SessionPhase::Idle;
-                                app.motion.on_stream_end();
+                                app.cancel_stream();
                                 app.status_message = Some("Turn canceled".to_string());
                             }
                             dirty = true;
@@ -156,8 +163,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                             app.ctrl_c_armed = false;
                             if app.session == SessionPhase::Streaming {
                                 stream_rx = None;
-                                app.session = SessionPhase::Idle;
-                                app.motion.on_stream_end();
+                                app.cancel_stream();
                                 app.status_message = Some("Turn canceled".to_string());
                             }
                             dirty = true;
@@ -221,7 +227,7 @@ async fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Resul
                             let prompt = app.composer.trim().to_string();
                             if !prompt.is_empty() {
                                 app.composer.clear();
-                                app.begin_stream();
+                                app.submit_prompt(prompt.clone());
                                 let trace_id = resolve_trace_id();
                                 match spawn_stream_task(prompt, app.mode.clone(), trace_id).await {
                                     Ok(rx) => stream_rx = Some(rx),
