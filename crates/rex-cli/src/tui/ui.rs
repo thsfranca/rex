@@ -1,4 +1,6 @@
-//! Ratatui layout and draw helpers (R080 presentation, R081 motion cues).
+//! Ratatui layout and draw helpers (R080 presentation).
+//!
+//! Regions and breakpoints follow `docs/TUI_DESIGN.md` (spatial permanence).
 
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::Modifier;
@@ -8,23 +10,31 @@ use ratatui::Frame;
 
 use super::state::{AppState, FocusPane, SessionPhase};
 
-const MIN_COLS: u16 = 40;
-const MIN_ROWS: u16 = 10;
+/// Micro profile: below this width, show “too small” only.
+const MICRO_COLS: u16 = 60;
+const TIMELINE_WIDE: u16 = 30;
+const TIMELINE_STANDARD: u16 = 24;
+const SHORT_HEIGHT: u16 = 24;
+const COMPOSER_DEFAULT_H: u16 = 3;
+const COMPOSER_SHORT_MAX_H: u16 = 5;
 
 pub fn draw(frame: &mut Frame, app: &AppState) {
     let area = frame.area();
-    if area.width < MIN_COLS || area.height < MIN_ROWS {
+    if area.width < MICRO_COLS {
+        let msg = format!(
+            "Terminal too small — resize to continue.\n{} cols × {} rows (need ≥ {} cols)",
+            area.width, area.height, MICRO_COLS
+        );
         frame.render_widget(
-            Paragraph::new("Terminal too small — resize to continue.")
-                .style(app.theme.status_warning()),
+            Paragraph::new(msg).style(app.theme.status_warning()),
             area,
         );
         return;
     }
 
-    let header_h = if app.help_expanded { 2 } else { 1 };
-    let composer_h = 3u16;
-    let footer_h = if app.help_expanded { 2 } else { 1 };
+    let header_h = 1u16;
+    let footer_h = 1u16;
+    let composer_h = composer_height(area.height, header_h, footer_h);
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -41,6 +51,40 @@ pub fn draw(frame: &mut Frame, app: &AppState) {
     draw_footer(frame, chunks[3], app);
     if app.pending_approval.is_some() {
         draw_approval_modal(frame, app);
+    }
+}
+
+fn composer_height(total_h: u16, header_h: u16, footer_h: u16) -> u16 {
+    if total_h <= SHORT_HEIGHT {
+        // Transcript ≥ 50% of viewport; composer capped at 5 rows.
+        let reserved = header_h + footer_h;
+        let body_and_composer = total_h.saturating_sub(reserved);
+        let min_transcript = (total_h / 2).max(1);
+        let max_composer = body_and_composer.saturating_sub(min_transcript);
+        COMPOSER_DEFAULT_H
+            .min(COMPOSER_SHORT_MAX_H)
+            .min(max_composer.max(1))
+    } else {
+        COMPOSER_DEFAULT_H
+    }
+}
+
+fn transcript_pad(width: u16) -> u16 {
+    if width >= 120 {
+        2
+    } else {
+        1
+    }
+}
+
+fn timeline_width(width: u16) -> Option<u16> {
+    if width >= 120 {
+        Some(TIMELINE_WIDE)
+    } else if width >= 80 {
+        Some(TIMELINE_STANDARD)
+    } else {
+        // Narrow (60–79): timeline unmounted.
+        None
     }
 }
 
@@ -76,31 +120,45 @@ fn draw_header(frame: &mut Frame, area: Rect, app: &AppState) {
         ));
     }
 
-    // No block border here: a 1-row header cannot host both content and a border.
     frame.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
 fn draw_body(frame: &mut Frame, area: Rect, app: &AppState) {
-    let narrow = area.width < 80;
-    if narrow {
-        draw_output(frame, area, app, FocusPane::Output);
-        return;
+    let pad = transcript_pad(area.width);
+    match timeline_width(area.width) {
+        None => {
+            let transcript = pad_rect(area, pad, 0);
+            draw_transcript(frame, transcript, app);
+        }
+        Some(tl_w) => {
+            let cols = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Min(10),
+                    Constraint::Length(tl_w),
+                ])
+                .split(area);
+            let transcript = pad_rect(cols[0], pad, 0);
+            draw_transcript(frame, transcript, app);
+            draw_timeline(frame, cols[1], app);
+        }
     }
-
-    let activity_pct = if area.width < 120 { 28 } else { 32 };
-    let cols = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage(activity_pct),
-            Constraint::Percentage(100 - activity_pct),
-        ])
-        .split(area);
-
-    draw_activity(frame, cols[0], app);
-    draw_output(frame, cols[1], app, FocusPane::Output);
 }
 
-fn draw_activity(frame: &mut Frame, area: Rect, app: &AppState) {
+fn pad_rect(area: Rect, pad_x: u16, pad_y: u16) -> Rect {
+    let x = area.x.saturating_add(pad_x);
+    let y = area.y.saturating_add(pad_y);
+    let width = area.width.saturating_sub(pad_x.saturating_mul(2));
+    let height = area.height.saturating_sub(pad_y.saturating_mul(2));
+    Rect {
+        x,
+        y,
+        width,
+        height,
+    }
+}
+
+fn draw_timeline(frame: &mut Frame, area: Rect, app: &AppState) {
     let focused = app.focus == FocusPane::Activity;
     let items: Vec<ListItem> = app
         .activity
@@ -118,31 +176,25 @@ fn draw_activity(frame: &mut Frame, area: Rect, app: &AppState) {
             ListItem::new(Span::styled(line, app.theme.text_tertiary()))
         })
         .collect();
-    let title = if focused { " · " } else { " " };
+    // Left hairline only — no titled box (Quiet Chrome).
     let list = List::new(items).block(
         Block::default()
-            .borders(Borders::ALL)
-            .border_style(app.theme.hairline(focused))
-            .title(Span::styled(title, app.theme.text_tertiary())),
+            .borders(Borders::LEFT)
+            .border_style(app.theme.hairline(focused)),
     );
     frame.render_widget(list, area);
 }
 
-fn draw_output(frame: &mut Frame, area: Rect, app: &AppState, pane: FocusPane) {
-    let focused = app.focus == pane;
+fn draw_transcript(frame: &mut Frame, area: Rect, app: &AppState) {
+    let focused = app.focus == FocusPane::Output;
     let mut text = app.output_lines.join("");
     if app.session == SessionPhase::Streaming {
         text.push_str(if app.tick % 2 == 0 { "▌" } else { " " });
     }
-    let title = if focused { " · " } else { " " };
+    // No outer box; focus is reserved for hairlines on adjacent chrome.
+    let _ = focused;
     let widget = Paragraph::new(text)
         .style(app.theme.text_secondary())
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(app.theme.hairline(focused))
-                .title(Span::styled(title, app.theme.text_tertiary())),
-        )
         .wrap(Wrap { trim: false });
     frame.render_widget(widget, area);
 }
@@ -157,9 +209,10 @@ fn draw_composer(frame: &mut Frame, area: Rect, app: &AppState) {
             Span::styled(app.composer.as_str(), app.theme.text_primary())
         },
     ]);
+    // Top hairline only; focus uses hairline.focus.
     let composer = Paragraph::new(line).block(
         Block::default()
-            .borders(Borders::ALL)
+            .borders(Borders::TOP)
             .border_style(app.theme.hairline(focused)),
     );
     frame.render_widget(composer, area);
@@ -226,4 +279,31 @@ fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {
             Constraint::Percentage((100 - percent_x) / 2),
         ])
         .split(popup_layout[1])[1]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn timeline_widths_match_breakpoints() {
+        assert_eq!(timeline_width(130), Some(30));
+        assert_eq!(timeline_width(100), Some(24));
+        assert_eq!(timeline_width(70), None);
+        assert_eq!(timeline_width(59), None);
+    }
+
+    #[test]
+    fn transcript_padding_matches_breakpoints() {
+        assert_eq!(transcript_pad(130), 2);
+        assert_eq!(transcript_pad(100), 1);
+        assert_eq!(transcript_pad(70), 1);
+    }
+
+    #[test]
+    fn short_height_caps_composer() {
+        let h = composer_height(20, 1, 1);
+        assert!(h <= COMPOSER_SHORT_MAX_H);
+        assert!(h >= 1);
+    }
 }
