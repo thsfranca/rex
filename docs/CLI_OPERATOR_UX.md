@@ -1,6 +1,6 @@
 # CLI operator UX — design hub
 
-**Status:** `design accepted` — **R071** / **R075** / **R072** / **R073** implemented; **R082** TUI design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R080–R081** implementation Open (gated on design); **R074** Could ([ROADMAP.md](ROADMAP.md)). Architecture: [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
+**Status:** `design accepted` — **R071** / **R075** / **R072** / **R073** / **R080** implemented; **R082** TUI design system ([TUI_DESIGN.md](TUI_DESIGN.md)); **R081** motion Open; **R074** Could ([ROADMAP.md](ROADMAP.md)). Architecture: [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
 
 ## Purpose
 
@@ -57,7 +57,7 @@ Operators run **`cd ~/projects/my-app && rex`** (or **`rex tui`**) and enter an 
 | Per-workspace routing | **R075** Done | Done |
 | Lifecycle feedback | Compact glyphs; still thin chrome | Product design system ([TUI_DESIGN.md](TUI_DESIGN.md)); implement **R080** |
 | Stream progress | Activity list + output in titled boxes | Chat-primary transcript + timeline; human phrases (**R080**) |
-| Interactive session | **`rex tui`** + TTY-delegating **`complete`** (**R073**) | Done (shell); presentation/motion **R080–R081** Open |
+| Interactive session | **`rex tui`** + TTY-delegating **`complete`** (**R073**) | Done (shell); presentation **R080** Done; motion **R081** Open |
 | Markdown output | Incremental **mdstream** path | Done |
 | Tool approval | Modal present | Human-first copy per design system (**R080**) |
 | Friendly status | Minimal structured copy | Progressive insight; optional narrator (**R074**) |
@@ -174,7 +174,7 @@ Canonical product design for **`rex tui`** presentation and motion: **[TUI_DESIG
 | ID | Scope | Status |
 |----|-------|--------|
 | **R082** | Product design system (principles, tokens, layout, choreography, acceptance) | **Done** |
-| **R080** | Layout + tokens implementation | **Open** — must pass [TUI_DESIGN.md](TUI_DESIGN.md) acceptance |
+| **R080** | Layout + tokens implementation | **Done** |
 | **R081** | Motion (tachyonfx region effects, flux hairlines) | **Open** — after **R080**; blink-only fails review |
 
 Shipped chrome after early presentation work remains **current debt** (see Current debt in [TUI_DESIGN.md](TUI_DESIGN.md)): titled boxes, mediocre blink caret/spinner. Implementation must meet the design bar, not polish debt in place.
@@ -377,7 +377,7 @@ Precedence: project **`.rex/config.json`** → **`$REX_ROOT/config.json`** → f
 | R072 messaging + NDJSON core | **Must** (program) | **Done** |
 | R073 TUI + approvals | **Should** | **Done** |
 | R082 TUI design system | **Should** | **Done** — [TUI_DESIGN.md](TUI_DESIGN.md) |
-| R080 presentation | **Should** | **Open** — gated on R082 |
+| R080 presentation | **Should** | **Done** |
 | R081 motion | **Should** | **Open** — after R080 |
 | R074 narrator | **Could** | After R073; prefer after R080 disclosure rules |
 | R076–R078 daemon intelligence | **Could** / **Later** | After TUI MVP |

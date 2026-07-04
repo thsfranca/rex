@@ -64,7 +64,7 @@ flowchart LR
  langfuseImpl --> v1
 ```
 
-**Current focus:** Implement TUI design system — **R080** → **R081** — [TUI_DESIGN.md](TUI_DESIGN.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md); [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
+**Current focus:** Implement TUI motion — **R081** — [TUI_DESIGN.md](TUI_DESIGN.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md); [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
 
 ## Now — stable baseline
 
@@ -85,7 +85,7 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 | 2 | **R072** — NDJSON core + operator messaging + **mdstream** | **Must** (program) | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | **Done** |
 | 3 | **R073** — full terminal UI + approval modals | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md) | **Done** |
 | 4 | **R082** — TUI product design system (docs) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
-| 5 | **R080** — TUI presentation (layout + tokens) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | Open — gated on **R082** |
+| 5 | **R080** — TUI presentation (layout + tokens) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
 | 6 | **R081** — TUI motion (choreography) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | Open — after **R080** |
 | 7 | **R074** — optional LLM status narrator | **Could** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Open — prefer **after R080** |
 | 5 | **R067** — intent-aware retrieval for short prompts | **Should** | — | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) | Open |
@@ -137,7 +137,7 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 | **Must** (program) | **R072** — NDJSON core + operator messaging + **mdstream** | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | **Done** |
 | **Should** | **R073** — full terminal UI + approval modals | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md) | **Done** |
 | **Should** | **R082** — TUI product design system (docs) | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
-| **Should** | **R080** — TUI presentation (layout + tokens) | [TUI_DESIGN.md](TUI_DESIGN.md) | Open — gated on **R082** |
+| **Should** | **R080** — TUI presentation (layout + tokens) | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
 | **Should** | **R081** — TUI motion (choreography) | [TUI_DESIGN.md](TUI_DESIGN.md) | Open — after **R080** |
 | **Could** | **R074** — optional LLM status narrator | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | After **R073**; prefer after **R080** |
 | **Should** | **R077** — brokered git dirty-state auto-commit | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | After **R073** — **`git.auto_commit_dirty`** |

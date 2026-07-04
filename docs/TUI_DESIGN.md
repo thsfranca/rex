@@ -1,6 +1,6 @@
 # Rex TUI design system
 
-**Status:** `design accepted` (**R082**) — implementation **R080** (layout + tokens) and **R081** (motion) are **Open** and gated on this document.
+**Status:** `design accepted` (**R082**) — implementation **R080** (layout + tokens) **Done**; **R081** (motion) **Open** and gated on this document.
 
 **Product hub:** [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) (operator path and lifecycle). **Architecture:** [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
 
@@ -42,17 +42,9 @@ Configuration remains **`REX_ROOT`** plus JSON only. Implementation must not inv
 
 **Clutter audit:** count border nesting, redundant labels, and chrome-to-content ratio. Prefer removing chrome over adding decoration.
 
-## Current debt (shipped baseline)
+## Current debt
 
-Live capture of idle `rex tui` (tuiwright MCP, text snapshot, wide terminal) shows:
-
-- Header: compact glyphs (`●` workspace `○`) — still thin; not a full token system.
-- Body: dual titled boxes (activity + output) with border depth and empty chrome.
-- Activity: human-ready line, but still inside a labeled frame.
-- Composer: mode glyph + placeholder; footer minimal key glyphs.
-- Motion: app tick with spinner glyph and blinking block caret — **Mediocre Blink** (fails this design system).
-
-Implementation must replace this baseline, not polish it in place without meeting acceptance below.
+**R080 presentation** is implemented (tokens, regions/breakpoints, transcript-primary, timeline disclosure, composer/footer, human-first approval). Remaining debt is **motion only** (**R081**): choreographed region effects and flux hairlines; blink-only activity cues must not return.
 
 ## Layout system
 
@@ -246,7 +238,7 @@ A Rex **headless** NDJSON-replay / ANSI-snapshot adapter remains **Won't** ([TER
 | ID | Scope | Status |
 |----|-------|--------|
 | **R082** | This design system | **Done** (this document) |
-| **R080** | Layout + tokens (chat-primary, breakpoints, progressive insight) | **Open** — must pass acceptance |
+| **R080** | Layout + tokens (chat-primary, breakpoints, progressive insight) | **Done** |
 | **R081** | Motion (tachyonfx choreography, flux hairlines) | **Open** — after R080; must pass acceptance |
 
 ## Related

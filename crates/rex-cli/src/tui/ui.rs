@@ -3,7 +3,6 @@
 //! Regions and breakpoints follow `docs/TUI_DESIGN.md` (spatial permanence).
 
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
-use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap};
 use ratatui::Frame;
@@ -285,9 +284,16 @@ fn draw_approval_modal(frame: &mut Frame, app: &AppState) {
         return;
     };
     let area = centered_rect(60, 40, frame.area());
+    // Dimmed backdrop token, then single-hairline modal (no deep border stacks).
+    frame.render_widget(
+        Block::default().style(app.theme.surface_dimmed()),
+        frame.area(),
+    );
     frame.render_widget(Clear, area);
     let summary = AppState::approval_summary(pending);
-    let mut body = format!("{summary}\n\nA approve   D deny");
+    let mut body = format!(
+        "◎ Action required\n\n{summary}\n\n[A] Approve   [D] Reject   [?] Details"
+    );
     if app.help_expanded {
         body.push_str(&format!("\n\n{} · {}", pending.name, pending.detail));
     }
@@ -297,10 +303,7 @@ fn draw_approval_modal(frame: &mut Frame, app: &AppState) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_style(app.theme.hairline(true))
-                .title(Span::styled(
-                    " ◎ ",
-                    app.theme.status_warning().add_modifier(Modifier::BOLD),
-                )),
+                .style(app.theme.surface_overlay()),
         )
         .wrap(Wrap { trim: false });
     frame.render_widget(modal, area);
