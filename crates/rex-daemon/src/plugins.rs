@@ -63,6 +63,8 @@ pub struct ContextRequest {
     /// When true, skip lexical retrieval (directive or gate).
     pub retrieve_off: bool,
     pub active_file_path: Option<String>,
+    /// Scopes prefix cache entries per harness terminal (parallel harness).
+    pub harness_session_id: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -454,7 +456,7 @@ impl ContextPipeline {
             };
         }
 
-        let cache_key = stable_prefix_key(&bounded_prompt);
+        let cache_key = stable_prefix_key(&request.harness_session_id, &bounded_prompt);
         if !request.cache_bypass {
             if let Some(context) = self.cache.get(&cache_key) {
                 return PipelineResult {
@@ -639,8 +641,14 @@ fn is_ignored_path(path: &str) -> bool {
         || normalized.starts_with(".git/")
 }
 
-fn stable_prefix_key(prompt: &str) -> String {
-    prompt.chars().take(96).collect::<String>()
+fn stable_prefix_key(harness_session_id: &str, prompt: &str) -> String {
+    let prefix = prompt.chars().take(96).collect::<String>();
+    let session = harness_session_id.trim();
+    if session.is_empty() {
+        prefix
+    } else {
+        format!("{session}:{prefix}")
+    }
 }
 
 fn apply_prompt_budget(prompt: &str, max_prompt_tokens: usize) -> String {
@@ -734,6 +742,7 @@ mod tests {
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: true,
             active_file_path: None,
+            harness_session_id: String::new(),
         };
         let result = pipeline.prepare(
             &request,
@@ -808,15 +817,49 @@ mod tests {
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
             active_file_path: None,
+            harness_session_id: String::new(),
         };
         assert!(!should_skip_retrieval(&request));
     }
 
     #[test]
     fn cache_key_uses_stable_prompt_prefix() {
-        let a = stable_prefix_key("abcdef");
-        let b = stable_prefix_key("abcdef and more");
+        let a = stable_prefix_key("", "abcdef");
+        let b = stable_prefix_key("", "abcdef and more");
         assert!(b.starts_with(&a));
+    }
+
+    #[test]
+    fn prefix_cache_isolated_by_harness_session() {
+        let mut pipeline = test_pipeline();
+        let prompt = "status stream retry integration tests daemon lifecycle".to_string();
+        let caps = AdapterCapabilities::for_runtime(RuntimeKind::Mock);
+        let session_a = ContextRequest {
+            prompt: prompt.clone(),
+            diagnostics_hint: None,
+            cache_bypass: false,
+            behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
+            active_file_path: None,
+            harness_session_id: "session-a".to_string(),
+        };
+        let session_b = ContextRequest {
+            prompt,
+            diagnostics_hint: None,
+            cache_bypass: false,
+            behavior_snapshot: BehaviorSnapshot::default(),
+            retrieve_off: false,
+            active_file_path: None,
+            harness_session_id: "session-b".to_string(),
+        };
+        assert_eq!(
+            pipeline.prepare(&session_a, caps).metrics.cache_status,
+            CacheStatus::MissStored
+        );
+        assert_eq!(
+            pipeline.prepare(&session_b, caps).metrics.cache_status,
+            CacheStatus::MissStored
+        );
     }
 
     #[test]
@@ -829,6 +872,7 @@ mod tests {
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
             active_file_path: None,
+            harness_session_id: String::new(),
         };
         let caps = AdapterCapabilities::for_runtime(RuntimeKind::Mock);
         let first = pipeline.prepare(&request, caps);
@@ -847,6 +891,7 @@ mod tests {
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
             active_file_path: None,
+            harness_session_id: String::new(),
         };
         let result = pipeline.prepare(
             &request,
@@ -865,6 +910,7 @@ mod tests {
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
             active_file_path: None,
+            harness_session_id: String::new(),
         };
         let result = pipeline.prepare(
             &request,
@@ -883,6 +929,7 @@ mod tests {
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
             active_file_path: None,
+            harness_session_id: String::new(),
         };
         let result = pipeline.prepare(
             &request,
@@ -901,6 +948,7 @@ mod tests {
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
             active_file_path: None,
+            harness_session_id: String::new(),
         };
         let result = pipeline.prepare(
             &request,
@@ -920,6 +968,7 @@ mod tests {
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: true,
             active_file_path: None,
+            harness_session_id: String::new(),
         };
         let result = pipeline.prepare(
             &request,
@@ -939,6 +988,7 @@ mod tests {
             behavior_snapshot: BehaviorSnapshot::default(),
             retrieve_off: false,
             active_file_path: None,
+            harness_session_id: String::new(),
         };
         let result = pipeline.prepare(
             &request,
@@ -962,6 +1012,7 @@ mod tests {
             },
             retrieve_off: false,
             active_file_path: None,
+            harness_session_id: String::new(),
         };
         let result = pipeline.prepare(
             &request,

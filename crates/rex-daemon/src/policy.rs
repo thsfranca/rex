@@ -20,6 +20,7 @@ pub struct PolicyRequest<'a> {
     pub mode: &'a str,
     pub effective_prompt: &'a str,
     pub cache_bypass: bool,
+    pub harness_session_id: &'a str,
 }
 
 /// Reasons a request is not eligible for cache lookup or storage.
@@ -56,6 +57,7 @@ pub fn decide(req: &PolicyRequest<'_>) -> CacheDecision {
         req.mode,
         req.effective_prompt,
         false,
+        req.harness_session_id,
     ) {
         Some(key) => CacheDecision::Lookup(key),
         // `try_new` rejects only on bypass (handled above) or non-`ask` mode today.
@@ -212,6 +214,34 @@ mod tests {
             mode,
             effective_prompt: "ping",
             cache_bypass,
+            harness_session_id: "",
+        }
+    }
+
+    #[test]
+    fn different_harness_sessions_get_distinct_l1_keys() {
+        let a = decide(&PolicyRequest {
+            runtime: RuntimeKind::Mock,
+            model: "",
+            mode: "ask",
+            effective_prompt: "ping",
+            cache_bypass: false,
+            harness_session_id: "session-a",
+        });
+        let b = decide(&PolicyRequest {
+            runtime: RuntimeKind::Mock,
+            model: "",
+            mode: "ask",
+            effective_prompt: "ping",
+            cache_bypass: false,
+            harness_session_id: "session-b",
+        });
+        match (a, b) {
+            (CacheDecision::Lookup(ka), CacheDecision::Lookup(kb)) => {
+                assert_ne!(ka.harness_session_id, kb.harness_session_id);
+                assert_ne!(ka, kb);
+            }
+            other => panic!("expected Lookup for both sessions, got {other:?}"),
         }
     }
 

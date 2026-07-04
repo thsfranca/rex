@@ -511,6 +511,7 @@ impl RexService for RexDaemonService {
         let request_id = self.request_sequence.fetch_add(1, Ordering::Relaxed);
         let decision_id = format!("dec-{request_id}");
         let trace_id = extract_trace_id(request.metadata(), request_id);
+        let harness_session_id = extract_harness_session_id(request.metadata());
         ensure_workspace_configured()?;
         let inner = request.into_inner();
         let mut prompt = inner.prompt;
@@ -551,6 +552,7 @@ impl RexService for RexDaemonService {
             behavior_snapshot: directives.behavior_snapshot,
             retrieve_off: directives.retrieve_off,
             active_file_path,
+            harness_session_id: harness_session_id.clone(),
         };
         let pipeline_result = self
             .pipeline
@@ -604,6 +606,7 @@ impl RexService for RexDaemonService {
             mode: &mode,
             effective_prompt: &pipeline_result.effective_prompt,
             cache_bypass,
+            harness_session_id: &harness_session_id,
         };
         let decision = self.policy.decide(&policy_request);
         let mut approval_outcome_label: Option<String> = None;
@@ -977,6 +980,16 @@ fn log_broker_access_policy_deny(capability: &str, mode: &str, subject: &str, er
             "broker.access_policy=deny capability={capability} mode={mode} subject={subject} error={err}"
         );
     }
+}
+
+fn extract_harness_session_id(metadata: &tonic::metadata::MetadataMap) -> String {
+    metadata
+        .get("x-rex-harness-session-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("")
+        .to_string()
 }
 
 fn extract_turn_id(metadata: &tonic::metadata::MetadataMap) -> String {

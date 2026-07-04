@@ -11,7 +11,7 @@ use crate::adapters::RuntimeKind;
 use crate::domain::ACTIVE_MODEL_ID;
 
 /// Bumped when the L1 key shape or response semantic changes (invalidates on-disk or cross-version hits).
-pub const L1_CACHE_SCHEMA: u32 = 1;
+pub const L1_CACHE_SCHEMA: u32 = 2;
 
 const L1_MAX_ENTRIES: usize = 256;
 
@@ -59,6 +59,7 @@ pub struct L1Key {
     pub prompt_hash: u64,
     pub schema: u32,
     pub workspace: String,
+    pub harness_session_id: String,
 }
 
 impl L1Key {
@@ -68,6 +69,7 @@ impl L1Key {
         mode: &str,
         effective_prompt: &str,
         cache_bypass: bool,
+        harness_session_id: &str,
     ) -> Option<Self> {
         if cache_bypass {
             return None;
@@ -96,6 +98,7 @@ impl L1Key {
             prompt_hash: hash_effective_prompt(effective_prompt),
             schema: L1_CACHE_SCHEMA,
             workspace: workspace_fingerprint(),
+            harness_session_id: harness_session_id.trim().to_string(),
         })
     }
 }
@@ -168,7 +171,7 @@ mod tests {
 
     #[test]
     fn ask_mode_creates_key() {
-        let k = L1Key::try_new(RuntimeKind::Mock, "", "ask", "hello", false)
+        let k = L1Key::try_new(RuntimeKind::Mock, "", "ask", "hello", false, "session-a")
             .expect("ask should cache under L1");
         assert_eq!(k.model, ACTIVE_MODEL_ID);
         assert_eq!(k.mode, "ask");
@@ -176,12 +179,12 @@ mod tests {
 
     #[test]
     fn agent_mode_skips_l1() {
-        assert!(L1Key::try_new(RuntimeKind::Mock, "", "agent", "x", false).is_none());
+        assert!(L1Key::try_new(RuntimeKind::Mock, "", "agent", "x", false, "").is_none());
     }
 
     #[test]
     fn cache_bypass_skips() {
-        assert!(L1Key::try_new(RuntimeKind::Mock, "", "ask", "x", true).is_none());
+        assert!(L1Key::try_new(RuntimeKind::Mock, "", "ask", "x", true, "").is_none());
     }
 
     #[test]
@@ -196,9 +199,16 @@ mod tests {
     }
 
     #[test]
+    fn l1_keys_differ_by_harness_session() {
+        let a = L1Key::try_new(RuntimeKind::Mock, "", "ask", "ping", false, "session-a").expect("a");
+        let b = L1Key::try_new(RuntimeKind::Mock, "", "ask", "ping", false, "session-b").expect("b");
+        assert_ne!(a, b);
+    }
+
+    #[test]
     fn l1_put_get_round_trip() {
         let cache = L1ResponseCache::new();
-        let key = L1Key::try_new(RuntimeKind::Mock, "", "ask", "ping", false).expect("key");
+        let key = L1Key::try_new(RuntimeKind::Mock, "", "ask", "ping", false, "s1").expect("key");
         let v = vec![
             StreamInferenceResponse {
                 text: "x".to_string(),

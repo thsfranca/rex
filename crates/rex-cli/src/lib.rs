@@ -1,6 +1,7 @@
 mod daemon_lifecycle;
 mod domain;
 mod error;
+mod harness_session;
 mod transport;
 mod tui;
 

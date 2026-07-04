@@ -49,6 +49,7 @@ pub fn loaded_from_config(cfg: RexConfig, rex_root: &std::path::Path) -> Arc<Loa
 
 pub fn mock_e2e_config() -> RexConfig {
     let mut cfg = RexConfig::defaults();
+    cfg.daemon.socket_scope = Some(rex_config::DaemonSocketScope::Global);
     cfg.workspace.allow_cwd_fallback = Some(true);
     cfg.inference.runtime = "mock".to_string();
     cfg.sidecars.harness = Some("direct".to_string());
@@ -140,6 +141,7 @@ pub fn rex_root_path(guard: &RexRootGuard) -> PathBuf {
 
 pub fn managed_gateway_config(port: u16, gateway_stub_command: &str) -> RexConfig {
     let mut cfg = RexConfig::defaults();
+    cfg.daemon.socket_scope = Some(rex_config::DaemonSocketScope::Global);
     cfg.inference.runtime = "http-openai-compat".to_string();
     cfg.inference.gateway.mode = "managed".to_string();
     cfg.inference.gateway.port = port;
@@ -156,6 +158,7 @@ pub fn managed_gateway_config(port: u16, gateway_stub_command: &str) -> RexConfi
 
 pub fn managed_omlx_config(port: u16, omlx_stub_command: &str) -> RexConfig {
     let mut cfg = RexConfig::defaults();
+    cfg.daemon.socket_scope = Some(rex_config::DaemonSocketScope::Global);
     cfg.inference.runtime = "http-openai-compat".to_string();
     cfg.inference.omlx.mode = "managed".to_string();
     cfg.inference.omlx.port = port;

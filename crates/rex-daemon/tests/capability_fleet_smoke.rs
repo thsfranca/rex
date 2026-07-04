@@ -2,7 +2,7 @@
 
 #![allow(dead_code)]
 
-use rex_config::{CapabilitySidecarEntry, RexConfig};
+use rex_config::{CapabilitySidecarEntry, DaemonSocketScope, RexConfig};
 use serial_test::serial;
 use std::fs;
 use std::path::PathBuf;
@@ -68,6 +68,7 @@ fn capability_mock_binary() -> PathBuf {
 
 fn capability_only_config(cap_socket: &str, binary: &str) -> RexConfig {
     let mut cfg = RexConfig::defaults();
+    cfg.daemon.socket_scope = Some(DaemonSocketScope::Global);
     cfg.sidecars.harness = None;
     cfg.sidecars.required = Some(false);
     if let Some(host) = cfg.sidecars.list.first_mut() {

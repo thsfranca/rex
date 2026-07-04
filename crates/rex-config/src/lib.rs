@@ -188,6 +188,7 @@ mod tests {
             ensure_global_layout().unwrap();
             let mut global = RexConfig::defaults();
             global.inference.runtime = "mock".to_string();
+            global.workspace.allow_cwd_fallback = Some(true);
             fs::write(
                 global_config_path(),
                 serde_json::to_string_pretty(&global).unwrap(),
@@ -224,6 +225,7 @@ mod tests {
                 global_config_path(),
                 r#"{
   "version": 1,
+  "workspace": { "allow_cwd_fallback": true },
   "inference": {
     "runtime": "http-openai-compat",
     "gateway": { "mode": "managed", "port": 4000 },
@@ -251,6 +253,7 @@ mod tests {
                 global_config_path(),
                 r#"{
   "version": 1,
+  "workspace": { "allow_cwd_fallback": true },
   "observability": {
     "enabled": true,
     "otlp": { "endpoint": "http://127.0.0.1:4317", "protocol": "grpc" }
@@ -273,6 +276,7 @@ mod tests {
                 global_config_path(),
                 r#"{
   "version": 1,
+  "workspace": { "allow_cwd_fallback": true },
   "observability": { "enabled": true, "store": { "engine": "mmap" } }
 }"#,
             )
@@ -292,6 +296,7 @@ mod tests {
                 global_config_path(),
                 r#"{
   "version": 1,
+  "workspace": { "allow_cwd_fallback": true },
   "inference": {
     "runtime": "http-openai-compat",
     "gateway": { "mode": "disabled" },
@@ -353,6 +358,8 @@ mod tests {
 
         let tmp = tempfile::tempdir().unwrap();
         with_rex_root(tmp.path(), || {
+            env::set_current_dir(tmp.path()).unwrap();
+            ensure_global_layout().unwrap();
             let mut base = RexConfig::defaults();
             let mut overlay = RexConfig::default();
             overlay.daemon.ready_timeout_secs = 30;
@@ -360,6 +367,14 @@ mod tests {
             merge_config(&mut base, overlay);
             assert_eq!(base.daemon.ready_timeout_secs, 30);
             assert_eq!(base.daemon.log_path, "/tmp/custom-daemon.log");
+
+            let mut cfg = RexConfig::defaults();
+            cfg.workspace.allow_cwd_fallback = Some(true);
+            fs::write(
+                global_config_path(),
+                serde_json::to_string_pretty(&cfg).unwrap(),
+            )
+            .unwrap();
 
             let loaded = load_merged().expect("load");
             assert_eq!(

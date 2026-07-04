@@ -7,6 +7,7 @@ use rex_stream_ui::TurnPhase;
 
 use super::motion::MotionState;
 use super::theme::Theme;
+use crate::harness_session;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SessionPhase {
@@ -84,6 +85,8 @@ pub struct AppState {
     pub tick: u64,
     pub status_message: Option<String>,
     pub motion: MotionState,
+    /// Per-terminal harness session; scopes daemon prefix/L1 caches (parallel harness).
+    pub harness_session_id: String,
 }
 
 impl AppState {
@@ -109,6 +112,7 @@ impl AppState {
             tick: 0,
             status_message: None,
             motion: MotionState::default(),
+            harness_session_id: harness_session::new_harness_session_id(),
         }
     }
 
