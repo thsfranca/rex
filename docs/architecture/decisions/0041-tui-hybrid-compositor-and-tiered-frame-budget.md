@@ -1,7 +1,7 @@
 # ADR 0041: TUI hybrid compositor and tiered frame budget
 
 - **Date:** 2026-07-04
-- **Status:** Accepted
+- **Status:** Superseded by [0042](0042-web-desktop-presentation-pivot.md)
 
 ## Context
 
