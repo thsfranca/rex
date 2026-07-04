@@ -7,7 +7,7 @@
 
 ## Summary
 
-REX is a local AI runtime: `rex-daemon` owns streaming, policy, caches, and context shaping; thin CLI/TUI clients use gRPC over UDS. The product path is a supervised sidecar agent with brokered HTTP inference.
+REX is a local AI runtime: `rex-daemon` owns streaming, policy, caches, and context shaping; thin clients (Tauri desktop webview, automation scripts) use gRPC over UDS. The product path is a supervised sidecar agent with brokered HTTP inference. Primary operator surface: **Tauri 2 desktop app** ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md), [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md)).
 
 This document is the **software architecture description (SAD)** for REX: product goals, quality attributes, structural views, runtime behavior, security, and observability. Operational detail for inference adapters, caching keys, and pipeline contracts lives in [ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), and [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md). **Architecture Decision Records** live under [architecture/decisions/](architecture/decisions/).
 

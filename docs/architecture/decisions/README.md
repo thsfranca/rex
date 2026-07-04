@@ -44,9 +44,10 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0035](0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md) | CLI operator UX — daemon lifecycle parity and terminal UI | Accepted (design) |
 | [0036](0036-per-workspace-daemon-routing.md) | Per-workspace daemon routing | Accepted |
 | [0037](0037-daemon-idle-shutdown.md) | Daemon idle lifecycle and auto-shutdown | Accepted |
-| [0039](0039-terminal-harness-presentation-and-daemon-intelligence.md) | Terminal harness — presentation layer and daemon intelligence | Accepted (design) |
+| [0039](0039-terminal-harness-presentation-and-daemon-intelligence.md) | Terminal harness — presentation layer and daemon intelligence | Superseded → [0042](0042-web-desktop-presentation-pivot.md) |
 | [0040](0040-harness-session-transcript-authority.md) | Harness session transcript authority (daemon context, TUI viewport) | Accepted |
-| [0041](0041-tui-hybrid-compositor-and-tiered-frame-budget.md) | TUI hybrid compositor and tiered frame budget | Accepted |
+| [0041](0041-tui-hybrid-compositor-and-tiered-frame-budget.md) | TUI hybrid compositor and tiered frame budget | Superseded → [0042](0042-web-desktop-presentation-pivot.md) |
+| [0042](0042-web-desktop-presentation-pivot.md) | Web desktop presentation pivot (Tauri 2 + React) | Accepted |
 
 ## How to use
 

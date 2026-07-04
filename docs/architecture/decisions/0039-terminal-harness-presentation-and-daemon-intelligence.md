@@ -1,6 +1,6 @@
 # ADR 0039: Terminal harness — presentation layer and daemon intelligence
 
-**Status:** Accepted (design)  
+**Status:** Superseded by [0042](0042-web-desktop-presentation-pivot.md) (presentation framework)  
 **Date:** 2026-07-01  
 **Supplements:** [0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md](0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md)  
 **Aligns with:** [0038-cli-ndjson-stream-transport.md](0038-cli-ndjson-stream-transport.md)
