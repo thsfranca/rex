@@ -216,7 +216,7 @@ API keys remain in daemon. **`Ctrl+M`** overlay sends configuration override via
 | Agent-driven live TUI | External live harness (**tuiwright** MCP): `tui_open` → keys / wait → `tui_snapshot` with **text** format → `tui_close`. Prefer text over image/both on MCP stdio ([TUI_DESIGN.md](TUI_DESIGN.md#validation)) |
 | Presentation / motion (**R080–R081**) | Must pass [TUI_DESIGN.md](TUI_DESIGN.md) acceptance; sequential snapshots must show **region** change (not one-cell blink) |
 | Visual identity v2 (**R090–R096**) | Tiered compositor, Braille flux, harness stepped clock — [ADR 0041](architecture/decisions/0041-tui-hybrid-compositor-and-tiered-frame-budget.md) |
-| Deterministic motion | Probe fixture (`REX_HARNESS_SESSION_ID`): forced Idle tier + PTY `\x1b]999;step=<ms>\x07` advances animation clock; mid-frame text snapshots |
+| Deterministic motion | tuiwright probe fixture (`REX_ROOT` + cwd): F12 steps animation clock 16 ms; mid-frame text snapshots |
 | Dirty-rect diff (**R095**) | Double-buffer cell diff after compositor; sync wraps damage spans only |
 
 **Out of scope:** a Rex **headless** TUI adapter (NDJSON replay + ANSI snapshot command for external harnesses). Live PTY validation is enough; that adapter is **not** a Rex requirement ([ROADMAP.md](ROADMAP.md) — **Won't**).

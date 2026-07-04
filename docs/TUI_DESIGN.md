@@ -210,7 +210,7 @@ Decouple the animation clock from NDJSON ingestion. The compositor scheduler sel
 - Wrap **damage regions** in synchronized output (`CSI ?2026`) when `cli.ui.sync_output` — not necessarily full frames.
 - UI thread stays decoupled from the NDJSON consumer task.
 - **Reflow guard:** pause ambient/cinematic tiers when layout exceeds 16 ms; resume when stable.
-- **No new environment variables.** Harness determinism via `REX_HARNESS_SESSION_ID` probe path ([ADR 0041](architecture/decisions/0041-tui-hybrid-compositor-and-tiered-frame-budget.md)).
+- **No new environment variables.** Harness determinism via probe **fixture context** (`REX_ROOT` + cwd) — [ADR 0041](architecture/decisions/0041-tui-hybrid-compositor-and-tiered-frame-budget.md).
 
 ### Effect graph registry
 
