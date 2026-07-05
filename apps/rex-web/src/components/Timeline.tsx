@@ -1,4 +1,5 @@
 import type { TimelineTask, TurnPhase } from "../types";
+import { MotionTimelineItem } from "./Motion";
 
 interface Props {
   tasks: TimelineTask[];
@@ -14,7 +15,7 @@ export function Timeline({ tasks, phase }: Props) {
       ) : (
         <ul style={{ paddingLeft: "1rem", margin: 0 }}>
           {tasks.map((task) => (
-            <li key={task.id}>{task.label}</li>
+            <MotionTimelineItem key={task.id}>{task.label}</MotionTimelineItem>
           ))}
         </ul>
       )}

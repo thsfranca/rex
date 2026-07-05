@@ -78,18 +78,21 @@ async function assertLayout(
 
 async function assertMotion(region: string): Promise<StepResult> {
   const session = await import("./session.js").then((m) => m.getSession());
-  if (session.mode !== "static") {
-    return {
-      step: `assert_motion ${region}`,
-      pass: false,
-      detail: { reason: "requires static fixture (Playwright clock)" },
-    };
+  if (session.mode === "static") {
+    const page = session.page as Page;
+    const before = await pageLocatorScreenshot(session, region);
+    await page.clock.fastForward(150);
+    const mid = await pageLocatorScreenshot(session, region);
+    await page.clock.fastForward(350);
+    const after = await pageLocatorScreenshot(session, region);
+    const pass = !before.equals(mid) || !mid.equals(after);
+    return { step: `assert_motion ${region}`, pass };
   }
-  const page = session.page as Page;
+
   const before = await pageLocatorScreenshot(session, region);
-  await page.clock.fastForward(150);
+  await new Promise((resolve) => setTimeout(resolve, 200));
   const mid = await pageLocatorScreenshot(session, region);
-  await page.clock.fastForward(350);
+  await new Promise((resolve) => setTimeout(resolve, 400));
   const after = await pageLocatorScreenshot(session, region);
   const pass = !before.equals(mid) || !mid.equals(after);
   return { step: `assert_motion ${region}`, pass };
@@ -129,6 +132,9 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
   await pageFill(session, '[data-testid="composer-input"]', "hello");
   await pagePress(session, "Enter");
   results.push({ step: "send hello", pass: true });
+
+  await pageWaitForSelector(session, "#status-dot.working", 30_000).catch(() => {});
+  results.push(await assertMotion("#status-dot"));
 
   await pageWaitForText(session, "hello", 60_000);
   results.push({ step: "wait transcript hello", pass: true });
