@@ -154,7 +154,7 @@ Run LiteLLM with provider keys in **LiteLLM’s** config. Rex only needs the Ope
 Verification:
 
 1. Confirm LiteLLM responds on `{base_url}/chat/completions`.
-2. Start daemon with sidecar; `rex complete "hello" --format ndjson --model <litellm-model>`.
+2. Launch desktop with sidecar; send a chat turn with model `<litellm-model>` ([OPERATOR_UX.md](OPERATOR_UX.md)).
 3. On failure, see [ADAPTERS.md](ADAPTERS.md#broker-provider-errors-intent).
 
 ## Layered prompts (design accepted)
@@ -166,5 +166,5 @@ Versioned **system / project prompt assemblies** in the daemon — config sectio
 ## See also
 
 - [CONFIGURATION.md](CONFIGURATION.md) — JSON key catalog
-- [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md)
+- [OPERATOR_UX.md](OPERATOR_UX.md)
 - [DEPENDENCIES.md](DEPENDENCIES.md)

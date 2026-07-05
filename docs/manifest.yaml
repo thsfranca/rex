@@ -224,16 +224,6 @@ documents:
     status: active
     topics:
       - sidecar-runtime
-  - path: docs/TERMINAL_HARNESS_ARCHITECTURE.md
-    role: explanation
-    status: retired
-    topics:
-      - terminal-harness-architecture
-  - path: docs/TUI_DESIGN.md
-    role: explanation
-    status: retired
-    topics:
-      - tui-design
   - path: docs/WEB_UI_DESIGN.md
     role: explanation
     status: active

@@ -8,13 +8,13 @@
 
 **Status:** `complete` — **R038** shipped (daemon + sidecar + operator E2E script).
 
-**Related:** [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) (generative format target) · [ADAPTERS.md](ADAPTERS.md) · [CONFIGURATION.md](CONFIGURATION.md) · [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) · [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md)
+**Related:** [ADR 0023](architecture/decisions/0023-hybrid-agent-serialization-boundaries.md) (generative format target) · [ADAPTERS.md](ADAPTERS.md) · [CONFIGURATION.md](CONFIGURATION.md) · [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md) · [OPERATOR_UX.md](OPERATOR_UX.md)
 
 ## Purpose
 
 Rex’s product agent (`rex-agent`) today asks models to emit tool calls as **JSON in plain text** because `BrokerInference` is `prompt` → `text` only and `http_openai_compat` posts a single user message with **no `tools` field**. Ollama and other OpenAI-compat backends already support native `tools` / `tool_calls` on the same endpoint.
 
-**R038** adds additive broker wire for structured messages and tools, daemon forwarding and SSE parsing, and sidecar routing from real `tool_calls` — with a validated interim JSON fallback for mock CI (**RC-10**). This unblocks reliable live-model plan/agent turns documented in [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) §8 and closes the honest gap in **R019** acceptance.
+**R038** adds additive broker wire for structured messages and tools, daemon forwarding and SSE parsing, and sidecar routing from real `tool_calls` — with a validated interim JSON fallback for mock CI (**RC-10**). This unblocks reliable live-model plan/agent turns via the desktop operator path and closes the honest gap in **R019** acceptance.
 
 ## Product defaults (locked for R038)
 
@@ -32,7 +32,7 @@ Rex’s product agent (`rex-agent`) today asks models to emit tool calls as **JS
 - Daemon `http_openai_compat`: forward OpenAI-shaped `tools` / `tool_choice`; parse streaming `delta.tool_calls`; Ollama `/api/show` capability cache.
 - Config tri-state `inference.openai_compat.native_tools` (default **`auto`**); per-step native→interim fallback.
 - Sidecar: native path when broker supports it; interim JSON-in-text fallback for mock CI.
-- **Acceptance:** plan-mode tool loop (read known fixture file → final answer) passes against live **direct** Ollama; documented in [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md).
+- **Acceptance:** plan-mode tool loop (read known fixture file → final answer) passes against live **direct** Ollama via desktop; documented in [OPERATOR_UX.md](OPERATOR_UX.md).
 
 **Out (stay on R033 / later):**
 
@@ -157,7 +157,7 @@ Omit `native_tools` → schema default **`auto`**.
 
 ## E2E acceptance (operator; not PR CI)
 
-After [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) prerequisites (direct Ollama, `rex-agent` active):
+After [OPERATOR_UX.md](OPERATOR_UX.md) prerequisites (direct Ollama, `rex-agent` active):
 
 1. **Plan mode:** prompt that reads a known workspace fixture via `fs.read` and returns a final answer citing file content — **without** `parse_retries` on the native path (`protocol=native` in daemon logs).
 2. **Agent mode:** at least one brokered read under workspace root; denied read on protected path still fails closed.

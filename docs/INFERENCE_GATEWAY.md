@@ -159,7 +159,7 @@ No new `rex.v1` or `rex.sidecar.v1` RPCs.
 
 ### Requirement
 
-When `mode: managed`, the gateway **includes locally available Ollama models** in `GET /v1/models` alongside cloud aliases — one catalog for `rex complete --model` and operators.
+When `mode: managed`, the gateway **includes locally available Ollama models** in `GET /v1/models` alongside cloud aliases — one catalog for the desktop model picker and operators.
 
 ### Mechanism
 

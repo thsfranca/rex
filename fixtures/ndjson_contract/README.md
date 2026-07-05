@@ -1,11 +1,11 @@
-# NDJSON stream contract fixtures
+# Stream event fixtures
 
-Shared **stdout lines** for `rex-cli complete --format ndjson` ([docs/NDJSON_STREAM.md](../../docs/NDJSON_STREAM.md) stream contract).
+Shared **stream event lines** for internal contract tests ([docs/NDJSON_STREAM.md](../../docs/NDJSON_STREAM.md)).
 
 Consumers:
 
-- `crates/rex-cli/tests/ndjson_contract_conformance.rs` — Rust integration checks.
-- `src/test/ndjson_contract_fixture.test.ts` — extension parser (resolves the file relative to **cwd** `rex CLI`, matching `npm test` and CI).
+- `crates/rex-stream-ui` — Rust unit/integration checks against golden lines.
+- `scripts/ci/guidelines/` — NDJSON terminal and plan contract gates.
 
 | File | Purpose |
 |------|---------|

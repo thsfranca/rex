@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Ver
 
 - **`rex config init`** operator template enables mock web search (`search.enabled: true`, `search.provider: mock`).
 - Install scripts always attempt `rex-agent` setup (warn when pip missing); removed `--no-agent` / `rex.productAgentConfig` opt-in flags.
-- Missing `rex-agent` errors include install hints (`rex sidecar doctor`, daemon startup, `rex complete`).
+- Missing `rex-agent` errors include install hints (`rex sidecar doctor`, daemon auto-start, bare `rex` desktop launch).
 
 ## [1.0.0] - (awaiting tag)
 
@@ -18,11 +18,11 @@ Workspace version **`1.0.0`** preparatory in tree; **`v1.0.0` git tag** lands wh
 
 ### Added
 
-- Unified **`rex`** CLI (`daemon`, `status`, `complete`); `rex-cli` / `rex-daemon` shims for compatibility.
+- Unified **`rex`** binary with setup subcommands (`config`, `proto`, `sidecar`, `gateway`, `omlx`); bare `rex` launches the Tauri desktop on macOS.
 - JSON-first config (`rex config init`); legacy `REX_*` env vars ignored with warning.
 - Product sidecar **`rex-agent`** (LangGraph ReAct); harness default **`rex-sidecar-stub`** for CI and `rex config init`.
-- Extension **`rex.productAgentConfig`** default merges `rex-agent` + approvals.
 - Access policy broker (RC-05); routing logs with **`route=`** and **`decision_id=`** (RC-09).
+- Web desktop operator surface (**W100–W118**); terminal TUI and in-repo VS Code extension removed.
 
 ### Changed
 

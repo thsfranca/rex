@@ -12,7 +12,7 @@ How **`rex-daemon`** centralizes **policy** (what must hold) separate from **mec
 |----------------------|---------------------------|
 | Cache eligibility by mode | LRU in `l1_cache.rs` |
 | Agent approval decisions | `ApprovalGate` in `approvals.rs` |
-| Git pre-edit dirty commit (**R077**) | Broker interceptor before **`fs.write`** approval — [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) |
+| Git pre-edit dirty commit (**R077**) | Broker interceptor before **`fs.write`** approval — [historical/TERMINAL_HARNESS_ARCHITECTURE.md](historical/TERMINAL_HARNESS_ARCHITECTURE.md) |
 | Future: capability allow/deny | OS sandbox, subprocess spawn, gRPC broker |
 | Stream terminal semantics | `service.rs` wiring |
 

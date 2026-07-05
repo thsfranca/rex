@@ -30,7 +30,7 @@ See [DOCUMENTATION.md](DOCUMENTATION.md) for the **feature-area hub** convention
 
 ### Terminal harness alignment (2026-07)
 
-Daemon-owned SQLite FTS5 index under per-project **`.rex/`** aligns with workspace isolation ([ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md)). **`ProjectMemoryRetrieval`** injects bounded fragments (default 10% token budget); the TUI reflects retrieval via activity events only — [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Implementation row: **R076** (Later) on [ROADMAP.md](ROADMAP.md).
+Daemon-owned SQLite FTS5 index under per-project **`.rex/`** aligns with workspace isolation ([ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md)). **`ProjectMemoryRetrieval`** injects bounded fragments (default 10% token budget); the desktop reflects retrieval via activity events only — [historical/TERMINAL_HARNESS_ARCHITECTURE.md](historical/TERMINAL_HARNESS_ARCHITECTURE.md). Implementation row: **R076** (Later) on [ROADMAP.md](ROADMAP.md).
 
 Remaining rows in **Design bets — uncommitted** below are hypotheses until implementation scheduling.
 

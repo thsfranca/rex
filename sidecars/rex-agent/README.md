@@ -49,7 +49,7 @@ Daemon must be up for `RunTurn` to succeed:
 rex-agent
 ```
 
-Or let `rex daemon` supervise the sidecar — set `sidecars.active` to an entry whose `binary` is `rex-agent` (see [DESIGN.md](DESIGN.md)).
+Or let the desktop auto-start the daemon with the sidecar — set `sidecars.active` to an entry whose `binary` is `rex-agent` (see [DESIGN.md](DESIGN.md)).
 
 ## Configuration
 
@@ -65,4 +65,4 @@ Supervisor injects `REX_ROOT`, `REX_SIDECAR_SOCKET`, `REX_DAEMON_SOCKET`, and `P
 
 - [DESIGN.md](DESIGN.md) — capability contract
 - [docs/AGENT_DELIVERY_ROADMAP.md](../../docs/AGENT_DELIVERY_ROADMAP.md) — R017–R019 **Done**
-- [docs/CLI_OPERATOR_UX.md](../../docs/CLI_OPERATOR_UX.md) §8 — live-model operator checklist
+- [docs/OPERATOR_UX.md](../../docs/OPERATOR_UX.md) — live-model operator checklist

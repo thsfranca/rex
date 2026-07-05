@@ -19,7 +19,7 @@ This document is the **canonical** policy for how REX settings work: merged **JS
 |---------|------|
 | **Product settings** | `$REX_ROOT/config.json` and optional `.rex/config.json` (walked from cwd upward) |
 | **Product env** | **`REX_ROOT` only** (optional). Layout directory for `config.json`, protos, and related paths. Defaults to `~/.rex` when unset. |
-| **CLI flags (partial)** | Per-invocation overrides on `rex complete` / `rex status` (see [Precedence](#precedence-implemented)) |
+| **CLI flags (partial)** | Reserved for future desktop/session overrides; product entry is bare **`rex`** (see [Precedence](#precedence-implemented)) |
 | **Secrets** | Prefer OS keychain or a non-`REX_*` secret store for API key *values* referenced by JSON fields (`inference.openai_compat.api_key`, `inference.openai_compat.headers`). Do not commit secrets. |
 
 **Not product configuration:** The daemon may inject socket paths into **child processes it spawns** (internal process plumbing). CI and contributor scripts may use test gates — see [CI.md](CI.md). Neither is an operator config catalog.
@@ -59,7 +59,7 @@ Bootstrap: `rex config init|show|path|validate`, `rex sidecar list|init|doctor`,
 | `cache` | `bypass` | L1 / prefix cache bypass. |
 | `broker` | `shell_allowlist`, `max_tool_result_bytes` | Allowed `exec.shell` programs; max bytes returned from `fs.read` and `exec.shell` stdout/stderr (default **8192**). Write upload cap remains **65536** bytes per request. |
 | `agent` | `approvals_enabled`, `tool_approvals_enabled`, `max_tools_per_step`, `deterministic_init_enabled`, `compaction_enabled`, `compaction_suffix_fraction`, `read_pruning_enabled` | Agent-mode approval gates; max batchable broker calls per LLM round (default **8**, **R057**); pre-LLM ask init (**R060**); intra-turn compaction (**R029**, default off); compaction threshold fraction (default **0.25**); goal-hint read pruning (**R031**, default off). |
-| `cli` | `stream_idle_timeout_secs_agent`, `stream_idle_timeout_secs_ask`, `ui` | Per-chunk idle timeouts (defaults **120**); `cli.ui.enabled` / `sync_output` for TUI (**R073**). |
+| `cli` | `stream_idle_timeout_secs_agent`, `stream_idle_timeout_secs_ask` | Per-chunk idle timeouts (defaults **120**) for desktop stream sessions. |
 | `search` | `enabled`, `provider`, `max_results`, `api_key_path` | Ask-mode `web.search` broker (`provider: mock` for local demos). **R055** will migrate to capability sidecar — [WEB_SEARCH.md](WEB_SEARCH.md). |
 | `observability` | `enabled`, `service_name`, `otlp` | OTLP export + stdout economics — [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [Observability](#observability) |
 
@@ -120,11 +120,11 @@ When `observability.enabled` is `true`, the daemon emits economics on **stdout**
 
 Legacy `store`, `read_api`, `ui`, and `custom_sidecar_metrics` keys in older config files are ignored at load time.
 
-## CLI daemon ensure (**R071** — implemented)
+## Daemon auto-start (**R071** — implemented)
 
-Design hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Decision: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md).
+Design hub: [OPERATOR_UX.md](OPERATOR_UX.md). Decision: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md).
 
-Running **`rex`** always ensures a daemon: probe UDS, spawn a detached process when needed, poll **`GetSystemStatus`** until ready.
+Launching **`rex`** (desktop) or running setup subcommands ensures a daemon: probe UDS, spawn a detached process when needed, poll **`GetSystemStatus`** until ready.
 
 | Key | Default | Purpose |
 |-----|---------|---------|
@@ -134,16 +134,7 @@ Running **`rex`** always ensures a daemon: probe UDS, spawn a detached process w
 
 When **`inference.omlx.mode: managed`** or **`inference.gateway.mode: managed`**, the ensured daemon also starts and health-checks that managed inference child before binding the UDS socket. Raise **`daemon.ready_timeout_secs`** if the managed child startup budget (for example oMLX **`startup_timeout_secs`**, default 30) exceeds the default ready poll (**10s**).
 
-### CLI operator UX (`cli.ui` — implemented)
-
-| Key | Default | Purpose |
-|-----|---------|---------|
-| `cli.ui.sync_output` | `true` | Emit terminal `?2026` synchronized output when supported |
-| `cli.ui.session_title_refresh_turns` | `3` | Daemon KEEP-or-rename title fallback cadence (completed operator turns) when the agent did not call `session.set_title` |
-
-Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
-
-**Module map:** Daemon: `settings`, `adapters`, `http_openai_compat`, `approvals`, `l1_cache`, stream service. CLI: `transport` (config socket), TUI ensure path.
+**Module map:** Daemon: `settings`, `adapters`, `http_openai_compat`, `approvals`, `l1_cache`, stream service. Desktop: UDS bridge + `rex-stream-ui` projection.
 
 Operator walkthroughs (bootstrap, gateway, oMLX, LiteLLM): [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md).
 
@@ -153,8 +144,8 @@ Keys under `cli` and `search` control stream idle timeouts and ask-mode `web.sea
 
 | Key | Default | Purpose |
 |-----|---------|---------|
-| `cli.stream_idle_timeout_secs_agent` | `120` | Per-chunk idle timeout for `agent` NDJSON streams |
-| `cli.stream_idle_timeout_secs_ask` | `120` | Per-chunk idle timeout for `ask` / `plan` NDJSON streams |
+| `cli.stream_idle_timeout_secs_agent` | `120` | Per-chunk idle timeout for `agent` streams |
+| `cli.stream_idle_timeout_secs_ask` | `120` | Per-chunk idle timeout for `ask` / `plan` streams |
 | `search.enabled` | `false` (operator init: `true`) | Enables broker `web.search` (ask mode only) |
 | `search.provider` | — (operator init: `mock`) | `mock` for local demos |
 | `search.max_results` | `5` | Max hits returned per query |
@@ -164,7 +155,7 @@ Keys under `cli` and `search` control stream idle timeouts and ask-mode `web.sea
 | `agent.compaction_suffix_fraction` | `0.25` | Compaction threshold as a fraction of `broker.max_tool_result_bytes` |
 | `agent.read_pruning_enabled` | `false` | Goal-hint read pruning (**R031**) |
 
-CLI flags: `rex complete --verbose` (stderr status in text mode), `--yes` / `--approval-id` for agent approval automation.
+Desktop passes approval ids on the gRPC stream when agent approvals are enabled ([OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md)).
 
 ## CI and harness (not operator product config)
 
@@ -182,7 +173,7 @@ Product operators use **`rex-agent`**, a live `http-openai-compat` backend, and 
 
 ## Not implemented yet (roadmap)
 
-- Global CLI flags mirroring all JSON keys — partial today (`rex complete` flags only).
+- Global CLI flags mirroring all JSON keys — not shipped; desktop and JSON config are the product surface.
 - Layered prompt assemblies — [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md#layered-prompts-design-accepted).
 
 ## See also

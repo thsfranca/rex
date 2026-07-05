@@ -94,7 +94,7 @@ Use these as short confidence cues when ranking optimization proposals:
 
 **Deferred (until R072–R073 land):** **LF-D01** → **LF-D02** → **LF-R01** → **LF-F01** — LangFuse program; **RC-LF1** remains **Not met**. See [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md).
 
-**Later (harness v2):** **R076** LSP, **R077** git broker, **R078** MCP dynamic UI — [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
+**Later (harness v2):** **R076** LSP, **R077** git broker, **R078** MCP dynamic UI — [historical/TERMINAL_HARNESS_ARCHITECTURE.md](historical/TERMINAL_HARNESS_ARCHITECTURE.md).
 
 **Deferred (Later / Won't now):** L2 semantic cache, in-daemon MLX, self-hosted LangFuse on Mac — see [ROADMAP.md](ROADMAP.md).
 

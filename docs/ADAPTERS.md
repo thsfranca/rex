@@ -91,7 +91,7 @@ Optional operator cheat sheet (not a broker API selector): [fixtures/guidelines/
 
 ### Verification
 
-- Local: set `inference.openai_compat` in `$REX_ROOT/config.json`, start daemon, `rex complete "hello" --format ndjson`.
+- Local: set `inference.openai_compat` in `$REX_ROOT/config.json`, launch bare `rex` (desktop auto-starts daemon).
 - LiteLLM: see [CONFIGURATION.md](CONFIGURATION.md#operator-profile-litellm-anthropic-and-other-providers).
 - Automated: `http_openai_compat` unit test with in-process TCP SSE stub; UDS e2e uses **`mock`** — [CI.md](CI.md).
 
@@ -125,7 +125,7 @@ Use a single OpenAI-compat broker URL where **LiteLLM** holds provider keys (Ant
 | `inference.openai_compat.base_url` | `http://127.0.0.1:4000/v1` |
 | `inference.openai_compat.api_key` | LiteLLM proxy key (if enabled) |
 | `inference.openai_compat.model` | LiteLLM model alias (for example Claude id configured in LiteLLM) |
-| `rex complete --model` | Passes through to LiteLLM as the chat/completions `model` field |
+| Desktop model picker | Passes through to LiteLLM as the chat/completions `model` field |
 
 JSON: `inference.openai_compat` block — see [CONFIGURATION.md](CONFIGURATION.md#operator-profile-litellm-anthropic-and-other-providers).
 
@@ -133,7 +133,7 @@ JSON: `inference.openai_compat` block — see [CONFIGURATION.md](CONFIGURATION.m
 
 ```mermaid
 flowchart LR
- CLI[rex complete]
+ Desktop[rex desktop]
  Daemon[rex-daemon]
  Sidecar[sidecar RunTurn]
  Broker[BrokerInference]
