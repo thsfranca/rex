@@ -1,9 +1,7 @@
-import type { Page } from "playwright";
 import type { TauriPage } from "@srsholmes/tauri-playwright";
-import type { HarnessMode } from "./config.js";
 export interface HarnessSession {
-    mode: HarnessMode;
-    page: Page | TauriPage;
+    mode: "desktop";
+    page: TauriPage;
     motionFrames: Buffer[];
     recording: boolean;
 }
@@ -18,7 +16,7 @@ export declare function pageSnapshotTree(session: HarnessSession): Promise<strin
 export declare function pageScreenshot(session: HarnessSession): Promise<Buffer>;
 export declare function pageLocatorScreenshot(session: HarnessSession, selector: string): Promise<Buffer>;
 export declare function pageEmulateReducedMotion(session: HarnessSession, enabled: boolean): Promise<void>;
-export declare function pageClockStep(session: HarnessSession, durationMs: number): Promise<void>;
+export declare function pageClockStep(_session: HarnessSession, durationMs: number): Promise<void>;
 export declare function pageLayout(session: HarnessSession, selector: string): Promise<{
     display: string;
     flexDirection: string;
@@ -30,3 +28,4 @@ export declare function pageCssTokenAssert(session: HarnessSession, selector: st
 }>;
 export declare function pageFill(session: HarnessSession, selector: string, text: string): Promise<void>;
 export declare function pageCanvasHash(session: HarnessSession, selector: string): Promise<string>;
+export declare function readObservabilitySnapshot(session: HarnessSession): Promise<Record<string, unknown>>;

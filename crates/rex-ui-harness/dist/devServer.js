@@ -1,39 +1,44 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
-const VITE_URL = "http://127.0.0.1:5173";
-let viteProcess = null;
+const WEB_UI_URL = "http://127.0.0.1:5173";
+let previewProcess = null;
 let startedByHarness = false;
-async function viteResponds() {
+async function webUiResponds() {
     try {
-        const res = await fetch(VITE_URL, { signal: AbortSignal.timeout(2_000) });
+        const res = await fetch(WEB_UI_URL, { signal: AbortSignal.timeout(2_000) });
         return res.ok;
     }
     catch {
         return false;
     }
 }
-export async function ensureViteDevServer(repoRoot) {
-    if (await viteResponds())
+/** Serve the production `apps/rex-web/dist` bundle (vite preview), not the dev server. */
+export async function ensureWebUiServer(repoRoot) {
+    if (await webUiResponds())
         return;
     const webDir = path.join(repoRoot, "apps/rex-web");
-    viteProcess = spawn("npm", ["run", "dev", "--", "--host", "127.0.0.1", "--port", "5173", "--strictPort"], {
+    previewProcess = spawn("npm", ["run", "preview", "--", "--host", "127.0.0.1", "--port", "5173", "--strictPort"], {
         cwd: webDir,
         stdio: "ignore",
         env: process.env,
     });
     startedByHarness = true;
     for (let attempt = 0; attempt < 120; attempt++) {
-        if (await viteResponds())
+        if (await webUiResponds())
             return;
         await new Promise((resolve) => setTimeout(resolve, 500));
     }
-    await stopViteDevServer();
-    throw new Error("Vite dev server did not start on http://127.0.0.1:5173. Rex desktop loads devUrl in cargo-run builds.");
+    await stopWebUiServer();
+    throw new Error("Production web UI preview did not start on http://127.0.0.1:5173. Run npm run build in apps/rex-web first.");
 }
-export async function stopViteDevServer() {
-    if (!viteProcess || !startedByHarness)
+export async function stopWebUiServer() {
+    if (!previewProcess || !startedByHarness)
         return;
-    viteProcess.kill("SIGTERM");
-    viteProcess = null;
+    previewProcess.kill("SIGTERM");
+    previewProcess = null;
     startedByHarness = false;
 }
+/** @deprecated Use ensureWebUiServer */
+export const ensureViteDevServer = ensureWebUiServer;
+/** @deprecated Use stopWebUiServer */
+export const stopViteDevServer = stopWebUiServer;

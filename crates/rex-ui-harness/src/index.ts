@@ -25,6 +25,7 @@ import {
   pageEmulateReducedMotion,
   pageFocus,
   pageLayout,
+  pageLocatorScreenshot,
   pagePress,
   pageScreenshot,
   pageSnapshotTree,
@@ -61,15 +62,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "ui_open",
       description:
-        "Launch Rex UI session. Default on macOS: real Tauri app + daemon (desktop). Use mode=static for HTML fixture.",
+        "Launch Rex desktop session (Tauri + production dist + mock daemon).",
       inputSchema: {
         type: "object",
         properties: {
-          headless: { type: "boolean", default: true, description: "Static fixture only" },
           mode: {
             type: "string",
-            enum: ["desktop", "static"],
-            description: "desktop = Tauri + UDS daemon; static = HTML probe fixture",
+            enum: ["desktop"],
+            description: "desktop = Tauri + UDS daemon",
           },
         },
       },
@@ -240,17 +240,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function handleTool(name: string, args: Record<string, unknown>): Promise<unknown> {
   switch (name) {
     case "ui_open": {
-      const modeArg = args.mode as "desktop" | "static" | undefined;
-      const mode = modeArg ?? (args.native === true ? "desktop" : undefined);
-      const opened = await openSession(config, {
-        headless: args.headless !== false,
-        mode,
-      });
+      const opened = await openSession(config, { mode: "desktop" });
       return {
         ok: true,
         mode: opened.mode,
-        rex_root: opened.mode === "desktop" ? config.rexRoot : undefined,
-        baseUrl: opened.mode === "static" ? config.baseUrl : undefined,
+        rex_root: config.rexRoot,
       };
     }
     case "ui_close":
@@ -287,20 +281,11 @@ async function handleTool(name: string, args: Record<string, unknown>): Promise<
     case "ui_assert_motion": {
       const s = getSession();
       const region = String(args.region);
-      if (s.mode === "desktop") {
-        return {
-          pass: false,
-          skipped: true,
-          reason: "ui_assert_motion requires static fixture (Playwright clock)",
-          region,
-        };
-      }
-      const { page } = s as { page: import("playwright").Page };
-      const before = await page.locator(region).screenshot();
-      await page.clock.fastForward(Number(args.min_duration_ms ?? 150));
-      const mid = await page.locator(region).screenshot();
-      await page.clock.fastForward(Number(args.max_duration_ms ?? 350));
-      const after = await page.locator(region).screenshot();
+      const before = await pageLocatorScreenshot(s, region);
+      await pageClockStep(s, Number(args.min_duration_ms ?? 150));
+      const mid = await pageLocatorScreenshot(s, region);
+      await pageClockStep(s, Number(args.max_duration_ms ?? 350));
+      const after = await pageLocatorScreenshot(s, region);
       const diff = !before.equals(mid) || !mid.equals(after);
       return { pass: diff, effect: args.effect, region };
     }
