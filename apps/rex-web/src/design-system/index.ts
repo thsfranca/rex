@@ -23,12 +23,25 @@ export {
   ambientTransition,
   activeTransition,
   modalTransition,
+  modalSpringTransition,
   messageVariants,
   timelineItemVariants,
   modalVariants,
+  bannerVariants,
   statusPulseTransition,
+  pressSpring,
+  staggerChildren,
+  motionOrchestrator,
+  useMotionOrchestrator,
+  useOrchestratorPhaseBinding,
+  useOrchestratorErrorBinding,
+  useOrchestratorStreamBinding,
+  useSpringScalar,
+  MotionPressable,
+  MotionBanner,
+  MotionSessionCard,
 } from "./motion";
 export type { MotionTier } from "./motion";
 
-export { rexColorTokens, rexMotionTokens } from "./theme/obsidian-calm";
-export type { RexColorToken, RexMotionToken } from "./theme/obsidian-calm";
+export { rexColorTokens, rexMotionTokens } from "./theme/electric-alive";
+export type { RexColorToken, RexMotionToken } from "./theme/electric-alive";

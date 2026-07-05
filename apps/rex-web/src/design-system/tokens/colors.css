@@ -1,4 +1,50 @@
 :root {
+  --rex-surface-base: #06070b;
+  --rex-surface-raised: #0e1018;
+  --rex-surface-overlay: #161822;
+  --rex-surface-dimmed: rgba(2, 4, 12, 0.78);
+  --rex-text-primary: #f0f0f5;
+  --rex-text-secondary: #9494a8;
+  --rex-hairline-default: #252836;
+  --rex-hairline-focus: #8b9cff;
+  --rex-border-subtle: #1e2130;
+  --rex-status-success: #5eecc4;
+  --rex-status-working: #8b9cff;
+  --rex-status-error: #ff6b8a;
+  --rex-accent-muted: rgba(139, 156, 255, 0.14);
+  --rex-accent-glow: rgba(139, 156, 255, 0.45);
+  --rex-glow-working: rgba(94, 236, 196, 0.35);
+  --rex-glow-error: rgba(255, 107, 138, 0.4);
+  --rex-hairline-flux: rgba(139, 156, 255, 0.55);
+  --rex-shimmer-highlight: rgba(240, 240, 245, 0.08);
+  --rex-particle-fill: rgba(139, 180, 255, 0.75);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --rex-surface-base: #f0f1f8;
+    --rex-surface-raised: #ffffff;
+    --rex-surface-overlay: #ffffff;
+    --rex-surface-dimmed: rgba(6, 7, 11, 0.5);
+    --rex-text-primary: #12131a;
+    --rex-text-secondary: #5c5c6e;
+    --rex-hairline-default: #dce0ef;
+    --rex-hairline-focus: #4f6bff;
+    --rex-border-subtle: #e8eaf5;
+    --rex-status-success: #059669;
+    --rex-status-working: #4f6bff;
+    --rex-status-error: #e11d48;
+    --rex-accent-muted: rgba(79, 107, 255, 0.1);
+    --rex-accent-glow: rgba(79, 107, 255, 0.28);
+    --rex-glow-working: rgba(5, 150, 105, 0.25);
+    --rex-glow-error: rgba(225, 29, 72, 0.3);
+    --rex-hairline-flux: rgba(79, 107, 255, 0.45);
+    --rex-shimmer-highlight: rgba(18, 19, 26, 0.06);
+    --rex-particle-fill: rgba(79, 107, 255, 0.65);
+  }
+}
+
+[data-theme="obsidian"] {
   --rex-surface-base: #0c0d11;
   --rex-surface-raised: #14151b;
   --rex-surface-overlay: #1c1d24;
@@ -13,23 +59,9 @@
   --rex-status-error: #ff7b7b;
   --rex-accent-muted: rgba(124, 156, 255, 0.12);
   --rex-accent-glow: rgba(124, 156, 255, 0.35);
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --rex-surface-base: #f4f4f5;
-    --rex-surface-raised: #ffffff;
-    --rex-surface-overlay: #ffffff;
-    --rex-surface-dimmed: rgba(0, 0, 0, 0.45);
-    --rex-text-primary: #18181b;
-    --rex-text-secondary: #52525b;
-    --rex-hairline-default: #e4e4e7;
-    --rex-hairline-focus: #2563eb;
-    --rex-border-subtle: #ececee;
-    --rex-status-success: #059669;
-    --rex-status-working: #2563eb;
-    --rex-status-error: #dc2626;
-    --rex-accent-muted: rgba(37, 99, 235, 0.08);
-    --rex-accent-glow: rgba(37, 99, 235, 0.2);
-  }
+  --rex-glow-working: rgba(110, 231, 168, 0.3);
+  --rex-glow-error: rgba(255, 123, 123, 0.35);
+  --rex-hairline-flux: rgba(124, 156, 255, 0.5);
+  --rex-shimmer-highlight: rgba(236, 236, 241, 0.06);
+  --rex-particle-fill: rgba(124, 156, 255, 0.7);
 }

@@ -3,6 +3,7 @@ import {
   activeTransition,
   ambientTransition,
   messageVariants,
+  modalSpringTransition,
   statusPulseTransition,
   timelineItemVariants,
 } from "../design-system/motion";
@@ -52,7 +53,7 @@ export function MotionTimelineItem({ children }: { children: React.ReactNode }) 
       initial="hidden"
       animate="visible"
       variants={timelineItemVariants}
-      transition={ambientTransition}
+      transition={{ ...ambientTransition, type: "spring", stiffness: 260, damping: 22 }}
     >
       {children}
     </motion.li>
@@ -78,8 +79,8 @@ export function MotionStatusDot({
       data-motion-tier={working ? "ambient" : "idle"}
       animate={
         reduceMotion || !working
-          ? { opacity: 1 }
-          : { opacity: [1, 0.4, 1] }
+          ? { opacity: 1, scale: 1 }
+          : { opacity: [1, 0.45, 1], scale: [1, 1.15, 1] }
       }
       transition={
         reduceMotion || !working
@@ -89,3 +90,5 @@ export function MotionStatusDot({
     />
   );
 }
+
+export { modalSpringTransition };

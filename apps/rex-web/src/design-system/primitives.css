@@ -18,9 +18,19 @@
   cursor: not-allowed;
 }
 
+.rex-banner--error {
+  background: color-mix(in srgb, var(--rex-status-error) 28%, var(--rex-surface-raised));
+  border-bottom-color: color-mix(in srgb, var(--rex-status-error) 45%, var(--rex-hairline-default));
+  box-shadow: var(--rex-shadow-glow-error);
+}
+
 .rex-btn--primary {
   background: var(--rex-status-working);
   color: var(--rex-text-primary);
+}
+
+.rex-btn--primary:hover:not(:disabled) {
+  box-shadow: var(--rex-shadow-glow-working);
 }
 
 .rex-btn--secondary {

@@ -1,6 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { Button } from "../design-system";
-import { modalTransition, modalVariants } from "../design-system/motion";
+import { Button, modalSpringTransition, modalVariants } from "../design-system";
 import type { PendingApproval } from "../types";
 
 interface Props {
@@ -14,12 +13,15 @@ export function ApprovalModal({ pending, onApprove, onDeny }: Props) {
   const lines = pending.detail.split("\n");
 
   return (
-    <div
-      className="modal-backdrop open"
+    <motion.div
+      className="modal-backdrop open rex-modal-backdrop--dim"
       data-testid="modal-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="approval-title"
+      initial={reduceMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
     >
       <motion.div
         className="modal"
@@ -29,7 +31,7 @@ export function ApprovalModal({ pending, onApprove, onDeny }: Props) {
         animate="visible"
         exit={reduceMotion ? undefined : "hidden"}
         variants={modalVariants}
-        transition={modalTransition}
+        transition={modalSpringTransition()}
       >
         <h2 id="approval-title" style={{ marginTop: 0 }}>
           {pending.toolName} needs your approval
@@ -54,6 +56,6 @@ export function ApprovalModal({ pending, onApprove, onDeny }: Props) {
           </Button>
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

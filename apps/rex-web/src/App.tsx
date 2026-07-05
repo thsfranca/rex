@@ -3,6 +3,12 @@ import { ShellGrid, Text } from "./design-system";
 import { AppHeader } from "./components/AppHeader";
 import { ApprovalModal } from "./components/ApprovalModal";
 import { AmbientCanvas } from "./components/AmbientCanvas";
+import { ParticleField } from "./components/ParticleField";
+import {
+  useOrchestratorErrorBinding,
+  useOrchestratorPhaseBinding,
+  useOrchestratorStreamBinding,
+} from "./design-system";
 import { CommandPalette, ErrorBanner, type CommandAction } from "./components/CommandPalette";
 import { Composer } from "./components/Composer";
 import { StatusPanel } from "./components/StatusPanel";
@@ -59,6 +65,10 @@ export default function App() {
   const lastSubmitError = useAppStore((s) => s.lastSubmitError);
   const composerBusy = useAppStore((s) => s.composerBusy);
   const composerMode = useAppStore((s) => s.composerMode);
+
+  useOrchestratorPhaseBinding(phase);
+  useOrchestratorErrorBinding(error);
+  useOrchestratorStreamBinding(messages.length);
 
   const refreshSessions = useCallback(async () => {
     try {
@@ -233,6 +243,7 @@ export default function App() {
   return (
     <>
       <AmbientCanvas phase={phase} />
+      <ParticleField phase={phase} />
       <ShellGrid
         header={
           <AppHeader
@@ -244,9 +255,9 @@ export default function App() {
             onOpenCommands={() => setCommandPaletteOpen(true)}
           />
         }
-        transcript={<Transcript messages={messages} />}
+        transcript={<Transcript messages={messages} phase={phase} working={working} />}
         timeline={<Timeline tasks={timeline} phase={phase} />}
-        composer={<Composer disabled={working || phase === "tool_approval"} />}
+        composer={<Composer disabled={working || phase === "tool_approval"} typing={composerBusy} />}
         footer={
           <Text tone="secondary" data-testid="footer">
             {workspaceRoot ? `Ready · ${workspaceRoot}` : "Ready"} · ⌘K commands

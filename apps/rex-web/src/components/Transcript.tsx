@@ -3,11 +3,14 @@ import { Virtuoso } from "react-virtuoso";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import { Button, Text } from "../design-system";
-import type { ChatMessage } from "../types";
+import type { ChatMessage, TurnPhase } from "../types";
+import { HairlineFlux } from "./HairlineFlux";
 import { MotionMessage } from "./Motion";
 
 interface Props {
   messages: ChatMessage[];
+  phase: TurnPhase;
+  working: boolean;
 }
 
 function CodePre({ children }: { children?: ReactNode }) {
@@ -35,30 +38,37 @@ const markdownComponents: Components = {
   },
 };
 
-export function Transcript({ messages }: Props) {
+export function Transcript({ messages, phase, working }: Props) {
   if (messages.length === 0) {
     return (
-      <div className="rex-transcript-empty" data-testid="transcript">
-        <h2 className="rex-transcript-empty__title">What should we work on?</h2>
-        <Text tone="secondary" className="rex-transcript-empty__hint">
-          Ask Rex about your workspace. Use Agent mode for edits, Ask mode for questions.
-        </Text>
+      <div className="rex-transcript-wrap">
+        <HairlineFlux phase={phase} testId="transcript-hairline" />
+        <div className="rex-transcript-empty" data-testid="transcript">
+          <h2 className="rex-transcript-empty__title">What should we work on?</h2>
+          <Text tone="secondary" className="rex-transcript-empty__hint">
+            Ask Rex about your workspace. Use Agent mode for edits, Ask mode for questions.
+          </Text>
+        </div>
       </div>
     );
   }
 
+  const lastIndex = messages.length - 1;
+
   return (
-    <div data-testid="transcript">
+    <div className="rex-transcript-wrap" data-testid="transcript">
+      <HairlineFlux phase={phase} testId="transcript-hairline" />
       <Virtuoso
         data={messages}
         followOutput="smooth"
         skipAnimationFrameInResizeObserver
-        itemContent={(_index, message) => {
+        itemContent={(index, message) => {
           const isUser = message.role === "user";
+          const isStreamingTail = working && index === lastIndex && !isUser;
           return (
             <div className={`rex-message-row rex-message-row--${isUser ? "user" : "assistant"}`}>
               <MotionMessage
-                className={`rex-message-bubble rex-message-bubble--${isUser ? "user" : "assistant"} message-block`}
+                className={`rex-message-bubble rex-message-bubble--${isUser ? "user" : "assistant"} message-block${isStreamingTail ? " rex-message-bubble--streaming" : ""}`}
               >
                 <span className="rex-message-bubble__role">{isUser ? "You" : "Rex"}</span>
                 {isUser ? (

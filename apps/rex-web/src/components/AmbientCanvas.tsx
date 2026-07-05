@@ -1,13 +1,39 @@
 import createREGL from "regl";
 import { useEffect, useRef } from "react";
+import ambientFrag from "../design-system/canvas/shaders/ambient.frag?raw";
+import { useMotionOrchestrator } from "../design-system/motion/orchestrator";
 import type { TurnPhase } from "../types";
 
 interface Props {
   phase: TurnPhase;
 }
 
+function phaseIntensity(phase: TurnPhase): number {
+  switch (phase) {
+    case "generating":
+      return 1;
+    case "tool_running":
+      return 0.85;
+    case "tool_approval":
+      return 0.7;
+    case "terminal":
+      return 0.35;
+    default:
+      return 0;
+  }
+}
+
 export function AmbientCanvas({ phase }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const orchestrator = useMotionOrchestrator();
+  const orchestratorRef = useRef(orchestrator);
+  orchestratorRef.current = orchestrator;
+
+  const active =
+    phase === "generating" ||
+    phase === "tool_running" ||
+    phase === "tool_approval" ||
+    phase === "terminal";
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -17,7 +43,6 @@ export function AmbientCanvas({ phase }: Props) {
     }
 
     const regl = createREGL({ canvas });
-    let t = 0;
     let batterySlowdown = 1;
 
     const readBattery = async () => {
@@ -35,17 +60,7 @@ export function AmbientCanvas({ phase }: Props) {
     void readBattery();
 
     const draw = regl({
-      frag: `
-        precision mediump float;
-        uniform float uTime;
-        uniform vec2 uResolution;
-        void main() {
-          vec2 uv = gl_FragCoord.xy / uResolution;
-          float pulse = 0.08 + 0.04 * sin(uTime * 1.4 + uv.x * 6.0);
-          vec3 color = vec3(0.35, 0.45, 0.85) * pulse;
-          gl_FragColor = vec4(color, pulse);
-        }
-      `,
+      frag: ambientFrag,
       vert: `
         precision mediump float;
         attribute vec2 position;
@@ -59,20 +74,20 @@ export function AmbientCanvas({ phase }: Props) {
       count: 4,
       primitive: "triangle strip",
       uniforms: {
-        uTime: () => t,
+        uTime: () => orchestratorRef.current.clock * batterySlowdown,
+        uIntensity: () =>
+          Math.max(phaseIntensity(phase), orchestratorRef.current.intensity * 0.5),
+        uFlowAngle: () => orchestratorRef.current.flowAngle,
         uResolution: ({ viewportWidth, viewportHeight }) => [viewportWidth, viewportHeight],
       },
     });
 
     let frame = 0;
     let running = true;
-    const isActive =
-      phase === "generating" || phase === "tool_running" || phase === "tool_approval";
 
     const loop = () => {
       if (!running) return;
-      if (isActive) {
-        t += 0.016 * batterySlowdown;
+      if (active || orchestratorRef.current.isTyping) {
         draw();
       } else {
         regl.clear({ color: [0, 0, 0, 0] });
@@ -90,10 +105,7 @@ export function AmbientCanvas({ phase }: Props) {
       window.removeEventListener("resize", resize);
       regl.destroy();
     };
-  }, [phase]);
-
-  const active =
-    phase === "generating" || phase === "tool_running" || phase === "tool_approval";
+  }, [phase, active]);
 
   return (
     <canvas

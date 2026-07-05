@@ -112,8 +112,68 @@ canvas#ambient {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  opacity: 0.15;
+  opacity: 0.28;
   z-index: var(--rex-z-base);
+}
+
+canvas#particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: calc(var(--rex-z-base) + 1);
+}
+
+.rex-transcript-wrap,
+.rex-composer-wrap,
+.timeline-panel {
+  position: relative;
+}
+
+.rex-hairline-flux {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 3px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.rex-edge-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 4px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.rex-modal-backdrop--dim {
+  background: color-mix(in srgb, var(--rex-surface-dimmed) 88%, hsl(348 80% 20% / 0.15));
+}
+
+.rex-message-bubble--streaming {
+  animation: rex-stream-shimmer 2s ease-in-out infinite;
+  box-shadow: var(--rex-shadow-sm), 0 0 24px var(--rex-accent-glow);
+}
+
+@keyframes rex-stream-shimmer {
+  0%,
+  100% {
+    border-color: var(--rex-border-subtle);
+  }
+  50% {
+    border-color: color-mix(in srgb, var(--rex-hairline-focus) 55%, var(--rex-border-subtle));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rex-message-bubble--streaming {
+    animation: none;
+  }
 }
 
 .diff-scrubber {

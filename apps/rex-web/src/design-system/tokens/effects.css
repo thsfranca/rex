@@ -1,11 +1,15 @@
 :root {
-  --rex-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
-  --rex-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.32);
-  --rex-shadow-composer: 0 -12px 40px rgba(0, 0, 0, 0.38);
-  --rex-shadow-overlay: 0 24px 64px rgba(0, 0, 0, 0.48);
-  --rex-gradient-base: radial-gradient(1200px 600px at 10% -10%, var(--rex-accent-muted), transparent 55%),
-    radial-gradient(900px 500px at 90% 0%, rgba(110, 231, 168, 0.06), transparent 50%),
-    var(--rex-surface-base);
-  --rex-glass-bg: color-mix(in srgb, var(--rex-surface-raised) 82%, transparent);
-  --rex-glass-border: color-mix(in srgb, var(--rex-hairline-default) 70%, transparent);
+  --rex-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.32), 0 0 12px rgba(139, 156, 255, 0.06);
+  --rex-shadow-md: 0 8px 32px rgba(0, 0, 0, 0.42), 0 0 24px rgba(139, 156, 255, 0.08);
+  --rex-shadow-composer: 0 -16px 48px rgba(0, 0, 0, 0.45), 0 0 32px rgba(94, 236, 196, 0.06);
+  --rex-shadow-overlay: 0 24px 72px rgba(0, 0, 0, 0.55), 0 0 48px rgba(139, 156, 255, 0.12);
+  --rex-shadow-glow-working: 0 0 20px var(--rex-glow-working);
+  --rex-shadow-glow-error: 0 0 20px var(--rex-glow-error);
+  --rex-gradient-aurora:
+    radial-gradient(1400px 700px at 8% -15%, rgba(139, 156, 255, 0.22), transparent 58%),
+    radial-gradient(1000px 550px at 92% 5%, rgba(94, 236, 196, 0.12), transparent 52%),
+    radial-gradient(800px 400px at 50% 100%, rgba(167, 139, 250, 0.08), transparent 55%);
+  --rex-gradient-base: var(--rex-gradient-aurora), var(--rex-surface-base);
+  --rex-glass-bg: color-mix(in srgb, var(--rex-surface-raised) 78%, transparent);
+  --rex-glass-border: color-mix(in srgb, var(--rex-hairline-focus) 22%, transparent);
 }

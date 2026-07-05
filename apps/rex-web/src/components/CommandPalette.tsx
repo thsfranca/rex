@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "../design-system";
+import { Button, MotionBanner } from "../design-system";
 
 export interface CommandAction {
   id: string;
@@ -116,11 +116,11 @@ export function ErrorBanner({
   onDismiss: () => void;
 }) {
   return (
-    <div className="rex-banner" data-testid="error-banner" data-motion-tier="cinematic" role="alert">
+    <MotionBanner className="rex-banner rex-banner--error" testId="error-banner">
       <span className="rex-banner__message">{message}</span>
       <Button type="button" variant="ghost" data-testid="error-banner-dismiss" onClick={onDismiss}>
         Dismiss
       </Button>
-    </div>
+    </MotionBanner>
   );
 }
