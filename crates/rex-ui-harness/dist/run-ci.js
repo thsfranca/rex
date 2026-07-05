@@ -107,6 +107,16 @@ async function assertParticleRegl() {
         detail: meta,
     };
 }
+async function assertModalParticleRegl() {
+    const session = await import("./session.js").then((m) => m.getSession());
+    const meta = await pageCanvasMeta(session, '[data-testid="modal-particles"]');
+    const pass = meta.renderer === "regl" && meta.webgl;
+    return {
+        step: "assert_modal_particle_regl",
+        pass,
+        detail: meta,
+    };
+}
 async function assertParticleCanvasTier(expected) {
     const session = await import("./session.js").then((m) => m.getSession());
     const meta = await pageCanvasMeta(session, '[data-testid="particles"]');
@@ -176,6 +186,8 @@ async function runDesktopSuite(cfg) {
     await gotoScenario("approval_required");
     results.push({ step: "goto approval_required", pass: true });
     await pageWaitForSelector(session, '[data-testid="modal"]', 30_000);
+    results.push(await assertModalParticleRegl());
+    results.push(await assertCanvasAnimating('[data-testid="modal-particles"]'));
     await pageClick(session, '[data-testid="approval-approve"]');
     results.push({ step: "approve modal", pass: true });
     await gotoScenario("error");
