@@ -20,10 +20,16 @@ pub use harness_session::{insert_metadata as insert_harness_session_metadata, ne
 pub use lock_util::PidLock;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DesktopLaunch {
+pub enum DesktopSession {
     New,
     ContinuePicker,
     Last,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DesktopLaunch {
+    pub session: DesktopSession,
+    pub debug: bool,
 }
 
 /// Ensure the daemon is up, then return `GetSystemStatus` (for integration tests).

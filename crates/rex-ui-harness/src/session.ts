@@ -69,7 +69,7 @@ async function openDesktopSession(cfg: HarnessConfig): Promise<HarnessSession> {
 
   processManager = new TauriProcessManager({
     command: desktopBin,
-    args: [],
+    args: ["--debug"],
     cwd: harnessCwd,
     socketPath: cfg.desktopSocket,
     startTimeout: cfg.desktopStartTimeoutSecs,
@@ -84,7 +84,6 @@ async function openDesktopSession(cfg: HarnessConfig): Promise<HarnessSession> {
 
   session = { mode: "desktop", page: tauriPage, motionFrames: [], recording: false };
 
-  await pageEvaluateObservabilityOn(session);
   await pageWaitForSelector(session, '[data-testid="shell"]', 60_000);
   await pageWaitForText(session, "Ready", 60_000);
 
@@ -102,12 +101,6 @@ export async function closeSession(): Promise<void> {
     desktopRepoRoot = null;
   }
   session = null;
-}
-
-async function pageEvaluateObservabilityOn(s: HarnessSession): Promise<void> {
-  await s.page.evaluate(`(() => {
-    try { localStorage.setItem("rexUiObservability", "1"); } catch {}
-  })()`);
 }
 
 export async function dumpObservability(label: string): Promise<string> {

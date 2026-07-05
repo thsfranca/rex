@@ -111,6 +111,10 @@ body {
   }
 }
 
+.ui-observability[hidden] {
+  display: none !important;
+}
+
 .ui-observability {
   position: fixed;
   right: 8px;
@@ -126,13 +130,6 @@ body {
   border-radius: var(--rex-radius-sm);
   padding: 6px 8px;
   pointer-events: none;
-}
-
-.ui-observability[aria-hidden="true"] {
-  max-width: 320px;
-  max-height: none;
-  overflow: hidden;
-  opacity: 0.85;
 }
 
 .modal-backdrop {

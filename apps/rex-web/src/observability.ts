@@ -1,6 +1,5 @@
 import type { PendingApproval, TurnPhase } from "./types";
 
-const STORAGE_KEY = "rexUiObservability";
 const MAX_STREAM_EVENTS = 32;
 
 export interface UiObservabilitySnapshot {
@@ -14,25 +13,6 @@ export interface UiObservabilitySnapshot {
   composerBusy: boolean;
   streamEvents: string[];
   updatedAt: string;
-}
-
-export function isObservabilityEnabled(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    if (localStorage.getItem(STORAGE_KEY) === "1") return true;
-  } catch {
-    // Private browsing or disabled storage.
-  }
-  return new URLSearchParams(window.location.search).get("rex_ui_obs") === "1";
-}
-
-export function enableObservability(): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(STORAGE_KEY, "1");
-  } catch {
-    // Best-effort for harness injection.
-  }
 }
 
 export function formatStreamEvent(event: unknown): string {
@@ -49,6 +29,7 @@ export function trimStreamEvents(events: string[]): string[] {
 }
 
 export function buildObservabilitySnapshot(input: {
+  enabled: boolean;
   phase: TurnPhase;
   statusLabel: string;
   pendingApproval: PendingApproval | null;
@@ -59,7 +40,6 @@ export function buildObservabilitySnapshot(input: {
   streamEvents: string[];
 }): UiObservabilitySnapshot {
   return {
-    enabled: isObservabilityEnabled(),
     ...input,
     streamEvents: trimStreamEvents(input.streamEvents),
     updatedAt: new Date().toISOString(),

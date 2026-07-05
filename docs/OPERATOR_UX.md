@@ -23,6 +23,7 @@ Design and acceptance: [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md). Architecture: [WEB_
 | Flag | Behavior |
 |------|----------|
 | `rex` | New session |
+| `rex --debug` | New session with in-app observability panel |
 | `rex --continue` | Resume closed session (carousel — W107) |
 | `rex --last` | Resume most recent closed session |
 

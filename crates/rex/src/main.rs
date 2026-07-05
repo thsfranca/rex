@@ -28,8 +28,8 @@ pub async fn run(args: impl Iterator<Item = String>) -> ExitCode {
             }
         },
         #[cfg(target_os = "macos")]
-        Ok(TopLevelCommand::Desktop(_launch)) => {
-            rex_desktop_lib::run();
+        Ok(TopLevelCommand::Desktop(launch)) => {
+            rex_desktop_lib::run(launch);
             ExitCode::SUCCESS
         }
         #[cfg(not(target_os = "macos"))]
