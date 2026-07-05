@@ -1,13 +1,22 @@
+mod control;
 mod stream;
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use control::{
+    fetch_session_events as fetch_session_events_rpc, get_system_status as get_system_status_rpc,
+    respond_to_tool_approval as respond_to_tool_approval_rpc, DaemonLifecycleEvent,
+    FetchSessionEventsDto, SystemStatusDto, ToolApprovalResultDto,
+};
 use rex_cli::ensure_daemon_ready;
 use rex_cli::CliError;
 use stream::{StreamEventDto, submit_prompt_stream};
 use tauri::ipc::Channel;
-use tauri::{menu::{Menu, MenuItem, PredefinedMenuItem, Submenu}, Manager};
+use tauri::{
+    menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
+    Emitter, Manager,
+};
 
 static SESSION_COUNTER: AtomicU64 = AtomicU64::new(0);
 
@@ -21,10 +30,54 @@ fn new_harness_session_id() -> String {
 }
 
 #[tauri::command]
-async fn ensure_daemon() -> Result<(), String> {
+async fn ensure_daemon() -> Result<SystemStatusDto, String> {
     ensure_daemon_ready()
         .await
+        .map_err(|e: CliError| e.operator_message())?;
+    get_system_status_rpc()
+        .await
         .map_err(|e: CliError| e.operator_message())
+}
+
+#[tauri::command]
+async fn get_system_status() -> Result<SystemStatusDto, String> {
+    get_system_status_rpc()
+        .await
+        .map_err(|e: CliError| e.operator_message())
+}
+
+#[tauri::command]
+async fn fetch_session_events(
+    harness_session_id: String,
+    before_sequence: u64,
+    after_sequence: u64,
+    limit: u32,
+) -> Result<FetchSessionEventsDto, String> {
+    fetch_session_events_rpc(
+        harness_session_id,
+        before_sequence,
+        after_sequence,
+        limit,
+    )
+    .await
+    .map_err(|e: CliError| e.operator_message())
+}
+
+#[tauri::command]
+async fn respond_to_tool_approval(
+    approval_token: String,
+    approved: bool,
+    tool_call_id: String,
+    harness_session_id: String,
+) -> Result<ToolApprovalResultDto, String> {
+    respond_to_tool_approval_rpc(
+        approval_token,
+        approved,
+        tool_call_id,
+        harness_session_id,
+    )
+    .await
+    .map_err(|e: CliError| e.operator_message())
 }
 
 #[tauri::command]
@@ -40,10 +93,28 @@ async fn submit_prompt(
         .map_err(|e: CliError| e.operator_message())
 }
 
+fn spawn_daemon_lifecycle_monitor(app: &tauri::App) {
+    let handle = app.handle().clone();
+    tauri::async_runtime::spawn(async move {
+        loop {
+            let event = control::probe_daemon_lifecycle().await;
+            let _ = handle.emit("daemon-lifecycle", event);
+            tokio::time::sleep(Duration::from_secs(5)).await;
+        }
+    });
+}
+
 pub fn build_app() -> tauri::Builder<tauri::Wry> {
     let mut builder = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![ensure_daemon, submit_prompt])
+        .invoke_handler(tauri::generate_handler![
+            ensure_daemon,
+            get_system_status,
+            fetch_session_events,
+            respond_to_tool_approval,
+            submit_prompt,
+        ])
         .setup(|app| {
+            spawn_daemon_lifecycle_monitor(app);
             let app_menu = build_menu(app)?;
             app.set_menu(app_menu)?;
             Ok(())
