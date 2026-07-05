@@ -38,21 +38,43 @@ export async function pagePress(session, key) {
         await session.page.keyboard.press(key);
     }
 }
+const TAURI_WAIT_CHUNK_MS = 25_000;
+async function waitWithChunks(totalMs, run) {
+    const deadline = Date.now() + totalMs;
+    let lastError;
+    while (Date.now() < deadline) {
+        const remaining = deadline - Date.now();
+        const chunk = Math.min(TAURI_WAIT_CHUNK_MS, remaining);
+        try {
+            await run(chunk);
+            return;
+        }
+        catch (err) {
+            lastError = err;
+            if (Date.now() >= deadline) {
+                break;
+            }
+        }
+    }
+    throw lastError instanceof Error
+        ? lastError
+        : new Error(`Timed out after ${totalMs}ms`);
+}
 export async function pageWaitForSelector(session, selector, timeout) {
+    const total = timeout ?? 60_000;
     if (session.mode === "static") {
-        await session.page.waitForSelector(selector, { timeout });
+        await session.page.waitForSelector(selector, { timeout: total });
+        return;
     }
-    else {
-        await session.page.waitForSelector(selector, timeout);
-    }
+    await waitWithChunks(total, (chunk) => session.page.waitForSelector(selector, chunk));
 }
 export async function pageWaitForText(session, text, timeout) {
+    const total = timeout ?? 60_000;
     if (session.mode === "static") {
-        await session.page.getByText(text).waitFor({ timeout });
+        await session.page.getByText(text).waitFor({ timeout: total });
+        return;
     }
-    else {
-        await session.page.getByText(text).waitFor(timeout);
-    }
+    await waitWithChunks(total, (chunk) => session.page.getByText(text).waitFor(chunk));
 }
 export async function pageSnapshotTree(session) {
     if (session.mode === "static") {
@@ -123,10 +145,20 @@ export async function pageCssTokenAssert(session, selector, token, property) {
 export async function pageFill(session, selector, text) {
     if (session.mode === "static") {
         await session.page.fill(selector, text);
+        return;
     }
-    else {
-        await session.page.fill(selector, text);
-    }
+    const page = session.page;
+    await page.evaluate(`(() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!(el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement)) {
+        throw new Error("fill requires input or textarea");
+      }
+      const prototype =
+        el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+      setter?.call(el, ${JSON.stringify(text)});
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    })()`);
 }
 export async function pageCanvasHash(session, selector) {
     return pageEvaluate(session, (sel) => {

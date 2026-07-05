@@ -1,0 +1,9 @@
+[[permission]]
+identifier = "allow-ensure-daemon"
+description = "Enables ensure_daemon for Rex desktop startup."
+commands.allow = ["ensure_daemon"]
+
+[[permission]]
+identifier = "allow-submit-prompt"
+description = "Enables submit_prompt for Rex chat streaming."
+commands.allow = ["submit_prompt"]
