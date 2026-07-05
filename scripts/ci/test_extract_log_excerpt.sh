@@ -29,4 +29,15 @@ if [[ "$("${EXTRACT}")" != "(no log file path provided)" ]]; then
   exit 1
 fi
 
+cat >"${tmp}/harness.log" <<'EOF'
+UI_HARNESS_FAIL step="assert_motion #status-dot"
+EOF
+
+out="$("${EXTRACT}" "${tmp}/harness.log")"
+if [[ "${out}" != *"UI_HARNESS_FAIL"* ]]; then
+  echo "extract_log_excerpt did not surface UI harness failure lines:"
+  printf '%s\n' "${out}"
+  exit 1
+fi
+
 echo "extract_log_excerpt contract tests passed."

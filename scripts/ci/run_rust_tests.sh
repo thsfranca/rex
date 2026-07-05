@@ -65,6 +65,13 @@ elif ! ./scripts/ci/test_extract_log_excerpt.sh 2>&1 | tee "ci-observability/ext
   hint="Run scripts/ci/test_extract_log_excerpt.sh locally."
   echo "::error::Log excerpt contract tests failed."
   echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
+elif ! ./scripts/ci/test_extract_ui_harness_failure.sh 2>&1 | tee "ci-observability/extract-ui-harness-failure-test.log"; then
+  result="failure"
+  fail_code="TEST_FAIL"
+  fail_stage="TestExecution"
+  hint="Run scripts/ci/test_extract_ui_harness_failure.sh locally."
+  echo "::error::UI harness failure excerpt contract tests failed."
+  echo "CI_SIGNAL code=${fail_code} stage=${fail_stage} result=${result} hint=${hint}"
 elif ! ./scripts/ci/test_scripts_syntax.sh 2>&1 | tee "ci-observability/scripts-syntax-test.log"; then
   result="failure"
   fail_code="TEST_FAIL"

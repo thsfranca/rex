@@ -112,8 +112,23 @@ if [ "${result}" = "success" ]; then
     RUN_ARGS+=(--socket "${DESKTOP_SOCKET}")
   fi
 
-  if ! node "${HARNESS_DIR}/dist/run-ci.js" "${RUN_ARGS[@]}" > >(tee "ci-observability/ui-harness.log") 2>&1; then
-    mark_failure "TestExecution" "UI_FAIL" "UI harness scenarios failed; run ./scripts/ci/run_ui_verify.sh --mode ${MODE} locally."
+  HARNESS_LOG="ci-observability/ui-harness.log"
+  set +e
+  node "${HARNESS_DIR}/dist/run-ci.js" "${RUN_ARGS[@]}" 2>&1 | tee "${HARNESS_LOG}"
+  harness_exit=${PIPESTATUS[0]}
+  set -e
+  if [ "${harness_exit}" -ne 0 ]; then
+    fail_summary="$(
+      "${ROOT}/scripts/ci/extract_ui_harness_failure.sh" "${HARNESS_LOG}" 5 \
+        | head -3 \
+        | tr '\n' ' ' \
+        | sed 's/[[:space:]]*$//'
+    )"
+    if [ -n "${fail_summary}" ]; then
+      mark_failure "TestExecution" "UI_FAIL" "UI harness failed: ${fail_summary} Run ./scripts/ci/run_ui_verify.sh --mode ${MODE} locally."
+    else
+      mark_failure "TestExecution" "UI_FAIL" "UI harness scenarios failed; see ${HARNESS_LOG}. Run ./scripts/ci/run_ui_verify.sh --mode ${MODE} locally."
+    fi
   fi
 fi
 echo "::endgroup::"

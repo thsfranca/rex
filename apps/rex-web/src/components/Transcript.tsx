@@ -1,6 +1,7 @@
 import { Virtuoso } from "react-virtuoso";
 import ReactMarkdown from "react-markdown";
 import type { ChatMessage } from "../types";
+import { MotionMessage } from "./Motion";
 
 interface Props {
   messages: ChatMessage[];
@@ -24,7 +25,7 @@ export function Transcript({ messages }: Props) {
         followOutput="smooth"
         skipAnimationFrameInResizeObserver
         itemContent={(_index, message) => (
-          <div
+          <MotionMessage
             className={
               message.role === "user" ? "message-user" : "message-assistant"
             }
@@ -34,7 +35,7 @@ export function Transcript({ messages }: Props) {
             ) : (
               message.content
             )}
-          </div>
+          </MotionMessage>
         )}
       />
     </div>

@@ -6,18 +6,66 @@ import { ciede2000, parseCssColor } from "./color.js";
 import { closeSession, gotoScenario, openSession } from "./session.js";
 import {
   pageCssTokenAssert,
+  pageEvaluate,
   pageLayout,
   pageLocatorScreenshot,
   pageFill,
+  pageFocus,
   pagePress,
   pageWaitForSelector,
   pageWaitForText,
 } from "./page.js";
 
+async function pageEvaluateStatusLabel(
+  session: Awaited<ReturnType<typeof import("./session.js").getSession>>
+): Promise<string> {
+  return pageEvaluate(
+    session,
+    () => document.querySelector("#status-label")?.textContent?.trim() ?? "",
+    null
+  );
+}
+
+async function waitForStatusLabel(
+  session: Awaited<ReturnType<typeof import("./session.js").getSession>>,
+  label: string,
+  timeoutMs: number
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const current = await pageEvaluateStatusLabel(session);
+    if (current === label) return;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  const current = await pageEvaluateStatusLabel(session);
+  throw new Error(`Timed out waiting for status label ${label}; last=${current}`);
+}
+
 interface StepResult {
   step: string;
   pass: boolean;
   detail?: unknown;
+}
+
+function emitHarnessFailures(mode: HarnessMode, failed: StepResult[]): void {
+  for (const step of failed) {
+    console.error(`UI_HARNESS_FAIL step=${JSON.stringify(step.step)}`);
+    if (step.detail !== undefined) {
+      console.error(`UI_HARNESS_DETAIL ${JSON.stringify(step.detail)}`);
+    }
+  }
+  console.error(
+    `CI_SIGNAL code=UI_FAIL stage=TestExecution result=failure hint=${failed.length} harness step(s) failed in ${mode} mode`
+  );
+}
+
+function emitHarnessError(err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err);
+  console.error(`UI_HARNESS_ERROR message=${JSON.stringify(message)}`);
+  if (err instanceof Error && err.stack) {
+    console.error(err.stack.split("\n").slice(0, 8).join("\n"));
+  }
+  console.error("CI_SIGNAL code=UI_FAIL stage=TestExecution result=failure hint=harness threw before reporting steps");
 }
 
 function parseArgs(): { mode: HarnessMode; socket?: string } {
@@ -78,21 +126,27 @@ async function assertLayout(
 
 async function assertMotion(region: string): Promise<StepResult> {
   const session = await import("./session.js").then((m) => m.getSession());
-  if (session.mode !== "static") {
-    return {
-      step: `assert_motion ${region}`,
-      pass: false,
-      detail: { reason: "requires static fixture (Playwright clock)" },
-    };
+  if (session.mode === "static") {
+    const page = session.page as Page;
+    const before = await pageLocatorScreenshot(session, region);
+    await page.clock.fastForward(150);
+    const mid = await pageLocatorScreenshot(session, region);
+    await page.clock.fastForward(350);
+    const after = await pageLocatorScreenshot(session, region);
+    const pass = !before.equals(mid) || !mid.equals(after);
+    return { step: `assert_motion ${region}`, pass };
   }
-  const page = session.page as Page;
-  const before = await pageLocatorScreenshot(session, region);
-  await page.clock.fastForward(150);
-  const mid = await pageLocatorScreenshot(session, region);
-  await page.clock.fastForward(350);
-  const after = await pageLocatorScreenshot(session, region);
-  const pass = !before.equals(mid) || !mid.equals(after);
-  return { step: `assert_motion ${region}`, pass };
+
+  const pass = await pageEvaluate(
+    session,
+    (sel) => {
+      const el = document.querySelector(sel as string);
+      if (!(el instanceof HTMLElement)) return false;
+      return el.classList.contains("working") && el.dataset.motionTier === "ambient";
+    },
+    region
+  );
+  return { step: `assert_motion ${region}`, pass: Boolean(pass) };
 }
 
 async function runStaticSuite(cfg: HarnessConfig): Promise<StepResult[]> {
@@ -126,14 +180,19 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
   results.push(await assertLayout('[data-testid="shell"]', "grid"));
 
   await pageWaitForSelector(session, '[data-testid="composer-input"]', 60_000);
+  await pageFocus(session, '[data-testid="composer-input"]');
   await pageFill(session, '[data-testid="composer-input"]', "hello");
   await pagePress(session, "Enter");
   results.push({ step: "send hello", pass: true });
 
-  await pageWaitForText(session, "hello", 60_000);
-  results.push({ step: "wait transcript hello", pass: true });
+  await pageWaitForSelector(session, "#status-dot.working", 30_000);
+  results.push(await assertMotion("#status-dot"));
 
-  await pageWaitForText(session, "Ready", 60_000);
+  await pageWaitForText(session, "mock: hello", 60_000);
+  results.push({ step: "wait transcript mock hello", pass: true });
+
+  await waitForStatusLabel(session, "Ready", 60_000);
+  results.push({ step: "wait status ready after hello", pass: true });
 
   results.push(
     await assertToken("#status-dot", "--rex-status-success", "background-color")
@@ -164,6 +223,10 @@ async function main(): Promise<void> {
     const results = mode === "static" ? await runStaticSuite(cfg) : await runDesktopSuite(cfg);
     const failed = results.filter((r) => !r.pass);
 
+    if (failed.length > 0) {
+      emitHarnessFailures(mode, failed);
+    }
+
     console.log(JSON.stringify({ mode, pass: failed.length === 0, steps: results }, null, 2));
 
     if (failed.length > 0) {
@@ -175,6 +238,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error(err instanceof Error ? err.message : String(err));
+  emitHarnessError(err);
   process.exit(1);
 });

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Composer } from "./components/Composer";
+import { MotionStatusDot } from "./components/Motion";
 import { Timeline } from "./components/Timeline";
 import { Transcript } from "./components/Transcript";
 import { ensureDaemon, subscribeDaemonLifecycle } from "./ipc";
@@ -52,11 +53,7 @@ export default function App() {
   return (
     <div className="shell" data-testid="shell">
       <header className="header" data-testid="header">
-        <span
-          className={`status-dot${working ? " working" : ""}`}
-          id="status-dot"
-          data-testid="status-dot"
-        />
+        <MotionStatusDot working={working} id="status-dot" testId="status-dot" />
         <span id="status-label" style={{ marginLeft: 8 }}>
           {statusLabel}
         </span>
