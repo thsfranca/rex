@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-NDJSON_DIR="${ROOT_DIR}/fixtures/ndjson_contract"
+NDJSON_DIR="${ROOT_DIR}/fixtures/stream_events"
 
 failures=0
 

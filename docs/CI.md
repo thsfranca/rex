@@ -164,9 +164,9 @@ When guideline conformance paths change, **guidelines-verify** runs [`scripts/ci
 **Guidelines-relevant** (`guidelines_changed` only):
 
 - `fixtures/guidelines/**`
-- `fixtures/ndjson_contract/**`
+- `fixtures/stream_events/**`
 - `docs/ERROR_HANDLING.md`
-- `docs/NDJSON_STREAM.md`
+- `docs/STREAM_EVENTS.md`
 - `crates/rex-cli/src/runtime.rs`
 - `crates/rex-daemon/src/access_policy.rs`
 - `scripts/ci/guidelines/**`

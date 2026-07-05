@@ -43,7 +43,7 @@ See hub sections for `plan.final`, `plan.clarify`, and `plan.save` JSON/RPC shap
 
 **NDJSON `plan` event:** `{"event":"plan","index":N,"phase":"ready|clarify|draft","title":"...","detail":"..."}`
 
-Fixture: [`fixtures/ndjson_contract/plan_stream.ndjson`](../fixtures/ndjson_contract/plan_stream.ndjson).
+Fixture: [`fixtures/stream_events/plan_stream.ndjson`](../fixtures/stream_events/plan_stream.ndjson).
 
 ## Error codes
 
@@ -51,4 +51,4 @@ Fixture: [`fixtures/ndjson_contract/plan_stream.ndjson`](../fixtures/ndjson_cont
 
 ## Cross-links
 
-- [NDJSON_STREAM.md](NDJSON_STREAM.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [ROADMAP.md](ROADMAP.md) **R037**
+- [STREAM_EVENTS.md](STREAM_EVENTS.md) · [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) · [ROADMAP.md](ROADMAP.md) **R037**

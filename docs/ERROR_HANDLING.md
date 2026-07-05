@@ -4,7 +4,7 @@
 > Role: reference | Status: active | Audience: contributors | Read when: error codes and messages
 > Prefer: ## Error code catalog
 
-Canonical hub for **how Rex surfaces failures** across daemon, CLI, extension, sidecar, broker, and plugins. Wire shapes for the editor path live in [NDJSON_STREAM.md](NDJSON_STREAM.md); this document defines **principles**, **message quality**, **code taxonomy**, and **CI enforcement**.
+Canonical hub for **how Rex surfaces failures** across daemon, CLI, extension, sidecar, broker, and plugins. Wire shapes for the editor path live in [STREAM_EVENTS.md](STREAM_EVENTS.md); this document defines **principles**, **message quality**, **code taxonomy**, and **CI enforcement**.
 
 ## Purpose and audiences
 
@@ -88,7 +88,7 @@ flowchart LR
 
 | Surface | Required fields | Transport | Owner |
 |---------|-----------------|-----------|-------|
-| NDJSON terminal | `event`, `code`, `message` | CLI stdout | `rex-cli` emits; consumers parse per [NDJSON_STREAM.md](NDJSON_STREAM.md) |
+| NDJSON terminal | `event`, `code`, `message` | CLI stdout | `rex-cli` emits; consumers parse per [STREAM_EVENTS.md](STREAM_EVENTS.md) |
 | gRPC stream failure | gRPC status code + message (+ Rex code in metadata when available) | UDS `rex.v1` | `rex-daemon` |
 | Broker unary | `ok`, `error` string today; **`code` target** for policy denies | `rex.v1` broker RPCs | `rex-daemon` |
 | Sidecar stream | Structured terminal error or RPC status — **not** inline stream text | `rex.sidecar.v1` | Sidecar + daemon — [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
@@ -150,7 +150,7 @@ These are **documented inconsistencies**; fixing them is follow-up work, not req
 | Sidecar stub broker failures | Embedded as `[broker.* error: …]` in stream **text** | Terminal structured error or gRPC status |
 | Broker proto | `ok` + `error` string only | Add `code` field; keep message human-readable |
 | Extension heuristics | `errorTaxonomy.ts` substring fallbacks when CLI omits `code` | Prefer CLI `code`; shrink heuristics over time |
-| `docs/NDJSON_STREAM.md` table | Was missing setup codes | Synced with this catalog — link here for full detail |
+| `docs/STREAM_EVENTS.md` table | Was missing setup codes | Synced with this catalog — link here for full detail |
 
 ## Security and redaction
 
@@ -164,7 +164,7 @@ These are **documented inconsistencies**; fixing them is follow-up work, not req
 - [ ] Stable **code** present at the boundary (NDJSON `error.code` for stream terminals).
 - [ ] Exactly **one** terminal `done` or `error` per NDJSON request path.
 - [ ] New stream codes added to `error_codes.yaml` and this table.
-- [ ] Fixtures updated under [`fixtures/ndjson_contract/`](../fixtures/ndjson_contract/) when wire shape changes.
+- [ ] Fixtures updated under [`fixtures/stream_events/`](../fixtures/stream_events/) when wire shape changes.
 - [ ] `./scripts/ci/run_guidelines_verify.sh` passes locally when codes or fixtures change.
 
 ## Adding a new NDJSON stream error
@@ -184,8 +184,8 @@ Runs executable checks under [`scripts/ci/guidelines/`](../scripts/ci/guidelines
 
 | Script | Guideline source | Rule |
 |--------|------------------|------|
-| `check_error_codes.sh` | This catalog + [NDJSON_STREAM.md](NDJSON_STREAM.md) | `error_codes.yaml` ↔ docs ↔ NDJSON error fixtures |
-| `check_ndjson_terminal.sh` | [NDJSON_STREAM.md](NDJSON_STREAM.md) | Each `fixtures/ndjson_contract/*.ndjson` has exactly one terminal event |
+| `check_error_codes.sh` | This catalog + [STREAM_EVENTS.md](STREAM_EVENTS.md) | `error_codes.yaml` ↔ docs ↔ NDJSON error fixtures |
+| `check_ndjson_terminal.sh` | [STREAM_EVENTS.md](STREAM_EVENTS.md) | Each `fixtures/stream_events/*.ndjson` has exactly one terminal event |
 | `check_ndjson_plan_contract.sh` | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | `plan` events include `index`, `phase`, `title`, `detail`; phases are `draft` \| `clarify` \| `ready` |
 | `check_broker_policy_codes.sh` | Broker table above | `broker_error_codes.yaml` ↔ docs ↔ `access_policy.rs` |
 
@@ -204,7 +204,7 @@ Run locally before PRs that touch error codes or guidelines:
 
 ## Related docs
 
-- [NDJSON_STREAM.md](NDJSON_STREAM.md) — NDJSON wire contract and bootstrap flow
+- [STREAM_EVENTS.md](STREAM_EVENTS.md) — NDJSON wire contract and bootstrap flow
 - [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) — quality gates and review checklist
 - [MVP_SPEC.md](MVP_SPEC.md) — RC-08 sidecar-missing clear error
 - [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) — sidecar structured errors

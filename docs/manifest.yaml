@@ -162,11 +162,11 @@ documents:
     status: active
     topics:
       - native-tool-calling
-  - path: docs/NDJSON_STREAM.md
+  - path: docs/STREAM_EVENTS.md
     role: reference
     status: active
     topics:
-      - ndjson-stream
+      - stream-events
   - path: docs/OMLX_INFERENCE.md
     role: explanation
     status: active

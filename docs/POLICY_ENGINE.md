@@ -87,7 +87,7 @@ Does **not** replace `ApprovalGate` — approvals are human/UX gates; access pol
 
 ## Extension and CLI
 
-- **Approval UX** stays in the extension — [NDJSON_STREAM.md](NDJSON_STREAM.md).
+- **Approval UX** stays in the extension — [STREAM_EVENTS.md](STREAM_EVENTS.md).
 - Clients supply **approval context** to the daemon when enforcement is on; daemon decides.
 - `rex-cli` and extension share one gate — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md).
 

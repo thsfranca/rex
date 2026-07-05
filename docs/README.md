@@ -51,7 +51,7 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 |-----|--------------|
 | [ADAPTERS.md](ADAPTERS.md) | Inference adapter capabilities |
 | [CACHING.md](CACHING.md) | Cache keys and policy |
-| [NDJSON_STREAM.md](NDJSON_STREAM.md) | NDJSON stream contract |
+| [STREAM_EVENTS.md](STREAM_EVENTS.md) | NDJSON stream contract |
 | [ERROR_HANDLING.md](ERROR_HANDLING.md) | Error codes and messages |
 | [CONFIGURATION.md](CONFIGURATION.md) | JSON config keys and precedence |
 | `proto/rex/v1/rex.proto` | gRPC contract |
@@ -107,7 +107,7 @@ Before adding or materially editing a doc under `docs/`:
 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Economics validation program — **design hub** |
 | [CONFIGURATION.md](CONFIGURATION.md) | JSON config schema + deprecated `REX_*` catalog |
 | [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md) | Operator setup walkthroughs (how-to) |
-| [NDJSON_STREAM.md](NDJSON_STREAM.md) | Internal stream event vocabulary (desktop projection; not public CLI) |
+| [STREAM_EVENTS.md](STREAM_EVENTS.md) | Internal stream event vocabulary (desktop projection; not public CLI) |
 | [ERROR_HANDLING.md](ERROR_HANDLING.md) | Error codes, human-readable messages, CI guidelines gate |
 | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Plan mode tools, stream contract, broker plan.save |
 | [OPERATOR_UX.md](OPERATOR_UX.md) | Desktop operator path and session flags — **product hub** |

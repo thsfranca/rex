@@ -42,7 +42,7 @@ for p in paths:
 required = [
     "docs/AGENTS.md",
     "docs/ERROR_HANDLING.md",
-    "docs/NDJSON_STREAM.md",
+    "docs/STREAM_EVENTS.md",
     "docs/CONFIGURATION.md",
 ]
 for req in required:

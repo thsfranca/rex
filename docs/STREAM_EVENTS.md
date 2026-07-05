@@ -6,7 +6,7 @@
 
 Canonical reference for **internal stream events** projected by the desktop client: modes, event shapes, terminal invariant, and stable error codes. **Not** a public subprocess API — public operator transport is UDS gRPC `StreamInference` via the Tauri desktop ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md); [ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md) superseded).
 
-**Consumers:** `rex-stream-ui`, `fixtures/ndjson_contract/` golden lines, guidelines CI. **Operator path:** [OPERATOR_UX.md](OPERATOR_UX.md). System context: [ARCHITECTURE.md](ARCHITECTURE.md).
+**Consumers:** `rex-stream-ui`, `fixtures/stream_events/` golden lines, guidelines CI. **Operator path:** [OPERATOR_UX.md](OPERATOR_UX.md). System context: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Goals
 
@@ -38,7 +38,7 @@ One JSON object per logical stream line. Exactly **one** terminal event per requ
 | `done` | `index` | Stream complete |
 | `error` | `message`, `code` | Terminal failure |
 
-Fixtures: [`fixtures/ndjson_contract/`](../fixtures/ndjson_contract/). Operation feedback design: [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md).
+Fixtures: [`fixtures/stream_events/`](../fixtures/stream_events/). Operation feedback design: [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md).
 
 `error` objects expose stable `code` for routing — [ERROR_HANDLING.md](ERROR_HANDLING.md).
 

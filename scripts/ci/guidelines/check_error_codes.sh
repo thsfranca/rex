@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 CATALOG="${ROOT_DIR}/fixtures/guidelines/error_codes.yaml"
 HUB_DOC="${ROOT_DIR}/docs/ERROR_HANDLING.md"
-NDJSON_DIR="${ROOT_DIR}/fixtures/ndjson_contract"
+NDJSON_DIR="${ROOT_DIR}/fixtures/stream_events"
 
 failures=0
 
@@ -60,7 +60,7 @@ if [ -d "${NDJSON_DIR}" ]; then
     fi
   done < <(grep -h '"event"[[:space:]]*:[[:space:]]*"error"' "${NDJSON_DIR}"/*.ndjson 2>/dev/null || true)
 else
-  echo "::notice::No ndjson_contract fixtures directory; skipping fixture check."
+  echo "::notice::No stream_events fixtures directory; skipping fixture check."
 fi
 echo "::endgroup::"
 

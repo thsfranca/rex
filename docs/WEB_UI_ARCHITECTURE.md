@@ -125,5 +125,5 @@ Legacy tuiwright PTY snapshots are retired with TUI removal.
 - [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)
 - [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md)
 - [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md)
-- [NDJSON_STREAM.md](NDJSON_STREAM.md) — automation contract (unchanged)
+- [STREAM_EVENTS.md](STREAM_EVENTS.md) — internal stream event vocabulary
 - [ARCHITECTURE.md](ARCHITECTURE.md)

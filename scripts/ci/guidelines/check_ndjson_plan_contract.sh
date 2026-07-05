@@ -3,8 +3,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-NDJSON_DIR="${ROOT_DIR}/fixtures/ndjson_contract"
-HUB_DOC="${ROOT_DIR}/docs/NDJSON_STREAM.md"
+NDJSON_DIR="${ROOT_DIR}/fixtures/stream_events"
+HUB_DOC="${ROOT_DIR}/docs/STREAM_EVENTS.md"
 
 failures=0
 
@@ -15,7 +15,7 @@ note_fail() {
 
 echo "::group::NDJSON plan event contract"
 if ! grep -q '`plan`' "${HUB_DOC}"; then
-  note_fail "docs/NDJSON_STREAM.md must document additive plan NDJSON events"
+  note_fail "docs/STREAM_EVENTS.md must document additive plan NDJSON events"
 fi
 
 if [ ! -d "${NDJSON_DIR}" ]; then

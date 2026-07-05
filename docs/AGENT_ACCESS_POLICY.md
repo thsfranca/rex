@@ -48,7 +48,7 @@ flowchart TB
 |-------|------|
 | **Envelope** | Process boundary, optional OS sandbox, resource caps. |
 | **Capabilities** | What the guest may **request** (`fs.read`, `fs.write`, `exec.shell`, `net.fetch`). |
-| **Mode** | Extension UX contract — [NDJSON_STREAM.md](NDJSON_STREAM.md). |
+| **Mode** | Extension UX contract — [STREAM_EVENTS.md](STREAM_EVENTS.md). |
 | **Approvals** | Daemon `ApprovalGate` for `agent` mode — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md). |
 | **Broker** | Daemon authorizes, executes, meters, logs — [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md). |
 

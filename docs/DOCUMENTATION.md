@@ -35,7 +35,7 @@ Match each document to **one primary reader need**. Full role lists live in [doc
 | **Tutorial** | Learn by doing; first success | Step-by-step path to a working outcome; assume little context | [README.md](../README.md) quickstart, [OPERATOR_UX.md](OPERATOR_UX.md) | Dump API tables, ADR history, or full architecture |
 | **How-to** | Accomplish a specific task | Goal-oriented recipe; prerequisites + ordered steps | [RELEASE.md](RELEASE.md), [CI.md](CI.md), [CONFIGURATION.md](CONFIGURATION.md) | Teach fundamentals or restate full feature design |
 | **Explanation** | Understand why and how things fit | Design intent, boundaries, trade-offs, hub-level bets | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md), feature hubs, [ARCHITECTURE.md](ARCHITECTURE.md) | Replace reference catalogs or operator runbooks |
-| **Reference** | Look up facts quickly | Accurate, complete, scannable facts; structure mirrors the thing described | [ADAPTERS.md](ADAPTERS.md), [NDJSON_STREAM.md](NDJSON_STREAM.md), `proto/rex/v1/rex.proto` | Narrative onboarding or undecided design bets |
+| **Reference** | Look up facts quickly | Accurate, complete, scannable facts; structure mirrors the thing described | [ADAPTERS.md](ADAPTERS.md), [STREAM_EVENTS.md](STREAM_EVENTS.md), `proto/rex/v1/rex.proto` | Narrative onboarding or undecided design bets |
 
 ## Choosing a location
 
