@@ -4,7 +4,7 @@
 > Role: explanation | Status: active | Audience: contributors | Read when: web desktop harness architecture
 > Prefer: ## Purpose
 
-**Status:** `design accepted` — [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md). Product design: [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md). Operator UX: [OPERATOR_UX.md](OPERATOR_UX.md) (pending migration from CLI_OPERATOR_UX).
+**Status:** `design accepted` — [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md). Product design: [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md). Operator UX: [OPERATOR_UX.md](OPERATOR_UX.md).
 
 ## Purpose
 

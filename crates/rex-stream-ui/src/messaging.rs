@@ -1,4 +1,4 @@
-//! Operator-facing message templates per [CLI_OPERATOR_UX.md].
+//! Operator-facing message templates per `docs/OPERATOR_UX.md`.
 
 /// Daemon ensure lifecycle phases for header / loading copy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

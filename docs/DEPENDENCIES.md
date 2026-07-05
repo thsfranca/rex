@@ -26,7 +26,7 @@ brew install protobuf
 
 ### Operator install prerequisites (local E2E)
 
-Use this table before `./scripts/install-cli.sh` or the step-by-step path in [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Run `./scripts/install-preflight.sh` for a live summary; add `--strict` to fail fast.
+Use this table before `./scripts/install-cli.sh` or the step-by-step path in [OPERATOR_UX.md](OPERATOR_UX.md). Run `./scripts/install-preflight.sh` for a live summary; add `--strict` to fail fast.
 
 | Component | Minimum | macOS install hint |
 |---|---|---|
@@ -60,7 +60,7 @@ Use this table before `./scripts/install-cli.sh` or the step-by-step path in [CL
 | Apple Silicon Mac | MLX inference target | oMLX is not supported on Linux CI runners |
 | Python (oMLX install) | oMLX ships as a Python package / Homebrew formula | Install per upstream docs; verify with `rex omlx doctor` |
 
-Operator path: `rex omlx init` → merge `$REX_ROOT/omlx/config.snippet.json` into `$REX_ROOT/config.json` (`inference.omlx.*`) → `rex omlx doctor` → `rex status` (R071 autostart). Hub: [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
+Operator path: `rex omlx init` → merge `$REX_ROOT/omlx/config.snippet.json` into `$REX_ROOT/config.json` (`inference.omlx.*`) → `rex omlx doctor` → bare `rex` (daemon auto-starts). Hub: [OMLX_INFERENCE.md](OMLX_INFERENCE.md).
 
 ### Python sidecar (`rex-agent`)
 
@@ -135,23 +135,15 @@ cargo audit
 
 ```bash
 cargo build --workspace
+cd apps/rex-web && npm ci && npm run build
 ```
 
-2. Configure JSON and start daemon:
+2. Configure JSON and launch desktop (macOS):
 
 ```bash
 rex config init
 # Edit $REX_ROOT/config.json — inference.openai_compat, sidecars
-rex daemon
+rex
 ```
 
-3. In another terminal, run CLI:
-
-```bash
-rex status
-rex complete "hello from rex" --format ndjson --mode ask
-```
-
-Readiness note:
-- If the CLI starts before daemon socket initialization, it fails fast with a connection timeout.
-- Re-run the command after daemon startup completes and `/tmp/rex.sock` is present.
+The desktop auto-starts the daemon when needed ([OPERATOR_UX.md](OPERATOR_UX.md)). Setup subcommands: `rex config`, `rex proto`, `rex sidecar`, `rex gateway`, `rex omlx`.

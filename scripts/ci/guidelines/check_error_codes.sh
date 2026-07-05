@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-# Validates NDJSON stream error codes stay in sync across yaml, docs, and fixtures.
-# Does not require a rex-cli CliError mapping: the public NDJSON emit path (rex complete)
-# was removed; codes remain a stream-contract catalog for TUI/fixtures.
+# Internal stream event error codes: yaml, docs, and fixtures stay in sync.
+# Public subprocess NDJSON was removed; codes remain the desktop/stream contract catalog.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"

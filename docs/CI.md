@@ -283,16 +283,16 @@ Use the same `CI_SIGNAL` pattern when adding release-specific scripts:
 
 ## Local MVP preflight (operator path)
 
-Before you run the **manual** CLI operator checklist in [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) or [MVP_SPEC.md](MVP_SPEC.md), run the same **build + Rust verify + sidecar verify** sequence locally:
+Before you run the **manual** desktop operator checklist in [OPERATOR_UX.md](OPERATOR_UX.md) or [MVP_SPEC.md](MVP_SPEC.md), run the same **build + Rust verify + sidecar verify** sequence locally:
 
 ```bash
 chmod +x ./scripts/verify_mvp_local.sh
 ./scripts/verify_mvp_local.sh
 ```
 
-That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), then [`scripts/ci/run_sidecar_verify.sh`](../scripts/ci/run_sidecar_verify.sh), then `cargo test -p rex-daemon mvp_product_path`. It does **not** start `rex-daemon` for manual CLI steps or **live LLM** dogfood ([MVP_SPEC.md](MVP_SPEC.md)).
+That script runs `cargo build --workspace`, then [`scripts/ci/run_rust_verify.sh`](../scripts/ci/run_rust_verify.sh), then [`scripts/ci/run_sidecar_verify.sh`](../scripts/ci/run_sidecar_verify.sh), then `cargo test -p rex-daemon mvp_product_path`. It does **not** start the desktop app for manual operator steps or **live LLM** dogfood ([MVP_SPEC.md](MVP_SPEC.md)).
 
-**Three tiers:** (1) **Per-PR** — **`mock`** / harness paths in `uds_e2e` and a **loopback OpenAI-compat HTTP fixture** in `mvp_product_path` (real `http_openai_compat`, no cloud API) — **RC-10**. (2) **Planned opt-in + nightly** — live Ollama smoke (**R039**, **R040**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). (3) **Operator dogfood** — live native tool E2E [`verify_native_tools_live.sh`](../scripts/verify_native_tools_live.sh) (not in `ci-checks`) plus manual live JSON `inference.openai_compat` (Ollama, LM Studio, etc.) — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md).
+**Three tiers:** (1) **Per-PR** — **`mock`** / harness paths in `uds_e2e` and a **loopback OpenAI-compat HTTP fixture** in `mvp_product_path` (real `http_openai_compat`, no cloud API) — **RC-10**. (2) **Planned opt-in + nightly** — live Ollama smoke (**R039**, **R040**) — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). (3) **Operator dogfood** — desktop manual path ([OPERATOR_UX.md](OPERATOR_UX.md)) and rex-ui-harness ([WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md)); live native tool scripts remain blocked pending harness rewrite.
 
 **Builtin sidecars:** [`run_sidecar_verify.sh`](../scripts/ci/run_sidecar_verify.sh) runs in the **`sidecar-verify`** job (path-aware) and in **`Release / sidecar-verify`** on pull requests. Tag pushes run `run_rust_verify.sh` then `run_sidecar_verify.sh` in the Release `plan` job. A sidecar failure fails **`sidecar-verify`** (or the Release sidecar job) and, when sidecar paths are relevant, **`ci-checks`** (`GATE_FAIL`). Manifest: [`builtin_sidecars.txt`](../scripts/ci/builtin_sidecars.txt).
 

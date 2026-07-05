@@ -82,7 +82,7 @@ Portable background: research theme on LLM observability and validation (GenAI s
 
 ## Live LLM validation program
 
-**Purpose:** Bridge mock CI ([`mvp_product_path`](../crates/rex-daemon/tests/mvp_product_path.rs), RC-10) and manual operator acceptance ([CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) §8 / **R019**) with an **opt-in** automated path against a real local model — without requiring live LLM on every PR.
+**Purpose:** Bridge mock CI ([`mvp_product_path`](../crates/rex-daemon/tests/mvp_product_path.rs), RC-10) and manual operator acceptance ([OPERATOR_UX.md](OPERATOR_UX.md) / **R019**) with an **opt-in** automated path against a real local model — without requiring live LLM on every PR.
 
 **Status:** **R039–R040 implemented** — operator script [`scripts/verify_ollama_live.sh`](../scripts/verify_ollama_live.sh) and nightly workflow; **R041–R042** remain **planned** on [ROADMAP.md](ROADMAP.md).
 
@@ -100,7 +100,7 @@ Portable background: research theme on LLM observability and validation (GenAI s
 | Role | Model | Notes |
 |------|-------|-------|
 | **Primary agent smoke** | `qwen2.5-coder:7b` | JSON-in-text protocol; ≤16GB guidance |
-| **Fast streaming smoke** | `llama3.2` | Matches [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) §3 example |
+| **Fast streaming smoke** | `llama3.2` | Matches [OPERATOR_UX.md](OPERATOR_UX.md) quickstart example |
 
 ### Interfaces (intent)
 
@@ -215,6 +215,6 @@ Harness should use a shared **store trait** and parity-check sqlite vs CHCE on m
 | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) | Economics harness row |
 | [ROADMAP.md](ROADMAP.md) | **R039–R042** live smoke phasing; **R038** native tools — [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) |
 | [CI.md](CI.md) | Three-tier validation model; RC-10 |
-| [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Manual R019 acceptance; **R039** automated smoke follow-up |
+| [OPERATOR_UX.md](OPERATOR_UX.md) | Manual R019 acceptance; **R039** automated smoke follow-up |
 | [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md) | **R041** gateway-path smoke |
 | [NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md) | **R038** plan-mode tool-loop E2E |

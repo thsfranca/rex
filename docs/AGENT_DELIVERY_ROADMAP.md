@@ -91,23 +91,24 @@ flowchart TB
 
 ## Unified CLI (R014)
 
-**Status: implemented.** One **`rex`** binary replaces separate **`rex-cli`** and **`rex-daemon`** entrypoints for operators and the extension:
+**Status: implemented.** One **`rex`** binary with setup subcommands and bare **`rex`** desktop launch on macOS:
 
-| Subcommand | Purpose |
+| Subcommand / entry | Purpose |
 |------------|---------|
-| `rex daemon` | Run daemon (was `rex-daemon`) |
-| `rex status` / `rex complete` | Client RPCs (was `rex-cli`) |
+| `rex` (no args) | Launch Tauri desktop (macOS); auto-starts daemon |
 | `rex config` | `init`, `show`, `path`, `validate` |
 | `rex proto` | `doctor`, `install`, `path` |
 | `rex sidecar` | `list`, `init`, `doctor` |
+| `rex gateway` | LiteLLM gateway setup |
+| `rex omlx` | oMLX local inference setup |
 
-Extension defaults: **`rex`** + `["daemon"]` for auto-start. Compatibility shims **`rex-cli`** / **`rex-daemon`** delegate to the same libraries with deprecation hints.
+Internal daemon entry: `__rex_internal_daemon` (spawned by desktop/setup; not a public operator command).
 
-## CLI operator UX (R071–R082)
+## Operator UX (R071–R082, superseded by W100+)
 
-**Status:** partial — **R071** / **R075** / **R072** / **R073** / **R082** / **R080** / **R081** Done. Hub: [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md). Design system: [TUI_DESIGN.md](TUI_DESIGN.md). Architecture: [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). Decisions: [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md).
+**Status:** terminal harness **Done** and **superseded** by web desktop **W100–W118**. Hub: [OPERATOR_UX.md](OPERATOR_UX.md). Historical terminal design: [historical/TUI_DESIGN.md](historical/TUI_DESIGN.md), [historical/TERMINAL_HARNESS_ARCHITECTURE.md](historical/TERMINAL_HARNESS_ARCHITECTURE.md).
 
-Terminal operators use Rex as the **primary surface** without a dedicated foreground **`rex daemon`** session. **`rex complete --format ndjson`** remains the automation and CI contract ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)).
+Desktop operators use Rex without a dedicated foreground daemon session. Stream events are projected over UDS gRPC ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)).
 
 | ID | Theme | MoSCoW | Depends on | Notes |
 |----|-------|--------|------------|-------|
@@ -115,10 +116,10 @@ Terminal operators use Rex as the **primary surface** without a dedicated foregr
 | **R075** | Per-workspace daemon routing | Must | — | **Done** — [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md) |
 | **R072** | NDJSON core + messaging + **mdstream** | Must (program) | R071 | **Done** |
 | **R073** | Full terminal UI + approval modals | Should | R072 | **Done** |
-| **R082** | TUI product design system (docs) | Should | R073 | **Done** — [TUI_DESIGN.md](TUI_DESIGN.md) |
+| **R082** | TUI product design system (docs) | Should | R073 | **Done** — [historical/TUI_DESIGN.md](historical/TUI_DESIGN.md) |
 | **R080** | TUI presentation (layout + tokens) | Should | R082 | **Done** |
 | **R081** | TUI motion (choreography) | Should | R080 | **Done** |
-| — | Headless TUI adapter (external agent harness replay/snapshot) | **Won't** | — | Not required — live PTY verification is enough ([TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md#testing-strategy), [ROADMAP.md](ROADMAP.md)) |
+| — | Headless terminal adapter (external agent harness replay/snapshot) | **Won't** | — | Not required — rex-ui-harness is the product path ([WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md)) |
 | **R074** | Optional LLM narrator | Could | R073 | Off by default; prefer after **R080** |
 | **R076** | Daemon-owned LSP diagnostics | Could | R073 | Later v2 |
 | **R077** | Brokered git dirty-state auto-commit | Should | R073 | **`git.auto_commit_dirty`** |
@@ -126,7 +127,7 @@ Terminal operators use Rex as the **primary surface** without a dedicated foregr
 
 ## JSON configuration (R015)
 
-**Status: implemented.** Precedence (low → high): defaults → `$REX_ROOT/config.json` → `.rex/config.json` → CLI flags on `rex complete`.
+**Status: implemented.** Precedence (low → high): defaults → `$REX_ROOT/config.json` → `.rex/config.json`.
 
 Layout root: **`REX_ROOT`** (default `~/.rex`) — **sole product environment variable**. All other settings are JSON — [CONFIGURATION.md](CONFIGURATION.md). Bootstrap with `rex config init`.
 
@@ -192,18 +193,18 @@ Prerequisites for **`rex-agent`** dogfood (**R017–R018** Done). Design: [DEVEL
 
 ## R019 — Integration and E2E acceptance
 
-**Status: Done.** Extension workspace binding, `client_hints` on CLI/daemon wire, operator checklist in [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#8-r019-acceptance--live-model-operator-not-ci), and extension operator alignment with **`rex-agent`** (JSON setup hints, default agent workspace overlay, NDJSON **`tool`**/**`step`** cards).
+**Status: Done.** Workspace binding, `client_hints` on daemon wire, operator checklist in [OPERATOR_UX.md](OPERATOR_UX.md), and desktop alignment with **`rex-agent`** (JSON setup hints, default agent workspace overlay, stream **`tool`**/**`step`** cards).
 
-**Known gap:** none — plan-mode native tool loop on direct Ollama is covered by **`./scripts/verify_native_tools_live.sh`** ([NATIVE_TOOL_CALLING.md](NATIVE_TOOL_CALLING.md), [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) §8a). CI/stub paths still use interim JSON.
+**Known gap:** live native tool E2E scripts (`verify_native_tools_live.sh`) remain blocked pending desktop harness rewrite; CI/stub paths use interim JSON.
 
-**Follow-up:** opt-in automated live Ollama smoke (`ask` + brokered read/policy) — **R039** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). Plan-mode tool-loop E2E is **R038** (separate track).
+**Follow-up:** opt-in automated live Ollama smoke — **R039** — [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md). Plan-mode tool-loop E2E is **R038** (separate track).
 
 | Criterion | Evidence |
 |-----------|----------|
-| Extension sets `workspace.root` when auto-starting daemon | Primary `workspaceFolders[0]` |
-| Extension workspace bind merges **`rex-agent`** + approvals | [src/workspace/binding.ts](../src/workspace/binding.ts); `rex config init` operator template |
+| Desktop binds workspace from process cwd | [OPERATOR_UX.md](OPERATOR_UX.md) |
+| Operator template merges **`rex-agent`** + approvals | `rex config init` operator template |
 | **C1:** thin `client_hints`; reduce duplicate selection-in-prompt | Document interim double-count until migrated |
-| [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) with **live model** (not stub echo) | `ask`, `plan`, `agent` modes |
+| [OPERATOR_UX.md](OPERATOR_UX.md) with **live model** (not stub echo) | `ask`, `plan`, `agent` modes via desktop |
 | Optional: refresh [MVP_SPEC.md](MVP_SPEC.md) stub vs product table | When product agent is proven |
 
 ## Multi-active sidecars (R016 — open decision, **Could**)

@@ -4,8 +4,8 @@ Version: snapshot for research — align with repo docs under docs/ when impleme
 ================================================================================
 1. WHAT REX IS
 ================================================================================
-REX is a local development-assistance stack: Rust daemon (rex-daemon), VS Code
-extension (rex-vscode), CLI (rex), and a supervised Python sidecar (rex-agent)
+REX is a local development-assistance stack: Rust daemon (rex-daemon), Tauri
+desktop (rex + apps/rex-web), and a supervised Python sidecar (rex-agent)
 that implements the product software-engineering agent.
 
 Design principle: the sidecar REQUESTS; the daemon AUTHORIZES, assembles context,
@@ -20,9 +20,9 @@ Canonical hubs in the Rex repo:
 ================================================================================
 2. RUNTIME FLOW (ONE USER CHAT TURN)
 ================================================================================
-1) User types in VS Code chat (mode: ask | plan | agent).
-2) Extension builds prompt string (+ optional attachments, editor hints).
-3) CLI: rex complete → gRPC StreamInference on daemon UDS.
+1) User types in the desktop chat (mode: ask | plan | agent).
+2) Desktop builds prompt string (+ optional attachments, workspace hints).
+3) Desktop → UDS gRPC StreamInference on daemon.
 4) Daemon ContextPipeline (once per turn start):
    - Budget user prompt
    - Optionally strip extension C1 blocks (--- / File: / Selection:) when client_hints exist

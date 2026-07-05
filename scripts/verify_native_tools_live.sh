@@ -7,10 +7,10 @@
 # Daemon logs protocol as numeric enum (proto/rex/v1/rex.proto InferenceProtocol):
 #   1 = INFERENCE_PROTOCOL_NATIVE, 3 = INFERENCE_PROTOCOL_INTERIM_FALLBACK
 #
-# Blocked: public `rex complete` was removed; turns need a TUI or internal harness rewrite.
+# Blocked: public stream subprocess removed; use desktop operator path or rex-ui-harness.
 set -euo pipefail
 
-echo "verify_native_tools_live: blocked — public \`rex complete\` was removed; use \`rex\` / \`rex tui\` for operator dogfood." >&2
+echo "verify_native_tools_live: blocked — use bare \`rex\` (desktop) per docs/OPERATOR_UX.md or rex-ui-harness (docs/WEB_UI_AGENT_VALIDATION.md)." >&2
 exit 1
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

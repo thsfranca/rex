@@ -47,7 +47,7 @@ Operators on Mac who enable **managed oMLX** get **local MLX inference** optimiz
 - Modes: `managed` (primary Mac profile), `external`, `disabled`.
 - Mutual-exclusion validation with managed gateway.
 - Operator sizing guidance for long-context dev agent (model class vs unified memory).
-- Future opt-in live E2E proof (parallel to Ollama §8a in [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md)).
+- Future opt-in live E2E proof (parallel to Ollama path in [OPERATOR_UX.md](OPERATOR_UX.md)).
 
 ### Out
 
@@ -234,7 +234,7 @@ When `omlx.mode` is `managed`, Rex injects `openai_compat.base_url` → `http://
 | PR 2 | `inference.omlx` config schema + supervisor + extend `resolve_effective_openai_compat_base_url` + mutual-exclusion validate | **Done** |
 | PR 3 | oMLX `native_tools` defaults under `openai_compat` (no profile registry) | **Done** |
 | PR 4 | `rex omlx init\|doctor` + `$REX_ROOT/omlx/` templates | **Done** |
-| PR 5 | Opt-in live E2E script + [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) §8b | **Done** |
+| PR 5 | Opt-in live E2E script + [OPERATOR_UX.md](OPERATOR_UX.md) | **Done** |
 
 ## Cross-links
 

@@ -9,10 +9,10 @@
 #   ./scripts/verify_omlx_native_tools_live.sh [direct|managed|autostart]
 # Default scenario: direct (explicit openai_compat.base_url at http://127.0.0.1:8000/v1).
 #
-# Blocked: public `rex complete` was removed; turns need a TUI or internal harness rewrite.
+# Blocked: public stream subprocess removed; use desktop operator path or rex-ui-harness.
 set -euo pipefail
 
-echo "verify_omlx_native_tools_live: blocked — public \`rex complete\` was removed; use \`rex\` / \`rex tui\` for operator dogfood." >&2
+echo "verify_omlx_native_tools_live: blocked — use bare \`rex\` (desktop) per docs/OPERATOR_UX.md or rex-ui-harness (docs/WEB_UI_AGENT_VALIDATION.md)." >&2
 exit 1
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -7,10 +7,10 @@
 #
 # Defaults: http://127.0.0.1:11434/v1; model qwen2.5-coder:7b or llama3.2 (first available).
 #
-# Blocked: public `rex complete` was removed; turns need a TUI or internal harness rewrite.
+# Blocked: public stream subprocess removed; use desktop operator path or rex-ui-harness.
 set -euo pipefail
 
-echo "verify_ollama_live: blocked — public \`rex complete\` was removed; use \`rex\` / \`rex tui\` for operator dogfood." >&2
+echo "verify_ollama_live: blocked — use bare \`rex\` (desktop) per docs/OPERATOR_UX.md or rex-ui-harness (docs/WEB_UI_AGENT_VALIDATION.md)." >&2
 exit 1
 
 if [[ "${REX_OLLAMA_LIVE:-}" != "1" ]]; then
