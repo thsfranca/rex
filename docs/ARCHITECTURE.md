@@ -15,7 +15,7 @@ This document is the **software architecture description (SAD)** for REX: produc
 
 - Deliver a **REX-native development agent** (modes, policy, and future tool orchestration) so **cost and performance** stay under **daemon** control.
 - Centralize **streaming inference**, **layered caching**, and **capability-aware context shaping** in [`rex-daemon`](../crates/rex-daemon).
-- Keep **clients thin** (CLI, scripts): one stable **gRPC** contract over **UDS** (`rex.v1`).
+- Keep **clients thin** (desktop app): one stable **gRPC** contract over **UDS** (`rex.v1`).
 - Run the **development agent** in a **supervised sidecar**; use **inference adapters** (HTTP OpenAI-compat, mock, legacy Cursor CLI) as **broker mechanisms** only. See [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md), [MVP_SPEC.md](MVP_SPEC.md).
 
 Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md).
@@ -55,15 +55,12 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 ```mermaid
 flowchart LR
  dev[Developer]
- cli[rex_cli]
- ci[CIOrScripts]
+ desktop[rex_desktop]
  rex[REX_daemon]
  side[Agent_sidecar]
  llm[HTTP_LLM_backend]
- dev --> cli
- dev --> ci
- cli -->|"rex_v1_UDS"| rex
- ci -->|"rex_v1_UDS"| rex
+ dev --> desktop
+ desktop -->|"rex_v1_UDS"| rex
  rex -->|supervise| side
  side -->|rex_sidecar_v1| rex
  rex -->|broker_inference| llm
@@ -71,9 +68,9 @@ flowchart LR
 
 | Actor | Interaction |
 |---|---|
-| Developer | Uses terminal or automation; owns approvals for guarded actions. |
-| **`rex` CLI** | Thin client; **`rex complete --format ndjson`** subprocess contract ([ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md)). |
-| CI / automation | **Mock** runtime and/or stub sidecar — harness only. |
+| Developer | Uses desktop app; owns approvals for guarded actions. |
+| **Desktop app** | Thin client over UDS gRPC ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)). |
+| CI / harness | **Mock** runtime and/or stub sidecar — test paths only. |
 | Agent sidecar | Reasoning loop + tool **requests**; daemon **brokers** inference and host reach. |
 | HTTP LLM backend | OpenAI-compatible API invoked by daemon on sidecar’s behalf ([ADAPTERS.md](ADAPTERS.md)). |
 
@@ -83,10 +80,12 @@ flowchart LR
 
 | Container | Responsibility | Status |
 |---|---|---|
-| `rex` | Unified CLI: `daemon`, `status`, `complete` (NDJSON for scripts). | `implemented` |
-| `rex-cli` / `rex-daemon` | Compatibility shims delegating to `rex` libraries. | `implemented` |
+| `rex` | Unified entry: opens desktop; config/proto/sidecar helpers. | `implemented` |
+| `rex-desktop` | Tauri backend: UDS proxy, daemon lifecycle, menu bar. | `implemented` |
+| `apps/rex-web` | React presentation client. | `implemented` |
+| `rex-stream-ui` | Stream event projection for desktop shell. | `implemented` |
 | `rex-config` | JSON config load/merge. | `implemented` |
-| `rex-daemon` | Session authority: stream contract, pipeline, cache, **broker** for sidecar inference/tools. | `implemented` |
+| `rex-daemon` | Session authority: stream contract, pipeline, cache, broker; legacy shim binary. | `implemented` |
 | `rex-sidecar-stub` | Harness sidecar (CI / `rex config init` default). | `implemented` |
 | `rex-agent` | Product LangGraph sidecar — [sidecars/rex-agent/](../sidecars/rex-agent/). | `implemented` |
 | Agent sidecar (generic) | Supervised **process** + `rex.sidecar.v1`; pluggable per [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). | `implemented` — [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [MVP_SPEC.md](MVP_SPEC.md) |
