@@ -1,0 +1,14 @@
+:root {
+  --rex-duration-ambient: 400ms;
+  --rex-duration-active: 250ms;
+  --rex-duration-modal: 350ms;
+  --rex-ease-ambient: cubic-bezier(0.33, 1, 0.68, 1);
+  --rex-ease-active: cubic-bezier(0.25, 1, 0.5, 1);
+  --rex-spring-modal-stiffness: 300;
+  --rex-spring-modal-damping: 20;
+  --rex-z-base: 0;
+  --rex-z-raised: 10;
+  --rex-z-overlay: 100;
+  --rex-z-modal: 1000;
+  --rex-z-debug: 9999;
+}

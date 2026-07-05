@@ -136,6 +136,17 @@ async function assertMotion(region: string): Promise<StepResult> {
   return { step: `assert_motion ${region}`, pass: Boolean(pass) };
 }
 
+async function assertCanvasTier(expected: string): Promise<StepResult> {
+  const session = await import("./session.js").then((m) => m.getSession());
+  const tier = await pageEvaluate(
+    session,
+    () => document.querySelector('[data-testid="ambient"]')?.getAttribute("data-motion-tier") ?? "",
+    null
+  );
+  const pass = tier === expected;
+  return { step: `assert_canvas_tier ${expected}`, pass, detail: { tier } };
+}
+
 async function runBuildSuite(): Promise<StepResult[]> {
   return [{ step: "build-only gate", pass: true }];
 }
@@ -156,6 +167,7 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
 
   await pageWaitForSelector(session, "#status-dot.working", 30_000);
   results.push(await assertMotion("#status-dot"));
+  results.push(await assertCanvasTier("cinematic"));
 
   await pageWaitForText(session, "mock: hello", 60_000);
   results.push({ step: "wait transcript mock hello", pass: true });
@@ -166,6 +178,17 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
   results.push(
     await assertToken("#status-dot", "--rex-status-success", "background-color")
   );
+
+  await pageEvaluate(session, () => {
+    window.resizeTo(600, 800);
+    window.dispatchEvent(new Event("resize"));
+  }, null);
+  results.push(await assertLayout('[data-testid="shell"]', "grid"));
+
+  await pagePress(session, "Meta+k");
+  await pageWaitForSelector(session, '[data-testid="command-palette"]', 10_000);
+  results.push({ step: "open command palette", pass: true });
+  await pagePress(session, "Escape");
 
   await gotoScenario("approval_required");
   results.push({ step: "goto approval_required", pass: true });

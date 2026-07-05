@@ -39,8 +39,13 @@ Failures surface in merge gate **`ci-checks`** as `UI_FAIL`. Local reproduction 
 4. `ui_send_keys` — selector `[data-testid=composer-input]`, keys `hello{Enter}` (or fill + Enter via separate tools)
 5. `ui_wait_for` — text `mock: hello` in assistant response (mock stream)
 6. `ui_wait_for` — status label `Ready` (`#status-label`, not footer copy)
-7. `ui_goto_scenario` → `approval_required` — real mock tool approval via `__approval_probe__`
-8. `ui_close`
+7. Narrow viewport layout assert + `⌘K` command palette smoke
+8. `ui_goto_scenario` → `approval_required` — real mock tool approval via `__approval_probe__`
+9. `ui_close`
+
+## Component tests (build leg)
+
+`apps/rex-web` runs Vitest + Testing Library via `npm test` in the `ui-verify` build matrix leg (primitives: Button, Modal, SegmentedControl).
 
 ## Observability (opt-in debug)
 

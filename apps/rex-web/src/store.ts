@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { ChatMessage, PendingApproval, SessionSummary, TimelineTask, TurnPhase } from "./types";
+import type { ComposerMode } from "./types";
 
 interface AppState {
   phase: TurnPhase;
@@ -9,6 +10,7 @@ interface AppState {
   messages: ChatMessage[];
   timeline: TimelineTask[];
   draft: string;
+  composerMode: ComposerMode;
   error: string | null;
   pendingApproval: PendingApproval | null;
   sessionPickerOpen: boolean;
@@ -17,6 +19,7 @@ interface AppState {
   lastSubmitError: string | null;
   composerBusy: boolean;
   setDraft: (draft: string) => void;
+  setComposerMode: (mode: ComposerMode) => void;
   setPhase: (phase: TurnPhase) => void;
   setStatusLabel: (label: string) => void;
   setWorkspaceRoot: (root: string | null) => void;
@@ -47,6 +50,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   messages: [],
   timeline: [],
   draft: "",
+  composerMode: "agent",
   error: null,
   pendingApproval: null,
   sessionPickerOpen: false,
@@ -55,6 +59,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   lastSubmitError: null,
   composerBusy: false,
   setDraft: (draft) => set({ draft }),
+  setComposerMode: (composerMode) => set({ composerMode }),
   setPhase: (phase) => {
     const statusLabel =
       phase === "generating" || phase === "tool_running"
