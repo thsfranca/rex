@@ -47,9 +47,8 @@ rex config init
 # Edit $REX_ROOT/config.json — inference.openai_compat + sidecars.active=agent (binary rex-agent)
 rex config validate
 cargo build --workspace
-rex             # interactive desktop workspace (ensures daemon)
-cd apps/rex-web && npm install && npm run build   # production web UI bundle (required before rex / tauri dev)
-cargo build -p rex
+make run        # rebuild web UI + rex, launch desktop (macOS)
+# Or manually: cd apps/rex-web && npm install && npm run build; cargo build -p rex; rex
 ```
 
 **Current focus:** Web UI program **W100–W108** — [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md). Running **`rex`** opens the Tauri desktop app and ensures the daemon. Install with **`./scripts/install-cli.sh`**. Agent UI validation: **rex-ui-harness** MCP — `./scripts/setup_ui_probe_env.sh`, [fixtures/ui_probe/README.md](../fixtures/ui_probe/README.md).

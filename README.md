@@ -75,6 +75,12 @@ cd apps/rex-web && npm ci && npm run build && cd -
 3) Launch the desktop app (macOS):
 
 ```bash
+make run
+```
+
+Or step by step after the web UI build:
+
+```bash
 cargo run -p rex --
 ```
 
