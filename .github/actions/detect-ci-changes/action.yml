@@ -10,6 +10,9 @@ outputs:
   guidelines_changed:
     description: Guideline conformance paths changed.
     value: ${{ steps.filter.outputs.guidelines_changed }}
+  ui_verify_changed:
+    description: Web UI probe and harness paths changed.
+    value: ${{ steps.filter.outputs.ui_verify_changed }}
   rust_codeql_changed:
     description: Rust source paths changed (CodeQL).
     value: ${{ steps.filter.outputs.rust_codeql_changed }}
@@ -25,6 +28,9 @@ outputs:
   guidelines_relevant:
     description: Whether guidelines-verify should run.
     value: ${{ steps.relevance.outputs.guidelines_relevant }}
+  ui_relevant:
+    description: Whether ui-verify should run.
+    value: ${{ steps.relevance.outputs.ui_relevant }}
   rust_codeql_relevant:
     description: Whether CodeQL rust analysis should run on path-filtered events.
     value: ${{ steps.relevance.outputs.rust_codeql_relevant }}
@@ -67,6 +73,12 @@ runs:
             - 'scripts/ci/guidelines/**'
             - 'scripts/ci/run_guidelines_verify.sh'
             - 'scripts/ci/test_guidelines_checks.sh'
+          ui_verify_changed:
+            - 'apps/rex-web/**'
+            - 'crates/rex-ui-harness/**'
+            - 'crates/rex-desktop/**'
+            - 'fixtures/ui_probe/**'
+            - 'scripts/ci/run_ui_verify.sh'
           rust_codeql_changed:
             - 'crates/**'
             - 'proto/**'
@@ -80,6 +92,7 @@ runs:
         RUST_VERIFY_CHANGED: ${{ steps.filter.outputs.rust_verify_changed }}
         SIDECAR_CHANGED: ${{ steps.filter.outputs.sidecar_changed }}
         GUIDELINES_CHANGED: ${{ steps.filter.outputs.guidelines_changed }}
+        UI_VERIFY_CHANGED: ${{ steps.filter.outputs.ui_verify_changed }}
         RUST_CODEQL_CHANGED: ${{ steps.filter.outputs.rust_codeql_changed }}
         PYTHON_CODEQL_CHANGED: ${{ steps.filter.outputs.python_codeql_changed }}
       run: bash "$(cd "${GITHUB_ACTION_PATH}/../../.." && pwd)/scripts/ci/evaluate_ci_relevance.sh"

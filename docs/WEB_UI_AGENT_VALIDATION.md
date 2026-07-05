@@ -19,6 +19,17 @@ Register MCP: `node crates/rex-ui-harness/dist/index.js` with cwd = repo root.
 
 Use `ui_open { "mode": "static" }` for the HTML fixture only (CI / layout tokens without daemon).
 
+## CI verify
+
+Path-aware **`ui-verify`** in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) runs when Web UI paths change:
+
+| Matrix leg | Runner | Command |
+|------------|--------|---------|
+| static | `ubuntu-latest` | `./scripts/ci/run_ui_verify.sh --mode static` |
+| desktop | `macos-latest` | `./scripts/ci/run_ui_verify.sh --mode desktop` |
+
+Failures surface in merge gate **`ci-checks`** as `UI_FAIL`. Local reproduction uses the same script. See [CI.md](CI.md#ui-verify-path-aware).
+
 ## Minimum scenario bundle (desktop)
 
 1. `ui_open`

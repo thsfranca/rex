@@ -23,6 +23,8 @@ run_gate_case() {
   local expected_signal_line="$6"
   local guidelines_res="${7:-success}"
   local guidelines_rel="${8:-true}"
+  local ui_res="${9:-success}"
+  local ui_rel="${10:-true}"
 
   local tmp_dir
   tmp_dir="$(mktemp -d)"
@@ -35,9 +37,11 @@ run_gate_case() {
     RUST_RELEVANT="${rust_rel}" \
     SIDECAR_RELEVANT="${sidecar_rel}" \
     GUIDELINES_RELEVANT="${guidelines_rel}" \
+    UI_RELEVANT="${ui_rel}" \
     RUST_RESULT="${rust_res}" \
     SIDECAR_RESULT="${sidecar_res}" \
     GUIDELINES_RESULT="${guidelines_res}" \
+    UI_RESULT="${ui_res}" \
     GITHUB_RUN_ID="local-test-run-id" \
     GITHUB_STEP_SUMMARY="${summary_file}" \
     bash "${GATE_SCRIPT}" 2>&1
@@ -61,6 +65,7 @@ run_gate_case() {
   assert_contains "${summary_contents}" "- rust-verify: ${rust_res}"
   assert_contains "${summary_contents}" "- sidecar-verify: ${sidecar_res}"
   assert_contains "${summary_contents}" "- guidelines-verify: ${guidelines_res}"
+  assert_contains "${summary_contents}" "- ui-verify: ${ui_res}"
   assert_contains "${summary_contents}" "- run_id: local-test-run-id"
 
   rm -rf "${tmp_dir}"
@@ -74,5 +79,7 @@ run_gate_case "false" "false" "success" "success" 0 "::notice::Top-level CI gate
 run_gate_case "true" "false" "success" "skipped" 0 "::notice::Top-level CI gate passed."
 run_gate_case "false" "false" "skipped" "skipped" 0 "::notice::Top-level CI gate passed." "skipped" "false"
 run_gate_case "true" "true" "success" "success" 1 "CI_SIGNAL code=GUIDELINES_FAIL" "failure"
+run_gate_case "false" "false" "skipped" "skipped" 1 "CI_SIGNAL code=UI_FAIL" "skipped" "false" "failure" "true"
+run_gate_case "false" "false" "skipped" "skipped" 0 "::notice::Top-level CI gate passed." "skipped" "false" "skipped" "false"
 
 echo "enforce_ci_gate contract tests passed."

@@ -29,6 +29,12 @@ guidelines_changed:
   - 'scripts/ci/guidelines/**'
   - 'scripts/ci/run_guidelines_verify.sh'
   - 'scripts/ci/test_guidelines_checks.sh'
+ui_verify_changed:
+  - 'apps/rex-web/**'
+  - 'crates/rex-ui-harness/**'
+  - 'crates/rex-desktop/**'
+  - 'fixtures/ui_probe/**'
+  - 'scripts/ci/run_ui_verify.sh'
 rust_codeql_changed:
   - 'crates/**'
   - 'proto/**'
