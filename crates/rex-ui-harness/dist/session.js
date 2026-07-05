@@ -1,7 +1,7 @@
 import { PluginClient, TauriPage, TauriProcessManager, } from "@srsholmes/tauri-playwright";
 import { harnessDesktopCwd, resolveDesktopBinary, resolveRexBinary, resetProbeDaemon, stopHarnessDesktopApps, } from "./desktopProcess.js";
-import { ensureViteDevServer, stopViteDevServer } from "./devServer.js";
-import { pageFill, pagePress, pageWaitForSelector, pageWaitForText, } from "./page.js";
+import { ensureWebUiServer, stopWebUiServer } from "./devServer.js";
+import { pageFill, pageFocus, pagePress, pageWaitForSelector, pageWaitForText, readObservabilitySnapshot, } from "./page.js";
 let session = null;
 let staticBrowser = null;
 let staticContext = null;
@@ -41,7 +41,7 @@ async function openDesktopSession(cfg) {
     process.env.TAURI_PLAYWRIGHT_SOCKET = cfg.desktopSocket;
     await stopHarnessDesktopApps(cfg.repoRoot);
     await resetProbeDaemon(cfg.rexRoot);
-    await ensureViteDevServer(cfg.repoRoot);
+    await ensureWebUiServer(cfg.repoRoot);
     desktopRepoRoot = cfg.repoRoot;
     const harnessCwd = harnessDesktopCwd();
     const rexBin = resolveRexBinary(cfg.repoRoot);
@@ -70,7 +70,7 @@ export async function closeSession() {
     pluginClient = null;
     processManager?.stop();
     processManager = null;
-    await stopViteDevServer();
+    await stopWebUiServer();
     if (desktopRepoRoot) {
         await stopHarnessDesktopApps(desktopRepoRoot);
         desktopRepoRoot = null;
@@ -108,8 +108,19 @@ export async function gotoScenario(scenario) {
             await pageWaitForSelector(s, "#status-dot.working", 30_000);
             break;
         }
-        case "approval_required":
-            throw new Error("approval_required needs agent.approvals_enabled in probe config — use static fixture");
+        case "approval_required": {
+            await pageFocus(s, '[data-testid="composer-input"]');
+            await pageFill(s, '[data-testid="composer-input"]', "__approval_probe__");
+            await pagePress(s, "Enter");
+            try {
+                await pageWaitForSelector(s, '[data-testid="modal-backdrop"]', 30_000);
+            }
+            catch (err) {
+                const obs = await readObservabilitySnapshot(s);
+                throw new Error(`${err instanceof Error ? err.message : String(err)}\nUI observability: ${JSON.stringify(obs)}`);
+            }
+            break;
+        }
         case "error":
         case "history-fetch":
             throw new Error(`${scenario} scenario is static-fixture only`);

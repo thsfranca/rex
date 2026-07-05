@@ -3,7 +3,7 @@ import path from "node:path";
 import { findRepoRoot, loadConfig } from "./config.js";
 import { ciede2000, parseCssColor } from "./color.js";
 import { closeSession, gotoScenario, openSession } from "./session.js";
-import { pageCssTokenAssert, pageEvaluate, pageLayout, pageLocatorScreenshot, pageFill, pageFocus, pagePress, pageWaitForSelector, pageWaitForText, } from "./page.js";
+import { pageCssTokenAssert, pageClick, pageEvaluate, pageLayout, pageLocatorScreenshot, pageFill, pageFocus, pagePress, pageWaitForSelector, pageWaitForText, } from "./page.js";
 async function pageEvaluateStatusLabel(session) {
     return pageEvaluate(session, () => document.querySelector("#status-label")?.textContent?.trim() ?? "", null);
 }
@@ -135,6 +135,11 @@ async function runDesktopSuite(cfg) {
     await waitForStatusLabel(session, "Ready", 60_000);
     results.push({ step: "wait status ready after hello", pass: true });
     results.push(await assertToken("#status-dot", "--rex-status-success", "background-color"));
+    await gotoScenario("approval_required");
+    results.push({ step: "goto approval_required", pass: true });
+    await pageWaitForSelector(session, '[data-testid="modal"]', 30_000);
+    await pageClick(session, '[data-testid="approval-approve"]');
+    results.push({ step: "approve modal", pass: true });
     await closeSession();
     results.push({ step: "close", pass: true });
     return results;

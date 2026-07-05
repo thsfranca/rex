@@ -1,20 +1,11 @@
 import { useEffect, useMemo } from "react";
 import { ApprovalModal } from "./components/ApprovalModal";
-import { AmbientCanvas } from "./components/AmbientCanvas";
 import { Composer } from "./components/Composer";
 import { MotionStatusDot } from "./components/Motion";
-import { SessionPicker } from "./components/SessionPicker";
 import { Timeline } from "./components/Timeline";
 import { Transcript } from "./components/Transcript";
 import { UiObservability } from "./components/UiObservability";
-import {
-  ensureDaemon,
-  fetchSessionEvents,
-  respondToToolApproval,
-  sessionEventsToMessages,
-  subscribeDaemonLifecycle,
-  subscribeMenuAction,
-} from "./ipc";
+import { ensureDaemon, respondToToolApproval, subscribeDaemonLifecycle } from "./ipc";
 import {
   buildObservabilitySnapshot,
   publishObservabilitySnapshot,
@@ -29,8 +20,6 @@ export default function App() {
   const timeline = useAppStore((s) => s.timeline);
   const error = useAppStore((s) => s.error);
   const pendingApproval = useAppStore((s) => s.pendingApproval);
-  const sessionPickerOpen = useAppStore((s) => s.sessionPickerOpen);
-  const sessions = useAppStore((s) => s.sessions);
   const harnessSessionId = useAppStore((s) => s.harnessSessionId);
   const streamEvents = useAppStore((s) => s.streamEvents);
   const lastSubmitError = useAppStore((s) => s.lastSubmitError);
@@ -65,8 +54,7 @@ export default function App() {
   }, [observabilitySnapshot]);
 
   useEffect(() => {
-    let unlistenLifecycle: (() => void) | undefined;
-    let unlistenMenu: (() => void) | undefined;
+    let unlisten: (() => void) | undefined;
 
     void (async () => {
       try {
@@ -77,7 +65,7 @@ export default function App() {
         useAppStore.getState().setError(message);
       }
 
-      unlistenLifecycle = await subscribeDaemonLifecycle((event) => {
+      unlisten = await subscribeDaemonLifecycle((event) => {
         const store = useAppStore.getState();
         switch (event.kind) {
           case "ready":
@@ -92,31 +80,10 @@ export default function App() {
             break;
         }
       });
-
-      unlistenMenu = await subscribeMenuAction(async (action) => {
-        const store = useAppStore.getState();
-        if (action === "session_new") {
-          store.newSession();
-          return;
-        }
-        if (action === "session_continue") {
-          store.setSessionPickerOpen(true);
-          return;
-        }
-        if (action === "session_last" && store.harnessSessionId) {
-          const result = await fetchSessionEvents(store.harnessSessionId);
-          const hydrated = sessionEventsToMessages(result.events).map((message, index) => ({
-            id: `h-${index}`,
-            ...message,
-          }));
-          store.hydrateMessages(hydrated);
-        }
-      });
     })();
 
     return () => {
-      unlistenLifecycle?.();
-      unlistenMenu?.();
+      unlisten?.();
     };
   }, []);
 
@@ -136,7 +103,6 @@ export default function App() {
 
   return (
     <>
-      <AmbientCanvas phase={phase} />
       <div className="shell" data-testid="shell">
         <header className="header" data-testid="header">
           <MotionStatusDot working={working} id="status-dot" testId="status-dot" />
@@ -156,23 +122,6 @@ export default function App() {
           pending={pendingApproval}
           onApprove={() => void handleApproval(true)}
           onDeny={() => void handleApproval(false)}
-        />
-      ) : null}
-      {sessionPickerOpen ? (
-        <SessionPicker
-          sessions={sessions}
-          onSelect={(sessionId) => {
-            void fetchSessionEvents(sessionId).then((result) => {
-              const hydrated = sessionEventsToMessages(result.events).map((message, index) => ({
-                id: `h-${index}`,
-                ...message,
-              }));
-              useAppStore.getState().hydrateMessages(hydrated);
-              useAppStore.getState().setHarnessSessionId(sessionId);
-              useAppStore.getState().setSessionPickerOpen(false);
-            });
-          }}
-          onClose={() => useAppStore.getState().setSessionPickerOpen(false)}
         />
       ) : null}
       <UiObservability snapshot={observabilitySnapshot} />
