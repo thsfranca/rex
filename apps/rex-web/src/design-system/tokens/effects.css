@@ -1,0 +1,11 @@
+:root {
+  --rex-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --rex-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --rex-shadow-composer: 0 -12px 40px rgba(0, 0, 0, 0.38);
+  --rex-shadow-overlay: 0 24px 64px rgba(0, 0, 0, 0.48);
+  --rex-gradient-base: radial-gradient(1200px 600px at 10% -10%, var(--rex-accent-muted), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(110, 231, 168, 0.06), transparent 50%),
+    var(--rex-surface-base);
+  --rex-glass-bg: color-mix(in srgb, var(--rex-surface-raised) 82%, transparent);
+  --rex-glass-border: color-mix(in srgb, var(--rex-hairline-default) 70%, transparent);
+}

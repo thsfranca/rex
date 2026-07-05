@@ -95,6 +95,13 @@ export async function gotoScenario(scenario) {
             }
             break;
         }
+        case "error": {
+            await pageFocus(s, '[data-testid="composer-input"]');
+            await pageFill(s, '[data-testid="composer-input"]', "__error_probe__");
+            await pagePress(s, "Enter");
+            await pageWaitForSelector(s, '[data-testid="error-banner"]', 30_000);
+            break;
+        }
         default:
             throw new Error(`Unknown scenario: ${scenario}`);
     }

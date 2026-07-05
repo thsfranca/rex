@@ -1,5 +1,6 @@
 @import "./tokens.css";
 @import "./design-system/layout/breakpoints.css";
+@import "./design-system/layout/shell-chrome.css";
 @import "./design-system/primitives.css";
 
 textarea {
@@ -8,7 +9,7 @@ textarea {
   font-family: var(--rex-font-ui-base);
   font-size: var(--rex-font-size-ui-base);
   color: var(--rex-text-primary);
-  background: var(--rex-surface-base);
+  background: color-mix(in srgb, var(--rex-surface-base) 50%, transparent);
   border: 1px solid var(--rex-hairline-default);
   border-radius: var(--rex-radius-md);
   padding: var(--rex-space-md);
@@ -17,22 +18,6 @@ textarea {
 textarea:focus {
   outline: 2px solid var(--rex-hairline-focus);
   outline-offset: 1px;
-}
-
-.message-user {
-  color: var(--rex-text-primary);
-  margin-bottom: var(--rex-space-md);
-}
-
-.message-assistant {
-  color: var(--rex-text-secondary);
-  margin-bottom: var(--rex-space-md);
-}
-
-.message-assistant pre {
-  border-left: 3px solid var(--rex-hairline-focus);
-  padding-left: var(--rex-space-md);
-  overflow-x: auto;
 }
 
 .composer-row {

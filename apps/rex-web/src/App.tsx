@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ShellGrid, Text } from "./design-system";
+import { AppHeader } from "./components/AppHeader";
 import { ApprovalModal } from "./components/ApprovalModal";
 import { AmbientCanvas } from "./components/AmbientCanvas";
 import { CommandPalette, ErrorBanner, type CommandAction } from "./components/CommandPalette";
 import { Composer } from "./components/Composer";
-import { MotionStatusDot } from "./components/Motion";
-import { SessionPicker } from "./components/SessionPicker";
 import { StatusPanel } from "./components/StatusPanel";
+import { SessionPicker } from "./components/SessionPicker";
 import { Timeline } from "./components/Timeline";
 import { Transcript } from "./components/Transcript";
 import { UiObservability } from "./components/UiObservability";
@@ -58,6 +58,7 @@ export default function App() {
   const streamEvents = useAppStore((s) => s.streamEvents);
   const lastSubmitError = useAppStore((s) => s.lastSubmitError);
   const composerBusy = useAppStore((s) => s.composerBusy);
+  const composerMode = useAppStore((s) => s.composerMode);
 
   const refreshSessions = useCallback(async () => {
     try {
@@ -183,55 +184,65 @@ export default function App() {
     useAppStore.getState().setPhase("generating");
   };
 
-  const commandActions: CommandAction[] = [
-    {
-      id: "new-session",
-      label: "New session",
-      run: () => useAppStore.getState().newSession(),
-    },
-    {
-      id: "continue",
-      label: "Continue session",
-      run: () => {
-        void refreshSessions();
-        useAppStore.getState().setSessionPickerOpen(true);
+  const commandActions: CommandAction[] = useMemo(
+    () => [
+      {
+        id: "new-session",
+        label: "New session",
+        run: () => useAppStore.getState().newSession(),
       },
-    },
-    {
-      id: "last-session",
-      label: "Open last session",
-      run: () => {
-        const id = useAppStore.getState().harnessSessionId;
-        if (id) void hydrateSession(id);
+      {
+        id: "continue",
+        label: "Continue session",
+        run: () => {
+          void refreshSessions();
+          useAppStore.getState().setSessionPickerOpen(true);
+        },
       },
-    },
-    {
-      id: "status",
-      label: "Show system status",
-      run: () => {
-        void getSystemStatus().then(setSystemStatus);
-        setStatusPanelOpen(true);
+      {
+        id: "last-session",
+        label: "Open last session",
+        run: () => {
+          const id = useAppStore.getState().harnessSessionId;
+          if (id) void hydrateSession(id);
+        },
       },
-    },
-    {
-      id: "reload",
-      label: "Reload window",
-      shortcut: "View menu",
-      run: () => window.location.reload(),
-    },
-  ];
+      {
+        id: "status",
+        label: "Show system status",
+        run: () => {
+          void getSystemStatus().then(setSystemStatus);
+          setStatusPanelOpen(true);
+        },
+      },
+      {
+        id: "toggle-debug",
+        label: debugEnabled ? "Hide debug overlay" : "Show debug overlay",
+        run: () => setDebugEnabled((enabled) => !enabled),
+      },
+      {
+        id: "reload",
+        label: "Reload window",
+        shortcut: "View menu",
+        run: () => window.location.reload(),
+      },
+    ],
+    [debugEnabled, refreshSessions]
+  );
 
   return (
     <>
       <AmbientCanvas phase={phase} />
       <ShellGrid
         header={
-          <>
-            <MotionStatusDot working={working} id="status-dot" testId="status-dot" />
-            <span id="status-label" style={{ marginLeft: "var(--rex-space-sm)" }}>
-              {statusLabel}
-            </span>
-          </>
+          <AppHeader
+            workspaceRoot={workspaceRoot}
+            mode={composerMode}
+            statusLabel={statusLabel}
+            working={working}
+            hasError={Boolean(error)}
+            onOpenCommands={() => setCommandPaletteOpen(true)}
+          />
         }
         transcript={<Transcript messages={messages} />}
         timeline={<Timeline tasks={timeline} phase={phase} />}

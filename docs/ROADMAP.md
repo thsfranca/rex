@@ -41,7 +41,7 @@ flowchart LR
  langfuseImpl --> v1
 ```
 
-**Current focus:** Web UI pivot **W100–W106** ([WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)); **W100** Done; **R090–R096** Cancelled.
+**Current focus:** Web UI pivot **W100–W118** ([WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)); **W100** Done; **R090–R096** Cancelled.
 
 ## Now — stable baseline
 
@@ -67,9 +67,10 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 | 6b | Session naming + `rex --continue` / `rex --last` | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#session-model), [ADR 0040](architecture/decisions/0040-harness-session-transcript-authority.md) | **Done** |
 | 6c | **R090–R096** — TUI visual identity v2 | **Won't (now)** | — | Superseded by **W100+** — [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md) | **Cancelled** |
 | 6d | **W100** — rex-ui-harness MCP | **Must** | — | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | **Done** |
-| 6e | **W101–W104** — Tauri shell, chat MVP, CLI launch, TUI removal | **Must** | — | [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md) | **Planned** |
-| 6f | **W105–W108** — Motion, approval, session picker, WebGL | **Should** | — | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | **Planned** |
+| 6e | **W101–W104** — Tauri shell, chat MVP, CLI launch, TUI removal | **Must** | — | [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md) | **Done** |
+| 6f | **W105–W108** — Motion, approval, session picker, WebGL | **Should** | — | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | **Done** |
 | 6g | **W111** — path-aware UI verify CI | **Should** | — | [WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md), [CI.md](CI.md) | **Done** |
+| 6h | **W112–W118** — Design system module, operator chrome, UI test expansion | **Should** | — | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md) | **Done** |
 | 7 | **R074** — optional LLM status narrator | **Could** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Open — prefer **after R080** |
 | 5 | **R067** — intent-aware retrieval for short prompts | **Should** | — | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) | Open |
 | 6 | **R068** — ask answer-first prompt policy | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |

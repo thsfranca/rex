@@ -55,6 +55,18 @@ pub fn stream_event_from_grpc(
             detail: chunk.detail.clone(),
             sequence: optional_u64(chunk.sequence),
         }),
+        "error" => Some(StreamEvent::Error {
+            message: if chunk.text.is_empty() {
+                chunk.summary.clone()
+            } else {
+                chunk.text.clone()
+            },
+            code: if chunk.phase.is_empty() {
+                "stream_error".to_string()
+            } else {
+                chunk.phase.clone()
+            },
+        }),
         _ => None,
     }
 }
@@ -90,5 +102,21 @@ mod tests {
         };
         let event = stream_event_from_grpc(&chunk).unwrap();
         assert!(matches!(event, StreamEvent::Chunk { text, .. } if text == "hi"));
+    }
+
+    #[test]
+    fn maps_error_response() {
+        let chunk = StreamInferenceResponse {
+            text: "boom".to_string(),
+            index: 2,
+            done: false,
+            event: "error".to_string(),
+            phase: "mock_error".to_string(),
+            ..Default::default()
+        };
+        let event = stream_event_from_grpc(&chunk).unwrap();
+        assert!(
+            matches!(event, StreamEvent::Error { message, code } if message == "boom" && code == "mock_error")
+        );
     }
 }

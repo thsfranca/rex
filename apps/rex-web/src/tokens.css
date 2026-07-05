@@ -10,42 +10,20 @@ body {
   font-size: var(--rex-font-size-ui-base);
   line-height: var(--rex-line-height-ui);
   color: var(--rex-text-primary);
-  background: var(--rex-surface-base);
+  background: var(--rex-gradient-base);
+  min-height: 100vh;
 }
 
 .shell {
   /* Layout defined in design-system/layout/breakpoints.css (.rex-shell) */
 }
 
-.header {
-  grid-column: 1 / -1;
-  padding: var(--rex-space-md);
-  background: var(--rex-surface-raised);
-  border-bottom: 1px solid var(--rex-hairline-default);
-}
-
-.transcript {
-  padding: var(--rex-space-md);
-}
-
-.timeline {
-  padding: var(--rex-space-md);
-  background: var(--rex-surface-raised);
-  border-left: 1px solid var(--rex-hairline-default);
-}
-
-.composer {
-  grid-column: 1 / -1;
-  padding: var(--rex-space-md);
-  background: var(--rex-surface-raised);
-  border-top: 1px solid var(--rex-hairline-default);
-}
-
+.header,
+.transcript,
+.timeline,
+.composer,
 .footer {
-  grid-column: 1 / -1;
-  padding: var(--rex-space-sm) var(--rex-space-md);
-  color: var(--rex-text-secondary);
-  border-top: 1px solid var(--rex-hairline-default);
+  /* Chrome in design-system/layout/shell-chrome.css */
 }
 
 .status-dot {

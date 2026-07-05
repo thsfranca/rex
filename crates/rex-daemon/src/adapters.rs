@@ -104,6 +104,7 @@ pub fn active_model_id_from_config() -> String {
 pub struct MockInferenceRuntime;
 
 const APPROVAL_PROBE_PROMPT: &str = "__approval_probe__";
+const ERROR_PROBE_PROMPT: &str = "__error_probe__";
 
 fn mock_approval_probe_chunks() -> Vec<Result<StreamInferenceResponse, Status>> {
     let token = crate::tool_approval::register_pending(
@@ -129,11 +130,25 @@ fn mock_approval_probe_chunks() -> Vec<Result<StreamInferenceResponse, Status>> 
     ]
 }
 
+fn mock_error_probe_chunks() -> Vec<Result<StreamInferenceResponse, Status>> {
+    vec![Ok(StreamInferenceResponse {
+        text: "Probe error: mock inference failed".into(),
+        index: 0,
+        done: false,
+        event: "error".into(),
+        phase: "mock_error".into(),
+        ..Default::default()
+    })]
+}
+
 #[tonic::async_trait]
 impl InferenceRuntime for MockInferenceRuntime {
     async fn build_chunks(&self, prompt: &str) -> Vec<Result<StreamInferenceResponse, Status>> {
         if prompt.contains(APPROVAL_PROBE_PROMPT) {
             return mock_approval_probe_chunks();
+        }
+        if prompt.contains(ERROR_PROBE_PROMPT) {
+            return mock_error_probe_chunks();
         }
         let text = build_mock_output(prompt);
         let content_chunks = chunk_output(&text, STREAM_CHUNK_MAX_CHARS);
