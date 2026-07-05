@@ -1,7 +1,7 @@
 import createREGL from "regl";
 import { useEffect, useRef } from "react";
 import ambientFrag from "../design-system/canvas/shaders/ambient.frag?raw";
-import { useMotionOrchestrator } from "../design-system/motion/orchestrator";
+import { useDecorativeMotionEnabled, useMotionOrchestrator } from "../design-system/motion/orchestrator";
 import type { TurnPhase } from "../types";
 
 interface Props {
@@ -29,11 +29,13 @@ export function AmbientCanvas({ phase }: Props) {
   const orchestratorRef = useRef(orchestrator);
   orchestratorRef.current = orchestrator;
 
+  const enabled = useDecorativeMotionEnabled();
   const active =
-    phase === "generating" ||
-    phase === "tool_running" ||
-    phase === "tool_approval" ||
-    phase === "terminal";
+    enabled &&
+    (phase === "generating" ||
+      phase === "tool_running" ||
+      phase === "tool_approval" ||
+      phase === "terminal");
 
   useEffect(() => {
     const canvas = canvasRef.current;

@@ -57,9 +57,10 @@ interface MotionBannerProps {
   className?: string;
   testId?: string;
   role?: string;
+  style?: React.CSSProperties;
 }
 
-export function MotionBanner({ children, className, testId, role = "alert" }: MotionBannerProps) {
+export function MotionBanner({ children, className, testId, role = "alert", style }: MotionBannerProps) {
   const reduceMotion = useReducedMotion();
 
   if (reduceMotion) {
@@ -73,6 +74,7 @@ export function MotionBanner({ children, className, testId, role = "alert" }: Mo
   return (
     <motion.div
       className={className}
+      style={style}
       data-testid={testId}
       role={role}
       data-motion-tier="cinematic"
@@ -92,6 +94,7 @@ interface MotionSessionCardProps {
   onClick?: () => void;
   focused?: boolean;
   "data-testid"?: string;
+  "data-session-id"?: string;
 }
 
 export function MotionSessionCard({
@@ -100,12 +103,13 @@ export function MotionSessionCard({
   onClick,
   focused = false,
   "data-testid": testId,
+  "data-session-id": sessionId,
 }: MotionSessionCardProps) {
   const reduceMotion = useReducedMotion();
 
   if (reduceMotion) {
     return (
-      <button type="button" className={className} data-testid={testId} onClick={onClick}>
+      <button type="button" className={className} data-testid={testId} data-session-id={sessionId} onClick={onClick}>
         {children}
       </button>
     );
@@ -116,6 +120,7 @@ export function MotionSessionCard({
       type="button"
       className={className}
       data-testid={testId}
+      data-session-id={sessionId}
       data-motion-tier="active"
       onClick={onClick}
       animate={{ scale: focused ? 1.04 : 1, opacity: focused ? 1 : 0.88 }}

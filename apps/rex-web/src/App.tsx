@@ -5,9 +5,11 @@ import { ApprovalModal } from "./components/ApprovalModal";
 import { AmbientCanvas } from "./components/AmbientCanvas";
 import { ParticleField } from "./components/ParticleField";
 import {
+  ShellEntrance,
   useOrchestratorErrorBinding,
   useOrchestratorPhaseBinding,
   useOrchestratorStreamBinding,
+  motionOrchestrator,
 } from "./design-system";
 import { CommandPalette, ErrorBanner, type CommandAction } from "./components/CommandPalette";
 import { Composer } from "./components/Composer";
@@ -15,6 +17,7 @@ import { StatusPanel } from "./components/StatusPanel";
 import { SessionPicker } from "./components/SessionPicker";
 import { Timeline } from "./components/Timeline";
 import { Transcript } from "./components/Transcript";
+import { StatusOrbit } from "./components/StatusOrbit";
 import { UiObservability } from "./components/UiObservability";
 import {
   ensureDaemon,
@@ -124,10 +127,12 @@ export default function App() {
         const status = await ensureDaemon();
         useAppStore.getState().setWorkspaceRoot(status.workspaceRoot || null);
         setSystemStatus(status);
+        motionOrchestrator.signalDaemonReady();
         await refreshSessions();
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         useAppStore.getState().setError(message);
+        motionOrchestrator.signalDaemonReady();
       }
 
       unlistenLifecycle = await subscribeDaemonLifecycle((event) => {
@@ -244,6 +249,8 @@ export default function App() {
     <>
       <AmbientCanvas phase={phase} />
       <ParticleField phase={phase} />
+      <StatusOrbit working={working} />
+      <ShellEntrance>
       <ShellGrid
         header={
           <AppHeader
@@ -264,11 +271,13 @@ export default function App() {
           </Text>
         }
       />
+      </ShellEntrance>
       {error ? (
         <ErrorBanner message={error} onDismiss={() => useAppStore.getState().setError(null)} />
       ) : null}
       {pendingApproval && phase === "tool_approval" ? (
         <ApprovalModal
+          open
           pending={pendingApproval}
           onApprove={() => void handleApproval(true)}
           onDeny={() => void handleApproval(false)}

@@ -40,8 +40,10 @@ export {
   MotionPressable,
   MotionBanner,
   MotionSessionCard,
+  ShellEntrance,
+  AnimatedModal,
 } from "./motion";
-export type { MotionTier } from "./motion";
+export type { MotionTier, AnimatedModalProps } from "./motion";
 
 export { rexColorTokens, rexMotionTokens } from "./theme/electric-alive";
 export type { RexColorToken, RexMotionToken } from "./theme/electric-alive";

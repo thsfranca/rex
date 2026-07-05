@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { motionOrchestrator } from "../design-system/motion/orchestrator";
+import { motionOrchestrator, useDecorativeMotionEnabled } from "../design-system/motion/orchestrator";
 
 interface Props {
   active: boolean;
@@ -12,6 +12,8 @@ function readGlowColor(): string {
 
 export function EdgeGlow({ active }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const enabled = useDecorativeMotionEnabled();
+  const show = active && enabled;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -41,7 +43,7 @@ export function EdgeGlow({ active }: Props) {
 
       const orch = motionOrchestrator.getSnapshot();
       const glow = readGlowColor();
-      if ((active || orch.isTyping) && glow) {
+      if ((show || orch.isTyping) && glow) {
         const t = orch.clock;
         const pulse = 0.35 + 0.65 * (Math.sin(t * 3) * 0.5 + 0.5);
         const gradient = ctx.createLinearGradient(0, 0, w, 0);
@@ -64,14 +66,14 @@ export function EdgeGlow({ active }: Props) {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
     };
-  }, [active]);
+  }, [show]);
 
   return (
     <canvas
       ref={canvasRef}
       className="rex-edge-glow"
       data-testid="edge-glow"
-      data-motion-tier={active ? "active" : "idle"}
+      data-motion-tier={show ? "active" : "idle"}
       aria-hidden
     />
   );

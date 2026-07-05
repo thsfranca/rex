@@ -3,18 +3,24 @@ import {
   activeTransition,
   ambientTransition,
   messageVariants,
-  modalSpringTransition,
+  staggerChildren,
   statusPulseTransition,
   timelineItemVariants,
 } from "../design-system/motion";
 
-interface Props {
+interface MessageProps {
   className: string;
   children: React.ReactNode;
+  index?: number;
   "data-testid"?: string;
 }
 
-export function MotionMessage({ className, children, "data-testid": testId }: Props) {
+export function MotionMessage({
+  className,
+  children,
+  index = 0,
+  "data-testid": testId,
+}: MessageProps) {
   const reduceMotion = useReducedMotion();
 
   if (reduceMotion) {
@@ -33,14 +39,20 @@ export function MotionMessage({ className, children, "data-testid": testId }: Pr
       initial="hidden"
       animate="visible"
       variants={messageVariants}
-      transition={activeTransition}
+      transition={{ ...activeTransition, delay: index * staggerChildren }}
     >
       {children}
     </motion.div>
   );
 }
 
-export function MotionTimelineItem({ children }: { children: React.ReactNode }) {
+export function MotionTimelineItem({
+  children,
+  index = 0,
+}: {
+  children: React.ReactNode;
+  index?: number;
+}) {
   const reduceMotion = useReducedMotion();
 
   if (reduceMotion) {
@@ -49,11 +61,19 @@ export function MotionTimelineItem({ children }: { children: React.ReactNode }) 
 
   return (
     <motion.li
+      className="timeline-row-motion"
       data-motion-tier="ambient"
       initial="hidden"
       animate="visible"
       variants={timelineItemVariants}
-      transition={{ ...ambientTransition, type: "spring", stiffness: 260, damping: 22 }}
+      transition={{
+        ...ambientTransition,
+        type: "spring",
+        stiffness: 260,
+        damping: 22,
+        delay: index * staggerChildren,
+      }}
+      whileHover={{ scale: 1.02, x: 4 }}
     >
       {children}
     </motion.li>
@@ -80,15 +100,9 @@ export function MotionStatusDot({
       animate={
         reduceMotion || !working
           ? { opacity: 1, scale: 1 }
-          : { opacity: [1, 0.45, 1], scale: [1, 1.15, 1] }
+          : { opacity: [1, 0.45, 1], scale: [1, 1.18, 1] }
       }
-      transition={
-        reduceMotion || !working
-          ? { duration: 0 }
-          : statusPulseTransition
-      }
+      transition={reduceMotion || !working ? { duration: 0 } : statusPulseTransition}
     />
   );
 }
-
-export { modalSpringTransition };

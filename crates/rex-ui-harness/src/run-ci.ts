@@ -168,6 +168,18 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
   await pageWaitForSelector(session, "#status-dot.working", 30_000);
   results.push(await assertMotion("#status-dot"));
   results.push(await assertCanvasTier("cinematic"));
+  results.push(
+    await assertLayout('[data-testid="timeline-hairline"]', "block")
+  );
+  results.push(
+    await assertLayout('[data-testid="transcript-hairline"]', "block")
+  );
+  results.push(
+    await assertLayout('[data-testid="edge-glow"]', "block")
+  );
+  results.push(
+    await assertLayout('[data-testid="status-orbit"]', "block")
+  );
 
   await pageWaitForText(session, "mock: hello", 60_000);
   results.push({ step: "wait transcript mock hello", pass: true });

@@ -3,6 +3,7 @@ import { Virtuoso } from "react-virtuoso";
 import ReactMarkdown from "react-markdown";
 import type { Components } from "react-markdown";
 import { Button, Text } from "../design-system";
+import { useReflowGuard } from "../design-system/motion/orchestrator";
 import type { ChatMessage, TurnPhase } from "../types";
 import { HairlineFlux } from "./HairlineFlux";
 import { MotionMessage } from "./Motion";
@@ -39,9 +40,12 @@ const markdownComponents: Components = {
 };
 
 export function Transcript({ messages, phase, working }: Props) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  useReflowGuard(wrapRef);
+
   if (messages.length === 0) {
     return (
-      <div className="rex-transcript-wrap">
+      <div className="rex-transcript-wrap" ref={wrapRef}>
         <HairlineFlux phase={phase} testId="transcript-hairline" />
         <div className="rex-transcript-empty" data-testid="transcript">
           <h2 className="rex-transcript-empty__title">What should we work on?</h2>
@@ -56,7 +60,7 @@ export function Transcript({ messages, phase, working }: Props) {
   const lastIndex = messages.length - 1;
 
   return (
-    <div className="rex-transcript-wrap" data-testid="transcript">
+    <div className="rex-transcript-wrap" data-testid="transcript" ref={wrapRef}>
       <HairlineFlux phase={phase} testId="transcript-hairline" />
       <Virtuoso
         data={messages}
@@ -68,6 +72,7 @@ export function Transcript({ messages, phase, working }: Props) {
           return (
             <div className={`rex-message-row rex-message-row--${isUser ? "user" : "assistant"}`}>
               <MotionMessage
+                index={index}
                 className={`rex-message-bubble rex-message-bubble--${isUser ? "user" : "assistant"} message-block${isStreamingTail ? " rex-message-bubble--streaming" : ""}`}
               >
                 <span className="rex-message-bubble__role">{isUser ? "You" : "Rex"}</span>

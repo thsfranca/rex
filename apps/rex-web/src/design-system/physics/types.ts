@@ -29,6 +29,9 @@ export interface MotionOrchestratorState {
   isTyping: boolean;
   hasError: boolean;
   streamTick: number;
+  connectFade: number;
+  decorativePaused: boolean;
+  approvalOpen: boolean;
 }
 
 export type EffectTrigger =

@@ -5,7 +5,7 @@ import {
   stepParticles,
 } from "../design-system/physics/particle-euler";
 import type { Particle2D } from "../design-system/physics/types";
-import { useMotionOrchestrator } from "../design-system/motion/orchestrator";
+import { useDecorativeMotionEnabled, useMotionOrchestrator } from "../design-system/motion/orchestrator";
 import type { TurnPhase } from "../types";
 
 interface Props {
@@ -31,7 +31,8 @@ export function ParticleField({ phase }: Props) {
   orchestratorRef.current = orchestrator;
   const lastTickRef = useRef(orchestrator.streamTick);
 
-  const active = phaseActive(phase);
+  const enabled = useDecorativeMotionEnabled();
+  const active = phaseActive(phase) && enabled;
 
   useEffect(() => {
     const canvas = canvasRef.current;

@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Button, MotionBanner } from "../design-system";
+import { ERROR_HSL, NEUTRAL_HSL, lerpHslCss } from "../design-system/physics/hsl-lerp";
+import { useSpringScalar } from "../design-system/motion/useSpringScalar";
 
 export interface CommandAction {
   id: string;
@@ -115,8 +117,13 @@ export function ErrorBanner({
   message: string;
   onDismiss: () => void;
 }) {
+  const wash = useSpringScalar(1, { stiffness: 220, damping: 18 });
+  const bannerStyle = {
+    "--rex-banner-wash": lerpHslCss(NEUTRAL_HSL, ERROR_HSL, wash),
+  } as CSSProperties;
+
   return (
-    <MotionBanner className="rex-banner rex-banner--error" testId="error-banner">
+    <MotionBanner className="rex-banner rex-banner--error" testId="error-banner" style={bannerStyle}>
       <span className="rex-banner__message">{message}</span>
       <Button type="button" variant="ghost" data-testid="error-banner-dismiss" onClick={onDismiss}>
         Dismiss

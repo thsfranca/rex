@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useMotionOrchestrator } from "../design-system/motion/orchestrator";
+import { useDecorativeMotionEnabled, useMotionOrchestrator } from "../design-system/motion/orchestrator";
 import type { TurnPhase } from "../types";
 
 interface Props {
@@ -17,7 +17,8 @@ export function HairlineFlux({ phase, testId = "hairline-flux" }: Props) {
   const orchestratorRef = useRef(orchestrator);
   orchestratorRef.current = orchestrator;
 
-  const active = isActivePhase(phase);
+  const enabled = useDecorativeMotionEnabled();
+  const active = isActivePhase(phase) && enabled;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -73,7 +74,7 @@ export function HairlineFlux({ phase, testId = "hairline-flux" }: Props) {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
     };
-  }, [active]);
+  }, [active, enabled]);
 
   return (
     <canvas

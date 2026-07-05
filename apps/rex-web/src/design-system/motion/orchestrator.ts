@@ -1,4 +1,4 @@
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 import type { MotionOrchestratorState } from "../physics/types";
 import type { TurnPhase } from "../../types";
 
@@ -10,6 +10,9 @@ const IDLE: MotionOrchestratorState = {
   isTyping: false,
   hasError: false,
   streamTick: 0,
+  connectFade: 0,
+  decorativePaused: false,
+  approvalOpen: false,
 };
 
 type Listener = () => void;
@@ -59,6 +62,7 @@ class MotionOrchestrator {
       phase,
       intensity: this.intensityForPhase(phase),
       flowAngle: this.flowAngleForPhase(phase, this.state.clock),
+      approvalOpen: phase === "tool_approval",
     };
     if (phase !== "idle" && prev === "idle") {
       this.state.streamTick += 1;
@@ -82,6 +86,19 @@ class MotionOrchestrator {
   setError(hasError: boolean): void {
     this.state = { ...this.state, hasError };
     this.emit();
+    this.ensureLoop();
+  }
+
+  signalDaemonReady(): void {
+    this.state = { ...this.state, connectFade: 1 };
+    this.emit();
+    this.ensureLoop();
+  }
+
+  setDecorativePaused(paused: boolean): void {
+    if (this.state.decorativePaused === paused) return;
+    this.state = { ...this.state, decorativePaused: paused };
+    this.emit();
   }
 
   private tick = (now: number): void => {
@@ -89,11 +106,17 @@ class MotionOrchestrator {
     const dt = this.last ? (now - this.last) / 1000 : 0;
     this.last = now;
     const active =
-      this.state.phase !== "idle" || this.state.isTyping || this.state.hasError;
+      this.state.phase !== "idle" ||
+      this.state.isTyping ||
+      this.state.hasError ||
+      this.state.connectFade > 0;
     if (active) {
+      const connectFade =
+        this.state.connectFade > 0 ? Math.max(0, this.state.connectFade - dt * 2.5) : 0;
       this.state = {
         ...this.state,
         clock: this.state.clock + dt,
+        connectFade,
         flowAngle: this.flowAngleForPhase(
           this.state.phase as TurnPhase,
           this.state.clock + dt,
@@ -129,6 +152,11 @@ export function useMotionOrchestrator(): MotionOrchestratorState {
   );
 }
 
+export function useDecorativeMotionEnabled(): boolean {
+  const { decorativePaused } = useMotionOrchestrator();
+  return !decorativePaused;
+}
+
 export function useOrchestratorPhaseBinding(phase: TurnPhase): void {
   useEffect(() => {
     motionOrchestrator.setPhase(phase);
@@ -149,4 +177,23 @@ export function useOrchestratorStreamBinding(messageCount: number): void {
     }
     prev.current = messageCount;
   }, [messageCount]);
+}
+
+export function useReflowGuard(ref: RefObject<HTMLElement | null>): void {
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver(() => {
+      motionOrchestrator.setDecorativePaused(true);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => motionOrchestrator.setDecorativePaused(false), 120);
+    });
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      if (timer) clearTimeout(timer);
+      motionOrchestrator.setDecorativePaused(false);
+    };
+  }, [ref]);
 }

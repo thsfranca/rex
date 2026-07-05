@@ -16,9 +16,14 @@ export {
 export {
   motionOrchestrator,
   useMotionOrchestrator,
+  useDecorativeMotionEnabled,
   useOrchestratorPhaseBinding,
   useOrchestratorErrorBinding,
   useOrchestratorStreamBinding,
+  useReflowGuard,
 } from "./orchestrator";
 export { useSpringScalar } from "./useSpringScalar";
 export { MotionPressable, MotionBanner, MotionSessionCard } from "./components";
+export { ShellEntrance } from "./ShellEntrance";
+export { AnimatedModal } from "./AnimatedModal";
+export type { AnimatedModalProps } from "./AnimatedModal";

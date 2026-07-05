@@ -25,8 +25,8 @@ export function Timeline({ tasks, phase }: Props) {
           <Text tone="secondary">{phase === "generating" ? "Working…" : "No tasks"}</Text>
         ) : (
           <ul style={{ paddingLeft: "1rem", margin: 0 }}>
-            {tasks.map((task) => (
-              <MotionTimelineItem key={task.id}>
+            {tasks.map((task, index) => (
+              <MotionTimelineItem key={task.id} index={index}>
                 <div className="timeline-row">
                   <span>{task.label}</span>
                   <div className="timeline-row__detail">{task.id}</div>
