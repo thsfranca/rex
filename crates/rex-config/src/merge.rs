@@ -1,7 +1,40 @@
 use std::path::PathBuf;
 
 use crate::error::ConfigError;
-use crate::model::RexConfig;
+use crate::model::{
+    AgentConfig, BrokerConfig, CacheConfig, CliConfig, ContextConfig, DaemonConfig,
+    InferenceConfig, ObservabilityConfig, RexConfig, SearchConfig, SidecarsConfig,
+    WorkspaceConfig,
+};
+
+/// Partial config file: only keys present in JSON are merged onto the base.
+#[derive(Debug, Default, serde::Deserialize)]
+pub struct RexConfigOverlay {
+    #[serde(default)]
+    pub version: Option<u32>,
+    #[serde(default)]
+    pub daemon: Option<DaemonConfig>,
+    #[serde(default)]
+    pub sidecars: Option<SidecarsConfig>,
+    #[serde(default)]
+    pub inference: Option<InferenceConfig>,
+    #[serde(default)]
+    pub workspace: Option<WorkspaceConfig>,
+    #[serde(default)]
+    pub context: Option<ContextConfig>,
+    #[serde(default)]
+    pub cache: Option<CacheConfig>,
+    #[serde(default)]
+    pub broker: Option<BrokerConfig>,
+    #[serde(default)]
+    pub agent: Option<AgentConfig>,
+    #[serde(default)]
+    pub cli: Option<CliConfig>,
+    #[serde(default)]
+    pub search: Option<SearchConfig>,
+    #[serde(default)]
+    pub observability: Option<ObservabilityConfig>,
+}
 
 #[derive(Debug, Clone)]
 pub struct LoadedConfig {
@@ -209,21 +242,65 @@ impl LoadedConfig {
     }
 }
 
-pub fn merge_config(base: &mut RexConfig, overlay: RexConfig) {
-    if overlay.version != 0 {
-        base.version = overlay.version;
+pub fn merge_overlay(base: &mut RexConfig, overlay: RexConfigOverlay) {
+    if let Some(version) = overlay.version {
+        if version != 0 {
+            base.version = version;
+        }
     }
-    merge_daemon(&mut base.daemon, overlay.daemon);
-    merge_sidecars(&mut base.sidecars, overlay.sidecars);
-    merge_inference(&mut base.inference, overlay.inference);
-    merge_workspace(&mut base.workspace, overlay.workspace);
-    merge_context(&mut base.context, overlay.context);
-    merge_cache(&mut base.cache, overlay.cache);
-    merge_broker(&mut base.broker, overlay.broker);
-    merge_agent(&mut base.agent, overlay.agent);
-    merge_cli(&mut base.cli, overlay.cli);
-    merge_search(&mut base.search, overlay.search);
-    merge_observability(&mut base.observability, overlay.observability);
+    if let Some(daemon) = overlay.daemon {
+        merge_daemon(&mut base.daemon, daemon);
+    }
+    if let Some(sidecars) = overlay.sidecars {
+        merge_sidecars(&mut base.sidecars, sidecars);
+    }
+    if let Some(inference) = overlay.inference {
+        merge_inference(&mut base.inference, inference);
+    }
+    if let Some(workspace) = overlay.workspace {
+        merge_workspace(&mut base.workspace, workspace);
+    }
+    if let Some(context) = overlay.context {
+        merge_context(&mut base.context, context);
+    }
+    if let Some(cache) = overlay.cache {
+        merge_cache(&mut base.cache, cache);
+    }
+    if let Some(broker) = overlay.broker {
+        merge_broker(&mut base.broker, broker);
+    }
+    if let Some(agent) = overlay.agent {
+        merge_agent(&mut base.agent, agent);
+    }
+    if let Some(cli) = overlay.cli {
+        merge_cli(&mut base.cli, cli);
+    }
+    if let Some(search) = overlay.search {
+        merge_search(&mut base.search, search);
+    }
+    if let Some(observability) = overlay.observability {
+        merge_observability(&mut base.observability, observability);
+    }
+}
+
+pub fn merge_config(base: &mut RexConfig, overlay: RexConfig) {
+    merge_overlay(
+        base,
+        RexConfigOverlay {
+            version: Some(overlay.version),
+            daemon: Some(overlay.daemon),
+            sidecars: Some(overlay.sidecars),
+            inference: Some(overlay.inference),
+            workspace: Some(overlay.workspace),
+            context: Some(overlay.context),
+            cache: Some(overlay.cache),
+            broker: Some(overlay.broker),
+            agent: Some(overlay.agent),
+            cli: Some(overlay.cli),
+            search: Some(overlay.search),
+            observability: Some(overlay.observability),
+        },
+    );
 }
 
 fn merge_daemon(base: &mut crate::model::DaemonConfig, overlay: crate::model::DaemonConfig) {
@@ -493,4 +570,53 @@ fn merge_observability(
 #[allow(dead_code)]
 pub fn validate_loaded(config: &LoadedConfig) -> Result<(), ConfigError> {
     config.effective.validate()
+}
+
+#[cfg(test)]
+mod overlay_tests {
+    use super::*;
+
+    #[test]
+    fn project_overlay_without_inference_preserves_global_gateway() {
+        let mut base = RexConfig::defaults();
+        base.inference.runtime = "http-openai-compat".to_string();
+        base.inference.openai_compat.model = "deepseek-v4-flash".to_string();
+        base.inference.gateway.mode = "managed".to_string();
+
+        let overlay: RexConfigOverlay = serde_json::from_str(
+            r#"{
+  "version": 1,
+  "sidecars": { "active": "agent" },
+  "search": { "enabled": true, "provider": "mock" }
+}"#,
+        )
+        .expect("parse overlay");
+
+        merge_overlay(&mut base, overlay);
+        assert_eq!(base.inference.gateway.mode, "managed");
+        assert_eq!(base.inference.openai_compat.model, "deepseek-v4-flash");
+        assert_eq!(base.sidecars.active, "agent");
+        assert!(base.search.enabled.unwrap());
+    }
+
+    #[test]
+    fn project_overlay_inference_section_still_merges_gateway() {
+        let mut base = RexConfig::defaults();
+        base.inference.runtime = "http-openai-compat".to_string();
+        base.inference.gateway.mode = "managed".to_string();
+
+        let overlay: RexConfigOverlay = serde_json::from_str(
+            r#"{
+  "inference": {
+    "gateway": { "mode": "disabled" },
+    "openai_compat": { "base_url": "http://127.0.0.1:9/v1" }
+  }
+}"#,
+        )
+        .expect("parse overlay");
+
+        merge_overlay(&mut base, overlay);
+        assert_eq!(base.inference.gateway.mode, "disabled");
+        assert_eq!(base.inference.openai_compat.base_url, "http://127.0.0.1:9/v1");
+    }
 }

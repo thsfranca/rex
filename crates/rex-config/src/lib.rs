@@ -71,8 +71,8 @@ pub fn load_merged() -> Result<LoadedConfig, ConfigError> {
 
     let global_loaded = if global_path.is_file() {
         let raw = std::fs::read_to_string(&global_path)?;
-        let overlay: RexConfig = serde_json::from_str(&raw)?;
-        merge::merge_config(&mut effective, overlay);
+        let overlay: merge::RexConfigOverlay = serde_json::from_str(&raw)?;
+        merge::merge_overlay(&mut effective, overlay);
         Some(global_path)
     } else {
         None
@@ -82,8 +82,8 @@ pub fn load_merged() -> Result<LoadedConfig, ConfigError> {
         find_project_config(env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
     if let Some(ref path) = project_path {
         let raw = std::fs::read_to_string(path)?;
-        let overlay: RexConfig = serde_json::from_str(&raw)?;
-        merge::merge_config(&mut effective, overlay);
+        let overlay: merge::RexConfigOverlay = serde_json::from_str(&raw)?;
+        merge::merge_overlay(&mut effective, overlay);
     }
 
     effective.validate()?;

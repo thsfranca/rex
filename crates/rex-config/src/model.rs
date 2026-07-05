@@ -327,6 +327,7 @@ fn default_true() -> bool {
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct InferenceConfig {
+    #[serde(default)]
     pub runtime: String,
     #[serde(default)]
     pub openai_compat: OpenAiCompatConfig,
