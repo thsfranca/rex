@@ -7,11 +7,22 @@ cd "$ROOT"
 mkdir -p ci-observability
 
 MODE=""
+SKIP_WEB_BUILD=false
+SKIP_HARNESS_BUILD=false
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --mode)
       MODE="${2:-}"
       shift 2
+      ;;
+    --skip-web-build)
+      SKIP_WEB_BUILD=true
+      shift
+      ;;
+    --skip-harness-build)
+      SKIP_HARNESS_BUILD=true
+      shift
       ;;
     *)
       echo "Unknown argument: $1" >&2
@@ -21,13 +32,17 @@ while [ $# -gt 0 ]; do
 done
 
 if [ "${MODE}" != "static" ] && [ "${MODE}" != "desktop" ]; then
-  echo "Usage: $0 --mode static|desktop" >&2
+  echo "Usage: $0 --mode static|desktop [--skip-web-build] [--skip-harness-build]" >&2
   exit 1
 fi
 
 if [ "${MODE}" = "desktop" ] && [ "$(uname -s)" != "Darwin" ]; then
   echo "Desktop mode requires macOS." >&2
   exit 1
+fi
+
+if [ "${MODE}" = "static" ]; then
+  SKIP_WEB_BUILD=true
 fi
 
 result="success"
@@ -45,6 +60,14 @@ mark_failure() {
   hint="${hint_value}"
   echo "::error::${stage} failed (${code}). ${hint_value}"
   echo "CI_SIGNAL code=${code} stage=${stage} result=${result} hint=${hint_value}"
+}
+
+require_dist() {
+  local dist_dir="$1"
+  local label="$2"
+  if [ ! -d "${dist_dir}" ] || [ -z "$(ls -A "${dist_dir}" 2>/dev/null || true)" ]; then
+    mark_failure "BuildAndChecks" "UI_BUILD_FAIL" "Missing ${label} dist at ${dist_dir}; run ./scripts/ci/build_ui_artifacts.sh or omit --skip-* flags."
+  fi
 }
 
 echo "::group::Setup"
@@ -74,15 +97,29 @@ fi
 echo "::endgroup::"
 
 echo "::group::BuildAndChecks"
-if [ "${result}" = "success" ]; then
+if [ "${result}" = "success" ] && [ "${SKIP_WEB_BUILD}" = "false" ]; then
   if ! (cd "${WEB_DIR}" && npm ci && npm run build) 2>&1 | tee "ci-observability/ui-web-build.log"; then
     mark_failure "BuildAndChecks" "UI_BUILD_FAIL" "rex-web npm ci/build failed; see ci-observability/ui-web-build.log."
   fi
+elif [ "${result}" = "success" ] && [ "${MODE}" = "desktop" ]; then
+  require_dist "${WEB_DIR}/dist" "rex-web"
+  if [ "${result}" = "success" ]; then
+    if ! (cd "${WEB_DIR}" && npm ci) 2>&1 | tee -a "ci-observability/ui-web-build.log"; then
+      mark_failure "BuildAndChecks" "UI_BUILD_FAIL" "rex-web npm ci failed (dist reused from ui-build)."
+    fi
+  fi
 fi
 
-if [ "${result}" = "success" ]; then
+if [ "${result}" = "success" ] && [ "${SKIP_HARNESS_BUILD}" = "false" ]; then
   if ! (cd "${HARNESS_DIR}" && npm ci && npm run build) 2>&1 | tee "ci-observability/ui-harness-build.log"; then
     mark_failure "BuildAndChecks" "UI_BUILD_FAIL" "rex-ui-harness npm ci/build failed."
+  fi
+elif [ "${result}" = "success" ]; then
+  require_dist "${HARNESS_DIR}/dist" "rex-ui-harness"
+  if [ "${result}" = "success" ]; then
+    if ! (cd "${HARNESS_DIR}" && npm ci) 2>&1 | tee -a "ci-observability/ui-harness-build.log"; then
+      mark_failure "BuildAndChecks" "UI_BUILD_FAIL" "rex-ui-harness npm ci failed (dist reused from ui-build)."
+    fi
   fi
 fi
 
@@ -134,6 +171,3 @@ fi
 echo "::endgroup::"
 
 ./scripts/ci/finish_verify_job.sh
-if [ "${result}" != "success" ]; then
-  exit 1
-fi

@@ -181,10 +181,14 @@ Local run (any time):
 
 ### UI verify (path-aware)
 
-When Web UI probe or harness paths change, **ui-verify** runs [`scripts/ci/run_ui_verify.sh`](scripts/ci/run_ui_verify.sh) in a matrix:
+When Web UI probe or harness paths change, CI runs a shared **`ui-build`** job then **`ui-verify`** matrix legs:
 
-- **static** (`ubuntu-latest`) — rex-web build + static fixture scenarios (no daemon)
-- **desktop** (`macos-latest`) — rex-desktop build + native Playwright harness with probe daemon
+1. **`ui-build`** (`ubuntu-latest`) — [`scripts/ci/build_ui_artifacts.sh`](scripts/ci/build_ui_artifacts.sh) builds `apps/rex-web/dist` and `crates/rex-ui-harness/dist` once; uploads artifacts for matrix reuse.
+2. **`ui-verify`** matrix — [`scripts/ci/run_ui_verify.sh`](scripts/ci/run_ui_verify.sh) downloads artifacts and runs scenarios:
+   - **static** (`ubuntu-latest`) — harness `npm ci` + Playwright chromium; **no rex-web build** (static fixture only; no daemon)
+   - **desktop** (`macos-latest`) — reused web/harness dist + `npm ci` for preview/runtime deps; `cargo build -p rex -p rex-desktop --features e2e-testing`; native Playwright harness with probe daemon
+
+Matrix legs pass `--skip-harness-build`; desktop also passes `--skip-web-build`. Local full builds omit skip flags (static still skips rex-web by default).
 
 Failure code: `UI_FAIL` (scenario failures) or `UI_BUILD_FAIL` (build step). See [WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md).
 
@@ -195,8 +199,17 @@ Failure code: `UI_FAIL` (scenario failures) or `UI_BUILD_FAIL` (build step). See
 - `crates/rex-desktop/**`
 - `fixtures/ui_probe/**`
 - `scripts/ci/run_ui_verify.sh`
+- `scripts/ci/build_ui_artifacts.sh`
 
 Local run:
+
+```bash
+./scripts/ci/build_ui_artifacts.sh
+./scripts/ci/run_ui_verify.sh --mode static --skip-harness-build
+./scripts/ci/run_ui_verify.sh --mode desktop --skip-web-build --skip-harness-build   # macOS only
+```
+
+Full local build (no artifacts):
 
 ```bash
 ./scripts/ci/run_ui_verify.sh --mode static
@@ -206,7 +219,7 @@ Local run:
 ### Dependency model
 
 - Path detection: `changes`
-- Verify jobs (parallel, path-aware): `rust-verify`, `sidecar-verify`, `guidelines-verify`, `ui-verify`
+- Verify jobs (parallel, path-aware): `rust-verify`, `sidecar-verify`, `guidelines-verify`, `ui-build` → `ui-verify` matrix
 - Merge gate: all verify jobs → `ci-checks`
 
 When a domain is non-relevant, its verify job skips. `ci-checks` runs with `if: always` and passes when skipped verify results are acceptable for non-relevant paths.

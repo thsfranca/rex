@@ -166,9 +166,54 @@ jobs:
         if: ${{ steps.run_guidelines_verify.outcome != 'success' }}
         run: ./scripts/ci/enforce_verify_job.sh
 
-  ui-verify:
+  ui-build:
     needs: [changes]
     if: ${{ needs.changes.outputs.ui_relevant == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Build UI artifacts
+        id: run_ui_build
+        continue-on-error: true
+        run: ./scripts/ci/build_ui_artifacts.sh
+
+      - name: Upload UI build artifacts
+        if: ${{ steps.run_ui_build.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-build-artifacts-${{ github.run_id }}
+          path: |
+            apps/rex-web/dist
+            crates/rex-ui-harness/dist
+          retention-days: 1
+
+      - name: Write Job Summary
+        if: ${{ always() }}
+        run: ./scripts/ci/write_job_summary.sh ui-build
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_ui_build.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-ui-build-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+
+      - name: Enforce ui build job status
+        if: ${{ steps.run_ui_build.outcome != 'success' }}
+        run: ./scripts/ci/enforce_verify_job.sh
+
+  ui-verify:
+    needs: [changes, ui-build]
+    if: |
+      always() &&
+      needs.changes.outputs.ui_relevant == 'true' &&
+      (needs.ui-build.result == 'success' || needs.ui-build.result == 'skipped')
     strategy:
       fail-fast: false
       matrix:
@@ -184,6 +229,13 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+
+      - name: Download UI build artifacts
+        if: ${{ needs.ui-build.result == 'success' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-build-artifacts-${{ github.run_id }}
+          path: .
 
       - name: Install system build dependencies
         if: ${{ matrix.mode == 'desktop' }}
@@ -203,7 +255,12 @@ jobs:
         env:
           REX_ROOT: ${{ github.workspace }}/fixtures/ui_probe/rex_root
           REX_SIDECAR_HARNESS: direct
-        run: ./scripts/ci/run_ui_verify.sh --mode ${{ matrix.mode }}
+        run: |
+          ARGS=(--mode "${{ matrix.mode }}" --skip-harness-build)
+          if [ "${{ matrix.mode }}" = "desktop" ]; then
+            ARGS+=(--skip-web-build)
+          fi
+          ./scripts/ci/run_ui_verify.sh "${ARGS[@]}"
 
       - name: Write Job Summary
         if: ${{ always() }}
@@ -223,7 +280,7 @@ jobs:
 
   ci-checks:
     if: ${{ always() }}
-    needs: [changes, rust-verify, sidecar-verify, guidelines-verify, ui-verify]
+    needs: [changes, rust-verify, sidecar-verify, guidelines-verify, ui-build, ui-verify]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

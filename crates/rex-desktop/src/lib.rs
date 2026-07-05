@@ -85,12 +85,13 @@ async fn submit_prompt(
     prompt: String,
     mode: String,
     on_event: Channel<StreamEventDto>,
-) -> Result<(), String> {
+) -> Result<String, String> {
     let session_id = new_harness_session_id();
     let trace_id = format!("web-{}", session_id);
-    submit_prompt_stream(prompt, mode, trace_id, session_id, on_event)
+    submit_prompt_stream(prompt, mode, trace_id, session_id.clone(), on_event)
         .await
-        .map_err(|e: CliError| e.operator_message())
+        .map_err(|e: CliError| e.operator_message())?;
+    Ok(session_id)
 }
 
 fn spawn_daemon_lifecycle_monitor(app: &tauri::App) {
@@ -117,6 +118,9 @@ pub fn build_app() -> tauri::Builder<tauri::Wry> {
             spawn_daemon_lifecycle_monitor(app);
             let app_menu = build_menu(app)?;
             app.set_menu(app_menu)?;
+            app.on_menu_event(|app, event| {
+                let _ = app.emit("menu-action", event.id().0.clone());
+            });
             Ok(())
         });
 
