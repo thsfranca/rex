@@ -15,6 +15,7 @@
     "react-dom": "^19.1.0",
     "react-markdown": "^10.1.0",
     "react-virtuoso": "^4.12.5",
+    "regl": "^2.1.1",
     "zustand": "^5.0.5"
   },
   "devDependencies": {

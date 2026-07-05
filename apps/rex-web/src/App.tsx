@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { ApprovalModal } from "./components/ApprovalModal";
+import { AmbientCanvas } from "./components/AmbientCanvas";
 import { Composer } from "./components/Composer";
 import { MotionStatusDot } from "./components/Motion";
 import { SessionPicker } from "./components/SessionPicker";
@@ -135,6 +136,7 @@ export default function App() {
 
   return (
     <>
+      <AmbientCanvas phase={phase} />
       <div className="shell" data-testid="shell">
         <header className="header" data-testid="header">
           <MotionStatusDot working={working} id="status-dot" testId="status-dot" />
