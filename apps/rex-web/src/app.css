@@ -1,12 +1,10 @@
 @import "./tokens.css";
-@import "./design-system/layout/breakpoints.css";
-@import "./design-system/primitives.css";
 
 textarea {
   width: 100%;
   resize: vertical;
   font-family: var(--rex-font-ui-base);
-  font-size: var(--rex-font-size-ui-base);
+  font-size: 14px;
   color: var(--rex-text-primary);
   background: var(--rex-surface-base);
   border: 1px solid var(--rex-hairline-default);
@@ -39,4 +37,19 @@ textarea:focus {
   display: flex;
   gap: var(--rex-space-md);
   align-items: flex-end;
+}
+
+.composer-row button {
+  background: var(--rex-status-working);
+  color: var(--rex-surface-raised);
+  border: none;
+  border-radius: var(--rex-radius-md);
+  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.composer-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

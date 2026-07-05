@@ -1,5 +1,3 @@
-export type ComposerMode = "agent" | "ask";
-
 export type TurnPhase = "idle" | "generating" | "tool_running" | "tool_approval" | "terminal";
 
 export type StreamEvent =

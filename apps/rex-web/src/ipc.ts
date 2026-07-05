@@ -3,7 +3,6 @@ import { listen } from "@tauri-apps/api/event";
 import type {
   DaemonLifecycleEvent,
   FetchSessionEventsResult,
-  SessionSummary,
   StreamEvent,
   SystemStatus,
   ToolApprovalResult,
@@ -36,10 +35,6 @@ export async function getLaunchOptions(): Promise<{ debug: boolean }> {
 
 export async function getSystemStatus(): Promise<SystemStatus> {
   return invoke<SystemStatus>("get_system_status");
-}
-
-export async function listClosedSessions(): Promise<SessionSummary[]> {
-  return invoke<SessionSummary[]>("list_closed_sessions");
 }
 
 export async function fetchSessionEvents(

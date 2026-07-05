@@ -1,12 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { ShellGrid, Text } from "./design-system";
+import { useEffect, useMemo, useState } from "react";
 import { ApprovalModal } from "./components/ApprovalModal";
 import { AmbientCanvas } from "./components/AmbientCanvas";
-import { CommandPalette, ErrorBanner, type CommandAction } from "./components/CommandPalette";
 import { Composer } from "./components/Composer";
 import { MotionStatusDot } from "./components/Motion";
 import { SessionPicker } from "./components/SessionPicker";
-import { StatusPanel } from "./components/StatusPanel";
 import { Timeline } from "./components/Timeline";
 import { Transcript } from "./components/Transcript";
 import { UiObservability } from "./components/UiObservability";
@@ -14,8 +11,6 @@ import {
   ensureDaemon,
   fetchSessionEvents,
   getLaunchOptions,
-  getSystemStatus,
-  listClosedSessions,
   respondToToolApproval,
   sessionEventsToMessages,
   subscribeDaemonLifecycle,
@@ -26,25 +21,9 @@ import {
   publishObservabilitySnapshot,
 } from "./observability";
 import { useAppStore } from "./store";
-import type { SystemStatus } from "./types";
-
-async function hydrateSession(sessionId: string) {
-  const result = await fetchSessionEvents(sessionId);
-  const hydrated = sessionEventsToMessages(result.events).map((message, index) => ({
-    id: `h-${index}`,
-    ...message,
-  }));
-  const store = useAppStore.getState();
-  store.hydrateMessages(hydrated);
-  store.setHarnessSessionId(sessionId);
-}
 
 export default function App() {
   const [debugEnabled, setDebugEnabled] = useState(false);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [statusPanelOpen, setStatusPanelOpen] = useState(false);
-  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
-
   const phase = useAppStore((s) => s.phase);
   const statusLabel = useAppStore((s) => s.statusLabel);
   const workspaceRoot = useAppStore((s) => s.workspaceRoot);
@@ -58,15 +37,6 @@ export default function App() {
   const streamEvents = useAppStore((s) => s.streamEvents);
   const lastSubmitError = useAppStore((s) => s.lastSubmitError);
   const composerBusy = useAppStore((s) => s.composerBusy);
-
-  const refreshSessions = useCallback(async () => {
-    try {
-      const items = await listClosedSessions();
-      useAppStore.getState().setSessions(items);
-    } catch {
-      useAppStore.getState().setSessions([]);
-    }
-  }, []);
 
   const observabilitySnapshot = useMemo(
     () =>
@@ -112,8 +82,6 @@ export default function App() {
       try {
         const status = await ensureDaemon();
         useAppStore.getState().setWorkspaceRoot(status.workspaceRoot || null);
-        setSystemStatus(status);
-        await refreshSessions();
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         useAppStore.getState().setError(message);
@@ -142,12 +110,16 @@ export default function App() {
           return;
         }
         if (action === "session_continue") {
-          await refreshSessions();
           store.setSessionPickerOpen(true);
           return;
         }
         if (action === "session_last" && store.harnessSessionId) {
-          await hydrateSession(store.harnessSessionId);
+          const result = await fetchSessionEvents(store.harnessSessionId);
+          const hydrated = sessionEventsToMessages(result.events).map((message, index) => ({
+            id: `h-${index}`,
+            ...message,
+          }));
+          store.hydrateMessages(hydrated);
         }
       });
     })();
@@ -156,17 +128,6 @@ export default function App() {
       unlistenLifecycle?.();
       unlistenMenu?.();
     };
-  }, [refreshSessions]);
-
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setCommandPaletteOpen((open) => !open);
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
   const working = phase === "generating" || phase === "tool_running";
@@ -183,68 +144,23 @@ export default function App() {
     useAppStore.getState().setPhase("generating");
   };
 
-  const commandActions: CommandAction[] = [
-    {
-      id: "new-session",
-      label: "New session",
-      run: () => useAppStore.getState().newSession(),
-    },
-    {
-      id: "continue",
-      label: "Continue session",
-      run: () => {
-        void refreshSessions();
-        useAppStore.getState().setSessionPickerOpen(true);
-      },
-    },
-    {
-      id: "last-session",
-      label: "Open last session",
-      run: () => {
-        const id = useAppStore.getState().harnessSessionId;
-        if (id) void hydrateSession(id);
-      },
-    },
-    {
-      id: "status",
-      label: "Show system status",
-      run: () => {
-        void getSystemStatus().then(setSystemStatus);
-        setStatusPanelOpen(true);
-      },
-    },
-    {
-      id: "reload",
-      label: "Reload window",
-      shortcut: "View menu",
-      run: () => window.location.reload(),
-    },
-  ];
-
   return (
     <>
       <AmbientCanvas phase={phase} />
-      <ShellGrid
-        header={
-          <>
-            <MotionStatusDot working={working} id="status-dot" testId="status-dot" />
-            <span id="status-label" style={{ marginLeft: "var(--rex-space-sm)" }}>
-              {statusLabel}
-            </span>
-          </>
-        }
-        transcript={<Transcript messages={messages} />}
-        timeline={<Timeline tasks={timeline} phase={phase} />}
-        composer={<Composer disabled={working || phase === "tool_approval"} />}
-        footer={
-          <Text tone="secondary" data-testid="footer">
-            {workspaceRoot ? `Ready · ${workspaceRoot}` : "Ready"} · ⌘K commands
-          </Text>
-        }
-      />
-      {error ? (
-        <ErrorBanner message={error} onDismiss={() => useAppStore.getState().setError(null)} />
-      ) : null}
+      <div className="shell" data-testid="shell">
+        <header className="header" data-testid="header">
+          <MotionStatusDot working={working} id="status-dot" testId="status-dot" />
+          <span id="status-label" style={{ marginLeft: 8 }}>
+            {statusLabel}
+          </span>
+        </header>
+        <Transcript messages={messages} />
+        <Timeline tasks={timeline} phase={phase} />
+        <Composer disabled={working || phase === "tool_approval"} />
+        <footer className="footer" data-testid="footer">
+          {error ? error : workspaceRoot ? `Ready · ${workspaceRoot}` : "Ready"} · ⌘K ?
+        </footer>
+      </div>
       {pendingApproval && phase === "tool_approval" ? (
         <ApprovalModal
           pending={pendingApproval}
@@ -256,20 +172,18 @@ export default function App() {
         <SessionPicker
           sessions={sessions}
           onSelect={(sessionId) => {
-            void hydrateSession(sessionId).then(() => {
+            void fetchSessionEvents(sessionId).then((result) => {
+              const hydrated = sessionEventsToMessages(result.events).map((message, index) => ({
+                id: `h-${index}`,
+                ...message,
+              }));
+              useAppStore.getState().hydrateMessages(hydrated);
+              useAppStore.getState().setHarnessSessionId(sessionId);
               useAppStore.getState().setSessionPickerOpen(false);
             });
           }}
           onClose={() => useAppStore.getState().setSessionPickerOpen(false)}
         />
-      ) : null}
-      <CommandPalette
-        open={commandPaletteOpen}
-        actions={commandActions}
-        onClose={() => setCommandPaletteOpen(false)}
-      />
-      {statusPanelOpen ? (
-        <StatusPanel status={systemStatus} onClose={() => setStatusPanelOpen(false)} />
       ) : null}
       <UiObservability snapshot={observabilitySnapshot} />
     </>

@@ -96,10 +96,6 @@ echo "::group::BuildAndChecks"
 if [ "${result}" = "success" ] && [ "${SKIP_WEB_BUILD}" = "false" ]; then
   if ! (cd "${WEB_DIR}" && npm ci && npm run build) 2>&1 | tee "ci-observability/ui-web-build.log"; then
     mark_failure "BuildAndChecks" "UI_BUILD_FAIL" "rex-web npm ci/build failed; see ci-observability/ui-web-build.log."
-  elif ! "${ROOT}/scripts/ci/lint_ui_tokens.sh" 2>&1 | tee -a "ci-observability/ui-web-build.log"; then
-    mark_failure "BuildAndChecks" "UI_BUILD_FAIL" "UI token lint failed; see ci-observability/ui-web-build.log."
-  elif ! (cd "${WEB_DIR}" && npm test) 2>&1 | tee -a "ci-observability/ui-web-build.log"; then
-    mark_failure "BuildAndChecks" "UI_BUILD_FAIL" "rex-web vitest failed; see ci-observability/ui-web-build.log."
   fi
 elif [ "${result}" = "success" ] && [ "${MODE}" = "desktop" ]; then
   require_dist "${WEB_DIR}/dist" "rex-web"

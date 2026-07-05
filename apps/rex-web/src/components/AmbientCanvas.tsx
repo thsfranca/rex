@@ -66,12 +66,12 @@ export function AmbientCanvas({ phase }: Props) {
 
     let frame = 0;
     let running = true;
-    const isActive =
+    const active =
       phase === "generating" || phase === "tool_running" || phase === "tool_approval";
 
     const loop = () => {
       if (!running) return;
-      if (isActive) {
+      if (active) {
         t += 0.016 * batterySlowdown;
         draw();
       } else {
@@ -92,16 +92,5 @@ export function AmbientCanvas({ phase }: Props) {
     };
   }, [phase]);
 
-  const active =
-    phase === "generating" || phase === "tool_running" || phase === "tool_approval";
-
-  return (
-    <canvas
-      id="ambient"
-      ref={canvasRef}
-      data-testid="ambient"
-      data-motion-tier={active ? "cinematic" : "idle"}
-      aria-hidden
-    />
-  );
+  return <canvas id="ambient" ref={canvasRef} data-testid="ambient" aria-hidden />;
 }

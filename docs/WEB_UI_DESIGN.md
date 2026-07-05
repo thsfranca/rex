@@ -43,21 +43,6 @@ Configuration remains **`REX_ROOT`** plus JSON only. No cosmetic-only env vars o
 
 All styling MUST reference CSS custom properties (`--rex-*`). Raw color literals outside tokens are **automatic PR rejection** for agents.
 
-### Design system module
-
-Implementation lives in [`apps/rex-web/src/design-system/`](../apps/rex-web/src/design-system/):
-
-| Path | Role |
-|------|------|
-| `tokens/*.css` | **Only** place raw color literals are allowed |
-| `primitives.css` | Primitive component styles (token references only) |
-| `primitives/*.tsx` | React primitives (`Button`, `Modal`, `Text`, `Surface`, `Stack`, `StatusDot`) |
-| `theme/obsidian-calm.ts` | Typed token name exports for harness and TS consumers |
-
-Feature components import primitives from `../design-system` (or `@/design-system` when aliased). Layout shell classes remain in `tokens.css` until migrated to `layout/ShellGrid`.
-
-Token lint: `./scripts/ci/lint_ui_tokens.sh` (wired into `run_ui_verify.sh` build leg).
-
 ### Semantic color
 
 | Token | Light | Dark | Application |
