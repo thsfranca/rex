@@ -94,7 +94,7 @@ Shared protobuf compiles to Rust (`rex-proto`) and TypeScript interfaces for web
 
 | Phase | Deliverable |
 |-------|-------------|
-| Dev | `cargo tauri dev` + Vite HMR |
+| Dev | `cargo tauri dev` — builds `apps/rex-web/dist` and serves the same bundle as release (no Vite dev server) |
 | CI | rex-ui-harness browser mode; native WKWebView after tauri-plugin-playwright |
 | Release | GitHub Actions + Developer ID signing + `tauri-plugin-updater` (W107) |
 
@@ -106,7 +106,7 @@ macOS Gatekeeper requires notarization for distribution; deferred until post-MVP
 
 Validation MUST exercise the same frontend artifact operators receive:
 
-1. **`apps/rex-web/dist`** — built via `npm run build`; Tauri `frontendDist` and rex-ui-harness desktop mode both load this bundle (`vite preview` on port 5173 for harness + debug `devUrl` parity).
+1. **`apps/rex-web/dist`** — built via `npm run build`; Tauri `frontendDist`, bare `cargo run -p rex`, and rex-ui-harness desktop mode all load this bundle (harness uses `vite preview` on port 5173 when a URL server is required).
 2. **No alternate presentation code** — mock scenarios belong in daemon config (`fixtures/ui_probe/rex_root/`), not duplicate HTML/React trees.
 3. **Harness stack** — Tauri + `e2e-testing` + tauri-plugin-playwright + mock daemon; intelligence path matches bare `rex`.
 

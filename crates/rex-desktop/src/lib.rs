@@ -11,6 +11,8 @@ use control::{
 };
 use rex_cli::ensure_daemon_ready;
 use rex_cli::CliError;
+use rex_cli::DesktopLaunch;
+use serde::Serialize;
 use stream::{StreamEventDto, submit_prompt_stream};
 use tauri::ipc::Channel;
 use tauri::{
@@ -27,6 +29,22 @@ fn new_harness_session_id() -> String {
         .map(|d| d.as_nanos())
         .unwrap_or(0);
     format!("hs-{}-{}-{}", std::process::id(), seq, nanos)
+}
+
+struct LaunchState {
+    debug: bool,
+}
+
+#[derive(Serialize)]
+struct LaunchOptionsDto {
+    debug: bool,
+}
+
+#[tauri::command]
+fn launch_options(state: tauri::State<LaunchState>) -> LaunchOptionsDto {
+    LaunchOptionsDto {
+        debug: state.debug,
+    }
 }
 
 #[tauri::command]
@@ -105,16 +123,18 @@ fn spawn_daemon_lifecycle_monitor(app: &tauri::App) {
     });
 }
 
-pub fn build_app() -> tauri::Builder<tauri::Wry> {
+pub fn build_app(debug: bool) -> tauri::Builder<tauri::Wry> {
     let mut builder = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
+            launch_options,
             ensure_daemon,
             get_system_status,
             fetch_session_events,
             respond_to_tool_approval,
             submit_prompt,
         ])
-        .setup(|app| {
+        .setup(move |app| {
+            app.manage(LaunchState { debug });
             spawn_daemon_lifecycle_monitor(app);
             let app_menu = build_menu(app)?;
             app.set_menu(app_menu)?;
@@ -182,8 +202,8 @@ fn build_menu(app: &tauri::App) -> tauri::Result<Menu<tauri::Wry>> {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    build_app()
+pub fn run(launch: DesktopLaunch) {
+    build_app(launch.debug)
         .run(tauri::generate_context!())
         .expect("error while running Rex desktop");
 }

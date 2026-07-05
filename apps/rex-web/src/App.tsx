@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ApprovalModal } from "./components/ApprovalModal";
 import { AmbientCanvas } from "./components/AmbientCanvas";
 import { Composer } from "./components/Composer";
@@ -10,6 +10,7 @@ import { UiObservability } from "./components/UiObservability";
 import {
   ensureDaemon,
   fetchSessionEvents,
+  getLaunchOptions,
   respondToToolApproval,
   sessionEventsToMessages,
   subscribeDaemonLifecycle,
@@ -22,6 +23,7 @@ import {
 import { useAppStore } from "./store";
 
 export default function App() {
+  const [debugEnabled, setDebugEnabled] = useState(false);
   const phase = useAppStore((s) => s.phase);
   const statusLabel = useAppStore((s) => s.statusLabel);
   const workspaceRoot = useAppStore((s) => s.workspaceRoot);
@@ -39,6 +41,7 @@ export default function App() {
   const observabilitySnapshot = useMemo(
     () =>
       buildObservabilitySnapshot({
+        enabled: debugEnabled,
         phase,
         statusLabel,
         pendingApproval,
@@ -49,6 +52,7 @@ export default function App() {
         streamEvents,
       }),
     [
+      debugEnabled,
       phase,
       statusLabel,
       pendingApproval,
@@ -59,6 +63,12 @@ export default function App() {
       streamEvents,
     ]
   );
+
+  useEffect(() => {
+    void getLaunchOptions()
+      .then((options) => setDebugEnabled(options.debug))
+      .catch(() => setDebugEnabled(false));
+  }, []);
 
   useEffect(() => {
     publishObservabilitySnapshot(observabilitySnapshot);

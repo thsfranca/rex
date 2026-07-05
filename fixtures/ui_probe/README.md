@@ -60,7 +60,7 @@ Register MCP in Cursor:
 
 ## Observability
 
-Harness desktop sessions set `localStorage.rexUiObservability=1`. Inspect `[data-testid=ui-observability]` or `window.__REX_UI_OBSERVABILITY__` for phase, stream events, and submit errors when a scenario fails.
+Harness desktop sessions launch with `--debug`. Inspect `[data-testid=ui-observability]` or `window.__REX_UI_OBSERVABILITY__` for phase, stream events, and submit errors when a scenario fails.
 
 ## Baselines
 

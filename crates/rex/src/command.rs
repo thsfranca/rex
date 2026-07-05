@@ -18,11 +18,13 @@ pub const INTERNAL_DAEMON_ARG: &str = "__rex_internal_daemon";
 pub fn parse_top_level(args: impl Iterator<Item = String>) -> Result<TopLevelCommand, String> {
     let mut continue_flag = false;
     let mut last_flag = false;
+    let mut debug_flag = false;
     let mut positional = Vec::new();
     for arg in args {
         match arg.as_str() {
             "--continue" => continue_flag = true,
             "--last" => last_flag = true,
+            "--debug" => debug_flag = true,
             other => positional.push(other.to_string()),
         }
     }
@@ -32,14 +34,17 @@ pub fn parse_top_level(args: impl Iterator<Item = String>) -> Result<TopLevelCom
 
     match positional.first().map(|s| s.as_str()) {
         None => {
-            let launch = if last_flag {
-                rex_cli::DesktopLaunch::Last
+            let session = if last_flag {
+                rex_cli::DesktopSession::Last
             } else if continue_flag {
-                rex_cli::DesktopLaunch::ContinuePicker
+                rex_cli::DesktopSession::ContinuePicker
             } else {
-                rex_cli::DesktopLaunch::New
+                rex_cli::DesktopSession::New
             };
-            Ok(TopLevelCommand::Desktop(launch))
+            Ok(TopLevelCommand::Desktop(rex_cli::DesktopLaunch {
+                session,
+                debug: debug_flag,
+            }))
         }
         Some("-h") | Some("--help") | Some("help") => Ok(TopLevelCommand::Help),
         Some(INTERNAL_DAEMON_ARG) => Ok(TopLevelCommand::InternalDaemon),
@@ -66,7 +71,7 @@ pub fn print_usage() {
     eprintln!(
         "\
 Usage:
-  rex [--continue | --last]
+  rex [--continue | --last] [--debug]
   rex config <init|show|path|validate>
   rex proto <install|path|doctor>
   rex sidecar <list|init|doctor>
@@ -80,13 +85,16 @@ Open the interactive desktop workspace (default), resume a closed session, or ru
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rex_cli::DesktopLaunch;
+    use rex_cli::{DesktopLaunch, DesktopSession};
 
     #[test]
     fn bare_rex_opens_desktop() {
         assert_eq!(
             parse_top_level(std::iter::empty()).unwrap(),
-            TopLevelCommand::Desktop(DesktopLaunch::New)
+            TopLevelCommand::Desktop(DesktopLaunch {
+                session: DesktopSession::New,
+                debug: false,
+            })
         );
     }
 
@@ -94,7 +102,10 @@ mod tests {
     fn parses_continue_flag() {
         assert_eq!(
             parse_top_level(["--continue".to_string()].into_iter()).unwrap(),
-            TopLevelCommand::Desktop(DesktopLaunch::ContinuePicker)
+            TopLevelCommand::Desktop(DesktopLaunch {
+                session: DesktopSession::ContinuePicker,
+                debug: false,
+            })
         );
     }
 
@@ -102,7 +113,21 @@ mod tests {
     fn parses_last_flag() {
         assert_eq!(
             parse_top_level(["--last".to_string()].into_iter()).unwrap(),
-            TopLevelCommand::Desktop(DesktopLaunch::Last)
+            TopLevelCommand::Desktop(DesktopLaunch {
+                session: DesktopSession::Last,
+                debug: false,
+            })
+        );
+    }
+
+    #[test]
+    fn parses_debug_flag() {
+        assert_eq!(
+            parse_top_level(["--debug".to_string()].into_iter()).unwrap(),
+            TopLevelCommand::Desktop(DesktopLaunch {
+                session: DesktopSession::New,
+                debug: true,
+            })
         );
     }
 

@@ -4,8 +4,7 @@
   "version": "1.0.0",
   "identifier": "dev.rex.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev --prefix ../../apps/rex-web",
-    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run build --prefix ../../apps/rex-web",
     "beforeBuildCommand": "npm run build --prefix ../../apps/rex-web",
     "frontendDist": "../../apps/rex-web/dist"
   },

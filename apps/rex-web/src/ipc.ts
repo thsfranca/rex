@@ -29,6 +29,10 @@ export async function ensureDaemon(): Promise<SystemStatus> {
   return invoke<SystemStatus>("ensure_daemon");
 }
 
+export async function getLaunchOptions(): Promise<{ debug: boolean }> {
+  return invoke<{ debug: boolean }>("launch_options");
+}
+
 export async function getSystemStatus(): Promise<SystemStatus> {
   return invoke<SystemStatus>("get_system_status");
 }

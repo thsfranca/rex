@@ -38,7 +38,7 @@ async function openDesktopSession(cfg) {
     process.env.REX_BIN = rexBin;
     processManager = new TauriProcessManager({
         command: desktopBin,
-        args: [],
+        args: ["--debug"],
         cwd: harnessCwd,
         socketPath: cfg.desktopSocket,
         startTimeout: cfg.desktopStartTimeoutSecs,
@@ -49,7 +49,6 @@ async function openDesktopSession(cfg) {
     const tauriPage = new TauriPage(pluginClient);
     tauriPage.setDefaultTimeout(60_000);
     session = { mode: "desktop", page: tauriPage, motionFrames: [], recording: false };
-    await pageEvaluateObservabilityOn(session);
     await pageWaitForSelector(session, '[data-testid="shell"]', 60_000);
     await pageWaitForText(session, "Ready", 60_000);
     return session;
@@ -65,11 +64,6 @@ export async function closeSession() {
         desktopRepoRoot = null;
     }
     session = null;
-}
-async function pageEvaluateObservabilityOn(s) {
-    await s.page.evaluate(`(() => {
-    try { localStorage.setItem("rexUiObservability", "1"); } catch {}
-  })()`);
 }
 export async function dumpObservability(label) {
     const s = getSession();

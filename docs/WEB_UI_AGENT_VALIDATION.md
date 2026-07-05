@@ -42,15 +42,15 @@ Failures surface in merge gate **`ci-checks`** as `UI_FAIL`. Local reproduction 
 7. `ui_goto_scenario` → `approval_required` — real mock tool approval via `__approval_probe__`
 8. `ui_close`
 
-## Observability (debug)
+## Observability (opt-in debug)
 
-When a desktop scenario fails, enable the in-app debug strip before reproducing:
+The in-app observability panel is **hidden unless Rex is started with `--debug`**:
 
-```javascript
-localStorage.setItem("rexUiObservability", "1");
+```bash
+rex --debug
 ```
 
-The harness enables this automatically on `ui_open`. Read `[data-testid=ui-observability]` or `window.__REX_UI_OBSERVABILITY__` for phase, stream events, and submit errors.
+The harness launches `rex-desktop --debug` automatically. Read `[data-testid=ui-observability]` or `window.__REX_UI_OBSERVABILITY__` for phase, stream events, and submit errors.
 
 ## Related
 

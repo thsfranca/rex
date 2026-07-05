@@ -48,7 +48,7 @@ rex config init
 rex config validate
 cargo build --workspace
 rex             # interactive desktop workspace (ensures daemon)
-cd apps/rex-web && npm install && npm run build   # web UI assets (for tauri build)
+cd apps/rex-web && npm install && npm run build   # production web UI bundle (required before rex / tauri dev)
 cargo build -p rex
 ```
 
