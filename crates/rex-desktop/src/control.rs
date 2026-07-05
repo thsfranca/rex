@@ -50,6 +50,14 @@ pub struct ToolApprovalResultDto {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClosedSessionDto {
+    pub id: String,
+    pub title: String,
+    pub preview: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DaemonLifecycleEvent {
     Ready { workspace_root: String },
@@ -66,6 +74,19 @@ pub async fn get_system_status() -> Result<SystemStatusDto, CliError> {
         lifecycle_state: status.lifecycle_state,
         idle_seconds: status.idle_seconds,
     })
+}
+
+pub fn list_closed_sessions_dto() -> Result<Vec<ClosedSessionDto>, CliError> {
+    let workspace = rex_cli::session_resume::workspace_root()?;
+    let items = rex_cli::session_resume::list_closed_sessions(&workspace)?;
+    Ok(items
+        .into_iter()
+        .map(|item| ClosedSessionDto {
+            id: item.harness_session_id.clone(),
+            title: item.title.clone(),
+            preview: item.title,
+        })
+        .collect())
 }
 
 pub async fn fetch_session_events(

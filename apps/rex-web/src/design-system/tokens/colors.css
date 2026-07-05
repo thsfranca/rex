@@ -1,0 +1,31 @@
+:root {
+  --rex-surface-base: #fafafa;
+  --rex-surface-raised: #ffffff;
+  --rex-surface-overlay: #ffffff;
+  --rex-surface-dimmed: rgba(0, 0, 0, 0.2);
+  --rex-text-primary: #111111;
+  --rex-text-secondary: #666666;
+  --rex-hairline-default: #e5e5e5;
+  --rex-hairline-focus: #2563eb;
+  --rex-border-subtle: #ececec;
+  --rex-status-success: #10b981;
+  --rex-status-working: #2563eb;
+  --rex-status-error: #ef4444;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rex-surface-base: transparent;
+    --rex-surface-raised: #1a1b20;
+    --rex-surface-overlay: #24252b;
+    --rex-surface-dimmed: rgba(0, 0, 0, 0.6);
+    --rex-text-primary: #e2e2e2;
+    --rex-text-secondary: #a0a0a5;
+    --rex-hairline-default: #303136;
+    --rex-hairline-focus: #82a0ff;
+    --rex-border-subtle: #2a2b31;
+    --rex-status-success: #86e59a;
+    --rex-status-working: #82a0ff;
+    --rex-status-error: #ff6b6b;
+  }
+}

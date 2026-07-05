@@ -6,8 +6,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use control::{
     fetch_session_events as fetch_session_events_rpc, get_system_status as get_system_status_rpc,
-    respond_to_tool_approval as respond_to_tool_approval_rpc, DaemonLifecycleEvent,
-    FetchSessionEventsDto, SystemStatusDto, ToolApprovalResultDto,
+    list_closed_sessions_dto, respond_to_tool_approval as respond_to_tool_approval_rpc,
+    ClosedSessionDto, DaemonLifecycleEvent, FetchSessionEventsDto, SystemStatusDto,
+    ToolApprovalResultDto,
 };
 use rex_cli::ensure_daemon_ready;
 use rex_cli::CliError;
@@ -99,6 +100,11 @@ async fn respond_to_tool_approval(
 }
 
 #[tauri::command]
+fn list_closed_sessions() -> Result<Vec<ClosedSessionDto>, String> {
+    list_closed_sessions_dto().map_err(|e: CliError| e.operator_message())
+}
+
+#[tauri::command]
 async fn submit_prompt(
     prompt: String,
     mode: String,
@@ -129,6 +135,7 @@ pub fn build_app(debug: bool) -> tauri::Builder<tauri::Wry> {
             launch_options,
             ensure_daemon,
             get_system_status,
+            list_closed_sessions,
             fetch_session_events,
             respond_to_tool_approval,
             submit_prompt,

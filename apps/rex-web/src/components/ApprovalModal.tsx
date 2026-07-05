@@ -1,4 +1,6 @@
 import { motion, useReducedMotion } from "framer-motion";
+import { Button } from "../design-system";
+import { modalTransition, modalVariants } from "../design-system/motion";
 import type { PendingApproval } from "../types";
 
 interface Props {
@@ -23,10 +25,11 @@ export function ApprovalModal({ pending, onApprove, onDeny }: Props) {
         className="modal"
         data-testid="modal"
         data-motion-tier="cinematic"
-        initial={reduceMotion ? false : { opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={reduceMotion ? undefined : { opacity: 0, scale: 0.95 }}
-        transition={{ duration: 0.35, ease: [0.25, 1, 0.5, 1] }}
+        initial={reduceMotion ? false : "hidden"}
+        animate="visible"
+        exit={reduceMotion ? undefined : "hidden"}
+        variants={modalVariants}
+        transition={modalTransition}
       >
         <h2 id="approval-title" style={{ marginTop: 0 }}>
           {pending.toolName} needs your approval
@@ -43,17 +46,12 @@ export function ApprovalModal({ pending, onApprove, onDeny }: Props) {
           ))}
         </div>
         <div className="modal-actions">
-          <button type="button" data-testid="approval-deny" onClick={onDeny}>
+          <Button type="button" variant="secondary" data-testid="approval-deny" onClick={onDeny}>
             Deny
-          </button>
-          <button
-            type="button"
-            data-testid="approval-approve"
-            className="primary"
-            onClick={onApprove}
-          >
+          </Button>
+          <Button type="button" variant="primary" data-testid="approval-approve" onClick={onApprove}>
             Approve
-          </button>
+          </Button>
         </div>
       </motion.div>
     </div>

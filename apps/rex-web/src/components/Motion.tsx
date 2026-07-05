@@ -1,9 +1,11 @@
 import { motion, useReducedMotion } from "framer-motion";
-
-const messageVariants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0 },
-};
+import {
+  activeTransition,
+  ambientTransition,
+  messageVariants,
+  statusPulseTransition,
+  timelineItemVariants,
+} from "../design-system/motion";
 
 interface Props {
   className: string;
@@ -30,7 +32,7 @@ export function MotionMessage({ className, children, "data-testid": testId }: Pr
       initial="hidden"
       animate="visible"
       variants={messageVariants}
-      transition={{ duration: 0.25, ease: [0.25, 1, 0.5, 1] }}
+      transition={activeTransition}
     >
       {children}
     </motion.div>
@@ -47,9 +49,10 @@ export function MotionTimelineItem({ children }: { children: React.ReactNode }) 
   return (
     <motion.li
       data-motion-tier="ambient"
-      initial={{ opacity: 0, x: 8 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.4, ease: [0.33, 1, 0.68, 1] }}
+      initial="hidden"
+      animate="visible"
+      variants={timelineItemVariants}
+      transition={ambientTransition}
     >
       {children}
     </motion.li>
@@ -81,7 +84,7 @@ export function MotionStatusDot({
       transition={
         reduceMotion || !working
           ? { duration: 0 }
-          : { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
+          : statusPulseTransition
       }
     />
   );

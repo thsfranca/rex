@@ -1,35 +1,4 @@
-:root {
-  --rex-surface-base: #fafafa;
-  --rex-surface-raised: #ffffff;
-  --rex-surface-overlay: #ffffff;
-  --rex-surface-dimmed: rgba(0, 0, 0, 0.2);
-  --rex-text-primary: #111111;
-  --rex-text-secondary: #666666;
-  --rex-hairline-default: #e5e5e5;
-  --rex-hairline-focus: #2563eb;
-  --rex-status-success: #10b981;
-  --rex-status-working: #2563eb;
-  --rex-status-error: #ef4444;
-  --rex-font-ui-base: system-ui, -apple-system, sans-serif;
-  --rex-space-md: 16px;
-  --rex-radius-md: 8px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --rex-surface-base: transparent;
-    --rex-surface-raised: #1a1b20;
-    --rex-surface-overlay: #24252b;
-    --rex-surface-dimmed: rgba(0, 0, 0, 0.6);
-    --rex-text-primary: #e2e2e2;
-    --rex-text-secondary: #a0a0a5;
-    --rex-hairline-default: #303136;
-    --rex-hairline-focus: #82a0ff;
-    --rex-status-success: #86e59a;
-    --rex-status-working: #82a0ff;
-    --rex-status-error: #ff6b6b;
-  }
-}
+@import "./design-system/tokens/index.css";
 
 * {
   box-sizing: border-box;
@@ -38,17 +7,14 @@
 body {
   margin: 0;
   font-family: var(--rex-font-ui-base);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: var(--rex-font-size-ui-base);
+  line-height: var(--rex-line-height-ui);
   color: var(--rex-text-primary);
   background: var(--rex-surface-base);
 }
 
 .shell {
-  display: grid;
-  grid-template-rows: auto 1fr auto auto;
-  grid-template-columns: 1fr 280px;
-  min-height: 100vh;
+  /* Layout defined in design-system/layout/breakpoints.css (.rex-shell) */
 }
 
 .header {
@@ -77,7 +43,7 @@ body {
 
 .footer {
   grid-column: 1 / -1;
-  padding: 8px var(--rex-space-md);
+  padding: var(--rex-space-sm) var(--rex-space-md);
   color: var(--rex-text-secondary);
   border-top: 1px solid var(--rex-hairline-default);
 }
@@ -117,18 +83,20 @@ body {
 
 .ui-observability {
   position: fixed;
-  right: 8px;
-  bottom: 8px;
-  z-index: 9999;
+  right: var(--rex-space-sm);
+  bottom: var(--rex-space-sm);
+  z-index: var(--rex-z-debug);
   max-width: min(420px, 40vw);
   max-height: 240px;
   overflow: auto;
-  font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--rex-font-mono-small);
+  font-size: var(--rex-font-size-mono-small);
+  line-height: var(--rex-line-height-mono-small);
   color: var(--rex-text-secondary);
   background: color-mix(in srgb, var(--rex-surface-overlay) 92%, transparent);
   border: 1px solid var(--rex-border-subtle);
   border-radius: var(--rex-radius-sm);
-  padding: 6px 8px;
+  padding: 6px var(--rex-space-sm);
   pointer-events: none;
 }
 
@@ -152,8 +120,9 @@ body {
   min-width: 320px;
   transform: scale(0.95);
   opacity: 0;
-  transition: transform 350ms cubic-bezier(0.25, 1, 0.5, 1),
-    opacity 350ms cubic-bezier(0.25, 1, 0.5, 1);
+  transition:
+    transform var(--rex-duration-modal) var(--rex-ease-active),
+    opacity var(--rex-duration-modal) var(--rex-ease-active);
 }
 
 .modal-backdrop.open .modal {
@@ -166,15 +135,15 @@ canvas#ambient {
   inset: 0;
   pointer-events: none;
   opacity: 0.15;
-  z-index: -1;
+  z-index: var(--rex-z-base);
 }
 
 .diff-scrubber {
   display: flex;
   overflow-x: auto;
-  gap: 8px;
-  padding: 8px 0;
-  margin: 12px 0;
+  gap: var(--rex-space-sm);
+  padding: var(--rex-space-sm) 0;
+  margin: var(--rex-space-md) 0;
 }
 
 .diff-line {
@@ -190,37 +159,29 @@ canvas#ambient {
 
 .diff-marker {
   color: var(--rex-status-success);
-  font-weight: 600;
+  font-weight: var(--rex-font-weight-semibold);
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.modal-actions button.primary {
-  background: var(--rex-status-working);
-  color: var(--rex-text-primary);
-  border: none;
-  border-radius: var(--rex-radius-md);
-  padding: 8px 14px;
+  gap: var(--rex-space-sm);
+  margin-top: var(--rex-space-md);
 }
 
 .session-picker .session-carousel {
   display: flex;
-  gap: 12px;
+  gap: var(--rex-space-md);
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  padding-bottom: 8px;
+  padding-bottom: var(--rex-space-sm);
 }
 
 .session-card {
   scroll-snap-align: start;
   min-width: 200px;
   text-align: left;
-  padding: 12px;
+  padding: var(--rex-space-md);
   border: 1px solid var(--rex-hairline-default);
   border-radius: var(--rex-radius-md);
   background: var(--rex-surface-base);

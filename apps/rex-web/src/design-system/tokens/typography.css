@@ -1,0 +1,15 @@
+:root {
+  --rex-font-ui-base: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --rex-font-ui-bold: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --rex-font-mono-base: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --rex-font-mono-small: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --rex-font-size-ui-base: 14px;
+  --rex-font-size-ui-bold: 14px;
+  --rex-font-size-mono-base: 13px;
+  --rex-font-size-mono-small: 11px;
+  --rex-line-height-ui: 1.5;
+  --rex-line-height-mono: 1.6;
+  --rex-line-height-mono-small: 1.4;
+  --rex-font-weight-normal: 400;
+  --rex-font-weight-semibold: 600;
+}
