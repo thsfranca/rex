@@ -44,7 +44,10 @@ export function AmbientCanvas({ phase }: Props) {
       return;
     }
 
-    const regl = createREGL({ canvas });
+    const regl = createREGL({
+      canvas,
+      attributes: { preserveDrawingBuffer: true },
+    });
     let batterySlowdown = 1;
 
     const readBattery = async () => {

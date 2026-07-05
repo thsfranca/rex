@@ -56,7 +56,7 @@ Register MCP in Cursor:
 | Scenario | Validates |
 |----------|-----------|
 | `idle` | Default Ready state |
-| `streaming` | Working status + motion tier on `#status-dot`; ambient canvas tier `cinematic`; hairline flux, edge glow, status orbit |
+| `streaming` | Working status + motion tier on `#status-dot`; ambient/particle canvas tier `cinematic`; regl particle renderer; canvas pixel drift |
 | `approval_required` | Approval modal on production UI (mock daemon probe) |
 
 ## Observability

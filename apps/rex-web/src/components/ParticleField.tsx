@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createParticleRenderer } from "../design-system/canvas/particle-renderer";
 import {
   createParticlePool,
   spawnBurst,
@@ -39,17 +40,12 @@ export function ParticleField({ phase }: Props) {
     if (!canvas) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
+    const renderer = createParticleRenderer(canvas, POOL_SIZE);
     let frame = 0;
     let running = true;
     let last = performance.now();
 
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
+    const resize = () => renderer.poll();
     resize();
     window.addEventListener("resize", resize);
 
@@ -63,28 +59,16 @@ export function ParticleField({ phase }: Props) {
 
       if (orch.streamTick !== lastTickRef.current) {
         lastTickRef.current = orch.streamTick;
-        spawnBurst(pool, canvas.width * 0.5, canvas.height * 0.32, 16, Math.PI * 0.55, orch.flowAngle);
+        const { width, height } = canvas.getBoundingClientRect();
+        spawnBurst(pool, width * 0.5, height * 0.32, 16, Math.PI * 0.55, orch.flowAngle);
       }
 
       if (active) {
         stepParticles(pool, dt, 2.8, 18);
       }
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const fill =
-        getComputedStyle(document.documentElement).getPropertyValue("--rex-particle-fill").trim() ||
-        getComputedStyle(document.documentElement).getPropertyValue("--rex-accent-glow").trim();
-      for (const p of pool) {
-        if (!p.active) continue;
-        const alpha = (p.life / p.maxLife) * 0.75;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 2 + alpha * 2, 0, Math.PI * 2);
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = fill;
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-
+      renderer.updatePool(pool);
+      renderer.draw(active);
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);
@@ -93,6 +77,7 @@ export function ParticleField({ phase }: Props) {
       running = false;
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
+      renderer.destroy();
     };
   }, [phase, active]);
 
@@ -101,6 +86,7 @@ export function ParticleField({ phase }: Props) {
       id="particles"
       ref={canvasRef}
       data-testid="particles"
+      data-renderer="regl"
       data-motion-tier={active ? "cinematic" : "idle"}
       aria-hidden
     />
