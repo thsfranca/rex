@@ -5,6 +5,8 @@ import { closeSession, gotoScenario, openSession } from "./session.js";
 import {
   pageCssTokenAssert,
   pageClick,
+  pageCanvasHash,
+  pageCanvasMeta,
   pageEvaluate,
   pageFill,
   pageFocus,
@@ -147,6 +149,41 @@ async function assertCanvasTier(expected: string): Promise<StepResult> {
   return { step: `assert_canvas_tier ${expected}`, pass, detail: { tier } };
 }
 
+async function assertParticleRegl(): Promise<StepResult> {
+  const session = await import("./session.js").then((m) => m.getSession());
+  const meta = await pageCanvasMeta(session, '[data-testid="particles"]');
+  const pass = meta.renderer === "regl" && meta.webgl;
+  return {
+    step: "assert_particle_regl",
+    pass,
+    detail: meta,
+  };
+}
+
+async function assertParticleCanvasTier(expected: string): Promise<StepResult> {
+  const session = await import("./session.js").then((m) => m.getSession());
+  const meta = await pageCanvasMeta(session, '[data-testid="particles"]');
+  const pass = meta.motionTier === expected;
+  return {
+    step: `assert_particle_canvas_tier ${expected}`,
+    pass,
+    detail: meta,
+  };
+}
+
+async function assertCanvasAnimating(selector: string): Promise<StepResult> {
+  const session = await import("./session.js").then((m) => m.getSession());
+  const hash1 = await pageCanvasHash(session, selector);
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  const hash2 = await pageCanvasHash(session, selector);
+  const pass = hash1.length > 0 && hash2.length > 0 && hash1 !== hash2;
+  return {
+    step: `assert_canvas_animating ${selector}`,
+    pass,
+    detail: { hash1_preview: hash1.slice(0, 32), hash2_preview: hash2.slice(0, 32) },
+  };
+}
+
 async function runBuildSuite(): Promise<StepResult[]> {
   return [{ step: "build-only gate", pass: true }];
 }
@@ -168,6 +205,22 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
   await pageWaitForSelector(session, "#status-dot.working", 30_000);
   results.push(await assertMotion("#status-dot"));
   results.push(await assertCanvasTier("cinematic"));
+  results.push(await assertParticleRegl());
+  results.push(await assertParticleCanvasTier("cinematic"));
+  results.push(await assertCanvasAnimating('[data-testid="particles"]'));
+  results.push(await assertCanvasAnimating('[data-testid="ambient"]'));
+  results.push(
+    await assertLayout('[data-testid="timeline-hairline"]', "block")
+  );
+  results.push(
+    await assertLayout('[data-testid="transcript-hairline"]', "block")
+  );
+  results.push(
+    await assertLayout('[data-testid="edge-glow"]', "block")
+  );
+  results.push(
+    await assertLayout('[data-testid="status-orbit"]', "block")
+  );
 
   await pageWaitForText(session, "mock: hello", 60_000);
   results.push({ step: "wait transcript mock hello", pass: true });
@@ -189,6 +242,12 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
   await pageWaitForSelector(session, '[data-testid="command-palette"]', 10_000);
   results.push({ step: "open command palette", pass: true });
   await pagePress(session, "Escape");
+
+  await gotoScenario("streaming");
+  results.push({ step: "goto streaming", pass: true });
+  await pageWaitForSelector(session, "#status-dot.working", 30_000);
+  results.push(await assertParticleCanvasTier("cinematic"));
+  results.push(await assertCanvasAnimating('[data-testid="particles"]'));
 
   await gotoScenario("approval_required");
   results.push({ step: "goto approval_required", pass: true });

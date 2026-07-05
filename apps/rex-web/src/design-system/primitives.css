@@ -18,9 +18,19 @@
   cursor: not-allowed;
 }
 
+.rex-banner--error {
+  background: color-mix(in srgb, var(--rex-banner-wash, var(--rex-status-error)) 28%, var(--rex-surface-raised));
+  border-bottom-color: color-mix(in srgb, var(--rex-status-error) 45%, var(--rex-hairline-default));
+  box-shadow: var(--rex-shadow-glow-error);
+}
+
 .rex-btn--primary {
   background: var(--rex-status-working);
   color: var(--rex-text-primary);
+}
+
+.rex-btn--primary:hover:not(:disabled) {
+  box-shadow: var(--rex-shadow-glow-working);
 }
 
 .rex-btn--secondary {
@@ -398,5 +408,69 @@
 
 .message-block pre:hover .message-block__copy {
   opacity: 1;
+}
+
+.rex-shell-entrance {
+  min-height: 100%;
+  width: 100%;
+}
+
+.rex-status-orbit,
+.rex-modal-particles {
+  position: fixed;
+  display: block;
+  pointer-events: none;
+  z-index: calc(var(--rex-z-overlay) + 1);
+}
+
+.rex-modal-particles {
+  inset: 0;
+  z-index: calc(var(--rex-z-modal) - 1);
+}
+
+.rex-hairline-flux,
+.rex-edge-glow {
+  display: block;
+  width: 100%;
+  pointer-events: none;
+}
+
+.rex-hairline-flux {
+  height: 3px;
+}
+
+.rex-edge-glow {
+  height: 4px;
+}
+
+.session-carousel {
+  display: flex;
+  gap: var(--rex-space-md);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: var(--rex-space-sm) 0;
+}
+
+.session-carousel .session-card {
+  flex: 0 0 min(280px, 80vw);
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--rex-space-xs);
+  text-align: left;
+  padding: var(--rex-space-md);
+  border-radius: var(--rex-radius-md);
+  border: 1px solid var(--rex-hairline-default);
+  background: var(--rex-surface-base);
+  color: var(--rex-text-primary);
+}
+
+.rex-surface--interactive:hover {
+  box-shadow: var(--rex-shadow-glow-working);
+  border-color: color-mix(in srgb, var(--rex-hairline-focus) 35%, var(--rex-hairline-default));
+}
+
+.message-block--streaming .rex-message-bubble--assistant {
+  box-shadow: var(--rex-shadow-glow-working);
 }
 

@@ -33,6 +33,12 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 | 16 | **W116** | Approval modal polish | **Done** |
 | 17 | **W117** | Session list IPC + picker | **Done** |
 | 18 | **W118** | Command palette + status + errors + test expansion | **Done** |
+| 19 | **W119** | Electric Alive default tokens + aurora gradients | **Done** |
+| 20 | **W120** | RK4 spring physics + motion orchestrator | **Done** |
+| 21 | **W121** | AmbientCanvas v2 + ParticleField (regl) | **Done** |
+| 22 | **W122** | HairlineFlux + EdgeGlow region canvases | **Done** |
+| 23 | **W123** | Component choreography (effect graph) | **Done** |
+| 24 | **W124** | Harness baselines + motion scenario refresh | **Done** |
 
 ## Phase detail
 
@@ -119,6 +125,10 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 
 - Command palette (⌘K), status panel, error banner
 - Vitest RTL for primitives; expanded harness CI scenarios
+
+### W124 — Harness motion refresh
+
+- Electric Alive token lint; streaming canvas flux + region motion asserts unchanged contract
 
 ## Cancelled
 

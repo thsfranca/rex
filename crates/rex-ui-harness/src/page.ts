@@ -202,8 +202,43 @@ export async function pageCanvasHash(session: HarnessSession, selector: string):
     (sel) => {
       const c = document.querySelector(sel as string) as HTMLCanvasElement | null;
       if (!c) return "";
-      const ctx = c.getContext("2d");
-      return ctx?.getImageData(0, 0, c.width, c.height).data.join(",").slice(0, 500) ?? "";
+      const ctx2d = c.getContext("2d");
+      if (ctx2d) {
+        return ctx2d.getImageData(0, 0, c.width, c.height).data.join(",").slice(0, 500);
+      }
+      const gl = c.getContext("webgl2") ?? c.getContext("webgl");
+      if (!gl) return "";
+      const chunks: number[] = [];
+      for (let i = 0; i < 8; i += 1) {
+        const sample = new Uint8Array(4);
+        const x = Math.max(0, Math.floor((c.width * (i + 1)) / 9));
+        const y = Math.max(0, Math.floor((c.height * (i + 1)) / 9));
+        gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, sample);
+        chunks.push(...sample);
+      }
+      return chunks.join(",");
+    },
+    selector
+  );
+}
+
+export async function pageCanvasMeta(
+  session: HarnessSession,
+  selector: string
+): Promise<{ renderer: string; motionTier: string; webgl: boolean }> {
+  return pageEvaluate(
+    session,
+    (sel) => {
+      const el = document.querySelector(sel as string);
+      if (!(el instanceof HTMLCanvasElement)) {
+        return { renderer: "", motionTier: "", webgl: false };
+      }
+      const webgl = Boolean(el.getContext("webgl2") ?? el.getContext("webgl"));
+      return {
+        renderer: el.dataset.renderer ?? "",
+        motionTier: el.dataset.motionTier ?? "",
+        webgl,
+      };
     },
     selector
   );

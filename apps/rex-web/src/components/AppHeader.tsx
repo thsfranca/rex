@@ -1,5 +1,6 @@
-import { Badge, StatusDot, Text } from "../design-system";
+import { Badge, Text } from "../design-system";
 import type { ComposerMode } from "../types";
+import { MotionStatusDot } from "./Motion";
 
 interface Props {
   workspaceRoot: string | null;
@@ -25,7 +26,7 @@ export function AppHeader({
   onOpenCommands,
 }: Props) {
   return (
-    <div className="rex-app-header" data-testid="app-header">
+    <div className={`rex-app-header${hasError ? " rex-app-header--error" : ""}`} data-testid="app-header">
       <div className="rex-app-header__brand">
         <span className="rex-app-header__mark">Rex</span>
         <span className="rex-app-header__workspace" title={workspaceRoot ?? undefined}>
@@ -34,7 +35,7 @@ export function AppHeader({
         <Badge testId="header-mode-badge">{mode}</Badge>
       </div>
       <div className="rex-app-header__status">
-        <StatusDot working={working} error={hasError} id="status-dot" testId="status-dot" />
+        <MotionStatusDot working={working} id="status-dot" testId="status-dot" />
         <Text as="span" id="status-label" data-testid="status-label">
           {statusLabel}
         </Text>

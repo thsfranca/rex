@@ -1,10 +1,13 @@
+import { motion, useReducedMotion } from "framer-motion";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { pressSpring } from "../motion/presets";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   children: ReactNode;
+  "data-testid"?: string;
 }
 
 const variantClass: Record<Variant, string> = {
@@ -19,12 +22,49 @@ export function Button({
   className,
   type = "button",
   children,
-  ...rest
+  disabled,
+  onClick,
+  "data-testid": testId,
+  id,
+  form,
+  name,
+  value,
+  autoFocus,
+  tabIndex,
+  "aria-label": ariaLabel,
+  "aria-disabled": ariaDisabled,
 }: ButtonProps) {
+  const reduceMotion = useReducedMotion();
   const classes = className ? `${variantClass[variant]} ${className}` : variantClass[variant];
+  const shared = {
+    type,
+    className: classes,
+    disabled,
+    onClick,
+    "data-testid": testId,
+    id,
+    form,
+    name,
+    value,
+    autoFocus,
+    tabIndex,
+    "aria-label": ariaLabel,
+    "aria-disabled": ariaDisabled,
+  };
+
+  if (reduceMotion || disabled) {
+    return <button {...shared}>{children}</button>;
+  }
+
   return (
-    <button type={type} className={classes} {...rest}>
+    <motion.button
+      {...shared}
+      data-motion-tier="active"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.97 }}
+      transition={pressSpring}
+    >
       {children}
-    </button>
+    </motion.button>
   );
 }

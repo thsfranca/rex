@@ -1,5 +1,6 @@
 import { Text } from "../design-system";
 import type { TimelineTask, TurnPhase } from "../types";
+import { HairlineFlux } from "./HairlineFlux";
 import { MotionTimelineItem } from "./Motion";
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 export function Timeline({ tasks, phase }: Props) {
   return (
     <div className="timeline-panel" data-testid="timeline">
+      <HairlineFlux phase={phase} testId="timeline-hairline" />
       <div className="timeline-panel__rail" aria-hidden>
         {tasks.slice(0, 5).map((task) => (
           <span key={task.id} className="timeline-panel__dot" title={task.label} />
@@ -23,8 +25,8 @@ export function Timeline({ tasks, phase }: Props) {
           <Text tone="secondary">{phase === "generating" ? "Working…" : "No tasks"}</Text>
         ) : (
           <ul style={{ paddingLeft: "1rem", margin: 0 }}>
-            {tasks.map((task) => (
-              <MotionTimelineItem key={task.id}>
+            {tasks.map((task, index) => (
+              <MotionTimelineItem key={task.id} index={index}>
                 <div className="timeline-row">
                   <span>{task.label}</span>
                   <div className="timeline-row__detail">{task.id}</div>

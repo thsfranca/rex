@@ -2,7 +2,7 @@
 import { findRepoRoot, loadConfig } from "./config.js";
 import { ciede2000, parseCssColor } from "./color.js";
 import { closeSession, gotoScenario, openSession } from "./session.js";
-import { pageCssTokenAssert, pageClick, pageEvaluate, pageFill, pageFocus, pageLayout, pagePress, pageWaitForSelector, pageWaitForText, } from "./page.js";
+import { pageCssTokenAssert, pageClick, pageCanvasHash, pageCanvasMeta, pageEvaluate, pageFill, pageFocus, pageLayout, pagePress, pageWaitForSelector, pageWaitForText, } from "./page.js";
 async function pageEvaluateStatusLabel(session) {
     return pageEvaluate(session, () => document.querySelector("#status-label")?.textContent?.trim() ?? "", null);
 }
@@ -97,6 +97,38 @@ async function assertCanvasTier(expected) {
     const pass = tier === expected;
     return { step: `assert_canvas_tier ${expected}`, pass, detail: { tier } };
 }
+async function assertParticleRegl() {
+    const session = await import("./session.js").then((m) => m.getSession());
+    const meta = await pageCanvasMeta(session, '[data-testid="particles"]');
+    const pass = meta.renderer === "regl" && meta.webgl;
+    return {
+        step: "assert_particle_regl",
+        pass,
+        detail: meta,
+    };
+}
+async function assertParticleCanvasTier(expected) {
+    const session = await import("./session.js").then((m) => m.getSession());
+    const meta = await pageCanvasMeta(session, '[data-testid="particles"]');
+    const pass = meta.motionTier === expected;
+    return {
+        step: `assert_particle_canvas_tier ${expected}`,
+        pass,
+        detail: meta,
+    };
+}
+async function assertCanvasAnimating(selector) {
+    const session = await import("./session.js").then((m) => m.getSession());
+    const hash1 = await pageCanvasHash(session, selector);
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    const hash2 = await pageCanvasHash(session, selector);
+    const pass = hash1.length > 0 && hash2.length > 0 && hash1 !== hash2;
+    return {
+        step: `assert_canvas_animating ${selector}`,
+        pass,
+        detail: { hash1_preview: hash1.slice(0, 32), hash2_preview: hash2.slice(0, 32) },
+    };
+}
 async function runBuildSuite() {
     return [{ step: "build-only gate", pass: true }];
 }
@@ -114,6 +146,14 @@ async function runDesktopSuite(cfg) {
     await pageWaitForSelector(session, "#status-dot.working", 30_000);
     results.push(await assertMotion("#status-dot"));
     results.push(await assertCanvasTier("cinematic"));
+    results.push(await assertParticleRegl());
+    results.push(await assertParticleCanvasTier("cinematic"));
+    results.push(await assertCanvasAnimating('[data-testid="particles"]'));
+    results.push(await assertCanvasAnimating('[data-testid="ambient"]'));
+    results.push(await assertLayout('[data-testid="timeline-hairline"]', "block"));
+    results.push(await assertLayout('[data-testid="transcript-hairline"]', "block"));
+    results.push(await assertLayout('[data-testid="edge-glow"]', "block"));
+    results.push(await assertLayout('[data-testid="status-orbit"]', "block"));
     await pageWaitForText(session, "mock: hello", 60_000);
     results.push({ step: "wait transcript mock hello", pass: true });
     await waitForStatusLabel(session, "Ready", 60_000);
@@ -128,6 +168,11 @@ async function runDesktopSuite(cfg) {
     await pageWaitForSelector(session, '[data-testid="command-palette"]', 10_000);
     results.push({ step: "open command palette", pass: true });
     await pagePress(session, "Escape");
+    await gotoScenario("streaming");
+    results.push({ step: "goto streaming", pass: true });
+    await pageWaitForSelector(session, "#status-dot.working", 30_000);
+    results.push(await assertParticleCanvasTier("cinematic"));
+    results.push(await assertCanvasAnimating('[data-testid="particles"]'));
     await gotoScenario("approval_required");
     results.push({ step: "goto approval_required", pass: true });
     await pageWaitForSelector(session, '[data-testid="modal"]', 30_000);

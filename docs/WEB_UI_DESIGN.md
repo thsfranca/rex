@@ -52,7 +52,8 @@ Implementation lives in [`apps/rex-web/src/design-system/`](../apps/rex-web/src/
 | `tokens/*.css` | **Only** place raw color literals are allowed |
 | `primitives.css` | Primitive component styles (token references only) |
 | `primitives/*.tsx` | React primitives (`Button`, `Modal`, `Text`, `Surface`, `Stack`, `StatusDot`) |
-| `theme/obsidian-calm.ts` | Typed token name exports for harness and TS consumers |
+| `theme/obsidian-calm.ts` | Legacy Obsidian token names (superseded by `electric-alive.ts`) |
+| `theme/electric-alive.ts` | Typed token name exports for harness and TS consumers |
 
 Feature components import primitives from `../design-system` (or `@/design-system` when aliased). Layout shell classes remain in `tokens.css` until migrated to `layout/ShellGrid`.
 
@@ -126,7 +127,25 @@ Every animated component MUST include `prefers-reduced-motion` fallback.
 
 ## Default aesthetic
 
-**Obsidian Calm** (dark-first recommended): near-monochrome surfaces (`#1A1B20`), luminous semantic accents for active states. Alternate themes: Electric Alive (WebGL), Glass Depth (macOS blur) — secondary.
+**Electric Alive** (default): deep void base with aurora gradients, luminous semantic accents, glass chrome, and continuous shader/particle motion during async work. Rollback theme: set `data-theme="obsidian"` on `<html>` for near-monochrome Obsidian Calm. **Glass Depth** (macOS blur) is folded into shell chrome.
+
+## Effect graph (web)
+
+| Trigger | Effect | Tier | Surface |
+|---------|--------|------|---------|
+| `generating` / `tool_running` | Aurora shader + hairline flux + status particle orbit | Ambient–Cinematic | Fullscreen + active panel hairline |
+| Stream token delta | Edge glow pulse + particle burst at transcript tail | Active | Transcript |
+| Timeline row add | Spring coalesce + HSL flash | Ambient | Timeline |
+| Approval open | RK4 scale spring + backdrop HSL dim + particle ring | Cinematic | Modal |
+| Approval close | Spring out (250ms cap) | Cinematic | Modal |
+| Error | HSL shift to error hue + banner spring drop | Active | Header |
+| Composer focus/typing | Edge glow sweep | Active | Composer |
+| Session carousel focus | Spring scale/fade adjacent cards | Active | SessionPicker |
+| Daemon connect | Viewport fade-in (400ms) | Ambient | Shell |
+
+**Invariant:** while async work is in flight, at least one Ambient-tier motion MUST be visible — static wait fails review.
+
+Spring modals use `--rex-spring-modal-stiffness` and `--rex-spring-modal-damping` from [`motion.css`](../apps/rex-web/src/design-system/tokens/motion.css).
 
 ## Agent PR gates
 

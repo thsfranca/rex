@@ -1,39 +1,35 @@
-import { motion, useReducedMotion } from "framer-motion";
-import { Button } from "../design-system";
-import { modalTransition, modalVariants } from "../design-system/motion";
+import { Button, AnimatedModal } from "../design-system";
+import { ModalParticleRing } from "./ModalParticleRing";
 import type { PendingApproval } from "../types";
 
 interface Props {
+  open: boolean;
   pending: PendingApproval;
   onApprove: () => void;
   onDeny: () => void;
 }
 
-export function ApprovalModal({ pending, onApprove, onDeny }: Props) {
-  const reduceMotion = useReducedMotion();
+export function ApprovalModal({ open, pending, onApprove, onDeny }: Props) {
   const lines = pending.detail.split("\n");
 
   return (
-    <div
-      className="modal-backdrop open"
-      data-testid="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="approval-title"
-    >
-      <motion.div
-        className="modal"
-        data-testid="modal"
-        data-motion-tier="cinematic"
-        initial={reduceMotion ? false : "hidden"}
-        animate="visible"
-        exit={reduceMotion ? undefined : "hidden"}
-        variants={modalVariants}
-        transition={modalTransition}
+    <>
+      <ModalParticleRing active={open} />
+      <AnimatedModal
+        open={open}
+        title={`${pending.toolName} needs your approval`}
+        testId="modal-backdrop"
+        actions={
+          <>
+            <Button type="button" variant="secondary" data-testid="approval-deny" onClick={onDeny}>
+              Deny
+            </Button>
+            <Button type="button" variant="primary" data-testid="approval-approve" onClick={onApprove}>
+              Approve
+            </Button>
+          </>
+        }
       >
-        <h2 id="approval-title" style={{ marginTop: 0 }}>
-          {pending.toolName} needs your approval
-        </h2>
         <p style={{ color: "var(--rex-text-secondary)" }}>
           Review the proposed change before Rex continues.
         </p>
@@ -45,15 +41,7 @@ export function ApprovalModal({ pending, onApprove, onDeny }: Props) {
             </div>
           ))}
         </div>
-        <div className="modal-actions">
-          <Button type="button" variant="secondary" data-testid="approval-deny" onClick={onDeny}>
-            Deny
-          </Button>
-          <Button type="button" variant="primary" data-testid="approval-approve" onClick={onApprove}>
-            Approve
-          </Button>
-        </div>
-      </motion.div>
-    </div>
+      </AnimatedModal>
+    </>
   );
 }

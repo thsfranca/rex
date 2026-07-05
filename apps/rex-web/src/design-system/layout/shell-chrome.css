@@ -10,9 +10,14 @@
   gap: var(--rex-space-md);
   padding: var(--rex-space-sm) var(--rex-space-lg);
   background: var(--rex-glass-bg);
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px) saturate(1.2);
   border-bottom: 1px solid var(--rex-glass-border);
-  box-shadow: var(--rex-shadow-sm);
+  box-shadow: var(--rex-shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--rex-hairline-focus) 12%, transparent);
+}
+
+.rex-app-header--error .rex-app-header__mark {
+  color: var(--rex-status-error);
+  text-shadow: 0 0 12px var(--rex-glow-error);
 }
 
 .rex-app-header {
@@ -151,10 +156,10 @@
   margin: 0 auto;
   padding: var(--rex-space-md);
   background: var(--rex-glass-bg);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(24px) saturate(1.25);
   border: 1px solid var(--rex-glass-border);
   border-radius: var(--rex-radius-lg);
-  box-shadow: var(--rex-shadow-composer);
+  box-shadow: var(--rex-shadow-composer), inset 0 1px 0 color-mix(in srgb, var(--rex-hairline-focus) 10%, transparent);
 }
 
 .rex-shell__footer {

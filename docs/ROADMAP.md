@@ -41,7 +41,7 @@ flowchart LR
  langfuseImpl --> v1
 ```
 
-**Current focus:** LangFuse program **LF-D01+** toward **RC-LF1** ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)); web UI pivot **W100–W118** **Done** ([WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md)).
+**Current focus:** LangFuse program **LF-D01+** toward **RC-LF1** ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)); web UI **W119–W124** Electric Alive motion **Done** ([WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md)).
 
 ## Now — stable baseline
 
@@ -66,6 +66,7 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 | 6 | **R040** — nightly live-smoke workflow | **Should** | RC-S6 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [CI.md](CI.md) | Open |
 | 7 | **R059** — `workspace.search` broker | **Should** | — | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md#workspace-search-broker-r059) | Open |
 | — | **W100–W118** — web desktop operator surface | **Must/Should** | — | [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md), [OPERATOR_UX.md](OPERATOR_UX.md) | **Done** |
+| — | **W119–W124** — Electric Alive physics motion v2 | **Could** | — | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | **Done** |
 | — | **R072–R073**, **R080–R082** — terminal harness (superseded) | — | — | [historical/CLI_OPERATOR_UX.md](historical/CLI_OPERATOR_UX.md) | **Done** (superseded by **W100+**) |
 | — | **R090–R096** — TUI visual identity v2 | **Won't (now)** | — | [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md) | **Cancelled** |
 
