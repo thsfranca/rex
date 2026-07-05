@@ -38,6 +38,7 @@ pick_log() {
     LINT_FAIL) candidates=(extension-lint.log) ;;
     PACKAGE_FAIL) candidates=(extension-package.log) ;;
     GUIDELINES_FAIL) candidates=(guidelines.log) ;;
+    UI_FAIL) candidates=(ui-harness.log ui-web-build.log ui-harness-build.log ui-desktop-build.log) ;;
     *)
       candidates=()
       ;;

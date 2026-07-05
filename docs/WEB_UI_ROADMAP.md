@@ -25,6 +25,7 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 | 8 | **W108** | Canvas/WebGL cinematic tier (regl) | Planned |
 | 9 | **W109** | tauri-plugin-playwright native harness | **Done** (desktop default in rex-ui-harness) |
 | 10 | **W110** | macOS signing + auto-update CI | Planned |
+| 11 | **W111** | path-aware `ui-verify` CI matrix | **Done** |
 
 ## Phase detail
 
@@ -76,6 +77,11 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 ### W110 — Deployment
 
 - Developer ID signing, notarytool, `tauri-plugin-updater`
+
+### W111 — CI verify
+
+- Path-aware `ui-verify` job: static scenarios on Linux, desktop harness on macOS
+- Wired into `ci-checks` with `UI_FAIL` / skip semantics — [CI.md](CI.md)
 
 ## Cancelled
 

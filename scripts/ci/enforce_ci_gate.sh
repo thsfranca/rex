@@ -4,9 +4,11 @@ set -euo pipefail
 rust_relevant="${RUST_RELEVANT:-true}"
 sidecar_relevant="${SIDECAR_RELEVANT:-true}"
 guidelines_relevant="${GUIDELINES_RELEVANT:-true}"
+ui_relevant="${UI_RELEVANT:-true}"
 rust_result="${RUST_RESULT:-missing}"
 sidecar_result="${SIDECAR_RESULT:-missing}"
 guidelines_result="${GUIDELINES_RESULT:-missing}"
+ui_result="${UI_RESULT:-missing}"
 result="success"
 fail_stage="-"
 fail_code="-"
@@ -42,15 +44,19 @@ echo "::endgroup::"
 echo "::group::PostRunSummary"
 if ! domain_ok "${rust_relevant}" "${rust_result}" \
   || ! domain_ok "${sidecar_relevant}" "${sidecar_result}" \
-  || ! domain_ok "${guidelines_relevant}" "${guidelines_result}"; then
+  || ! domain_ok "${guidelines_relevant}" "${guidelines_result}" \
+  || ! domain_ok "${ui_relevant}" "${ui_result}"; then
   result="failure"
   fail_stage="PostRunSummary"
   fail_code="GATE_FAIL"
   if [ "${guidelines_relevant}" = "true" ] && [ "${guidelines_result}" != "success" ]; then
     fail_code="GUIDELINES_FAIL"
     hint="Guidelines verify failed; run ./scripts/ci/run_guidelines_verify.sh locally."
+  elif [ "${ui_relevant}" = "true" ] && [ "${ui_result}" != "success" ]; then
+    fail_code="UI_FAIL"
+    hint="UI verify failed; run ./scripts/ci/run_ui_verify.sh --mode static locally (desktop on macOS)."
   else
-    hint="Inspect rust-verify, sidecar-verify, and guidelines-verify summaries and artifacts; when a domain is not relevant, upstream verify may be skipped."
+    hint="Inspect rust-verify, sidecar-verify, guidelines-verify, and ui-verify summaries and artifacts; when a domain is not relevant, upstream verify may be skipped."
   fi
 fi
 
@@ -66,6 +72,7 @@ fi
   echo "- rust-verify: ${rust_result}"
   echo "- sidecar-verify: ${sidecar_result}"
   echo "- guidelines-verify: ${guidelines_result}"
+  echo "- ui-verify: ${ui_result}"
 } >> "$GITHUB_STEP_SUMMARY"
 
 {
@@ -76,6 +83,7 @@ fi
   echo "rust_verify=${rust_result}"
   echo "sidecar_verify=${sidecar_result}"
   echo "guidelines_verify=${guidelines_result}"
+  echo "ui_verify=${ui_result}"
 } > "ci-observability/ci-gate-summary.txt"
 
 if [ "${result}" != "success" ]; then

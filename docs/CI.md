@@ -80,6 +80,8 @@ Keep failure codes low-cardinality. Current baseline set:
 - `ENV_SETUP_FAIL`
 - `GATE_FAIL`
 - `GUIDELINES_FAIL` (documented guideline conformance — error code catalog sync and sibling checks under `scripts/ci/guidelines/`)
+- `UI_FAIL` (Web UI harness scenarios — static probe on Linux, desktop + daemon on macOS via [`run_ui_verify.sh`](scripts/ci/run_ui_verify.sh))
+- `UI_BUILD_FAIL` (rex-web or rex-ui-harness build step in UI verify)
 - `SIDECAR_FAIL` (builtin sidecar verify — `rex-sidecar-stub` / `rex-agent`; inner `RUFF_FAIL` from rex-agent ruff check)
 - `RUFF_FAIL` (rex-agent Ruff static analysis in sidecar verify)
 - `AUDIT_FAIL` (Rust supply chain — `cargo audit` on `Cargo.lock` in `rust-verify`)
@@ -107,13 +109,13 @@ Set branch protection or ruleset on `main` to require:
 - `ci-checks`
 - `Conventional PR title` (job in [`.github/workflows/pr-title-lint.yml`](../.github/workflows/pr-title-lint.yml))
 
-`ci-checks` is the merge gate for code quality. It reads `rust-verify`, `sidecar-verify`, and `guidelines-verify` results. All three verify jobs use path-aware skip semantics: when a domain is not relevant, the verify job is skipped and `ci-checks` still passes. When a relevant verify job fails, `ci-checks` fails with `GATE_FAIL`. When relevant `guidelines-verify` fails, `ci-checks` fails with `GUIDELINES_FAIL`.
+`ci-checks` is the merge gate for code quality. It reads `rust-verify`, `sidecar-verify`, `guidelines-verify`, and `ui-verify` results. All four verify jobs use path-aware skip semantics: when a domain is not relevant, the verify job is skipped and `ci-checks` still passes. When a relevant verify job fails, `ci-checks` fails with `GATE_FAIL`. When relevant `guidelines-verify` fails, `ci-checks` fails with `GUIDELINES_FAIL`. When relevant `ui-verify` fails, `ci-checks` fails with `UI_FAIL`.
 
 **Conventional PR title** is required because squash-merge titles become commits on `main`, which feed release-plz (semver + changelog). See [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 Do **not** require `rust-verify`, `guidelines-verify`, or `changes` — domain verify jobs skip on docs-only PRs; `changes` is path detection only.
 
-Informational jobs (not required): `rust-verify`, `sidecar-verify`, `guidelines-verify`, `changes`, CodeQL (`Analyze (rust)`, `Analyze (python)` in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)).
+Informational jobs (not required): `rust-verify`, `sidecar-verify`, `guidelines-verify`, `ui-verify`, `changes`, CodeQL (`Analyze (rust)`, `Analyze (python)` in [`.github/workflows/codeql.yml`](../.github/workflows/codeql.yml)).
 
 ## Path-aware execution model
 
@@ -124,11 +126,13 @@ CI first evaluates changed paths, then runs only relevant domain checks.
 - `rust_verify_changed`
 - `sidecar_changed`
 - `guidelines_changed`
+- `ui_verify_changed`
 - `rust_codeql_changed`
 - `python_codeql_changed`
 - `rust_relevant`
 - `sidecar_relevant`
 - `guidelines_relevant`
+- `ui_relevant`
 - `rust_codeql_relevant`
 - `python_codeql_relevant`
 
@@ -174,10 +178,34 @@ Local run (any time):
 ./scripts/ci/run_guidelines_verify.sh
 ```
 
+### UI verify (path-aware)
+
+When Web UI probe or harness paths change, **ui-verify** runs [`scripts/ci/run_ui_verify.sh`](scripts/ci/run_ui_verify.sh) in a matrix:
+
+- **static** (`ubuntu-latest`) — rex-web build + static fixture scenarios (no daemon)
+- **desktop** (`macos-latest`) — rex-desktop build + native Playwright harness with probe daemon
+
+Failure code: `UI_FAIL` (scenario failures) or `UI_BUILD_FAIL` (build step). See [WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md).
+
+**UI-relevant** (`ui_verify_changed` only):
+
+- `apps/rex-web/**`
+- `crates/rex-ui-harness/**`
+- `crates/rex-desktop/**`
+- `fixtures/ui_probe/**`
+- `scripts/ci/run_ui_verify.sh`
+
+Local run:
+
+```bash
+./scripts/ci/run_ui_verify.sh --mode static
+./scripts/ci/run_ui_verify.sh --mode desktop   # macOS only
+```
+
 ### Dependency model
 
 - Path detection: `changes`
-- Verify jobs (parallel, path-aware): `rust-verify`, `sidecar-verify`, `guidelines-verify`
+- Verify jobs (parallel, path-aware): `rust-verify`, `sidecar-verify`, `guidelines-verify`, `ui-verify`
 - Merge gate: all verify jobs → `ci-checks`
 
 When a domain is non-relevant, its verify job skips. `ci-checks` runs with `if: always` and passes when skipped verify results are acceptable for non-relevant paths.

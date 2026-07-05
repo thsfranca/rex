@@ -18,6 +18,7 @@ jobs:
       rust_relevant: ${{ steps.detect.outputs.rust_relevant }}
       sidecar_relevant: ${{ steps.detect.outputs.sidecar_relevant }}
       guidelines_relevant: ${{ steps.detect.outputs.guidelines_relevant }}
+      ui_relevant: ${{ steps.detect.outputs.ui_relevant }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -165,9 +166,64 @@ jobs:
         if: ${{ steps.run_guidelines_verify.outcome != 'success' }}
         run: ./scripts/ci/enforce_verify_job.sh
 
+  ui-verify:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.ui_relevant == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: static
+            runner: ubuntu-latest
+          - mode: desktop
+            runner: macos-latest
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install system build dependencies
+        if: ${{ matrix.mode == 'desktop' }}
+        run: brew install protobuf
+
+      - name: Setup Rust
+        if: ${{ matrix.mode == 'desktop' }}
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        if: ${{ matrix.mode == 'desktop' }}
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run UI verify
+        id: run_ui_verify
+        continue-on-error: true
+        env:
+          REX_ROOT: ${{ github.workspace }}/fixtures/ui_probe/rex_root
+          REX_SIDECAR_HARNESS: direct
+        run: ./scripts/ci/run_ui_verify.sh --mode ${{ matrix.mode }}
+
+      - name: Write Job Summary
+        if: ${{ always() }}
+        run: ./scripts/ci/write_job_summary.sh ui-verify-${{ matrix.mode }}
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_ui_verify.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-ui-verify-${{ matrix.mode }}-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+
+      - name: Enforce ui verify job status
+        if: ${{ steps.run_ui_verify.outcome != 'success' }}
+        run: ./scripts/ci/enforce_verify_job.sh
+
   ci-checks:
     if: ${{ always() }}
-    needs: [changes, rust-verify, sidecar-verify, guidelines-verify]
+    needs: [changes, rust-verify, sidecar-verify, guidelines-verify, ui-verify]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -186,9 +242,11 @@ jobs:
           RUST_RELEVANT: ${{ needs.changes.outputs.rust_relevant }}
           SIDECAR_RELEVANT: ${{ needs.changes.outputs.sidecar_relevant }}
           GUIDELINES_RELEVANT: ${{ needs.changes.outputs.guidelines_relevant }}
+          UI_RELEVANT: ${{ needs.changes.outputs.ui_relevant }}
           RUST_RESULT: ${{ needs.rust-verify.result }}
           SIDECAR_RESULT: ${{ needs.sidecar-verify.result }}
           GUIDELINES_RESULT: ${{ needs.guidelines-verify.result }}
+          UI_RESULT: ${{ needs.ui-verify.result }}
         run: ./scripts/ci/enforce_ci_gate.sh
 
       - name: Upload diagnostics artifact
