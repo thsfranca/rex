@@ -10,10 +10,9 @@ PATH_MARKER="# rex install-cli: cargo bin PATH"
 
 print_bin_paths() {
   cat <<EOF
-Copy-paste when the editor host PATH omits ${CARGO_BIN} (see docs/CLI_OPERATOR_UX.md):
+Copy-paste when the editor host PATH omits ${CARGO_BIN} (see docs/OPERATOR_UX.md):
 
-  rex.cliPath ${REX_BIN}
-  rex.daemonBinaryPath ${REX_BIN}
+  rexPath ${REX_BIN}
 EOF
 }
 
@@ -116,11 +115,10 @@ if ! command -v cargo > /dev/null 2>&1; then
   exit 127
 fi
 
-echo "Installing rex (and compatibility shims) from ${ROOT_DIR}"
+echo "Installing rex from ${ROOT_DIR}"
 
 cargo install --path "${ROOT_DIR}/crates/rex" --force
 cargo install --path "${ROOT_DIR}/crates/rex-daemon" --force
-cargo install --path "${ROOT_DIR}/crates/rex-cli" --force
 
 ensure_session_path
 
@@ -143,9 +141,9 @@ fi
 echo "Install complete."
 echo "Primary command:"
 echo "  rex"
-echo "Compatibility shims (deprecated):"
-echo "  rex-daemon (use: rex — daemon auto-starts)"
-echo "  rex-cli (use: rex or rex tui)"
+echo "Legacy shim (deprecated):"
+echo "  rex-daemon — prefer bare rex (daemon auto-starts)"
+echo "Next: cd apps/rex-web && npm ci && npm run build — see docs/OPERATOR_UX.md"
 if [[ ":${PATH}:" != *":${CARGO_BIN}:"* ]]; then
   echo "If PATH is not updated yet, run:"
   echo "  ${REX_BIN}"

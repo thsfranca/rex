@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Local MVP preflight: build, full Rust CI verify.
-# Does not start rex-daemon. Run from repository root.
+# Does not start the desktop app. Run from repository root.
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -25,9 +25,6 @@ cat <<'EOF'
 
 ==> MVP local preflight passed.
 
-Next (live LLM, after Ollama is up): ./scripts/verify_native_tools_live.sh
-
-Then: configure JSON per docs/CLI_OPERATOR_UX.md, run rex (or rex tui),
-and follow the CLI operator path for agent-mode dogfood (TUI stream, cancel,
-brokered fs.read).
+Next: configure JSON per docs/OPERATOR_UX.md, build apps/rex-web (npm ci && npm run build),
+then run rex on macOS for desktop operator dogfood.
 EOF
