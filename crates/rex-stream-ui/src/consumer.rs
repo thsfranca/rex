@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn feeds_happy_path_fixture() {
-        let fixture = include_str!("../../../fixtures/ndjson_contract/happy_path.ndjson");
+        let fixture = include_str!("../../../fixtures/stream_events/happy_path.ndjson");
         let mut consumer = StreamConsumer::new();
         let mut terminal = false;
         for line in fixture.lines() {

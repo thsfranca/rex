@@ -24,7 +24,7 @@ Configuration uses **`$REX_ROOT/config.json`** and `.rex/config.json` only ([CON
 
 ## Stream event catalog
 
-Non-terminal events may appear mid-stream. Exactly one terminal event per request: `done` or `error` ([ERROR_HANDLING.md](ERROR_HANDLING.md), [NDJSON_STREAM.md](NDJSON_STREAM.md)).
+Non-terminal events may appear mid-stream. Exactly one terminal event per request: `done` or `error` ([ERROR_HANDLING.md](ERROR_HANDLING.md), [STREAM_EVENTS.md](STREAM_EVENTS.md)).
 
 | `event` | Fields | Semantics |
 |---------|--------|-----------|
@@ -74,9 +74,9 @@ Sidecar `RunTurn` flushes events during graph execution via a **stream sink** an
 
 ## Related
 
-- [NDJSON_STREAM.md](NDJSON_STREAM.md) — internal stream event reference
+- [STREAM_EVENTS.md](STREAM_EVENTS.md) — internal stream event reference
 - [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) — presentation (timeline, activity strip)
 - [OPERATOR_UX.md](OPERATOR_UX.md) — desktop operator path
 - [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) — `web.search` mode matrix
 - [POLICY_ENGINE.md](POLICY_ENGINE.md) — approval gate
-- [fixtures/ndjson_contract/](../fixtures/ndjson_contract/) — golden stream event lines
+- [fixtures/stream_events/](../fixtures/stream_events/) — golden stream event lines

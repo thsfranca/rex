@@ -3,18 +3,18 @@
 use rex_stream_ui::{StreamConsumer, TurnPhase, UiEffect};
 
 const FIXTURES: &[(&str, &str)] = &[
-    ("happy_path", include_str!("../../../fixtures/ndjson_contract/happy_path.ndjson")),
+    ("happy_path", include_str!("../../../fixtures/stream_events/happy_path.ndjson")),
     (
         "tool_step_stream",
-        include_str!("../../../fixtures/ndjson_contract/tool_step_stream.ndjson"),
+        include_str!("../../../fixtures/stream_events/tool_step_stream.ndjson"),
     ),
     (
         "activity_stream",
-        include_str!("../../../fixtures/ndjson_contract/activity_stream.ndjson"),
+        include_str!("../../../fixtures/stream_events/activity_stream.ndjson"),
     ),
     (
         "plan_stream",
-        include_str!("../../../fixtures/ndjson_contract/plan_stream.ndjson"),
+        include_str!("../../../fixtures/stream_events/plan_stream.ndjson"),
     ),
 ];
 
@@ -49,7 +49,7 @@ fn all_success_fixtures_reach_terminal_done() {
 
 #[test]
 fn tool_step_fixture_tracks_tool_by_call_id() {
-    let fixture = include_str!("../../../fixtures/ndjson_contract/tool_step_stream.ndjson");
+    let fixture = include_str!("../../../fixtures/stream_events/tool_step_stream.ndjson");
     let mut consumer = StreamConsumer::new();
     for line in fixture.lines() {
         if line.trim().is_empty() {
@@ -67,7 +67,7 @@ fn tool_step_fixture_tracks_tool_by_call_id() {
 
 #[test]
 fn activity_stream_emits_operator_messages() {
-    let fixture = include_str!("../../../fixtures/ndjson_contract/activity_stream.ndjson");
+    let fixture = include_str!("../../../fixtures/stream_events/activity_stream.ndjson");
     let mut consumer = StreamConsumer::new();
     let mut messages = 0usize;
     for line in fixture.lines() {
@@ -86,7 +86,7 @@ fn activity_stream_emits_operator_messages() {
 #[test]
 fn approval_required_fixture_enters_tool_approval_phase() {
     let fixture =
-        include_str!("../../../fixtures/ndjson_contract/tool_approval_required.ndjson");
+        include_str!("../../../fixtures/stream_events/tool_approval_required.ndjson");
     let mut consumer = StreamConsumer::new();
     let mut saw_approval = false;
     for line in fixture.lines() {
@@ -104,7 +104,7 @@ fn approval_required_fixture_enters_tool_approval_phase() {
 #[test]
 fn error_fixture_produces_terminal_error() {
     let fixture =
-        include_str!("../../../fixtures/ndjson_contract/sidecar_setup_errors.ndjson");
+        include_str!("../../../fixtures/stream_events/sidecar_setup_errors.ndjson");
     for line in fixture.lines() {
         if line.trim().is_empty() {
             continue;

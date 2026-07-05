@@ -156,7 +156,7 @@ Truncation at **line boundaries** when exceeding `max_tool_result_bytes`.
 |---|----------|-----------|
 | 1 | **Cache header owner:** LiteLLM gateway vs native daemon HTTP adapter for Anthropic `cache_control` / OpenAI automatic caching | [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADAPTERS.md](ADAPTERS.md) |
 | 2 | **Linter sandbox:** whether `AccessPolicy` permits compile/lint during tool loop or requires isolated runner | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md) |
-| 3 | **NDJSON streaming:** whether raw delimited tool results require extension parser version bump | [NDJSON_STREAM.md](NDJSON_STREAM.md) |
+| 3 | **NDJSON streaming:** whether raw delimited tool results require extension parser version bump | [STREAM_EVENTS.md](STREAM_EVENTS.md) |
 
 ## Target topology
 

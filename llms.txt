@@ -10,7 +10,7 @@
 ## Core reference
 
 - [docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md): stable error codes and messages
-- [docs/NDJSON_STREAM.md](docs/NDJSON_STREAM.md): CLI NDJSON contract
+- [docs/STREAM_EVENTS.md](docs/STREAM_EVENTS.md): internal stream event contract (desktop)
 - [docs/CONFIGURATION.md](docs/CONFIGURATION.md): JSON config keys and precedence
 - [docs/PURPOSE_AND_PRINCIPLES.md](docs/PURPOSE_AND_PRINCIPLES.md): project intent
 

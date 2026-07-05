@@ -1,5 +1,5 @@
 # Machine-readable NDJSON stream error code catalog.
-# Keep in sync with docs/ERROR_HANDLING.md and fixtures/ndjson_contract.
+# Keep in sync with docs/ERROR_HANDLING.md and fixtures/stream_events.
 version: 1
 codes:
   - code: daemon_unavailable

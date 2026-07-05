@@ -141,7 +141,7 @@ sequenceDiagram
  end
 ```
 
-**Cancellation / errors:** Preserve a single observable terminal NDJSON outcome on the CLI path (`done` or `error`). Daemon logs `stream.lifecycle` / `stream.terminal`. See [MVP_SPEC.md](MVP_SPEC.md).
+**Cancellation / errors:** Preserve a single observable terminal stream outcome (`done` or `error`). Daemon logs `stream.lifecycle` / `stream.terminal`. See [MVP_SPEC.md](MVP_SPEC.md).
 
 ## Data and state
 
@@ -156,7 +156,7 @@ Ownership of chat transcript, turn assembly (`TurnContext`), workspace binding, 
 | **Repudiation** | Structured logs with `request_id`, `trace_id` **implemented**. |
 | **Information disclosure** | Optional Cursor adapter sends prompt off-machine when enabled — operator choice. |
 | **Denial of service** | Subprocess **timeouts**, bounded CLI retry **implemented**; future rate limits **planned**. |
-| **Elevation** | Access policy broker **implemented** (RC-05) — [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md); `ApprovalGate` for `agent` mode — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md); extension approval UX **implemented**. |
+| **Elevation** | Access policy broker **implemented** (RC-05) — [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md); `ApprovalGate` for `agent` mode — [ADR 0009](architecture/decisions/0009-centralized-agent-approvals-and-checkpoints.md); desktop approval UX **implemented**. |
 | **Prompt injection** from repo | **planned** hardening: classifiers, allowlists; today: operator awareness. |
 
 ## Interoperability
@@ -164,7 +164,7 @@ Ownership of chat transcript, turn assembly (`TurnContext`), workspace binding, 
 | Mechanism | Status |
 |---|---|
 | `rex.v1` gRPC | `implemented` |
-| NDJSON CLI contract | `implemented` — [NDJSON_STREAM.md](NDJSON_STREAM.md) |
+| Internal stream event contract | `implemented` — [STREAM_EVENTS.md](STREAM_EVENTS.md) |
 | MCP (or equivalent) for tools | `planned` — **approved direction:** MCP stacks **primarily** in the **isolated sidecar**; host-affecting work **brokered** sidecar → daemon ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) matrix). Remote doc resources vs Rex knowledge bundles: [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md). Formal ADR when implementation is scheduled. |
 | HTTP OpenAI-compat via LiteLLM (default API; opt-in managed gateway) | `accepted` design — [INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md), [ADR 0019](architecture/decisions/0019-inference-gateway-opt-in-litellm.md); external profile [ADR 0018](architecture/decisions/0018-gateway-first-multi-provider-inference.md) |
 | Native Anthropic Messages API | `planned` — [ADAPTERS.md](ADAPTERS.md#direct-anthropic-messages-api-planned--secondary) |
@@ -242,7 +242,7 @@ Inference and cache policy today: JSON only (`$REX_ROOT/config.json`); sole prod
 ## Non-goals in this document
 
 - Field-by-field proto reference — [MVP_SPEC.md](MVP_SPEC.md).
-- Extension UX detail — [NDJSON_STREAM.md](NDJSON_STREAM.md).
+- Extension UX detail — [STREAM_EVENTS.md](STREAM_EVENTS.md).
 - Cursor env catalog — [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Related documents

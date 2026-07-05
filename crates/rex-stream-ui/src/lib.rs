@@ -1,7 +1,6 @@
-//! Shared NDJSON stream consumer for Rex terminal harness and CLI paths.
+//! Internal stream event consumer for the Rex desktop client.
 //!
-//! Parses [NDJSON_STREAM.md](https://github.com/thsfranca/rex/blob/main/docs/NDJSON_STREAM.md)
-//! events into a [`TurnState`] machine and operator-facing messages.
+//! Parses `docs/STREAM_EVENTS.md` events into a [`TurnState`] machine and operator-facing messages.
 
 mod consumer;
 mod event;

@@ -131,7 +131,7 @@ Documented in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Illustrative verbs:
 
 ## Stream event vocabulary (internal)
 
-Fixture-backed event names (`chunk`, `done`, `tool`, …) consumed by `rex-stream-ui` for desktop projection — see [fixtures/ndjson_contract/](../fixtures/ndjson_contract/). Not a public subprocess API.
+Fixture-backed event names (`chunk`, `done`, `tool`, …) consumed by `rex-stream-ui` for desktop projection — see [fixtures/stream_events/](../fixtures/stream_events/). Not a public subprocess API.
 
 ## Degraded / harness paths
 
