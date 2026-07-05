@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { submitPrompt } from "../ipc";
+import { useAppStore } from "../store";
 
 interface Props {
   disabled: boolean;
@@ -13,11 +14,13 @@ export function Composer({ disabled }: Props) {
     const prompt = value.trim();
     if (!prompt || busy) return;
     setBusy(true);
+    useAppStore.getState().setComposerBusy(true);
     setValue("");
     try {
       await submitPrompt(prompt);
     } finally {
       setBusy(false);
+      useAppStore.getState().setComposerBusy(false);
     }
   }
 

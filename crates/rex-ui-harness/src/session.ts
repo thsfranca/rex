@@ -16,9 +16,11 @@ import { ensureWebUiServer, stopWebUiServer } from "./devServer.js";
 import type { HarnessSession } from "./page.js";
 import {
   pageFill,
+  pageFocus,
   pagePress,
   pageWaitForSelector,
   pageWaitForText,
+  readObservabilitySnapshot,
 } from "./page.js";
 
 export type { HarnessSession };
@@ -148,10 +150,20 @@ export async function gotoScenario(scenario: string): Promise<void> {
       await pageWaitForSelector(s, "#status-dot.working", 30_000);
       break;
     }
-    case "approval_required":
-      throw new Error(
-        "approval_required needs agent.approvals_enabled in probe config — use static fixture"
-      );
+    case "approval_required": {
+      await pageFocus(s, '[data-testid="composer-input"]');
+      await pageFill(s, '[data-testid="composer-input"]', "__approval_probe__");
+      await pagePress(s, "Enter");
+      try {
+        await pageWaitForSelector(s, '[data-testid="modal-backdrop"]', 30_000);
+      } catch (err) {
+        const obs = await readObservabilitySnapshot(s);
+        throw new Error(
+          `${err instanceof Error ? err.message : String(err)}\nUI observability: ${JSON.stringify(obs)}`
+        );
+      }
+      break;
+    }
     case "error":
     case "history-fetch":
       throw new Error(`${scenario} scenario is static-fixture only`);

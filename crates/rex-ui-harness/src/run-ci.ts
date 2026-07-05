@@ -6,6 +6,7 @@ import { ciede2000, parseCssColor } from "./color.js";
 import { closeSession, gotoScenario, openSession } from "./session.js";
 import {
   pageCssTokenAssert,
+  pageClick,
   pageEvaluate,
   pageLayout,
   pageLocatorScreenshot,
@@ -197,6 +198,12 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
   results.push(
     await assertToken("#status-dot", "--rex-status-success", "background-color")
   );
+
+  await gotoScenario("approval_required");
+  results.push({ step: "goto approval_required", pass: true });
+  await pageWaitForSelector(session, '[data-testid="modal"]', 30_000);
+  await pageClick(session, '[data-testid="approval-approve"]');
+  results.push({ step: "approve modal", pass: true });
 
   await closeSession();
   results.push({ step: "close", pass: true });

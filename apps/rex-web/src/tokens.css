@@ -111,6 +111,30 @@ body {
   }
 }
 
+.ui-observability {
+  position: fixed;
+  right: 8px;
+  bottom: 8px;
+  z-index: 9999;
+  max-width: min(420px, 40vw);
+  max-height: 240px;
+  overflow: auto;
+  font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--rex-text-secondary);
+  background: color-mix(in srgb, var(--rex-surface-overlay) 92%, transparent);
+  border: 1px solid var(--rex-border-subtle);
+  border-radius: var(--rex-radius-sm);
+  padding: 6px 8px;
+  pointer-events: none;
+}
+
+.ui-observability[aria-hidden="true"] {
+  max-width: 320px;
+  max-height: none;
+  overflow: hidden;
+  opacity: 0.85;
+}
+
 .modal-backdrop {
   display: none;
   position: fixed;
@@ -146,4 +170,64 @@ canvas#ambient {
   pointer-events: none;
   opacity: 0.15;
   z-index: -1;
+}
+
+.diff-scrubber {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  padding: 8px 0;
+  margin: 12px 0;
+}
+
+.diff-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: max-content;
+  padding: 6px 10px;
+  background: var(--rex-surface-base);
+  border-left: 3px solid var(--rex-status-success);
+  border-radius: var(--rex-radius-md);
+}
+
+.diff-marker {
+  color: var(--rex-status-success);
+  font-weight: 600;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.modal-actions button.primary {
+  background: var(--rex-status-working);
+  color: var(--rex-text-primary);
+  border: none;
+  border-radius: var(--rex-radius-md);
+  padding: 8px 14px;
+}
+
+.session-picker .session-carousel {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 8px;
+}
+
+.session-card {
+  scroll-snap-align: start;
+  min-width: 200px;
+  text-align: left;
+  padding: 12px;
+  border: 1px solid var(--rex-hairline-default);
+  border-radius: var(--rex-radius-md);
+  background: var(--rex-surface-base);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }

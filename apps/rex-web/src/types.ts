@@ -4,6 +4,13 @@ export type StreamEvent =
   | { kind: "chunk"; text: string }
   | { kind: "phase"; phase: TurnPhase }
   | { kind: "message"; text: string }
+  | {
+      kind: "approvalRequired";
+      toolCallId: string;
+      toolName: string;
+      detail: string;
+      approvalToken: string;
+    }
   | { kind: "done" }
   | { kind: "error"; code: string; message: string };
 
@@ -39,6 +46,19 @@ export interface FetchSessionEventsResult {
 export interface ToolApprovalResult {
   ok: boolean;
   error: string;
+}
+
+export interface PendingApproval {
+  toolCallId: string;
+  toolName: string;
+  detail: string;
+  approvalToken: string;
+}
+
+export interface SessionSummary {
+  id: string;
+  title: string;
+  preview: string;
 }
 
 export interface ChatMessage {

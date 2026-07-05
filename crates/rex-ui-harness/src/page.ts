@@ -236,3 +236,31 @@ export async function pageCanvasHash(session: HarnessSession, selector: string):
     selector
   );
 }
+
+export async function readObservabilitySnapshot(
+  session: HarnessSession
+): Promise<Record<string, unknown>> {
+  return pageEvaluate(
+    session,
+    () => {
+      const el = document.querySelector('[data-testid="ui-observability"]');
+      const globalSnapshot = (
+        window as Window & { __REX_UI_OBSERVABILITY__?: Record<string, unknown> }
+      ).__REX_UI_OBSERVABILITY__;
+      if (globalSnapshot) return globalSnapshot;
+      if (!el) return { error: "missing ui-observability node" };
+      return {
+        phase: el.getAttribute("data-phase"),
+        status: el.getAttribute("data-status"),
+        pendingApproval: el.getAttribute("data-pending-approval"),
+        error: el.getAttribute("data-error"),
+        submitError: el.getAttribute("data-submit-error"),
+        sessionId: el.getAttribute("data-session-id"),
+        composerBusy: el.getAttribute("data-composer-busy"),
+        streamEvents: el.getAttribute("data-stream-events"),
+        summary: el.textContent?.trim() ?? "",
+      };
+    },
+    null
+  );
+}
