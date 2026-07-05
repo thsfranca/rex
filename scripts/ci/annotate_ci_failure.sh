@@ -96,7 +96,11 @@ main() {
   echo "::group::Failure excerpt (${fail_code} / ${fail_stage})"
   echo "hint: ${hint}"
   echo "log: ${log}"
-  excerpt="$("${SCRIPT_DIR}/extract_log_excerpt.sh" "${log}" 40)"
+  if [[ "${fail_code}" == "UI_FAIL" && "${log}" == *ui-harness.log* ]]; then
+    excerpt="$("${SCRIPT_DIR}/extract_ui_harness_failure.sh" "${log}" 40)"
+  else
+    excerpt="$("${SCRIPT_DIR}/extract_log_excerpt.sh" "${log}" 40)"
+  fi
   printf '%s\n' "${excerpt}"
   annotate_lines "${excerpt}"
 

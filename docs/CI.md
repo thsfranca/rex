@@ -32,6 +32,7 @@ Use this standard for every CI job in `.github/workflows/ci.yml`.
 - In gate jobs, include upstream job results explicitly.
 - On failure, append a **Failure excerpt** block (via `scripts/ci/annotate_ci_failure.sh`):
  - Pulls relevant lines from `ci-observability/*.log` using `scripts/ci/extract_log_excerpt.sh`
+ - For `UI_FAIL`, prefers `scripts/ci/extract_ui_harness_failure.sh` on `ui-harness.log` (parses `UI_HARNESS_*` lines and failed harness JSON steps)
  - Emits up to 25 `::error title=<fail_code>::` annotations so `gh run view --log-failed` shows the root cause
  - Maps `CI_FAIL_CODE` to the primary log (`test.log`, `clippy.log`, `sidecar-build.log`, etc.)
 - Verify scripts call `finish_verify_job.sh` on failure; workflow **Enforce** steps call `enforce_verify_job.sh` (re-print excerpt after `continue-on-error` verify steps).

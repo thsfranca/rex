@@ -19,7 +19,7 @@ strip_ansi() {
   sed 's/\x1b\[[0-9;]*m//g'
 }
 
-failure_pattern='FAIL \[|FAILED\.| failures:|panicked at|error\[E[0-9]+|error: |^Error:|assertion `|assertion failed|could not compile|CI_SIGNAL|::error::|RUST_BACKTRACE|exit code:|Process completed with exit code'
+failure_pattern='FAIL \[|FAILED\.| failures:|panicked at|error\[E[0-9]+|error: |^Error:|assertion `|assertion failed|could not compile|CI_SIGNAL|::error::|RUST_BACKTRACE|exit code:|Process completed with exit code|UI_HARNESS_(FAIL|ERROR|DETAIL)|Timed out waiting|TimeoutError|"pass": false'
 
 if matches="$(grep -n -E "${failure_pattern}" "${logfile}" 2>/dev/null | strip_ansi | tail -n "${max_lines}")" && [[ -n "${matches}" ]]; then
   printf '%s\n' "${matches}"
