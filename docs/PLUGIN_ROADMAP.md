@@ -2,12 +2,12 @@
 
 REX keeps **routing/caching/pipeline policy in `rex-daemon`**, runs the **development agent in a supervised sidecar process**, and uses **in-process inference adapters only as broker mechanisms** (HTTP OpenAI-compat today) — **not** as a substitute for the sidecar agent. See [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [MVP_SPEC.md](MVP_SPEC.md), [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md), ADRs [0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md), [0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md), [0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
-**Prioritization (2026-07-01):** Streaming/agent **RC-01–RC-10** **Met**; **v1.0 not Met** — observability Must **RC-LF1** blocks the tag. **Next** work is terminal harness **R072** → **R073** — [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md). LangFuse discovery deferred. Global queue: [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
+**Prioritization (2026-07-01):** Streaming/agent **RC-01–RC-10** **Met**; **v1.0 not Met** — observability Must **RC-LF1** blocks the tag. Web desktop **W100–W118** **Done** — [OPERATOR_UX.md](OPERATOR_UX.md), [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md). **Next:** LangFuse **LF-D01+**. Global queue: [PRIORITIZATION.md](PRIORITIZATION.md#current-focus-queue-audit-2026-07-01).
 
 ## Current purpose
 
-- Ship reliable **`rex.v1`** streaming for CLI and automation ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md)).
-- **Primary client:** terminal harness TUI consuming NDJSON internally — [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md).
+- Ship reliable **`rex.v1`** streaming for the desktop client ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)).
+- **Primary client:** Tauri web desktop — [OPERATOR_UX.md](OPERATOR_UX.md), [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md).
 - **MVP product path:** daemon-supervised **sidecar agent** + **brokered** HTTP inference + **one brokered tool**.
 - Concentrate **cost/performance levers** ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)) in the daemon boundary.
 - **Harness only:** direct in-process **mock** / HTTP without sidecar for CI and migration.

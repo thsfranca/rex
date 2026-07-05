@@ -19,10 +19,10 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 | 2 | **W102** | UDS bridge + simple streaming chat | **Done** |
 | 3 | **W103** | `rex` launches desktop + menu bar | **Done** |
 | 4 | **W104** | TUI removal | **Done** |
-| 5 | **W105** | Motion v1 (Framer Motion tiers) | Planned |
-| 6 | **W106** | Approval modal + diff scrubber | Planned |
-| 7 | **W107** | Session picker carousel | Planned |
-| 8 | **W108** | Canvas/WebGL cinematic tier (regl) | Planned |
+| 5 | **W105** | Motion v1 (Framer Motion tiers) | **Done** |
+| 6 | **W106** | Approval modal + diff scrubber | **Done** |
+| 7 | **W107** | Session picker carousel | **Done** |
+| 8 | **W108** | Canvas/WebGL cinematic tier (regl) | **Done** |
 | 9 | **W109** | tauri-plugin-playwright native harness | **Done** (desktop default in rex-ui-harness) |
 | 10 | **W110** | macOS signing + auto-update CI | In progress (release-desktop workflow stub) |
 | 11 | **W111** | path-aware `ui-verify` CI matrix | **Done** |
