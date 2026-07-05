@@ -38,8 +38,11 @@ const markdownComponents: Components = {
 export function Transcript({ messages }: Props) {
   if (messages.length === 0) {
     return (
-      <div data-testid="transcript">
-        <Text tone="secondary">Ask Rex anything about your workspace.</Text>
+      <div className="rex-transcript-empty" data-testid="transcript">
+        <h2 className="rex-transcript-empty__title">What should we work on?</h2>
+        <Text tone="secondary" className="rex-transcript-empty__hint">
+          Ask Rex about your workspace. Use Agent mode for edits, Ask mode for questions.
+        </Text>
       </div>
     );
   }
@@ -50,17 +53,23 @@ export function Transcript({ messages }: Props) {
         data={messages}
         followOutput="smooth"
         skipAnimationFrameInResizeObserver
-        itemContent={(_index, message) => (
-          <MotionMessage
-            className={`message-block ${message.role === "user" ? "message-user" : "message-assistant"}`}
-          >
-            {message.role === "assistant" ? (
-              <ReactMarkdown components={markdownComponents}>{message.content}</ReactMarkdown>
-            ) : (
-              message.content
-            )}
-          </MotionMessage>
-        )}
+        itemContent={(_index, message) => {
+          const isUser = message.role === "user";
+          return (
+            <div className={`rex-message-row rex-message-row--${isUser ? "user" : "assistant"}`}>
+              <MotionMessage
+                className={`rex-message-bubble rex-message-bubble--${isUser ? "user" : "assistant"} message-block`}
+              >
+                <span className="rex-message-bubble__role">{isUser ? "You" : "Rex"}</span>
+                {isUser ? (
+                  message.content
+                ) : (
+                  <ReactMarkdown components={markdownComponents}>{message.content}</ReactMarkdown>
+                )}
+              </MotionMessage>
+            </div>
+          );
+        }}
       />
     </div>
   );

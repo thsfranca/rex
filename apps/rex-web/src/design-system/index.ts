@@ -1,5 +1,7 @@
 export {
   Button,
+  IconButton,
+  Badge,
   Text,
   Heading,
   Surface,

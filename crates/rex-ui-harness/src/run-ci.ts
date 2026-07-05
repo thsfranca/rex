@@ -196,6 +196,11 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
   await pageClick(session, '[data-testid="approval-approve"]');
   results.push({ step: "approve modal", pass: true });
 
+  await gotoScenario("error");
+  results.push({ step: "goto error", pass: true });
+  await pageClick(session, '[data-testid="error-banner-dismiss"]');
+  results.push({ step: "dismiss error banner", pass: true });
+
   await closeSession();
   results.push({ step: "close", pass: true });
   return results;

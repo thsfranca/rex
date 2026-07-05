@@ -12,7 +12,7 @@ export function StatusDot({ working = false, error = false, id, testId }: Status
       id={id}
       data-testid={testId}
       data-motion-tier={working ? "ambient" : "idle"}
-      className={`rex-status-dot ${stateClass}`}
+      className={`rex-status-dot status-dot ${stateClass}${working ? " working" : ""}`}
       aria-hidden="true"
     />
   );

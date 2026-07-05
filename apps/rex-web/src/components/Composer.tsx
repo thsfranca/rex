@@ -31,7 +31,7 @@ export function Composer({ disabled }: Props) {
   }
 
   return (
-    <div data-testid="composer">
+    <div className="rex-composer-dock" data-testid="composer">
       <Stack direction="column" gap="sm">
         <SegmentedControl
           value={mode}
