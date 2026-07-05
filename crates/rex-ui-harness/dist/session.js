@@ -3,8 +3,6 @@ import { harnessDesktopCwd, resolveDesktopBinary, resolveRexBinary, resetProbeDa
 import { ensureWebUiServer, stopWebUiServer } from "./devServer.js";
 import { pageFill, pageFocus, pagePress, pageWaitForSelector, pageWaitForText, readObservabilitySnapshot, } from "./page.js";
 let session = null;
-let staticBrowser = null;
-let staticContext = null;
 let processManager = null;
 let pluginClient = null;
 let desktopRepoRoot = null;
@@ -17,24 +15,14 @@ export async function openSession(cfg, launch = {}) {
     if (session)
         await closeSession();
     const mode = launch.mode ?? cfg.mode;
-    if (mode === "desktop") {
-        return openDesktopSession(cfg);
+    if (mode === "build") {
+        throw new Error("Build mode does not open a browser session");
     }
-    return openStaticSession(cfg, launch.headless !== false);
-}
-async function openStaticSession(cfg, headless) {
-    const { chromium } = await import("playwright");
-    staticBrowser = await chromium.launch({ headless });
-    staticContext = await staticBrowser.newContext({ viewport: cfg.viewport });
-    const page = await staticContext.newPage();
-    await page.clock.install({ time: new Date("2026-01-01T00:00:00Z") });
-    await page.goto(cfg.baseUrl, { waitUntil: "domcontentloaded" });
-    session = { mode: "static", page, motionFrames: [], recording: false };
-    return session;
+    return openDesktopSession(cfg);
 }
 async function openDesktopSession(cfg) {
     if (process.platform !== "darwin") {
-        throw new Error('Desktop mode requires macOS. Set launch.mode = "static" in rex-ui-harness.toml.');
+        throw new Error("Desktop mode requires macOS.");
     }
     process.env.REX_ROOT = cfg.rexRoot;
     process.env.REX_SIDECAR_HARNESS = "direct";
@@ -61,6 +49,7 @@ async function openDesktopSession(cfg) {
     const tauriPage = new TauriPage(pluginClient);
     tauriPage.setDefaultTimeout(60_000);
     session = { mode: "desktop", page: tauriPage, motionFrames: [], recording: false };
+    await pageEvaluateObservabilityOn(session);
     await pageWaitForSelector(session, '[data-testid="shell"]', 60_000);
     await pageWaitForText(session, "Ready", 60_000);
     return session;
@@ -75,29 +64,20 @@ export async function closeSession() {
         await stopHarnessDesktopApps(desktopRepoRoot);
         desktopRepoRoot = null;
     }
-    if (staticContext) {
-        await staticContext.close();
-        staticContext = null;
-    }
-    if (staticBrowser) {
-        await staticBrowser.close();
-        staticBrowser = null;
-    }
     session = null;
+}
+async function pageEvaluateObservabilityOn(s) {
+    await s.page.evaluate(`(() => {
+    try { localStorage.setItem("rexUiObservability", "1"); } catch {}
+  })()`);
+}
+export async function dumpObservability(label) {
+    const s = getSession();
+    const snapshot = await readObservabilitySnapshot(s);
+    return `${label}: ${JSON.stringify(snapshot)}`;
 }
 export async function gotoScenario(scenario) {
     const s = getSession();
-    if (s.mode === "static") {
-        await s.page.evaluate((name) => {
-            const probe = window
-                .__rexProbe;
-            if (!probe)
-                throw new Error("Probe harness not loaded");
-            return probe.gotoScenario(name);
-        }, scenario);
-        await s.page.waitForTimeout(50);
-        return;
-    }
     switch (scenario) {
         case "idle":
             await pageWaitForText(s, "Ready", 30_000);
@@ -121,9 +101,6 @@ export async function gotoScenario(scenario) {
             }
             break;
         }
-        case "error":
-        case "history-fetch":
-            throw new Error(`${scenario} scenario is static-fixture only`);
         default:
             throw new Error(`Unknown scenario: ${scenario}`);
     }

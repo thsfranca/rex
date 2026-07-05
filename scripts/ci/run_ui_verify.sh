@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Web UI verify: rex-web build + rex-ui-harness CI scenarios (static or desktop).
+# Web UI verify: rex-web build + rex-ui-harness CI scenarios (build or desktop).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -31,18 +31,14 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-if [ "${MODE}" != "static" ] && [ "${MODE}" != "desktop" ]; then
-  echo "Usage: $0 --mode static|desktop [--skip-web-build] [--skip-harness-build]" >&2
+if [ "${MODE}" != "build" ] && [ "${MODE}" != "desktop" ]; then
+  echo "Usage: $0 --mode build|desktop [--skip-web-build] [--skip-harness-build]" >&2
   exit 1
 fi
 
 if [ "${MODE}" = "desktop" ] && [ "$(uname -s)" != "Darwin" ]; then
   echo "Desktop mode requires macOS." >&2
   exit 1
-fi
-
-if [ "${MODE}" = "static" ]; then
-  SKIP_WEB_BUILD=true
 fi
 
 result="success"
@@ -123,10 +119,8 @@ elif [ "${result}" = "success" ]; then
   fi
 fi
 
-if [ "${result}" = "success" ] && [ "${MODE}" = "static" ]; then
-  if ! (cd "${HARNESS_DIR}" && npx playwright install chromium) 2>&1 | tee "ci-observability/ui-playwright-install.log"; then
-    mark_failure "BuildAndChecks" "ENV_SETUP_FAIL" "playwright install chromium failed."
-  fi
+if [ "${result}" = "success" ] && [ "${MODE}" = "build" ]; then
+  : # npm build only; no playwright install or desktop cargo build
 fi
 
 if [ "${result}" = "success" ] && [ "${MODE}" = "desktop" ]; then

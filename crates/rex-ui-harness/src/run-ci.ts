@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-import path from "node:path";
-import type { Page } from "playwright";
 import { findRepoRoot, loadConfig, type HarnessConfig, type HarnessMode } from "./config.js";
 import { ciede2000, parseCssColor } from "./color.js";
 import { closeSession, gotoScenario, openSession } from "./session.js";
@@ -8,10 +6,9 @@ import {
   pageCssTokenAssert,
   pageClick,
   pageEvaluate,
-  pageLayout,
-  pageLocatorScreenshot,
   pageFill,
   pageFocus,
+  pageLayout,
   pagePress,
   pageWaitForSelector,
   pageWaitForText,
@@ -77,19 +74,19 @@ function parseArgs(): { mode: HarnessMode; socket?: string } {
     const arg = args[i];
     if (arg === "--mode" && args[i + 1]) {
       const value = args[++i];
-      if (value !== "static" && value !== "desktop") {
-        throw new Error(`Invalid --mode ${value}; expected static or desktop`);
+      if (value !== "desktop" && value !== "build") {
+        throw new Error(`Invalid --mode ${value}; expected desktop or build`);
       }
       mode = value;
     } else if (arg === "--socket" && args[i + 1]) {
       socket = args[++i];
     } else if (arg === "--help" || arg === "-h") {
-      console.log("Usage: run-ci.js --mode static|desktop [--socket PATH]");
+      console.log("Usage: run-ci.js --mode desktop|build [--socket PATH]");
       process.exit(0);
     }
   }
   if (!mode) {
-    throw new Error("Missing required --mode static|desktop");
+    throw new Error("Missing required --mode desktop|build");
   }
   return { mode, socket };
 }
@@ -127,17 +124,6 @@ async function assertLayout(
 
 async function assertMotion(region: string): Promise<StepResult> {
   const session = await import("./session.js").then((m) => m.getSession());
-  if (session.mode === "static") {
-    const page = session.page as Page;
-    const before = await pageLocatorScreenshot(session, region);
-    await page.clock.fastForward(150);
-    const mid = await pageLocatorScreenshot(session, region);
-    await page.clock.fastForward(350);
-    const after = await pageLocatorScreenshot(session, region);
-    const pass = !before.equals(mid) || !mid.equals(after);
-    return { step: `assert_motion ${region}`, pass };
-  }
-
   const pass = await pageEvaluate(
     session,
     (sel) => {
@@ -150,26 +136,8 @@ async function assertMotion(region: string): Promise<StepResult> {
   return { step: `assert_motion ${region}`, pass: Boolean(pass) };
 }
 
-async function runStaticSuite(cfg: HarnessConfig): Promise<StepResult[]> {
-  const results: StepResult[] = [];
-  await openSession(cfg, { mode: "static", headless: true });
-  results.push({ step: "open static", pass: true });
-
-  await gotoScenario("idle");
-  results.push({ step: "goto idle", pass: true });
-
-  results.push(
-    await assertToken("#status-dot", "--rex-status-success", "background-color")
-  );
-  results.push(await assertLayout('[data-testid="shell"]', "grid"));
-
-  await gotoScenario("streaming");
-  results.push({ step: "goto streaming", pass: true });
-  results.push(await assertMotion("#status-dot"));
-
-  await closeSession();
-  results.push({ step: "close", pass: true });
-  return results;
+async function runBuildSuite(): Promise<StepResult[]> {
+  return [{ step: "build-only gate", pass: true }];
 }
 
 async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
@@ -214,20 +182,23 @@ async function main(): Promise<void> {
   const { mode, socket } = parseArgs();
   const repoRoot = findRepoRoot(process.cwd());
   const base = loadConfig(repoRoot);
-  const staticIndex = path.join(repoRoot, "fixtures/ui_probe/static/index.html");
   const cfg: HarnessConfig = {
     ...base,
     mode,
     repoRoot,
-    baseUrl: `file://${staticIndex}`,
     ...(socket ? { desktopSocket: socket } : {}),
   };
   if (socket) {
     process.env.TAURI_PLAYWRIGHT_SOCKET = socket;
   }
 
+  if (mode === "build") {
+    console.log(JSON.stringify({ mode, pass: true, steps: await runBuildSuite() }, null, 2));
+    return;
+  }
+
   try {
-    const results = mode === "static" ? await runStaticSuite(cfg) : await runDesktopSuite(cfg);
+    const results = await runDesktopSuite(cfg);
     const failed = results.filter((r) => !r.pass);
 
     if (failed.length > 0) {

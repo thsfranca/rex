@@ -1,15 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import os from "node:os";
 import toml from "toml";
-const DEFAULT_MODE = os.platform() === "darwin" ? "desktop" : "static";
 const DEFAULTS = {
-    mode: DEFAULT_MODE,
+    mode: "desktop",
     repoRoot: "",
-    baseUrl: "file:///fixtures/ui_probe/static/index.html",
     viewport: { width: 1200, height: 800 },
     baselineDir: ".rex-ui-harness/baselines",
-    staticRoot: "fixtures/ui_probe/static",
     rexRoot: "fixtures/ui_probe/rex_root",
     workspaceDir: "fixtures/ui_probe/workspace",
     desktopSocket: "/tmp/rex-playwright.sock",
@@ -24,18 +20,16 @@ export function loadConfig(repoRoot) {
     const viewport = raw.viewport ?? {};
     const launch = raw.launch ?? {};
     const desktop = raw.desktop ?? {};
-    const modeRaw = launch.mode ?? DEFAULT_MODE;
-    const mode = modeRaw === "static" ? "static" : "desktop";
+    const modeRaw = launch.mode ?? DEFAULTS.mode;
+    const mode = modeRaw === "build" ? "build" : "desktop";
     return resolvePaths(repoRoot, {
         mode,
         repoRoot: "",
-        baseUrl: raw.base_url ?? DEFAULTS.baseUrl,
         viewport: {
             width: viewport.width ?? DEFAULTS.viewport.width,
             height: viewport.height ?? DEFAULTS.viewport.height,
         },
         baselineDir: raw.baseline_dir ?? DEFAULTS.baselineDir,
-        staticRoot: raw.static_root ?? DEFAULTS.staticRoot,
         rexRoot: desktop.rex_root ?? DEFAULTS.rexRoot,
         workspaceDir: desktop.workspace_dir ?? DEFAULTS.workspaceDir,
         desktopSocket: desktop.socket ?? DEFAULTS.desktopSocket,
@@ -43,17 +37,10 @@ export function loadConfig(repoRoot) {
     });
 }
 function resolvePaths(repoRoot, cfg) {
-    const staticAbs = path.join(repoRoot, cfg.staticRoot);
-    const indexFile = path.join(staticAbs, "index.html");
-    const baseUrl = cfg.baseUrl.startsWith("file://") && !cfg.baseUrl.includes("://fixtures")
-        ? cfg.baseUrl
-        : `file://${indexFile}`;
     return {
         ...cfg,
         repoRoot,
-        baseUrl,
         baselineDir: path.join(repoRoot, cfg.baselineDir),
-        staticRoot: staticAbs,
         rexRoot: path.join(repoRoot, cfg.rexRoot),
         workspaceDir: path.join(repoRoot, cfg.workspaceDir),
     };

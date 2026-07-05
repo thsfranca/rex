@@ -54,7 +54,7 @@ if ! domain_ok "${rust_relevant}" "${rust_result}" \
     hint="Guidelines verify failed; run ./scripts/ci/run_guidelines_verify.sh locally."
   elif [ "${ui_relevant}" = "true" ] && [ "${ui_result}" != "success" ]; then
     fail_code="UI_FAIL"
-    hint="UI verify failed; run ./scripts/ci/run_ui_verify.sh --mode static locally (desktop on macOS)."
+    hint="UI verify failed; run ./scripts/ci/run_ui_verify.sh --mode build locally (desktop on macOS)."
   else
     hint="Inspect rust-verify, sidecar-verify, guidelines-verify, and ui-verify summaries and artifacts; when a domain is not relevant, upstream verify may be skipped."
   fi

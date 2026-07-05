@@ -218,7 +218,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - mode: static
+          - mode: build
             runner: ubuntu-latest
           - mode: desktop
             runner: macos-latest

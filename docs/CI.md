@@ -81,7 +81,7 @@ Keep failure codes low-cardinality. Current baseline set:
 - `ENV_SETUP_FAIL`
 - `GATE_FAIL`
 - `GUIDELINES_FAIL` (documented guideline conformance — error code catalog sync and sibling checks under `scripts/ci/guidelines/`)
-- `UI_FAIL` (Web UI harness scenarios — static probe on Linux, desktop + daemon on macOS via [`run_ui_verify.sh`](scripts/ci/run_ui_verify.sh))
+- `UI_FAIL` (Web UI harness scenarios — build gate on Linux, desktop + daemon on macOS via [`run_ui_verify.sh`](scripts/ci/run_ui_verify.sh))
 - `UI_BUILD_FAIL` (rex-web or rex-ui-harness build step in UI verify)
 - `SIDECAR_FAIL` (builtin sidecar verify — `rex-sidecar-stub` / `rex-agent`; inner `RUFF_FAIL` from rex-agent ruff check)
 - `RUFF_FAIL` (rex-agent Ruff static analysis in sidecar verify)
@@ -185,10 +185,10 @@ When Web UI probe or harness paths change, CI runs a shared **`ui-build`** job t
 
 1. **`ui-build`** (`ubuntu-latest`) — [`scripts/ci/build_ui_artifacts.sh`](scripts/ci/build_ui_artifacts.sh) builds `apps/rex-web/dist` and `crates/rex-ui-harness/dist` once; uploads artifacts for matrix reuse.
 2. **`ui-verify`** matrix — [`scripts/ci/run_ui_verify.sh`](scripts/ci/run_ui_verify.sh) downloads artifacts and runs scenarios:
-   - **static** (`ubuntu-latest`) — harness `npm ci` + Playwright chromium; **no rex-web build** (static fixture only; no daemon)
+   - **build** (`ubuntu-latest`) — rex-web production bundle compile gate (`--mode build`); harness build-only step (no browser)
    - **desktop** (`macos-latest`) — reused web/harness dist + `npm ci` for preview/runtime deps; `cargo build -p rex -p rex-desktop --features e2e-testing`; native Playwright harness with probe daemon
 
-Matrix legs pass `--skip-harness-build`; desktop also passes `--skip-web-build`. Local full builds omit skip flags (static still skips rex-web by default).
+Matrix legs pass `--skip-harness-build`; desktop also passes `--skip-web-build`. Local full builds omit skip flags.
 
 Failure code: `UI_FAIL` (scenario failures) or `UI_BUILD_FAIL` (build step). See [WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md).
 
@@ -205,14 +205,14 @@ Local run:
 
 ```bash
 ./scripts/ci/build_ui_artifacts.sh
-./scripts/ci/run_ui_verify.sh --mode static --skip-harness-build
+./scripts/ci/run_ui_verify.sh --mode build --skip-harness-build
 ./scripts/ci/run_ui_verify.sh --mode desktop --skip-web-build --skip-harness-build   # macOS only
 ```
 
 Full local build (no artifacts):
 
 ```bash
-./scripts/ci/run_ui_verify.sh --mode static
+./scripts/ci/run_ui_verify.sh --mode build
 ./scripts/ci/run_ui_verify.sh --mode desktop   # macOS only
 ```
 
