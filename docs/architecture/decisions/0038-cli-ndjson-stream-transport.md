@@ -1,8 +1,10 @@
 # ADR 0038: CLI NDJSON stream transport
 
-**Status:** Accepted  
+**Status:** Superseded → [0042](0042-web-desktop-presentation-pivot.md)  
 **Date:** 2026-07-01  
 **Supersedes:** [0007-editor-extension-hybrid-transport-cli-and-grpc.md](0007-editor-extension-hybrid-transport-cli-and-grpc.md)
+
+> **Historical:** This ADR recorded the post-extension subprocess NDJSON contract. Public subprocess NDJSON was retired with the terminal harness; the desktop app is the operator surface per ADR 0042. Stream event vocabulary remains internal to `rex-stream-ui`.
 
 ## Context
 

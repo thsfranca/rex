@@ -3,7 +3,8 @@
 **Status:** Accepted  
 **Date:** 2026-07-04  
 **Supersedes (presentation intent):** [0039](0039-terminal-harness-presentation-and-daemon-intelligence.md), [0041](0041-tui-hybrid-compositor-and-tiered-frame-budget.md)  
-**Aligns with:** [0038](0038-cli-ndjson-stream-transport.md), [0040](0040-harness-session-transcript-authority.md)
+**Aligns with:** [0040](0040-harness-session-transcript-authority.md)  
+**Supersedes (transport):** [0038](0038-cli-ndjson-stream-transport.md) public subprocess NDJSON
 
 ## Context
 
@@ -44,7 +45,8 @@ Hub: [WEB_UI_ARCHITECTURE.md](../../WEB_UI_ARCHITECTURE.md).
 
 - **Positive:** GPU motion, fluid typography, deterministic visual regression for agent-driven UI PRs; 20×–50× smaller binary vs Electron; daemon boundary unchanged.
 - **Negative:** Two new crates + npm workspace; WKWebView vs Chrome dev-server parity until native harness lands; large deletion of TUI/compositor code.
-- **Risks / follow-up:** react-virtuoso scroll anchoring during streaming; CIEDE2000 threshold tuning on CI macOS runners; implement W100–W106 per [WEB_UI_ROADMAP.md](../../WEB_UI_ROADMAP.md).
+- **Risks / follow-up:** react-virtuoso scroll anchoring during streaming; CIEDE2000 threshold tuning on CI macOS runners; implement W100–W118 per [WEB_UI_ROADMAP.md](../../WEB_UI_ROADMAP.md).
+- **Public subprocess NDJSON:** not shipped. Stream event fixtures remain for `rex-stream-ui` projection and guidelines CI only — not an operator or automation entrypoint.
 
 ## Superseded ADR amendments
 

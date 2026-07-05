@@ -19,7 +19,7 @@ When documents disagree, resolve in this **order**:
 | 1 | [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PRINCIPLES.md) | Project **intent** and principles. |
 | 2 | **This file** (`ARCHITECTURE_GUIDELINES.md`) | **Stable policies** and ownership expectations that span features. |
 | 3 | Accepted **ADRs** under [architecture/decisions/](architecture/decisions/) | Recorded **decisions** with status and consequences. |
-| 4 | Feature hubs ([ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [NDJSON_STREAM.md](NDJSON_STREAM.md), …) | **Reference** behavior and contracts per area. |
+| 4 | Feature hubs ([ADAPTERS.md](ADAPTERS.md), [CACHING.md](CACHING.md), [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md), …) | **Reference** behavior and contracts per area. |
 | 5 | Code | **Shipped** behavior; docs **must** catch up when contracts change. |
 
 **Conflict rules:**
@@ -47,7 +47,7 @@ Guidelines doc **does not** invent new runtime flags or APIs—only **documents 
 
 | Context | Boundary | Integrate by |
 |---------|-----------|--------------|
-| **`rex.v1` client plane** | Thin stable API for CLI, editors, scripts over UDS. | Protobuf + [MVP_SPEC.md](MVP_SPEC.md); NDJSON via **`rex complete`** (shim: `rex-cli`) per [NDJSON_STREAM.md](NDJSON_STREAM.md). |
+| **`rex.v1` client plane** | Thin stable API for desktop over UDS. | Protobuf + [MVP_SPEC.md](MVP_SPEC.md); stream projection via `rex-stream-ui` per [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md). |
 | **Sidecar control plane** | Brokered integration for isolated runtimes—**not** a widening of `rex.v1` into a generic tunnel. | Dedicated API per [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md); map types at the boundary. |
 
 Do **not** leak raw **`rex.v1`** messages into sidecar-specific logic without translation; do **not** hide host reachability inside guests without daemon policy.

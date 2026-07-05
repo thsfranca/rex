@@ -4,19 +4,19 @@ This document is the **single source of truth** for **why REX exists** and **how
 
 ## Purpose
 
-REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **`rex-daemon`** owns inference and stream lifecycle; **thin clients** (CLI, CLI client, scripts) use **gRPC on a Unix domain socket** (`rex.v1`). The work favors a **daemon-owned economics surface** (routing hooks, caches, pipelines, observability) described in [ARCHITECTURE.md](ARCHITECTURE.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), and [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md).
+REX is a **local AI runtime** for macOS (Apple Silicon): a Rust **`rex-daemon`** owns inference and stream lifecycle; the **desktop app** uses **gRPC on a Unix domain socket** (`rex.v1`). The work favors a **daemon-owned economics surface** (routing hooks, caches, pipelines, observability) described in [ARCHITECTURE.md](ARCHITECTURE.md), [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md), and [ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md).
 
 Concrete goals:
 
 - **Single runtime boundary.** One long-lived process holds model/runtime policy, queueing, and shutdown semantics so every client sees the same behavior.
-- **Stable tool contract.** Clients integrate through the unified **`rex`** CLI (NDJSON + subprocess) and shared protobuf types in `rex-proto` instead of embedding vendor inference SDKs (`rex-cli` shim for compatibility).
+- **Stable tool contract.** Clients integrate through **`rex.v1`** gRPC and shared protobuf types in `rex-proto` instead of embedding vendor inference SDKs. The desktop shell is the product operator surface ([OPERATOR_UX.md](OPERATOR_UX.md)).
 - **Streaming-first correctness.** Server-streaming RPCs, explicit terminal outcomes (`done` / `error`), and tests around UDS races and interruption.
 - **Local-first default.** **Supervised sidecar agent** with **brokered OpenAI-compatible HTTP** inference; **LiteLLM** is the documented **default multi-provider API**, with an **opt-in daemon-controlled gateway** ([INFERENCE_GATEWAY.md](INFERENCE_GATEWAY.md)); **mock** and direct HTTP remain for automated tests—see [ADAPTERS.md](ADAPTERS.md), [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md).
 - **Room to grow.** Additional adapters and optional isolated runtimes evolve **without breaking** `rex.v1` consumers—see [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md).
 
 **Configuration:** precedence and `REX_*` catalog live in [CONFIGURATION.md](CONFIGURATION.md).
 
-**Audience:** engineers studying daemon-hosted inference, gRPC streaming over UDS, and editor integration; anyone building toward a **local-first** assistant on Mac.
+**Audience:** engineers studying daemon-hosted inference, gRPC streaming over UDS, and desktop operator UX; anyone building toward a **local-first** assistant on Mac.
 
 ## Principles
 
@@ -26,7 +26,7 @@ Concrete goals:
 
 3. **Incremental implementation.** Ship narrow, testable slices; separate **intent** ([MVP_SPEC.md](MVP_SPEC.md) scope) from **done** ([V1_0.md](V1_0.md) **RC-***, tracked in [ROADMAP.md](ROADMAP.md)) and MoSCoW deferrals in [PRIORITIZATION.md](PRIORITIZATION.md). Do not describe future work as shipped.
 
-4. **Stable external contract.** Preserve **`rex.v1`** and deterministic **`rex complete --format ndjson`** behavior for integrations unless a versioned migration is intentional.
+4. **Stable external contract.** Preserve **`rex.v1`** and deterministic **stream terminal semantics** (`done` / `error`) for integrations unless a versioned migration is intentional.
 
 5. **Documentation hubs.** Keep **one** canonical explanation document per major feature area under `docs/`; use **links** plus one-line status elsewhere ([DOCUMENTATION.md](DOCUMENTATION.md)). Record accepted boundaries in **ADRs** when formalizing decisions.
 
