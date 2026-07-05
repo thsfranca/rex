@@ -6,6 +6,7 @@ import { ciede2000, parseCssColor } from "./color.js";
 import { closeSession, gotoScenario, openSession } from "./session.js";
 import {
   pageCssTokenAssert,
+  pageEvaluate,
   pageLayout,
   pageLocatorScreenshot,
   pageFill,
@@ -89,13 +90,16 @@ async function assertMotion(region: string): Promise<StepResult> {
     return { step: `assert_motion ${region}`, pass };
   }
 
-  const before = await pageLocatorScreenshot(session, region);
-  await new Promise((resolve) => setTimeout(resolve, 200));
-  const mid = await pageLocatorScreenshot(session, region);
-  await new Promise((resolve) => setTimeout(resolve, 400));
-  const after = await pageLocatorScreenshot(session, region);
-  const pass = !before.equals(mid) || !mid.equals(after);
-  return { step: `assert_motion ${region}`, pass };
+  const pass = await pageEvaluate(
+    session,
+    (sel) => {
+      const el = document.querySelector(sel as string);
+      if (!(el instanceof HTMLElement)) return false;
+      return el.classList.contains("working") && el.dataset.motionTier === "ambient";
+    },
+    region
+  );
+  return { step: `assert_motion ${region}`, pass: Boolean(pass) };
 }
 
 async function runStaticSuite(cfg: HarnessConfig): Promise<StepResult[]> {

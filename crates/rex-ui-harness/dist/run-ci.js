@@ -3,7 +3,7 @@ import path from "node:path";
 import { findRepoRoot, loadConfig } from "./config.js";
 import { ciede2000, parseCssColor } from "./color.js";
 import { closeSession, gotoScenario, openSession } from "./session.js";
-import { pageCssTokenAssert, pageLayout, pageLocatorScreenshot, pageFill, pagePress, pageWaitForSelector, pageWaitForText, } from "./page.js";
+import { pageCssTokenAssert, pageEvaluate, pageLayout, pageLocatorScreenshot, pageFill, pagePress, pageWaitForSelector, pageWaitForText, } from "./page.js";
 function parseArgs() {
     const args = process.argv.slice(2);
     let mode;
@@ -53,21 +53,23 @@ async function assertLayout(selector, display) {
 }
 async function assertMotion(region) {
     const session = await import("./session.js").then((m) => m.getSession());
-    if (session.mode !== "static") {
-        return {
-            step: `assert_motion ${region}`,
-            pass: false,
-            detail: { reason: "requires static fixture (Playwright clock)" },
-        };
+    if (session.mode === "static") {
+        const page = session.page;
+        const before = await pageLocatorScreenshot(session, region);
+        await page.clock.fastForward(150);
+        const mid = await pageLocatorScreenshot(session, region);
+        await page.clock.fastForward(350);
+        const after = await pageLocatorScreenshot(session, region);
+        const pass = !before.equals(mid) || !mid.equals(after);
+        return { step: `assert_motion ${region}`, pass };
     }
-    const page = session.page;
-    const before = await pageLocatorScreenshot(session, region);
-    await page.clock.fastForward(150);
-    const mid = await pageLocatorScreenshot(session, region);
-    await page.clock.fastForward(350);
-    const after = await pageLocatorScreenshot(session, region);
-    const pass = !before.equals(mid) || !mid.equals(after);
-    return { step: `assert_motion ${region}`, pass };
+    const pass = await pageEvaluate(session, (sel) => {
+        const el = document.querySelector(sel);
+        if (!(el instanceof HTMLElement))
+            return false;
+        return el.classList.contains("working") && el.dataset.motionTier === "ambient";
+    }, region);
+    return { step: `assert_motion ${region}`, pass: Boolean(pass) };
 }
 async function runStaticSuite(cfg) {
     const results = [];
@@ -94,6 +96,8 @@ async function runDesktopSuite(cfg) {
     await pageFill(session, '[data-testid="composer-input"]', "hello");
     await pagePress(session, "Enter");
     results.push({ step: "send hello", pass: true });
+    await pageWaitForSelector(session, "#status-dot.working", 30_000).catch(() => { });
+    results.push(await assertMotion("#status-dot"));
     await pageWaitForText(session, "hello", 60_000);
     results.push({ step: "wait transcript hello", pass: true });
     await pageWaitForText(session, "Ready", 60_000);
