@@ -1,0 +1,135 @@
+#!/usr/bin/env node
+import path from "node:path";
+import { findRepoRoot, loadConfig } from "./config.js";
+import { ciede2000, parseCssColor } from "./color.js";
+import { closeSession, gotoScenario, openSession } from "./session.js";
+import { pageCssTokenAssert, pageLayout, pageLocatorScreenshot, pageFill, pagePress, pageWaitForSelector, pageWaitForText, } from "./page.js";
+function parseArgs() {
+    const args = process.argv.slice(2);
+    let mode;
+    let socket;
+    for (let i = 0; i < args.length; i++) {
+        const arg = args[i];
+        if (arg === "--mode" && args[i + 1]) {
+            const value = args[++i];
+            if (value !== "static" && value !== "desktop") {
+                throw new Error(`Invalid --mode ${value}; expected static or desktop`);
+            }
+            mode = value;
+        }
+        else if (arg === "--socket" && args[i + 1]) {
+            socket = args[++i];
+        }
+        else if (arg === "--help" || arg === "-h") {
+            console.log("Usage: run-ci.js --mode static|desktop [--socket PATH]");
+            process.exit(0);
+        }
+    }
+    if (!mode) {
+        throw new Error("Missing required --mode static|desktop");
+    }
+    return { mode, socket };
+}
+async function assertToken(selector, token, property, maxDelta = 2.3) {
+    const session = await import("./session.js").then((m) => m.getSession());
+    const { actual, expected } = await pageCssTokenAssert(session, selector, token, property);
+    const delta = ciede2000(parseCssColor(actual), parseCssColor(expected));
+    const pass = delta <= maxDelta;
+    return {
+        step: `assert_token ${selector} ${token}`,
+        pass,
+        detail: { delta_e: delta, actual, expected, max_delta_e: maxDelta },
+    };
+}
+async function assertLayout(selector, display) {
+    const session = await import("./session.js").then((m) => m.getSession());
+    const layout = await pageLayout(session, selector);
+    const pass = layout.display === display;
+    return {
+        step: `assert_layout ${selector} display=${display}`,
+        pass,
+        detail: { layout },
+    };
+}
+async function assertMotion(region) {
+    const session = await import("./session.js").then((m) => m.getSession());
+    if (session.mode !== "static") {
+        return {
+            step: `assert_motion ${region}`,
+            pass: false,
+            detail: { reason: "requires static fixture (Playwright clock)" },
+        };
+    }
+    const page = session.page;
+    const before = await pageLocatorScreenshot(session, region);
+    await page.clock.fastForward(150);
+    const mid = await pageLocatorScreenshot(session, region);
+    await page.clock.fastForward(350);
+    const after = await pageLocatorScreenshot(session, region);
+    const pass = !before.equals(mid) || !mid.equals(after);
+    return { step: `assert_motion ${region}`, pass };
+}
+async function runStaticSuite(cfg) {
+    const results = [];
+    await openSession(cfg, { mode: "static", headless: true });
+    results.push({ step: "open static", pass: true });
+    await gotoScenario("idle");
+    results.push({ step: "goto idle", pass: true });
+    results.push(await assertToken("#status-dot", "--rex-status-success", "background-color"));
+    results.push(await assertLayout('[data-testid="shell"]', "grid"));
+    await gotoScenario("streaming");
+    results.push({ step: "goto streaming", pass: true });
+    results.push(await assertMotion("#status-dot"));
+    await closeSession();
+    results.push({ step: "close", pass: true });
+    return results;
+}
+async function runDesktopSuite(cfg) {
+    const results = [];
+    await openSession(cfg, { mode: "desktop" });
+    results.push({ step: "open desktop", pass: true });
+    const session = await import("./session.js").then((m) => m.getSession());
+    results.push(await assertLayout('[data-testid="shell"]', "grid"));
+    await pageWaitForSelector(session, '[data-testid="composer-input"]', 60_000);
+    await pageFill(session, '[data-testid="composer-input"]', "hello");
+    await pagePress(session, "Enter");
+    results.push({ step: "send hello", pass: true });
+    await pageWaitForText(session, "hello", 60_000);
+    results.push({ step: "wait transcript hello", pass: true });
+    await pageWaitForText(session, "Ready", 60_000);
+    results.push(await assertToken("#status-dot", "--rex-status-success", "background-color"));
+    await closeSession();
+    results.push({ step: "close", pass: true });
+    return results;
+}
+async function main() {
+    const { mode, socket } = parseArgs();
+    const repoRoot = findRepoRoot(process.cwd());
+    const base = loadConfig(repoRoot);
+    const staticIndex = path.join(repoRoot, "fixtures/ui_probe/static/index.html");
+    const cfg = {
+        ...base,
+        mode,
+        repoRoot,
+        baseUrl: `file://${staticIndex}`,
+        ...(socket ? { desktopSocket: socket } : {}),
+    };
+    if (socket) {
+        process.env.TAURI_PLAYWRIGHT_SOCKET = socket;
+    }
+    try {
+        const results = mode === "static" ? await runStaticSuite(cfg) : await runDesktopSuite(cfg);
+        const failed = results.filter((r) => !r.pass);
+        console.log(JSON.stringify({ mode, pass: failed.length === 0, steps: results }, null, 2));
+        if (failed.length > 0) {
+            process.exit(1);
+        }
+    }
+    finally {
+        await closeSession();
+    }
+}
+main().catch((err) => {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+});

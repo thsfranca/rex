@@ -54,16 +54,45 @@ export async function pagePress(session: HarnessSession, key: string): Promise<v
   }
 }
 
+const TAURI_WAIT_CHUNK_MS = 25_000;
+
+async function waitWithChunks(
+  totalMs: number,
+  run: (chunkMs: number) => Promise<void>
+): Promise<void> {
+  const deadline = Date.now() + totalMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    const remaining = deadline - Date.now();
+    const chunk = Math.min(TAURI_WAIT_CHUNK_MS, remaining);
+    try {
+      await run(chunk);
+      return;
+    } catch (err) {
+      lastError = err;
+      if (Date.now() >= deadline) {
+        break;
+      }
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error(`Timed out after ${totalMs}ms`);
+}
+
 export async function pageWaitForSelector(
   session: HarnessSession,
   selector: string,
   timeout?: number
 ): Promise<void> {
+  const total = timeout ?? 60_000;
   if (session.mode === "static") {
-    await (session.page as Page).waitForSelector(selector, { timeout });
-  } else {
-    await (session.page as TauriPage).waitForSelector(selector, timeout);
+    await (session.page as Page).waitForSelector(selector, { timeout: total });
+    return;
   }
+  await waitWithChunks(total, (chunk) =>
+    (session.page as TauriPage).waitForSelector(selector, chunk)
+  );
 }
 
 export async function pageWaitForText(
@@ -71,11 +100,14 @@ export async function pageWaitForText(
   text: string,
   timeout?: number
 ): Promise<void> {
+  const total = timeout ?? 60_000;
   if (session.mode === "static") {
-    await (session.page as Page).getByText(text).waitFor({ timeout });
-  } else {
-    await (session.page as TauriPage).getByText(text).waitFor(timeout);
+    await (session.page as Page).getByText(text).waitFor({ timeout: total });
+    return;
   }
+  await waitWithChunks(total, (chunk) =>
+    (session.page as TauriPage).getByText(text).waitFor(chunk)
+  );
 }
 
 export async function pageSnapshotTree(session: HarnessSession): Promise<string> {
@@ -174,9 +206,22 @@ export async function pageCssTokenAssert(
 export async function pageFill(session: HarnessSession, selector: string, text: string): Promise<void> {
   if (session.mode === "static") {
     await (session.page as Page).fill(selector, text);
-  } else {
-    await (session.page as TauriPage).fill(selector, text);
+    return;
   }
+  const page = session.page as TauriPage;
+  await page.evaluate(
+    `(() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!(el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement)) {
+        throw new Error("fill requires input or textarea");
+      }
+      const prototype =
+        el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+      setter?.call(el, ${JSON.stringify(text)});
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    })()`
+  );
 }
 
 export async function pageCanvasHash(session: HarnessSession, selector: string): Promise<string> {

@@ -5,6 +5,14 @@ import {
   TauriProcessManager,
 } from "@srsholmes/tauri-playwright";
 import type { HarnessConfig } from "./config.js";
+import {
+  harnessDesktopCwd,
+  resolveDesktopBinary,
+  resolveRexBinary,
+  resetProbeDaemon,
+  stopHarnessDesktopApps,
+} from "./desktopProcess.js";
+import { ensureViteDevServer, stopViteDevServer } from "./devServer.js";
 import type { HarnessSession } from "./page.js";
 import {
   pageFill,
@@ -20,6 +28,7 @@ let staticBrowser: import("playwright").Browser | null = null;
 let staticContext: import("playwright").BrowserContext | null = null;
 let processManager: TauriProcessManager | null = null;
 let pluginClient: PluginClient | null = null;
+let desktopRepoRoot: string | null = null;
 
 export function getSession(): HarnessSession {
   if (!session) throw new Error("No active session — call ui_open first");
@@ -60,10 +69,22 @@ async function openDesktopSession(cfg: HarnessConfig): Promise<HarnessSession> {
   process.env.REX_SIDECAR_HARNESS = "direct";
   process.env.TAURI_PLAYWRIGHT_SOCKET = cfg.desktopSocket;
 
+  await stopHarnessDesktopApps(cfg.repoRoot);
+  await resetProbeDaemon(cfg.rexRoot);
+  await ensureViteDevServer(cfg.repoRoot);
+
+  desktopRepoRoot = cfg.repoRoot;
+  const harnessCwd = harnessDesktopCwd();
+
+  const rexBin = resolveRexBinary(cfg.repoRoot);
+  const desktopBin = resolveDesktopBinary(cfg.repoRoot);
+  process.env.CARGO_BIN_EXE_rex = rexBin;
+  process.env.REX_BIN = rexBin;
+
   processManager = new TauriProcessManager({
-    command: "cargo",
-    args: ["run", "-p", "rex-desktop", "--features", "e2e-testing"],
-    cwd: cfg.repoRoot,
+    command: desktopBin,
+    args: [],
+    cwd: harnessCwd,
     socketPath: cfg.desktopSocket,
     startTimeout: cfg.desktopStartTimeoutSecs,
   });
@@ -73,7 +94,7 @@ async function openDesktopSession(cfg: HarnessConfig): Promise<HarnessSession> {
   pluginClient = new PluginClient(cfg.desktopSocket);
   await pluginClient.connect();
   const tauriPage = new TauriPage(pluginClient);
-  tauriPage.setDefaultTimeout(30_000);
+  tauriPage.setDefaultTimeout(60_000);
 
   session = { mode: "desktop", page: tauriPage, motionFrames: [], recording: false };
 
@@ -88,6 +109,11 @@ export async function closeSession(): Promise<void> {
   pluginClient = null;
   processManager?.stop();
   processManager = null;
+  await stopViteDevServer();
+  if (desktopRepoRoot) {
+    await stopHarnessDesktopApps(desktopRepoRoot);
+    desktopRepoRoot = null;
+  }
   if (staticContext) {
     await staticContext.close();
     staticContext = null;

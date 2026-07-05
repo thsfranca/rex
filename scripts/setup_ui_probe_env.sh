@@ -31,8 +31,8 @@ echo "Building rex-web assets (Tauri beforeBuildCommand)…"
 (cd "$ROOT/apps/rex-web" && npm install && npm run build)
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
-  echo "Building rex-desktop with e2e-testing (Playwright plugin)…"
-  cargo build -p rex-desktop --features e2e-testing
+  echo "Building rex CLI + rex-desktop with e2e-testing (Playwright plugin)…"
+  cargo build -p rex -p rex-desktop --features e2e-testing
 fi
 
 echo

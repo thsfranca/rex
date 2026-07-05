@@ -113,15 +113,36 @@ fn load_config() -> Result<LoadedConfig, CliError> {
 }
 
 fn resolve_rex_binary(log_path: &Path) -> Result<PathBuf, CliError> {
-    if let Ok(path) = std::env::var("CARGO_BIN_EXE_rex") {
-        let path = PathBuf::from(path);
-        if path.is_file() {
-            return Ok(path);
+    for env_key in ["CARGO_BIN_EXE_rex", "REX_BIN"] {
+        if let Ok(path) = std::env::var(env_key) {
+            let path = PathBuf::from(path);
+            if path.is_file() {
+                return Ok(path);
+            }
         }
     }
-    std::env::current_exe().map_err(|source| {
+
+    let current = std::env::current_exe().map_err(|source| {
         CliError::daemon_spawn_failed(log_path, format!("could not resolve rex binary: {source}"))
-    })
+    })?;
+    if let Some(name) = current.file_name().and_then(|n| n.to_str()) {
+        if name == "rex" {
+            return Ok(current);
+        }
+        if name == "rex-desktop" {
+            if let Some(dir) = current.parent() {
+                let sibling = dir.join("rex");
+                if sibling.is_file() {
+                    return Ok(sibling);
+                }
+            }
+        }
+    }
+
+    Err(CliError::daemon_spawn_failed(
+        log_path,
+        "could not resolve rex binary; set REX_BIN or build the rex CLI".to_string(),
+    ))
 }
 
 fn spawn_detached_daemon(loaded: &LoadedConfig, log_path: &Path) -> Result<(), CliError> {
