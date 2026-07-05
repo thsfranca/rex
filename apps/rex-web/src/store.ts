@@ -4,6 +4,7 @@ import type { ChatMessage, TimelineTask, TurnPhase } from "./types";
 interface AppState {
   phase: TurnPhase;
   statusLabel: string;
+  workspaceRoot: string | null;
   messages: ChatMessage[];
   timeline: TimelineTask[];
   draft: string;
@@ -11,6 +12,7 @@ interface AppState {
   setDraft: (draft: string) => void;
   setPhase: (phase: TurnPhase) => void;
   setStatusLabel: (label: string) => void;
+  setWorkspaceRoot: (root: string | null) => void;
   addUserMessage: (content: string) => void;
   appendAssistantChunk: (text: string) => void;
   setError: (message: string | null) => void;
@@ -23,6 +25,7 @@ let messageCounter = 0;
 export const useAppStore = create<AppState>((set, get) => ({
   phase: "idle",
   statusLabel: "Ready",
+  workspaceRoot: null,
   messages: [],
   timeline: [],
   draft: "",
@@ -38,6 +41,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ phase, statusLabel });
   },
   setStatusLabel: (statusLabel) => set({ statusLabel }),
+  setWorkspaceRoot: (workspaceRoot) => set({ workspaceRoot }),
   addUserMessage: (content) => {
     messageCounter += 1;
     set((s) => ({
