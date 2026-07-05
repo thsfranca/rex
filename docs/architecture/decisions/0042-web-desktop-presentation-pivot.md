@@ -34,7 +34,7 @@ Hub: [WEB_UI_ARCHITECTURE.md](../../WEB_UI_ARCHITECTURE.md).
 
 6. **Stream normalization:** Reuse [`rex-stream-ui`](../../../crates/rex-stream-ui/) in the Tauri backend; webview consumes normalized effects via Channel + Zustand.
 
-7. **Validation:** Replace tuiwright PTY snapshots with **rex-ui-harness** MCP (CIEDE2000 token asserts, Playwright clock mocking, tauri-plugin-playwright for WKWebView).
+7. **Validation:** Replace tuiwright PTY snapshots with **rex-ui-harness** MCP (CIEDE2000 token asserts, Playwright clock mocking, tauri-plugin-playwright for WKWebView). Desktop harness loads **`apps/rex-web/dist`** (production bundle), not a parallel HTML fixture or Vite dev HMR tree; mock only at daemon config (`REX_ROOT`).
 
 8. **Configuration:** No new JSON keys for UI mode — process context (`rex` spawn) selects the desktop app ([KISS config surface](../../CONFIGURATION.md)).
 

@@ -102,6 +102,14 @@ macOS Gatekeeper requires notarization for distribution; deferred until post-MVP
 
 ## Testing strategy
 
+### Single UI contract
+
+Validation MUST exercise the same frontend artifact operators receive:
+
+1. **`apps/rex-web/dist`** — built via `npm run build`; Tauri `frontendDist` and rex-ui-harness desktop mode both load this bundle (`vite preview` on port 5173 for harness + debug `devUrl` parity).
+2. **No alternate presentation code** — mock scenarios belong in daemon config (`fixtures/ui_probe/rex_root/`), not duplicate HTML/React trees.
+3. **Harness stack** — Tauri + `e2e-testing` + tauri-plugin-playwright + mock daemon; intelligence path matches bare `rex`.
+
 | Layer | Tool | Asserts |
 |-------|------|---------|
 | Tokens | `ui_assert_token` | CIEDE2000 ΔE2000 vs `--rex-*` CSS variables |

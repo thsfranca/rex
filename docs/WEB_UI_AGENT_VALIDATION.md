@@ -15,6 +15,7 @@ Register MCP: `node crates/rex-ui-harness/dist/index.js` with cwd = repo root.
 `ui_open` with no arguments launches **rex-desktop** with:
 
 - `REX_ROOT=fixtures/ui_probe/rex_root` (mock inference, `sidecars.harness=direct`)
+- **`apps/rex-web/dist`** served via `vite preview` (same bundle as Tauri release builds)
 - Real Tauri IPC → UDS `StreamInference` → streaming transcript
 
 Use `ui_open { "mode": "static" }` for the HTML fixture only (CI / layout tokens without daemon).
