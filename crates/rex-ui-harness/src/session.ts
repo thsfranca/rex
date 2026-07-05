@@ -12,7 +12,7 @@ import {
   resetProbeDaemon,
   stopHarnessDesktopApps,
 } from "./desktopProcess.js";
-import { ensureViteDevServer, stopViteDevServer } from "./devServer.js";
+import { ensureWebUiServer, stopWebUiServer } from "./devServer.js";
 import type { HarnessSession } from "./page.js";
 import {
   pageFill,
@@ -71,7 +71,7 @@ async function openDesktopSession(cfg: HarnessConfig): Promise<HarnessSession> {
 
   await stopHarnessDesktopApps(cfg.repoRoot);
   await resetProbeDaemon(cfg.rexRoot);
-  await ensureViteDevServer(cfg.repoRoot);
+  await ensureWebUiServer(cfg.repoRoot);
 
   desktopRepoRoot = cfg.repoRoot;
   const harnessCwd = harnessDesktopCwd();
@@ -109,7 +109,7 @@ export async function closeSession(): Promise<void> {
   pluginClient = null;
   processManager?.stop();
   processManager = null;
-  await stopViteDevServer();
+  await stopWebUiServer();
   if (desktopRepoRoot) {
     await stopHarnessDesktopApps(desktopRepoRoot);
     desktopRepoRoot = null;
