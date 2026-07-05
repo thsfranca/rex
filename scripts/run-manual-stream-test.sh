@@ -2,15 +2,16 @@
 set -euo pipefail
 
 cat <<'EOF'
-Manual test steps:
+Manual test steps (macOS):
 
+  cd apps/rex-web && npm run build && cd -
   rex
 
 Expected behavior:
-- Interactive TUI opens (daemon auto-starts when needed).
-- Health and phase appear in the header.
+- Desktop app opens (daemon auto-starts when needed).
+- Status appears in the header strip.
 - Submit a prompt in the composer; assistant text streams in the transcript.
-- Esc cancels an in-flight turn; Ctrl+C twice exits.
+- Approval modals appear when agent policy requires confirmation.
 
-Public `rex daemon`, `rex status`, and `rex complete` were removed.
+See docs/OPERATOR_UX.md for session flags (--continue, --last, --debug).
 EOF
