@@ -8,11 +8,11 @@
 
 Product-grade **web-native desktop** design system: semantic tokens, motion tiers, layout breakpoints, and **rex-ui-harness** acceptance gates for the Tauri harness.
 
-**Status:** `design accepted` — implementation **W100–W106** per [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md). **Architecture:** [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md).
+**Status:** `design accepted` — implementation **W100–W118** per [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md). **Architecture:** [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md).
 
 This document is the **acceptance gate** for presentation and motion work on the Rex desktop app. Pull requests that implement blink-only motion, code-like chrome, or wireframe overload **fail review** against this system.
 
-**Operator path:** [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) (migrating to web-native flows).
+**Operator path:** [OPERATOR_UX.md](OPERATOR_UX.md).
 
 ## Design principles
 

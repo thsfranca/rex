@@ -68,12 +68,17 @@ documents:
     status: active
     topics:
       - ci-quality-gates
-  - path: docs/CLI_OPERATOR_UX.md
+  - path: docs/OPERATOR_UX.md
     role: explanation
     status: active
     topics:
-      - cli-operator-ux
-    summary_heading: "## Purpose"
+      - operator-ux
+    summary_heading: "## Product entry"
+  - path: docs/WEB_UI_AGENT_VALIDATION.md
+    role: how-to
+    status: active
+    topics:
+      - web-ui-agent-validation
   - path: docs/CONFIGURATION.md
     role: reference
     status: active
@@ -221,15 +226,14 @@ documents:
       - sidecar-runtime
   - path: docs/TERMINAL_HARNESS_ARCHITECTURE.md
     role: explanation
-    status: active
+    status: retired
     topics:
       - terminal-harness-architecture
   - path: docs/TUI_DESIGN.md
     role: explanation
-    status: active
+    status: retired
     topics:
       - tui-design
-    summary_heading: "## Purpose"
   - path: docs/WEB_UI_DESIGN.md
     role: explanation
     status: active

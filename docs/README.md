@@ -5,7 +5,7 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 | Role | Where to read |
 |------|----------------|
 | **Agent router** (task-scoped load) | [AGENTS.md](AGENTS.md), root [llms.txt](../llms.txt), [manifest.yaml](manifest.yaml) |
-| **Tutorials** (first success path) | [README.md](../README.md) quickstart, [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) |
+| **Tutorials** (first success path) | [README.md](../README.md) quickstart, [OPERATOR_UX.md](OPERATOR_UX.md) |
 
 ### How-to (task recipes)
 
@@ -39,11 +39,11 @@ Documentation follows **[Diátaxis](https://diataxis.fr/)** roles; the **archite
 | [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | LangFuse discovery queue |
 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Economics validation program |
 | [MVP_SPEC.md](MVP_SPEC.md) | Phase 1 product scope |
-| [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Terminal operator UX (migrating to web) |
+| [OPERATOR_UX.md](OPERATOR_UX.md) | Desktop operator path |
 | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | Web desktop design system |
 | [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md) | Web desktop architecture |
 | [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md) | Web UI phased delivery |
-| [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | Terminal harness architecture (historical) |
+| [WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md) | rex-ui-harness validation |
 
 ### Reference (narrow facts)
 
@@ -82,7 +82,7 @@ Before adding or materially editing a doc under `docs/`:
 | [PRIORITIZATION.md](PRIORITIZATION.md) | MoSCoW + quick R-ICE |
 | [PROJECT_CONTEXT_PATHS.md](PROJECT_CONTEXT_PATHS.md) | OpenCode-style context path pre-injection (**R066** planned) |
 | [V1_0.md](V1_0.md) | v1.0 release criteria (SMART), SemVer meaning, tagging gate |
-| [ROADMAP.md](ROADMAP.md) | v1.0 closure queue (**RC-LF1** Must), terminal harness **R072–R073**, engineering backlog IDs |
+| [ROADMAP.md](ROADMAP.md) | v1.0 closure queue (**RC-LF1** Must), web UI **W100–W118**, engineering backlog IDs |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | SAD + C4-style views + links to ADRs |
 | [ARCHITECTURE_GUIDELINES.md](ARCHITECTURE_GUIDELINES.md) | Architecture policies, ownership, documentation layering |
 | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Deferred VM/container transport catalog |
@@ -107,12 +107,12 @@ Before adding or materially editing a doc under `docs/`:
 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md) | Economics validation program — **design hub** |
 | [CONFIGURATION.md](CONFIGURATION.md) | JSON config schema + deprecated `REX_*` catalog |
 | [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md) | Operator setup walkthroughs (how-to) |
-| [NDJSON_STREAM.md](NDJSON_STREAM.md) | NDJSON stream contract for CLI and automation |
+| [NDJSON_STREAM.md](NDJSON_STREAM.md) | Internal stream event vocabulary (desktop projection; not public CLI) |
 | [ERROR_HANDLING.md](ERROR_HANDLING.md) | Error codes, human-readable messages, CI guidelines gate |
 | [PLANNING_TOOLS.md](PLANNING_TOOLS.md) | Plan mode tools, stream contract, broker plan.save |
-| [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Terminal operator path and daemon lifecycle UX — **product hub** |
-| [TUI_DESIGN.md](TUI_DESIGN.md) | Product-grade `rex` TUI design system — **acceptance gate** (**R082**) |
-| [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | Terminal harness technical architecture — **design spoke** (**R072–R073**) |
+| [OPERATOR_UX.md](OPERATOR_UX.md) | Desktop operator path and session flags — **product hub** |
+| [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | Web desktop design system — **acceptance gate** |
+| [WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md) | rex-ui-harness MCP validation |
 | [RELEASE.md](RELEASE.md) | Core release automation |
 | [CI.md](CI.md) | Automation gates |
 | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md) | CI quality and security gates (**R023** Done; **R024–R026** planned) |
@@ -129,6 +129,9 @@ Cancelled or superseded programs — see [historical/README.md](historical/READM
 | [historical/OBS_STORE_MMAP_FORMAT.md](historical/OBS_STORE_MMAP_FORMAT.md) | **Cancelled** — CHCE format |
 | [historical/OBS_READ_API.md](historical/OBS_READ_API.md) | **Cancelled** — loopback read API |
 | [historical/OBSERVABILITY_INTEGRATIONS.md](historical/OBSERVABILITY_INTEGRATIONS.md) | **Cancelled** — bundled Grafana suite |
+| [historical/CLI_OPERATOR_UX.md](historical/CLI_OPERATOR_UX.md) | **Superseded** — terminal operator UX |
+| [historical/TUI_DESIGN.md](historical/TUI_DESIGN.md) | **Superseded** — terminal design system |
+| [historical/TERMINAL_HARNESS_ARCHITECTURE.md](historical/TERMINAL_HARNESS_ARCHITECTURE.md) | **Superseded** — terminal harness architecture |
 
 ## Feature-area hub map
 
@@ -145,8 +148,8 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Daemon extensibility / sidecars | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Layered cache policy | [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | Routing / optional gateway stance | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), economics rows in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
-| CLI transport + NDJSON contract | [NDJSON_STREAM.md](NDJSON_STREAM.md), [ERROR_HANDLING.md](ERROR_HANDLING.md), [ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md) |
-| CLI operator UX (terminal TUI, auto-start) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TUI_DESIGN.md](TUI_DESIGN.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md), [ADR 0040](architecture/decisions/0040-harness-session-transcript-authority.md) |
+| Desktop client + `rex.v1` transport | [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md), [OPERATOR_UX.md](OPERATOR_UX.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md) |
+| Desktop operator UX | [OPERATOR_UX.md](OPERATOR_UX.md), [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md), [ADR 0040](architecture/decisions/0040-harness-session-transcript-authority.md) |
 | Operation feedback (live stream) | [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md), [ADR 0030](architecture/decisions/0030-incremental-run-turn-streaming.md), [ADR 0031](architecture/decisions/0031-ask-mode-research-broker.md) |
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 | Agent knowledge for AI sessions (planned) | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |

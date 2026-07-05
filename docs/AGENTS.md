@@ -13,8 +13,8 @@ Machine catalog: [manifest.yaml](manifest.yaml). Human index: [README.md](README
 | Task | Primary doc | Also useful |
 |------|-------------|-------------|
 | Fix CI or automation gates | [CI.md](CI.md) | [CI_QUALITY_GATES.md](CI_QUALITY_GATES.md), [DEVELOPER_EXPERIENCE_GUIDE.md](DEVELOPER_EXPERIENCE_GUIDE.md) |
-| Add or change error codes / CLI messages | [ERROR_HANDLING.md](ERROR_HANDLING.md) | [NDJSON_STREAM.md](NDJSON_STREAM.md) |
-| NDJSON stream / CLI transport contract | [NDJSON_STREAM.md](NDJSON_STREAM.md) | [ERROR_HANDLING.md](ERROR_HANDLING.md), [ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md) |
+| Add or change error codes / UI messages | [ERROR_HANDLING.md](ERROR_HANDLING.md) | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) |
+| Desktop operator path | [OPERATOR_UX.md](OPERATOR_UX.md) | [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
 | JSON config keys / env precedence | [CONFIGURATION.md](CONFIGURATION.md) | [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md), [KISS_CONFIG_SURFACE.md](KISS_CONFIG_SURFACE.md) |
 | Operator setup (daemon, LiteLLM, oMLX) | [CONFIGURATION_OPERATOR.md](CONFIGURATION_OPERATOR.md) | [OPERATOR_UX.md](OPERATOR_UX.md), [DEPENDENCIES.md](DEPENDENCIES.md) |
 | Web UI design / acceptance | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md), [WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md) |

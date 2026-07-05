@@ -17,31 +17,31 @@ flowchart LR
  core[CoreStreaming_RC01_RC07]
  side[Sidecar_RC03]
  broker[BrokeredHttpTool_RC04]
- cliClient[CLI_NDJSON_ADR0038]
+ desktopClient[WebDesktop_ADR0042]
  policyBroker[AccessPolicyBroker_RC05]
  agent[R013_R038_agent_Done]
- terminalHarness[R072_R073_harness]
+ webUI[W100_W118_web_UI_Done]
  langfuseDisc[LangFuse_discovery_LF-D]
  langfuseRm[LF-R01_dead_code_removal]
  langfuseImpl[LF-F01_export]
  v1[v1_0_RC_LF1_Met]
  core --> side
  side --> broker
- broker --> cliClient
+ broker --> desktopClient
  side --> policyBroker
  core --> agent
- cliClient --> agent
- agent --> terminalHarness
- terminalHarness --> langfuseDisc
+ desktopClient --> agent
+ agent --> webUI
+ webUI --> langfuseDisc
  langfuseDisc --> langfuseRm
  langfuseRm --> langfuseImpl
  policyBroker --> v1
- cliClient --> v1
+ desktopClient --> v1
  agent --> v1
  langfuseImpl --> v1
 ```
 
-**Current focus:** Web UI pivot **W100–W118** ([WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)); **W100** Done; **R090–R096** Cancelled.
+**Current focus:** LangFuse program **LF-D01+** toward **RC-LF1** ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)); web UI pivot **W100–W118** **Done** ([WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md)).
 
 ## Now — stable baseline
 
@@ -50,7 +50,7 @@ Streaming/agent Must **RC-01–RC-10** are **Met**. Observability Must **RC-LF1*
 | Priority | What | Notes |
 |----------|------|-------|
 | **Should** | Optional hardening | Stream/log polish beyond **RC-07** (Met); `cargo-deny`, Semgrep (**R026** Could) |
-| **Removed** | VS Code extension (in-repo) | Removed 2026-07 — CLI-only thin client; see [NDJSON_STREAM.md](NDJSON_STREAM.md), [ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md) |
+| **Removed** | VS Code extension (in-repo) | Removed 2026-07 — desktop web UI is the operator surface; see [OPERATOR_UX.md](OPERATOR_UX.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md) |
 
 ## Next — prioritized queue (audit 2026-07-01)
 
@@ -58,30 +58,20 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 
 | Rank | ID / theme | MoSCoW | RC-* | Source(s) | Status |
 |------|------------|--------|------|-----------|--------|
-| 1 | Terminal harness design docs + **ADR 0039** | **Must** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | Open |
-| 2 | **R072** — NDJSON core + operator messaging + **mdstream** | **Must** (program) | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | **Done** |
-| 3 | **R073** — full terminal UI + approval modals | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md) | **Done** |
-| 4 | **R082** — TUI product design system (docs) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
-| 5 | **R080** — TUI presentation (layout + tokens) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
-| 6 | **R081** — TUI motion (choreography) | **Should** | — | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
-| 6b | Session naming + `rex --continue` / `rex --last` | **Should** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md#session-model), [ADR 0040](architecture/decisions/0040-harness-session-transcript-authority.md) | **Done** |
-| 6c | **R090–R096** — TUI visual identity v2 | **Won't (now)** | — | Superseded by **W100+** — [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md) | **Cancelled** |
-| 6d | **W100** — rex-ui-harness MCP | **Must** | — | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | **Done** |
-| 6e | **W101–W104** — Tauri shell, chat MVP, CLI launch, TUI removal | **Must** | — | [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md) | **Done** |
-| 6f | **W105–W108** — Motion, approval, session picker, WebGL | **Should** | — | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | **Done** |
-| 6g | **W111** — path-aware UI verify CI | **Should** | — | [WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md), [CI.md](CI.md) | **Done** |
-| 6h | **W112–W118** — Design system module, operator chrome, UI test expansion | **Should** | — | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md) | **Done** |
-| 7 | **R074** — optional LLM status narrator | **Could** | — | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | Open — prefer **after R080** |
-| 5 | **R067** — intent-aware retrieval for short prompts | **Should** | — | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) | Open |
-| 6 | **R068** — ask answer-first prompt policy | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
-| 7 | **R069** — remove tool step caps | **Should** | — | [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) | Open |
-| 8 | **R070** — deterministic init intent gating | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
-| 9 | **R040** — nightly live-smoke workflow | **Should** | RC-S6 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [CI.md](CI.md) | Open |
-| 10 | **R059** — `workspace.search` broker | **Should** | — | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md#workspace-search-broker-r059) | Open |
+| 1 | **LF-D01+** — LangFuse discovery + export | **Must** | **RC-LF1** | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | Open |
+| 2 | **R067** — intent-aware retrieval for short prompts | **Should** | — | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) | Open |
+| 3 | **R068** — ask answer-first prompt policy | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
+| 4 | **R069** — remove tool step caps | **Should** | — | [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) | Open |
+| 5 | **R070** — deterministic init intent gating | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
+| 6 | **R040** — nightly live-smoke workflow | **Should** | RC-S6 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [CI.md](CI.md) | Open |
+| 7 | **R059** — `workspace.search` broker | **Should** | — | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md#workspace-search-broker-r059) | Open |
+| — | **W100–W118** — web desktop operator surface | **Must/Should** | — | [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md), [OPERATOR_UX.md](OPERATOR_UX.md) | **Done** |
+| — | **R072–R073**, **R080–R082** — terminal harness (superseded) | — | — | [historical/CLI_OPERATOR_UX.md](historical/CLI_OPERATOR_UX.md) | **Done** (superseded by **W100+**) |
+| — | **R090–R096** — TUI visual identity v2 | **Won't (now)** | — | [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md) | **Cancelled** |
 
 ### LangFuse integration (RC-LF1) — deferred
 
-Hub: [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). Discovery: [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md). **Sequencing:** deferred until terminal harness **R072–R073** land ([PRIORITIZATION.md](PRIORITIZATION.md)). **RC-LF1** remains **Not met**; v1.0 tag blocked until LangFuse program resumes.
+Hub: [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md). Discovery: [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md). **Sequencing:** terminal harness and web UI pivot **Done** (**R072–R073**, **W100–W118**); LangFuse program is **unblocked**. **RC-LF1** remains **Not met**; v1.0 tag blocked until export ships.
 
 | RC-* | Theme | Status |
 |------|-------|--------|
@@ -115,22 +105,17 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 | **Could** | Gateway adapters beyond broker HTTP | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md) | After router story matures |
 | **Could** | Vendor KV / prompt cache hints | [CACHING.md](CACHING.md#vendor-kv-and-prompt-cache-hints-planned) | Depends on outbound API |
 | **Could** | **LF-F02–LF-F07** LangFuse features | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) | After **LF-F01** |
-| **Should** | **R071** — CLI daemon auto-start (extension-compatible) | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md) | **Done** |
+| **Should** | **R071** — daemon auto-start on operator launch | [OPERATOR_UX.md](OPERATOR_UX.md), [ADR 0035](architecture/decisions/0035-cli-operator-ux-daemon-lifecycle-and-terminal-ui.md) | **Done** |
 | **Should** | **R071b** — daemon idle lifecycle + auto-shutdown | [ADR 0037](architecture/decisions/0037-daemon-idle-shutdown.md) | **Done** |
-| **Must** | **R075** — per-workspace daemon routing | [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), [CONFIGURATION.md](CONFIGURATION.md) | **Done** (PR1); extension folder-switch **PR2** |
-| **Must** (program) | **R072** — NDJSON core + operator messaging + **mdstream** | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | **Done** |
-| **Should** | **R073** — full terminal UI + approval modals | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md) | **Done** |
-| **Should** | **R082** — TUI product design system (docs) | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
-| **Should** | **R080** — TUI presentation (layout + tokens) | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
-| **Should** | **R081** — TUI motion (choreography) | [TUI_DESIGN.md](TUI_DESIGN.md) | **Done** |
-| **Could** | **R074** — optional LLM status narrator | [CLI_OPERATOR_UX.md](CLI_OPERATOR_UX.md) | After **R073**; prefer after **R080** |
-| **Should** | **R077** — brokered git dirty-state auto-commit | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | After **R073** — **`git.auto_commit_dirty`** |
-| **Could** | **R076** — daemon-owned LSP workspace diagnostics | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md) | After **R073** |
-| **Could** | **R078** — dynamic MCP approval schema UI | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) | After **R073**; may follow **R033** |
-| **Must** | **LF-D01–LF-F01** — LangFuse discovery + export | [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | **Deferred** until **R072–R073** — **RC-LF1** open |
+| **Must** | **R075** — per-workspace daemon routing | [ADR 0036](architecture/decisions/0036-per-workspace-daemon-routing.md), [CONFIGURATION.md](CONFIGURATION.md) | **Done** |
+| **Could** | **R074** — optional LLM status narrator | [historical/CLI_OPERATOR_UX.md](historical/CLI_OPERATOR_UX.md) | Open — desktop may subsume |
+| **Should** | **R077** — brokered git dirty-state auto-commit | [historical/TERMINAL_HARNESS_ARCHITECTURE.md](historical/TERMINAL_HARNESS_ARCHITECTURE.md), [POLICY_ENGINE.md](POLICY_ENGINE.md) | Open — **`git.auto_commit_dirty`** |
+| **Could** | **R076** — daemon-owned LSP workspace diagnostics | [historical/TERMINAL_HARNESS_ARCHITECTURE.md](historical/TERMINAL_HARNESS_ARCHITECTURE.md) | Open |
+| **Could** | **R078** — dynamic MCP approval schema UI | [historical/TERMINAL_HARNESS_ARCHITECTURE.md](historical/TERMINAL_HARNESS_ARCHITECTURE.md), [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) | Open; may follow **R033** |
+| **Must** | **LF-D01–LF-F01** — LangFuse discovery + export | [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | Open — **RC-LF1** |
 | **Won't (now)** | VM/container as **default Mac** sidecar envelope | [AGENT_RUNTIME_ENVIRONMENT.md](AGENT_RUNTIME_ENVIRONMENT.md) | Process + broker instead |
 | **Won't (now)** | Self-hosted LangFuse on Mac | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md) | Cloud default |
-| **Won't** | Headless TUI adapter for external agent harnesses (NDJSON replay + ANSI snapshot) | [TERMINAL_HARNESS_ARCHITECTURE.md](TERMINAL_HARNESS_ARCHITECTURE.md#testing-strategy) | Live PTY path is enough for agent-driven `rex` TUI work; not a Rex product requirement |
+| **Won't** | Headless terminal adapter for external agent harnesses | [historical/TERMINAL_HARNESS_ARCHITECTURE.md](historical/TERMINAL_HARNESS_ARCHITECTURE.md) | Superseded by rex-ui-harness |
 
 ## Engineering backlog (refactor / contract IDs)
 
@@ -169,12 +154,12 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 |--------|-----------------|--------|
 | **Remote** networking, **TLS**, **production auth** | Operator story + threat model ready | [MVP_SPEC.md](MVP_SPEC.md), [ARCHITECTURE.md](ARCHITECTURE.md) |
 | **Wasm** in-process plugins | Sidecar path mature | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md) |
-| **Node gRPC `StreamInference`** in extension | New ADR supersedes hybrid policy | [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) |
+| **Node gRPC `StreamInference`** in editor extension | New ADR supersedes hybrid policy | [ADR 0007](architecture/decisions/0007-editor-extension-hybrid-transport-cli-and-grpc.md) (extension removed) |
 | **Long-term / project memory** | After benchmark gate | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |
 | **Agent knowledge** | After R015 | [AGENT_KNOWLEDGE.md](AGENT_KNOWLEDGE.md) |
 | **MCP in sidecar** | Deferred | [ADR 0016](architecture/decisions/0016-mcp-in-sidecar-envelope.md) |
 | **Capability sidecar fleet + web search** | After **RC-LF1** headroom | [CAPABILITY_SIDECARS.md](CAPABILITY_SIDECARS.md), [WEB_SEARCH.md](WEB_SEARCH.md) |
-| **LangFuse integration** | **Deferred** until **R072–R073** | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) |
+| **LangFuse integration** | **Active** — harness pivot complete | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) |
 | ~~**Rex-owned observability suite**~~ | **Cancelled** — removal **LF-R01** | [OBSERVABILITY_AND_ECONOMICS.md](historical/OBSERVABILITY_AND_ECONOMICS.md) (superseded) |
 | ~~**CHCE mmap program**~~ | **Cancelled** | [CHCE_ROADMAP.md](historical/CHCE_ROADMAP.md) |
 
@@ -189,7 +174,7 @@ Canonical design: [AGENT_DELIVERY_ROADMAP.md](AGENT_DELIVERY_ROADMAP.md). **`rex
 
 ### Prioritization audit (2026-07-01)
 
-Pivot: **Terminal harness** becomes primary operator surface ([ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md), [ADR 0039](architecture/decisions/0039-terminal-harness-presentation-and-daemon-intelligence.md)). **Next slice:** terminal harness design docs → **R072** → **R073**. **LangFuse discovery (LF-D01+)** deferred until harness MVP; **RC-LF1** remains **Not met**. Prior audit: 2026-06-09 (LangFuse-primary).
+Pivot: **Web desktop** is the primary operator surface ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)). **W100–W118** **Done**. **Next slice:** LangFuse discovery **LF-D01+** toward **RC-LF1**. Prior audit: 2026-06-09 (LangFuse-primary).
 
 ## Related
 
