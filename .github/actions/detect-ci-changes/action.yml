@@ -79,6 +79,7 @@ runs:
             - 'crates/rex-desktop/**'
             - 'fixtures/ui_probe/**'
             - 'scripts/ci/run_ui_verify.sh'
+            - 'scripts/ci/build_ui_artifacts.sh'
           rust_codeql_changed:
             - 'crates/**'
             - 'proto/**'
