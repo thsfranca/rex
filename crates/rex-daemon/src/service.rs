@@ -886,6 +886,7 @@ impl RexService for RexDaemonService {
             let _work = activity_for_stream.track_work();
             let mut chunk_count: u64 = 0;
             let mut done_seen = false;
+            let mut approval_pause = false;
             let mut ttft_ms: Option<u64> = None;
             let mut agent_loop_terminal: Option<String> = None;
             if use_sidecar_live {
@@ -942,6 +943,9 @@ impl RexService for RexDaemonService {
                             if chunk.done {
                                 done_seen = true;
                             }
+                            if chunk.event == "tool" && chunk.phase == "approval_required" {
+                                approval_pause = true;
+                            }
                             observe_agent_loop_terminal(&mut agent_loop_terminal, &chunk);
                             let _ = session_store.append_stream_chunk(&session_id_for_log, &chunk);
                             yield Ok(chunk);
@@ -988,6 +992,9 @@ impl RexService for RexDaemonService {
                             }
                             if chunk.done {
                                 done_seen = true;
+                            }
+                            if chunk.event == "tool" && chunk.phase == "approval_required" {
+                                approval_pause = true;
                             }
                             let terminal = chunk.done;
                             let _ = session_store.append_stream_chunk(&session_id_for_log, &chunk);
@@ -1064,6 +1071,11 @@ impl RexService for RexDaemonService {
                         });
                     }
                 }
+            } else if approval_pause {
+                println!(
+                    "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.terminal=approval_pause chunks_sent={chunk_count} elapsed_ms={elapsed_ms}",
+                    StreamLifecycle::Completed.as_str(),
+                );
             } else {
                 println!(
                     "stream.request_id={request_id} trace_id={trace_id} turn_id={turn_id_for_stream} inference_runtime={inference_runtime} stream.lifecycle={} stream.event=incomplete stream.terminal=missing_done chunks_sent={chunk_count} elapsed_ms={elapsed_ms}",

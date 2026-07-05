@@ -1,5 +1,5 @@
 use rex_cli::transport::connect_client;
-use rex_cli::CliError;
+use rex_cli::{ensure_daemon_ready, CliError};
 use rex_proto::rex::v1::StreamInferenceRequest;
 use rex_stream_ui::{StreamConsumer, TurnPhase, UiEffect};
 use serde::Serialize;
@@ -12,6 +12,15 @@ pub enum StreamEventDto {
     Chunk { text: String },
     Phase { phase: String },
     Message { text: String },
+    ApprovalRequired {
+        #[serde(rename = "toolCallId")]
+        tool_call_id: String,
+        #[serde(rename = "toolName")]
+        tool_name: String,
+        detail: String,
+        #[serde(rename = "approvalToken")]
+        approval_token: String,
+    },
     Done,
     Error { code: String, message: String },
 }
@@ -23,6 +32,7 @@ pub async fn submit_prompt_stream(
     harness_session_id: String,
     channel: Channel<StreamEventDto>,
 ) -> Result<(), CliError> {
+    ensure_daemon_ready().await?;
     let mut client = connect_client(Some(&trace_id)).await?;
     let mut request = tonic::Request::new(StreamInferenceRequest {
         prompt,
@@ -44,7 +54,17 @@ pub async fn submit_prompt_stream(
     let mut stream: Streaming<rex_proto::rex::v1::StreamInferenceResponse> = response.into_inner();
     let mut consumer = StreamConsumer::new();
 
-    while let Some(chunk) = stream.message().await.map_err(CliError::Status)? {
+    loop {
+        let chunk = match stream.message().await {
+            Ok(Some(chunk)) => chunk,
+            Ok(None) => break,
+            Err(status) => {
+                if consumer.state.phase == TurnPhase::ToolApproval {
+                    return Ok(());
+                }
+                return Err(CliError::Status(status));
+            }
+        };
         if chunk.done {
             let _ = channel.send(StreamEventDto::Done);
             return Ok(());
@@ -54,6 +74,9 @@ pub async fn submit_prompt_stream(
                 let _ = channel.send(dto);
             }
         }
+    }
+    if consumer.state.phase == TurnPhase::ToolApproval {
+        return Ok(());
     }
     let _ = channel.send(StreamEventDto::Error {
         code: "stream_incomplete".to_string(),
@@ -69,8 +92,27 @@ fn map_effect(effect: UiEffect) -> Option<StreamEventDto> {
         UiEffect::PhaseChanged(phase) => Some(StreamEventDto::Phase {
             phase: phase_to_str(phase).to_string(),
         }),
+        UiEffect::ToolUpdated(card) if card.phase == "approval_required" => {
+            let (detail, approval_token) = split_approval_detail(&card.detail);
+            Some(StreamEventDto::ApprovalRequired {
+                tool_call_id: card.tool_call_id,
+                tool_name: card.name,
+                detail,
+                approval_token,
+            })
+        }
         UiEffect::TerminalDone => Some(StreamEventDto::Done),
-        UiEffect::TerminalError { code, message } => Some(StreamEventDto::Error { code, message }),
+        UiEffect::TerminalError { code, message } => {
+            if let Some(token) = message.strip_prefix("approval_required:") {
+                return Some(StreamEventDto::ApprovalRequired {
+                    tool_call_id: String::new(),
+                    tool_name: String::new(),
+                    detail: String::new(),
+                    approval_token: token.to_string(),
+                });
+            }
+            Some(StreamEventDto::Error { code, message })
+        }
         UiEffect::ToolUpdated(_)
         | UiEffect::Ignored => None,
     }
@@ -83,5 +125,34 @@ fn phase_to_str(phase: TurnPhase) -> &'static str {
         TurnPhase::ToolRunning => "tool_running",
         TurnPhase::ToolApproval => "tool_approval",
         TurnPhase::Terminal => "terminal",
+    }
+}
+
+fn split_approval_detail(detail: &str) -> (String, String) {
+    if let Some((path, token)) = detail.rsplit_once('|') {
+        if token.starts_with("tap-") {
+            return (path.to_string(), token.to_string());
+        }
+    }
+    (detail.to_string(), String::new())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn approval_required_serializes_camel_case_fields() {
+        let dto = StreamEventDto::ApprovalRequired {
+            tool_call_id: "tc1".into(),
+            tool_name: "fs.write".into(),
+            detail: "path".into(),
+            approval_token: "tap-1".into(),
+        };
+        let value: serde_json::Value = serde_json::to_value(&dto).unwrap();
+        assert_eq!(value["kind"], "approvalRequired");
+        assert_eq!(value["toolCallId"], "tc1");
+        assert_eq!(value["toolName"], "fs.write");
+        assert_eq!(value["approvalToken"], "tap-1");
     }
 }

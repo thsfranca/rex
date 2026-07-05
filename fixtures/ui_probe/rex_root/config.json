@@ -4,7 +4,7 @@
     "socket": "/tmp/rex-ui-probe.sock",
     "socket_scope": "global",
     "ready_timeout_secs": 60,
-    "log_path": ""
+    "log_path": "daemon.log"
   },
   "sidecars": {
     "active": "stub",

@@ -1,9 +1,24 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { ApprovalModal } from "./components/ApprovalModal";
+import { AmbientCanvas } from "./components/AmbientCanvas";
 import { Composer } from "./components/Composer";
 import { MotionStatusDot } from "./components/Motion";
+import { SessionPicker } from "./components/SessionPicker";
 import { Timeline } from "./components/Timeline";
 import { Transcript } from "./components/Transcript";
-import { ensureDaemon, subscribeDaemonLifecycle } from "./ipc";
+import { UiObservability } from "./components/UiObservability";
+import {
+  ensureDaemon,
+  fetchSessionEvents,
+  respondToToolApproval,
+  sessionEventsToMessages,
+  subscribeDaemonLifecycle,
+  subscribeMenuAction,
+} from "./ipc";
+import {
+  buildObservabilitySnapshot,
+  publishObservabilitySnapshot,
+} from "./observability";
 import { useAppStore } from "./store";
 
 export default function App() {
@@ -13,9 +28,45 @@ export default function App() {
   const messages = useAppStore((s) => s.messages);
   const timeline = useAppStore((s) => s.timeline);
   const error = useAppStore((s) => s.error);
+  const pendingApproval = useAppStore((s) => s.pendingApproval);
+  const sessionPickerOpen = useAppStore((s) => s.sessionPickerOpen);
+  const sessions = useAppStore((s) => s.sessions);
+  const harnessSessionId = useAppStore((s) => s.harnessSessionId);
+  const streamEvents = useAppStore((s) => s.streamEvents);
+  const lastSubmitError = useAppStore((s) => s.lastSubmitError);
+  const composerBusy = useAppStore((s) => s.composerBusy);
+
+  const observabilitySnapshot = useMemo(
+    () =>
+      buildObservabilitySnapshot({
+        phase,
+        statusLabel,
+        pendingApproval,
+        error,
+        harnessSessionId,
+        lastSubmitError,
+        composerBusy,
+        streamEvents,
+      }),
+    [
+      phase,
+      statusLabel,
+      pendingApproval,
+      error,
+      harnessSessionId,
+      lastSubmitError,
+      composerBusy,
+      streamEvents,
+    ]
+  );
 
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
+    publishObservabilitySnapshot(observabilitySnapshot);
+  }, [observabilitySnapshot]);
+
+  useEffect(() => {
+    let unlistenLifecycle: (() => void) | undefined;
+    let unlistenMenu: (() => void) | undefined;
 
     void (async () => {
       try {
@@ -26,7 +77,7 @@ export default function App() {
         useAppStore.getState().setError(message);
       }
 
-      unlisten = await subscribeDaemonLifecycle((event) => {
+      unlistenLifecycle = await subscribeDaemonLifecycle((event) => {
         const store = useAppStore.getState();
         switch (event.kind) {
           case "ready":
@@ -41,29 +92,90 @@ export default function App() {
             break;
         }
       });
+
+      unlistenMenu = await subscribeMenuAction(async (action) => {
+        const store = useAppStore.getState();
+        if (action === "session_new") {
+          store.newSession();
+          return;
+        }
+        if (action === "session_continue") {
+          store.setSessionPickerOpen(true);
+          return;
+        }
+        if (action === "session_last" && store.harnessSessionId) {
+          const result = await fetchSessionEvents(store.harnessSessionId);
+          const hydrated = sessionEventsToMessages(result.events).map((message, index) => ({
+            id: `h-${index}`,
+            ...message,
+          }));
+          store.hydrateMessages(hydrated);
+        }
+      });
     })();
 
     return () => {
-      unlisten?.();
+      unlistenLifecycle?.();
+      unlistenMenu?.();
     };
   }, []);
 
   const working = phase === "generating" || phase === "tool_running";
 
+  const handleApproval = async (approved: boolean) => {
+    if (!pendingApproval?.approvalToken || !harnessSessionId) return;
+    await respondToToolApproval(
+      pendingApproval.approvalToken,
+      approved,
+      pendingApproval.toolCallId,
+      harnessSessionId
+    );
+    useAppStore.getState().setPendingApproval(null);
+    useAppStore.getState().setPhase("generating");
+  };
+
   return (
-    <div className="shell" data-testid="shell">
-      <header className="header" data-testid="header">
-        <MotionStatusDot working={working} id="status-dot" testId="status-dot" />
-        <span id="status-label" style={{ marginLeft: 8 }}>
-          {statusLabel}
-        </span>
-      </header>
-      <Transcript messages={messages} />
-      <Timeline tasks={timeline} phase={phase} />
-      <Composer disabled={working} />
-      <footer className="footer" data-testid="footer">
-        {error ? error : workspaceRoot ? `Ready · ${workspaceRoot}` : "Ready"} · ⌘K ?
-      </footer>
-    </div>
+    <>
+      <AmbientCanvas phase={phase} />
+      <div className="shell" data-testid="shell">
+        <header className="header" data-testid="header">
+          <MotionStatusDot working={working} id="status-dot" testId="status-dot" />
+          <span id="status-label" style={{ marginLeft: 8 }}>
+            {statusLabel}
+          </span>
+        </header>
+        <Transcript messages={messages} />
+        <Timeline tasks={timeline} phase={phase} />
+        <Composer disabled={working || phase === "tool_approval"} />
+        <footer className="footer" data-testid="footer">
+          {error ? error : workspaceRoot ? `Ready · ${workspaceRoot}` : "Ready"} · ⌘K ?
+        </footer>
+      </div>
+      {pendingApproval && phase === "tool_approval" ? (
+        <ApprovalModal
+          pending={pendingApproval}
+          onApprove={() => void handleApproval(true)}
+          onDeny={() => void handleApproval(false)}
+        />
+      ) : null}
+      {sessionPickerOpen ? (
+        <SessionPicker
+          sessions={sessions}
+          onSelect={(sessionId) => {
+            void fetchSessionEvents(sessionId).then((result) => {
+              const hydrated = sessionEventsToMessages(result.events).map((message, index) => ({
+                id: `h-${index}`,
+                ...message,
+              }));
+              useAppStore.getState().hydrateMessages(hydrated);
+              useAppStore.getState().setHarnessSessionId(sessionId);
+              useAppStore.getState().setSessionPickerOpen(false);
+            });
+          }}
+          onClose={() => useAppStore.getState().setSessionPickerOpen(false)}
+        />
+      ) : null}
+      <UiObservability snapshot={observabilitySnapshot} />
+    </>
   );
 }
