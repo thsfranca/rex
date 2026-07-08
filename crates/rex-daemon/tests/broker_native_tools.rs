@@ -33,6 +33,9 @@ mod http_openai_compat;
 #[allow(dead_code)]
 #[path = "../src/ollama_capability.rs"]
 mod ollama_capability;
+#[allow(dead_code)]
+#[path = "../src/tool_approval.rs"]
+mod tool_approval;
 
 fn init_http_config(base_url: &str, native_tools: NativeToolsMode) {
     settings::reset_for_test();

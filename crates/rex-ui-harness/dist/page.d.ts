@@ -28,4 +28,9 @@ export declare function pageCssTokenAssert(session: HarnessSession, selector: st
 }>;
 export declare function pageFill(session: HarnessSession, selector: string, text: string): Promise<void>;
 export declare function pageCanvasHash(session: HarnessSession, selector: string): Promise<string>;
+export declare function pageCanvasMeta(session: HarnessSession, selector: string): Promise<{
+    renderer: string;
+    motionTier: string;
+    webgl: boolean;
+}>;
 export declare function readObservabilitySnapshot(session: HarnessSession): Promise<Record<string, unknown>>;

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { createParticleRenderer } from "../design-system/canvas/particle-renderer";
 import {
   createParticlePool,
   spawnBurst,
@@ -37,17 +38,19 @@ export function ModalParticleRing({ active }: Props) {
     if (!canvas || !active || !enabled) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
+    const renderer = (() => {
+      try {
+        return createParticleRenderer(canvas, POOL_SIZE);
+      } catch {
+        return null;
+      }
+    })();
+    if (!renderer) return;
     let frame = 0;
     let running = true;
     let last = performance.now();
 
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
+    const resize = () => renderer.poll();
     resize();
     window.addEventListener("resize", resize);
 
@@ -56,18 +59,8 @@ export function ModalParticleRing({ active }: Props) {
       const dt = Math.min(0.032, (now - last) / 1000);
       last = now;
       stepParticles(poolRef.current, dt, 3.2, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const fill =
-        getComputedStyle(document.documentElement).getPropertyValue("--rex-particle-fill").trim();
-      for (const p of poolRef.current) {
-        if (!p.active) continue;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
-        ctx.globalAlpha = (p.life / p.maxLife) * 0.8;
-        ctx.fillStyle = fill;
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
+      renderer.updatePool(poolRef.current);
+      renderer.draw(true);
       frame = requestAnimationFrame(loop);
     };
     frame = requestAnimationFrame(loop);
@@ -76,6 +69,7 @@ export function ModalParticleRing({ active }: Props) {
       running = false;
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
+      renderer.destroy();
     };
   }, [active, enabled]);
 
@@ -86,6 +80,7 @@ export function ModalParticleRing({ active }: Props) {
       ref={canvasRef}
       className="rex-modal-particles"
       data-testid="modal-particles"
+      data-renderer="regl"
       data-motion-tier="cinematic"
       aria-hidden
     />
