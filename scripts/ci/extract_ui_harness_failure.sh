@@ -50,11 +50,11 @@ if (!last) {
 }
 
 let parsed;
-try {
-  parsed = JSON.parse(last);
-} catch {
-  process.exit(2);
-}
+  try {
+    parsed = JSON.parse(last);
+  } catch {
+    process.exit(2);
+  }
 
 const failed = (parsed.steps ?? []).filter((step) => step.pass === false);
 const lines = [];

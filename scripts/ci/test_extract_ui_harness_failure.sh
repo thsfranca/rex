@@ -8,9 +8,9 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "${tmp}"' EXIT
 
 cat >"${tmp}/harness.log" <<'EOF'
-UI_HARNESS_FAIL step="assert_motion #status-dot"
-UI_HARNESS_DETAIL {"motionTier":"none"}
-{
+ UI_HARNESS_FAIL step="assert_motion #status-dot"
+ UI_HARNESS_DETAIL {"motionTier":"none"}
+ {
   "mode": "desktop",
   "pass": false,
   "steps": [

@@ -119,6 +119,8 @@ export default function App() {
   }, [observabilitySnapshot]);
 
   useEffect(() => {
+    motionOrchestrator.signalDaemonReady();
+
     let unlistenLifecycle: (() => void) | undefined;
     let unlistenMenu: (() => void) | undefined;
 
