@@ -40,7 +40,14 @@ export function ParticleField({ phase }: Props) {
     if (!canvas) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    const renderer = createParticleRenderer(canvas, POOL_SIZE);
+    const renderer = (() => {
+      try {
+        return createParticleRenderer(canvas, POOL_SIZE);
+      } catch {
+        return null;
+      }
+    })();
+    if (!renderer) return;
     let frame = 0;
     let running = true;
     let last = performance.now();

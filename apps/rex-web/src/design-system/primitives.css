@@ -411,6 +411,8 @@
 }
 
 .rex-shell-entrance {
+  position: relative;
+  z-index: var(--rex-z-shell);
   min-height: 100%;
   width: 100%;
 }

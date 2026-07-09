@@ -120,7 +120,7 @@ canvas#particles {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: calc(var(--rex-z-base) + 1);
+  z-index: var(--rex-z-base);
 }
 
 .rex-transcript-wrap,
