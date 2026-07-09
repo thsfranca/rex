@@ -220,6 +220,7 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
   results.push(await assertParticleCanvasTier("cinematic"));
   results.push(await assertCanvasAnimating('[data-testid="particles"]'));
   results.push(await assertCanvasAnimating('[data-testid="ambient"]'));
+  await pageWaitForSelector(session, '[data-testid="timeline-hairline"]', 10_000);
   results.push(
     await assertLayout('[data-testid="timeline-hairline"]', "block")
   );

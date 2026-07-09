@@ -160,6 +160,7 @@ async function runDesktopSuite(cfg) {
     results.push(await assertParticleCanvasTier("cinematic"));
     results.push(await assertCanvasAnimating('[data-testid="particles"]'));
     results.push(await assertCanvasAnimating('[data-testid="ambient"]'));
+    await pageWaitForSelector(session, '[data-testid="timeline-hairline"]', 10_000);
     results.push(await assertLayout('[data-testid="timeline-hairline"]', "block"));
     results.push(await assertLayout('[data-testid="transcript-hairline"]', "block"));
     results.push(await assertLayout('[data-testid="edge-glow"]', "block"));
