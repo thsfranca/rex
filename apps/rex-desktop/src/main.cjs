@@ -3,10 +3,14 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { app, BrowserWindow } = require("electron");
+const { registerDaemonIpc } = require("./ipc/registerHandlers.cjs");
 
 const APP_ROOT = path.join(__dirname, "..");
 const PROOF_DIR = path.join(APP_ROOT, "proof");
 const WEB_DIST = path.resolve(APP_ROOT, "..", "rex-web", "dist", "index.html");
+
+let mainWindow = null;
+let stopLifecycle = null;
 
 function parseArgs(argv) {
   const flags = new Set(argv.slice(2));
@@ -56,16 +60,26 @@ function createWindow({ proof, bury, debug }) {
 
 app.whenReady().then(() => {
   const opts = parseArgs(process.argv);
-  createWindow(opts);
+  if (!opts.proof) {
+    stopLifecycle = registerDaemonIpc(
+      () => mainWindow,
+      { debug: opts.debug },
+    );
+  }
+  mainWindow = createWindow(opts);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow(opts);
+      mainWindow = createWindow(opts);
     }
   });
 });
 
 app.on("window-all-closed", () => {
+  if (typeof stopLifecycle === "function") {
+    stopLifecycle();
+    stopLifecycle = null;
+  }
   if (process.platform !== "darwin") {
     app.quit();
   }

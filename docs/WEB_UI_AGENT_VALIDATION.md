@@ -12,7 +12,7 @@ Register MCP: `node crates/rex-ui-harness/dist/index.js` with cwd = repo root.
 
 ## Default: real desktop + daemon (macOS)
 
-`ui_open` with no arguments will launch **Electron** `apps/rex-desktop` with production `apps/rex-web` once W127/W129 land. Until then, desktop CI uses the compositor proof gate (`./scripts/ci/run_electron_compositor_proof.sh`).
+`ui_open` with no arguments will launch **Electron** `apps/rex-desktop` with production `apps/rex-web` once W129 lands (harness Electron transport). Until then, desktop CI uses the compositor proof gate (`./scripts/ci/run_electron_compositor_proof.sh`). Daemon UDS bridge in Electron main is **W127** (shipped).
 
 Planned desktop probe wiring:
 

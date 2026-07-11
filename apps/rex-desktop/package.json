@@ -11,6 +11,10 @@
     "compositor-proof": "node scripts/run-compositor-proof.mjs",
     "compositor-proof:bury-expect-fail": "node scripts/run-compositor-proof.mjs --bury --expect-fail"
   },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.13.4",
+    "@grpc/proto-loader": "^0.7.15"
+  },
   "devDependencies": {
     "electron": "^36.4.0",
     "playwright": "^1.53.0",

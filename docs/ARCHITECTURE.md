@@ -81,7 +81,7 @@ flowchart LR
 | Container | Responsibility | Status |
 |---|---|---|
 | `rex` | Unified entry: opens desktop; config/proto/sidecar helpers. | `implemented` |
-| `rex-desktop` (`apps/rex-desktop`) | Electron shell: loads React UI, UDS proxy in main (W127). | `in progress` |
+| `rex-desktop` (`apps/rex-desktop`) | Electron shell: loads React UI, UDS proxy in main (W127). | `shipped` |
 | `apps/rex-web` | React presentation client. | `implemented` |
 | `rex-stream-ui` | Stream event projection for desktop shell. | `implemented` |
 | `rex-config` | JSON config load/merge. | `implemented` |
