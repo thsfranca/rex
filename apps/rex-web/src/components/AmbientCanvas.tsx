@@ -44,10 +44,17 @@ export function AmbientCanvas({ phase }: Props) {
       return;
     }
 
-    const regl = createREGL({
-      canvas,
-      attributes: { preserveDrawingBuffer: true },
-    });
+    let regl: ReturnType<typeof createREGL> | null = null;
+    try {
+      regl = createREGL({
+        canvas,
+        attributes: { preserveDrawingBuffer: true },
+      });
+    } catch {
+      return;
+    }
+    if (!regl) return;
+    const gl = regl;
     let batterySlowdown = 1;
 
     const readBattery = async () => {
@@ -64,7 +71,7 @@ export function AmbientCanvas({ phase }: Props) {
     };
     void readBattery();
 
-    const draw = regl({
+    const draw = gl({
       frag: ambientFrag,
       vert: `
         precision mediump float;
@@ -95,20 +102,20 @@ export function AmbientCanvas({ phase }: Props) {
       if (active || orchestratorRef.current.isTyping) {
         draw();
       } else {
-        regl.clear({ color: [0, 0, 0, 0] });
+        gl.clear({ color: [0, 0, 0, 0] });
       }
       frame = requestAnimationFrame(loop);
     };
     loop();
 
-    const resize = () => regl.poll();
+    const resize = () => gl.poll();
     window.addEventListener("resize", resize);
 
     return () => {
       running = false;
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
-      regl.destroy();
+      gl.destroy();
     };
   }, [phase, active]);
 

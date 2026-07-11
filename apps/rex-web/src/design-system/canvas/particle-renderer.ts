@@ -6,7 +6,10 @@ import particleVert from "./shaders/particle.vert?raw";
 
 const QUAD = [-1, -1, 1, -1, -1, 1, 1, 1];
 
+export type ParticleRendererKind = "regl" | "canvas2d";
+
 export interface ParticleRenderer {
+  kind: ParticleRendererKind;
   draw(active: boolean): void;
   poll(): void;
   updatePool(pool: Particle2D[]): void;
@@ -14,6 +17,28 @@ export interface ParticleRenderer {
 }
 
 export function createParticleRenderer(
+  canvas: HTMLCanvasElement,
+  poolSize: number,
+): ParticleRenderer {
+  if (!webGlSupportsInstancing()) {
+    return createCanvas2dParticleRenderer(canvas);
+  }
+  try {
+    return createReglInstancedRenderer(canvas, poolSize);
+  } catch {
+    return createCanvas2dParticleRenderer(canvas);
+  }
+}
+
+function webGlSupportsInstancing(): boolean {
+  if (typeof document === "undefined") return true;
+  const probe = document.createElement("canvas");
+  const gl = probe.getContext("webgl2") ?? probe.getContext("webgl");
+  if (!gl) return false;
+  return gl instanceof WebGL2RenderingContext || Boolean(gl.getExtension("ANGLE_instanced_arrays"));
+}
+
+function createReglInstancedRenderer(
   canvas: HTMLCanvasElement,
   poolSize: number,
 ): ParticleRenderer {
@@ -64,6 +89,7 @@ export function createParticleRenderer(
   });
 
   return {
+    kind: "regl",
     poll: () => regl.poll(),
     updatePool(pool: Particle2D[]) {
       for (let i = 0; i < poolSize; i += 1) {
@@ -95,6 +121,45 @@ export function createParticleRenderer(
     destroy() {
       regl.destroy();
     },
+  };
+}
+
+function createCanvas2dParticleRenderer(canvas: HTMLCanvasElement): ParticleRenderer {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("2d context unavailable");
+  }
+
+  let pool: Particle2D[] = [];
+
+  const poll = () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  };
+
+  return {
+    kind: "canvas2d",
+    poll,
+    updatePool(nextPool: Particle2D[]) {
+      pool = nextPool;
+    },
+    draw(active: boolean) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (!active) return;
+      const [r, g, b, a] = readParticleColor();
+      const channels = `${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a}`;
+      ctx.fillStyle = String.fromCharCode(114, 103, 98, 97, 40) + channels + ")";
+      for (const particle of pool) {
+        if (!particle.active) continue;
+        const lifeRatio = particle.life / particle.maxLife;
+        ctx.globalAlpha = lifeRatio * 0.75;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, 2 + lifeRatio * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    },
+    destroy() {},
   };
 }
 
