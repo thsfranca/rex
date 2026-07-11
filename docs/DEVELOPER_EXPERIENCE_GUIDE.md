@@ -14,13 +14,14 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 
 REX provides a local AI runtime with one daemon as the **system authority** for **streaming contracts, adapter policy, caches, pipelines, and the agent/economics roadmap** ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). Isolated **agent runtime environments** (when implemented) remain **supervised and policy-bound** to the daemon—see [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). **Sidecar ↔ daemon** integration uses a **dedicated brokered API**, not **`rex.v1`** — [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
-The interactive **desktop web UI** (bare **`rex`**) is the product usage path; the Tauri shell consumes **`StreamInference`** over UDS via **`rex-stream-ui`** projection per **[ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)**.
+The interactive **desktop web UI** (bare **`rex`**) is the product usage path. The product shell is migrating to **Electron** ([ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md)); legacy Tauri path remains until W129. Daemon boundary and UDS `rex.v1` are unchanged ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md) pivot).
 
 | Component | Responsibility |
 |---|---|
 | `rex` | Unified CLI: bare entry opens the desktop app (product); setup/doctor commands. |
-| `rex-desktop` | Tauri shell: UDS proxy, menu bar, webview host. |
-| `apps/rex-web` | React presentation client (transcript, composer, timeline). |
+| `apps/rex-desktop-electron` | Electron shell (target): UDS proxy in main, menu bar, Chromium webview host. |
+| `crates/rex-desktop` | Legacy Tauri shell (retiring): UDS proxy, menu bar, WKWebView host. |
+| `apps/rex-web` | React presentation client (transcript, composer, timeline, Electric Alive). |
 | `rex-daemon` | Model/agent policy, adapters, caches, **`StreamInference`** lifecycle. |
 | `rex-proto` | `rex.v1` gRPC contract. |
 | `rex-config` | JSON config load/merge (`$REX_ROOT/config.json`). |
@@ -51,7 +52,7 @@ make run        # rebuild web UI + rex, launch desktop (macOS)
 # Or manually: cd apps/rex-web && npm install && npm run build; cargo build -p rex; rex
 ```
 
-**Current focus:** Web UI program **W100–W108** — [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md). Running **`rex`** opens the Tauri desktop app and ensures the daemon. Install with **`./scripts/install-cli.sh`**. Agent UI validation: **rex-ui-harness** MCP — `./scripts/setup_ui_probe_env.sh`, [fixtures/ui_probe/README.md](../fixtures/ui_probe/README.md).
+**Current focus:** Web UI program **W125–W129** Electron migration — [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md), [ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md). Running **`rex`** opens the desktop app and ensures the daemon (Tauri until Electron launch lands). Install with **`./scripts/install-cli.sh`**. Agent UI validation: **rex-ui-harness** MCP — `./scripts/setup_ui_probe_env.sh`, [fixtures/ui_probe/README.md](../fixtures/ui_probe/README.md).
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Configure **`sidecars`** and **`inference.openai_compat`** in JSON ([CONFIGURATION.md](CONFIGURATION.md)); legacy `REX_*` tuning env vars are ignored. CI may use `sidecars.harness: "direct"` (harness only).
 

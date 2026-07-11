@@ -148,7 +148,7 @@ Use **one** canonical doc per row for feature **shape**; roadmaps link here—se
 | Daemon extensibility / sidecars | [PLUGIN_ROADMAP.md](PLUGIN_ROADMAP.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md), [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md) |
 | Layered cache policy | [CACHING.md](CACHING.md), [ADR 0003](architecture/decisions/0003-layered-cache-agent-mode-policy.md) |
 | Routing / optional gateway stance | [ADR 0004](architecture/decisions/0004-routing-daemon-first-optional-http-gateway.md), economics rows in [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md) |
-| Desktop client + `rex.v1` transport | [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md), [OPERATOR_UX.md](OPERATOR_UX.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md) |
+| Desktop client + `rex.v1` transport | [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md), [OPERATOR_UX.md](OPERATOR_UX.md), [ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md) |
 | Desktop operator UX | [OPERATOR_UX.md](OPERATOR_UX.md), [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_AGENT_VALIDATION.md](WEB_UI_AGENT_VALIDATION.md), [ADR 0040](architecture/decisions/0040-harness-session-transcript-authority.md) |
 | Operation feedback (live stream) | [OPERATION_FEEDBACK.md](OPERATION_FEEDBACK.md), [ADR 0030](architecture/decisions/0030-incremental-run-turn-streaming.md), [ADR 0031](architecture/decisions/0031-ask-mode-research-broker.md) |
 | Long-term / project memory | [LONG_TERM_MEMORY.md](LONG_TERM_MEMORY.md) |

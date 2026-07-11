@@ -6,9 +6,9 @@
 
 ## Summary
 
-Product-grade **web-native desktop** design system: semantic tokens, motion tiers, layout breakpoints, and **rex-ui-harness** acceptance gates for the Tauri harness.
+Product-grade **web-native desktop** design system: semantic tokens, motion tiers, layout breakpoints, and **rex-ui-harness** acceptance gates for the Electron desktop harness.
 
-**Status:** `design accepted` — implementation **W100–W118** per [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md). **Architecture:** [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md).
+**Status:** `design accepted` — implementation **W100–W118** per [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md); shell host [ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md). **Architecture:** [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md) (pivot).
 
 This document is the **acceptance gate** for presentation and motion work on the Rex desktop app. Pull requests that implement blink-only motion, code-like chrome, or wireframe overload **fail review** against this system.
 
@@ -162,12 +162,16 @@ Minimum acceptance bundle (after `ui_open`):
 2. `ui_assert_token` on status indicator vs `--rex-status-success`
 3. `ui_assert_layout` on shell grid
 4. `ui_goto_scenario` → `streaming`; `ui_assert_motion` or canvas flux
-5. `ui_close`
+5. **Compositor proof** when fullscreen WebGL is mounted: chrome + WebGL co-visible at t=0, 1s, 3s, 5s (luminance + hit-test) — see [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md#compositor-proof-required)
+6. `ui_close`
 
 Setup: [fixtures/ui_probe/README.md](../fixtures/ui_probe/README.md), `./scripts/setup_ui_probe_env.sh`.
+
+Electric Alive **and** visible chrome are one requirement. Unmounting ambient/particle layers to avoid bury fails this gate.
 
 ## Related
 
 - [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md)
 - [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md)
+- [ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md)
 - [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)

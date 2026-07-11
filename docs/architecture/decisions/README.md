@@ -47,7 +47,8 @@ REX logs **accept/reject architectural choices** here so rationale survives chat
 | [0039](0039-terminal-harness-presentation-and-daemon-intelligence.md) | Terminal harness — presentation layer and daemon intelligence | Superseded → [0042](0042-web-desktop-presentation-pivot.md) |
 | [0040](0040-harness-session-transcript-authority.md) | Harness session transcript authority (daemon context, TUI viewport) | Accepted |
 | [0041](0041-tui-hybrid-compositor-and-tiered-frame-budget.md) | TUI hybrid compositor and tiered frame budget | Superseded → [0042](0042-web-desktop-presentation-pivot.md) |
-| [0042](0042-web-desktop-presentation-pivot.md) | Web desktop presentation pivot (Tauri 2 + React) | Accepted |
+| [0042](0042-web-desktop-presentation-pivot.md) | Web desktop presentation pivot (Tauri 2 + React) | Accepted (shell → [0043](0043-electron-shell-for-electric-alive-compositor.md)) |
+| [0043](0043-electron-shell-for-electric-alive-compositor.md) | Electron shell for Electric Alive compositor | Accepted |
 
 ## How to use
 

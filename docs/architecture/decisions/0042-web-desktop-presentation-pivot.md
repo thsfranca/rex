@@ -1,10 +1,11 @@
 # ADR 0042: Web desktop presentation pivot
 
-**Status:** Accepted  
+**Status:** Accepted (shell choice superseded → [0043](0043-electron-shell-for-electric-alive-compositor.md))  
 **Date:** 2026-07-04  
 **Supersedes (presentation intent):** [0039](0039-terminal-harness-presentation-and-daemon-intelligence.md), [0041](0041-tui-hybrid-compositor-and-tiered-frame-budget.md)  
 **Aligns with:** [0040](0040-harness-session-transcript-authority.md)  
-**Supersedes (transport):** [0038](0038-cli-ndjson-stream-transport.md) public subprocess NDJSON
+**Supersedes (transport):** [0038](0038-cli-ndjson-stream-transport.md) public subprocess NDJSON  
+**Superseded (shell / host IPC):** [0043](0043-electron-shell-for-electric-alive-compositor.md) replaces Tauri 2 + WKWebView as the product desktop host; Option C, React `apps/rex-web`, and UDS `rex.v1` remain.
 
 ## Context
 
