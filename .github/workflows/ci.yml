@@ -278,9 +278,49 @@ jobs:
         if: ${{ steps.run_ui_verify.outcome != 'success' }}
         run: ./scripts/ci/enforce_verify_job.sh
 
+  electron-compositor-proof:
+    needs: [changes]
+    if: ${{ needs.changes.outputs.ui_relevant == 'true' }}
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/rex-desktop-electron/package-lock.json
+
+      - name: Run Electron compositor proof
+        id: run_electron_compositor_proof
+        continue-on-error: true
+        run: ./scripts/ci/run_electron_compositor_proof.sh
+
+      - name: Write Job Summary
+        if: ${{ always() }}
+        run: ./scripts/ci/write_job_summary.sh electron-compositor-proof
+
+      - name: Upload diagnostics artifact
+        if: ${{ steps.run_electron_compositor_proof.outcome != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-logs-electron-compositor-proof-${{ github.run_id }}
+          path: ci-observability
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Enforce electron compositor proof status
+        if: ${{ steps.run_electron_compositor_proof.outcome != 'success' }}
+        run: ./scripts/ci/enforce_verify_job.sh
+
   ci-checks:
     if: ${{ always() }}
-    needs: [changes, rust-verify, sidecar-verify, guidelines-verify, ui-build, ui-verify]
+    needs: [changes, rust-verify, sidecar-verify, guidelines-verify, ui-build, ui-verify, electron-compositor-proof]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -304,6 +344,7 @@ jobs:
           SIDECAR_RESULT: ${{ needs.sidecar-verify.result }}
           GUIDELINES_RESULT: ${{ needs.guidelines-verify.result }}
           UI_RESULT: ${{ needs.ui-verify.result }}
+          ELECTRON_COMPOSITOR_RESULT: ${{ needs.electron-compositor-proof.result }}
         run: ./scripts/ci/enforce_ci_gate.sh
 
       - name: Upload diagnostics artifact
