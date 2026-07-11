@@ -6,7 +6,7 @@
 
 ## Summary
 
-Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **R090–R096** TUI visual identity program.
+Phased delivery for the **Electron + React** desktop harness ([ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md)). W100–W124 shipped on Tauri; **W125+** migrates the product shell to Electron so Electric Alive WebGL and visible chrome coexist. Supersedes cancelled **R090–R096** TUI visual identity program.
 
 **Design hub:** [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md). **Architecture:** [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md).
 
@@ -15,7 +15,7 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 | Phase | ID | Concern | Status |
 |-------|-----|---------|--------|
 | 0 | **W100** | rex-ui-harness MCP + static probe | **Done** |
-| 1 | **W101** | Tauri shell + `--rex-*` tokens | **Done** |
+| 1 | **W101** | Tauri shell + `--rex-*` tokens | **Done** (legacy host) |
 | 2 | **W102** | UDS bridge + simple streaming chat | **Done** |
 | 3 | **W103** | `rex` launches desktop + menu bar | **Done** |
 | 4 | **W104** | TUI removal | **Done** |
@@ -23,7 +23,7 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 | 6 | **W106** | Approval modal + diff scrubber | **Done** |
 | 7 | **W107** | Session picker carousel | **Done** |
 | 8 | **W108** | Canvas/WebGL cinematic tier (regl) | **Done** |
-| 9 | **W109** | tauri-plugin-playwright native harness | **Done** (desktop default in rex-ui-harness) |
+| 9 | **W109** | tauri-plugin-playwright native harness | **Done** (superseded host → Electron) |
 | 10 | **W110** | macOS signing + auto-update CI | In progress (release-desktop workflow stub) |
 | 11 | **W111** | path-aware `ui-verify` CI matrix | **Done** |
 | 12 | **W112** | In-app design system module + token lint | **Done** |
@@ -35,10 +35,15 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 | 18 | **W118** | Command palette + status + errors + test expansion | **Done** |
 | 19 | **W119** | Electric Alive default tokens + aurora gradients | **Done** |
 | 20 | **W120** | RK4 spring physics + motion orchestrator | **Done** |
-| 21 | **W121** | AmbientCanvas v2 + ParticleField (regl) | **Done** |
+| 21 | **W121** | AmbientCanvas v2 + ParticleField (regl) | **Done** (remount on Electron in W128) |
 | 22 | **W122** | HairlineFlux + EdgeGlow region canvases | **Done** |
 | 23 | **W123** | Component choreography (effect graph) | **Done** |
 | 24 | **W124** | Harness baselines + motion scenario refresh | **Done** |
+| 25 | **W125** | ADR 0043 Electron shell decision + compositor proof spec | **In progress** |
+| 26 | **W126** | Electron scaffold + compositor proof CI | Planned |
+| 27 | **W127** | Electron main UDS/stream + load `apps/rex-web` | Planned |
+| 28 | **W128** | Remount Electric Alive on Electron; `rex` launches Electron | Planned |
+| 29 | **W129** | Harness on Electron; retire Tauri product path | Planned |
 
 ## Phase detail
 
@@ -129,6 +134,29 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 ### W124 — Harness motion refresh
 
 - Electric Alive token lint; streaming canvas flux + region motion asserts unchanged contract
+- Follow-up note: WKWebView fullscreen regl buries chrome (#417); product host moves to Electron (W125+)
+
+### W125 — Electron shell decision
+
+- [ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md): Electron replaces Tauri/WKWebView for product shell
+- Compositor proof spec in [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md): chrome + WebGL co-visible ≥5s
+
+### W126 — Electron compositor proof
+
+- `apps/rex-desktop-electron` scaffold; minimal chrome + fullscreen WebGL proof page
+- CI/local script fails on bury
+
+### W127 — Electron daemon bridge
+
+- Main-process UDS gRPC + stream fan-out; load `apps/rex-web/dist`
+
+### W128 — Electric Alive on Electron
+
+- Remount AmbientCanvas + ParticleField; `rex` launches Electron
+
+### W129 — Harness + retire Tauri path
+
+- rex-ui-harness desktop = Electron; remove product Tauri launch; DX docs
 
 ## Cancelled
 
@@ -140,3 +168,4 @@ Phased delivery for the Tauri 2 + React desktop harness. Supersedes cancelled **
 
 - [ROADMAP.md](ROADMAP.md)
 - [PRIORITIZATION.md](PRIORITIZATION.md)
+- [ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md)

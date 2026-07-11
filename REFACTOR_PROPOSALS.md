@@ -2,6 +2,7 @@
 <!-- One line per item. Keep IDs stable. -->
 <!-- Status: NEW | READY | DOING | DONE | DROPPED | BLOCKED -->
 
+- [R090] T:Electron shell for Electric Alive compositor | S:DOING | P:W125 | N:Y | V:5 | C:4 | Tr:docs/adr-0043-electron-shell | E:WKWebView fullscreen WebGL buries chrome; ADR 0043; follow W126–W129 | Pr:W125
 - [R082a] T:Docs JSON-only one env REX_ROOT | S:DONE | P:R082 | N:Y | V:5 | C:1 | Tr:chore/r082-config-docs-one-env | E:CONFIGURATION + hubs; no legacy env catalogs | PR:#348
 - [R082b] T:Remove dead agent step/soft-cap keys | S:DONE | P:R082 | N:Y | V:4 | C:2 | D:R082a | Tr:chore/r082-remove-dead-agent-caps | E:ADR 0034 follow-up; schema + agent | PR:#349
 - [R082c] T:Drop REX_ALLOW_CWD_WORKSPACE + schema sync | S:DONE | P:R082 | N:Y | V:4 | C:2 | D:R082b | Tr:chore/r082-schema-sync | E:JSON-only harness; promote agent-only keys | PR:#350

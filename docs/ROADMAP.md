@@ -41,7 +41,7 @@ flowchart LR
  langfuseImpl --> v1
 ```
 
-**Current focus:** LangFuse program **LF-D01+** toward **RC-LF1** ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)); web UI **W119–W124** Electric Alive motion **Done** ([WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md)).
+**Current focus:** Web UI **W125–W129** Electron shell migration ([WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md), [ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md)); LangFuse program **LF-D01+** toward **RC-LF1** ([LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md)).
 
 ## Now — stable baseline
 
@@ -50,7 +50,7 @@ Streaming/agent Must **RC-01–RC-10** are **Met**. Observability Must **RC-LF1*
 | Priority | What | Notes |
 |----------|------|-------|
 | **Should** | Optional hardening | Stream/log polish beyond **RC-07** (Met); `cargo-deny`, Semgrep (**R026** Could) |
-| **Removed** | VS Code extension (in-repo) | Removed 2026-07 — desktop web UI is the operator surface; see [OPERATOR_UX.md](OPERATOR_UX.md), [ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md) |
+| **Removed** | VS Code extension (in-repo) | Removed 2026-07 — desktop web UI is the operator surface; see [OPERATOR_UX.md](OPERATOR_UX.md), [ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md) |
 
 ## Next — prioritized queue (audit 2026-07-01)
 
@@ -58,13 +58,14 @@ Canonical scoring: [PRIORITIZATION.md — Current focus queue](PRIORITIZATION.md
 
 | Rank | ID / theme | MoSCoW | RC-* | Source(s) | Status |
 |------|------------|--------|------|-----------|--------|
-| 1 | **LF-D01+** — LangFuse discovery + export | **Must** | **RC-LF1** | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | Open |
-| 2 | **R067** — intent-aware retrieval for short prompts | **Should** | — | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) | Open |
-| 3 | **R068** — ask answer-first prompt policy | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
-| 4 | **R069** — remove tool step caps | **Should** | — | [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) | Open |
-| 5 | **R070** — deterministic init intent gating | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
-| 6 | **R040** — nightly live-smoke workflow | **Should** | RC-S6 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [CI.md](CI.md) | Open |
-| 7 | **R059** — `workspace.search` broker | **Should** | — | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md#workspace-search-broker-r059) | Open |
+| 1 | **W125–W129** — Electron shell for Electric Alive + visible chrome | **Must** | — | [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md), [ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md) | Open |
+| 2 | **LF-D01+** — LangFuse discovery + export | **Must** | **RC-LF1** | [LANGFUSE_INTEGRATION.md](LANGFUSE_INTEGRATION.md), [LANGFUSE_DISCOVERY_ROADMAP.md](LANGFUSE_DISCOVERY_ROADMAP.md) | Open |
+| 3 | **R067** — intent-aware retrieval for short prompts | **Should** | — | [CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md#advisory-intent-retrieval-r067) | Open |
+| 4 | **R068** — ask answer-first prompt policy | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
+| 5 | **R069** — remove tool step caps | **Should** | — | [ADR 0034](architecture/decisions/0034-remove-tool-step-caps.md) | Open |
+| 6 | **R070** — deterministic init intent gating | **Should** | — | [AGENT_GRAPH_ARCHITECTURE.md](AGENT_GRAPH_ARCHITECTURE.md#advisory-ask-efficiency-r067r070) | Open |
+| 7 | **R040** — nightly live-smoke workflow | **Should** | RC-S6 | [ECONOMICS_VALIDATION.md](ECONOMICS_VALIDATION.md), [CI.md](CI.md) | Open |
+| 8 | **R059** — `workspace.search` broker | **Should** | — | [AGENT_ACCESS_POLICY.md](AGENT_ACCESS_POLICY.md#workspace-search-broker-r059) | Open |
 | — | **W100–W118** — web desktop operator surface | **Must/Should** | — | [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md), [OPERATOR_UX.md](OPERATOR_UX.md) | **Done** |
 | — | **W119–W124** — Electric Alive physics motion v2 | **Could** | — | [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md) | **Done** |
 | — | **R072–R073**, **R080–R082** — terminal harness (superseded) | — | — | [historical/CLI_OPERATOR_UX.md](historical/CLI_OPERATOR_UX.md) | **Done** (superseded by **W100+**) |
