@@ -25,6 +25,15 @@ run_gate_case() {
   local guidelines_rel="${8:-true}"
   local ui_res="${9:-success}"
   local ui_rel="${10:-true}"
+  local electron_res="${11:-}"
+
+  if [ -z "${electron_res}" ]; then
+    if [ "${ui_rel}" = "true" ]; then
+      electron_res="success"
+    else
+      electron_res="skipped"
+    fi
+  fi
 
   local tmp_dir
   tmp_dir="$(mktemp -d)"
@@ -42,6 +51,7 @@ run_gate_case() {
     SIDECAR_RESULT="${sidecar_res}" \
     GUIDELINES_RESULT="${guidelines_res}" \
     UI_RESULT="${ui_res}" \
+    ELECTRON_COMPOSITOR_RESULT="${electron_res}" \
     GITHUB_RUN_ID="local-test-run-id" \
     GITHUB_STEP_SUMMARY="${summary_file}" \
     bash "${GATE_SCRIPT}" 2>&1
@@ -66,6 +76,7 @@ run_gate_case() {
   assert_contains "${summary_contents}" "- sidecar-verify: ${sidecar_res}"
   assert_contains "${summary_contents}" "- guidelines-verify: ${guidelines_res}"
   assert_contains "${summary_contents}" "- ui-verify: ${ui_res}"
+  assert_contains "${summary_contents}" "- electron-compositor-proof: ${electron_res}"
   assert_contains "${summary_contents}" "- run_id: local-test-run-id"
 
   rm -rf "${tmp_dir}"
@@ -81,5 +92,6 @@ run_gate_case "false" "false" "skipped" "skipped" 0 "::notice::Top-level CI gate
 run_gate_case "true" "true" "success" "success" 1 "CI_SIGNAL code=GUIDELINES_FAIL" "failure"
 run_gate_case "false" "false" "skipped" "skipped" 1 "CI_SIGNAL code=UI_FAIL" "skipped" "false" "failure" "true"
 run_gate_case "false" "false" "skipped" "skipped" 0 "::notice::Top-level CI gate passed." "skipped" "false" "skipped" "false"
+run_gate_case "false" "false" "skipped" "skipped" 1 "CI_SIGNAL code=UI_FAIL" "skipped" "false" "success" "true" "failure"
 
 echo "enforce_ci_gate contract tests passed."

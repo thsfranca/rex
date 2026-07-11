@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rex compositor proof</title>
+    <link rel="stylesheet" href="./proof.css" />
+  </head>
+  <body data-proof-page="1">
+    <canvas id="webgl-layer" aria-hidden="true"></canvas>
+    <div id="shell-chrome" data-shell-chrome="1">
+      <header id="proof-header" data-proof-target="header">
+        <span class="brand">Rex</span>
+        <span id="status-label" class="status">Ready</span>
+      </header>
+      <main class="stage" aria-hidden="true"></main>
+      <footer id="proof-composer" data-proof-target="composer">
+        <div class="composer-box" role="textbox" aria-label="Composer">
+          Ask Rex…
+        </div>
+      </footer>
+    </div>
+    <script src="./proof.js"></script>
+  </body>
+</html>

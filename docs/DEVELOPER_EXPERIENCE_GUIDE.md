@@ -19,7 +19,7 @@ The interactive **desktop web UI** (bare **`rex`**) is the product usage path. T
 | Component | Responsibility |
 |---|---|
 | `rex` | Unified CLI: bare entry opens the desktop app (product); setup/doctor commands. |
-| `apps/rex-desktop-electron` | Electron shell (target): UDS proxy in main, menu bar, Chromium webview host. |
+| `apps/rex-desktop-electron` | Electron shell (target): UDS proxy in main, menu bar, Chromium webview host. Compositor proof: `./scripts/ci/run_electron_compositor_proof.sh`. |
 | `crates/rex-desktop` | Legacy Tauri shell (retiring): UDS proxy, menu bar, WKWebView host. |
 | `apps/rex-web` | React presentation client (transcript, composer, timeline, Electric Alive). |
 | `rex-daemon` | Model/agent policy, adapters, caches, **`StreamInference`** lifecycle. |

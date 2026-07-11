@@ -39,8 +39,8 @@ Phased delivery for the **Electron + React** desktop harness ([ADR 0043](archite
 | 22 | **W122** | HairlineFlux + EdgeGlow region canvases | **Done** |
 | 23 | **W123** | Component choreography (effect graph) | **Done** |
 | 24 | **W124** | Harness baselines + motion scenario refresh | **Done** |
-| 25 | **W125** | ADR 0043 Electron shell decision + compositor proof spec | **In progress** |
-| 26 | **W126** | Electron scaffold + compositor proof CI | Planned |
+| 25 | **W125** | ADR 0043 Electron shell decision + compositor proof spec | **Done** |
+| 26 | **W126** | Electron scaffold + compositor proof CI | **In progress** |
 | 27 | **W127** | Electron main UDS/stream + load `apps/rex-web` | Planned |
 | 28 | **W128** | Remount Electric Alive on Electron; `rex` launches Electron | Planned |
 | 29 | **W129** | Harness on Electron; retire Tauri product path | Planned |
@@ -144,7 +144,7 @@ Phased delivery for the **Electron + React** desktop harness ([ADR 0043](archite
 ### W126 — Electron compositor proof
 
 - `apps/rex-desktop-electron` scaffold; minimal chrome + fullscreen WebGL proof page
-- CI/local script fails on bury
+- CI/local script fails on bury: `./scripts/ci/run_electron_compositor_proof.sh`
 
 ### W127 — Electron daemon bridge
 
