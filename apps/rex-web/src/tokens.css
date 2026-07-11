@@ -108,19 +108,19 @@ body {
   opacity: 1;
 }
 
-canvas#ambient {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.28;
-  z-index: var(--rex-z-base);
-}
-
+canvas#ambient,
 canvas#particles {
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  z-index: calc(var(--rex-z-base) + 1);
+  /* Always behind shell chrome — WKWebView WebGL layers ignore equal/zero stacking. */
+  z-index: -1;
+}
+
+canvas#ambient {
+  opacity: 0.28;
 }
 
 .rex-transcript-wrap,
