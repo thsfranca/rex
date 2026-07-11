@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-APP_DIR="${ROOT}/apps/rex-desktop-electron"
+APP_DIR="${ROOT}/apps/rex-desktop"
 cd "$ROOT"
 mkdir -p ci-observability
 
@@ -37,7 +37,7 @@ if [ "${result}" = "success" ]; then
   cd "${APP_DIR}"
   if [ ! -d node_modules ]; then
     if ! npm install 2>&1 | tee "${ROOT}/ci-observability/electron-compositor-npm.log"; then
-      mark_failure "Setup" "NPM_CI_FAIL" "npm install failed in apps/rex-desktop-electron."
+      mark_failure "Setup" "NPM_CI_FAIL" "npm install failed in apps/rex-desktop."
     fi
   fi
 fi

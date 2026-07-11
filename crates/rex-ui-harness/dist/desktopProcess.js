@@ -27,8 +27,13 @@ function requireBinary(binPath, packageName) {
 export function resolveRexBinary(repoRoot) {
     return requireBinary(targetBinary(repoRoot, "rex"), "rex");
 }
-export function resolveDesktopBinary(repoRoot) {
-    return requireBinary(targetBinary(repoRoot, "rex-desktop"), "rex-desktop --features e2e-testing");
+/** Electron app directory (apps/rex-desktop). */
+export function resolveDesktopAppDir(repoRoot) {
+    const dir = path.join(repoRoot, "apps", "rex-desktop");
+    if (!fs.existsSync(dir)) {
+        throw new Error(`Missing ${dir}; apps/rex-desktop is the Electron shell.`);
+    }
+    return dir;
 }
 export function harnessDesktopCwd() {
     const dir = path.join(os.tmpdir(), "rex-ui-harness-desktop");
@@ -65,8 +70,9 @@ export async function stopHarnessDesktopApps(repoRoot) {
     if (process.platform !== "darwin")
         return;
     const patterns = [
-        targetBinary(repoRoot, "rex-desktop"),
-        "rex-desktop __rex_internal_daemon",
+        path.join(repoRoot, "apps", "rex-desktop", "node_modules", "electron"),
+        "Electron.app",
+        "rex-desktop",
     ];
     for (const pattern of patterns) {
         try {

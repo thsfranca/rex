@@ -1,7 +1,7 @@
-import type { TauriPage } from "@srsholmes/tauri-playwright";
+import type { Page } from "playwright";
 export interface HarnessSession {
     mode: "desktop";
-    page: TauriPage;
+    page: Page;
     motionFrames: Buffer[];
     recording: boolean;
 }

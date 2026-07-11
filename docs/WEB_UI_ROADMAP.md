@@ -49,7 +49,7 @@ Phased delivery for the **Electron + React** desktop harness ([ADR 0043](archite
 
 ### W101 — Shell MVP
 
-- Tauri 2 monorepo (`crates/rex-desktop`, `apps/rex-web`)
+- Electron monorepo (`apps/rex-desktop`, `apps/rex-web`)
 - Wide-profile wireframe: header, transcript, timeline, composer, footer
 - Harness token asserts on idle shell
 
@@ -143,8 +143,9 @@ Phased delivery for the **Electron + React** desktop harness ([ADR 0043](archite
 
 ### W126 — Electron compositor proof
 
-- `apps/rex-desktop-electron` scaffold; minimal chrome + fullscreen WebGL proof page
+- `apps/rex-desktop` Electron scaffold; loads `apps/rex-web`; compositor proof page under `proof/` (CI only)
 - CI/local script fails on bury: `./scripts/ci/run_electron_compositor_proof.sh`
+- Tauri `crates/rex-desktop` removed (no parallel shell)
 
 ### W127 — Electron daemon bridge
 
