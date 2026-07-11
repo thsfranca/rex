@@ -63,12 +63,7 @@ jobs:
           config-file: .github/codeql/codeql-config.yml
 
       - name: Build workspace
-        run: |
-          excludes=()
-          if [ "$(uname -s)" != "Darwin" ]; then
-            excludes=(--exclude rex-desktop)
-          fi
-          cargo build --workspace --locked "${excludes[@]}"
+        run: cargo build --workspace --locked
 
       - name: Analyze
         id: analyze

@@ -63,7 +63,7 @@ REX keeps the presentation client thin and centralizes model/runtime policy in o
 cargo build --workspace
 ```
 
-This compiles the full workspace (`rex-proto`, `rex-config`, `rex`, `rex-daemon`, `rex-desktop`, `rex-stream-ui`, `rex-sidecar-stub`, and related crates).
+This compiles the full workspace (`rex-proto`, `rex-config`, `rex`, `rex-daemon`, `rex-stream-ui`, `rex-sidecar-stub`, and related crates). The desktop shell is Electron at `apps/rex-desktop`.
 
 2) Initialize config and build the web UI:
 
@@ -185,7 +185,8 @@ See [docs/README.md](docs/README.md) for **CONFIGURATION**, **SIDECAR_RUNTIME**,
 - `crates/rex-config`: JSON config load/merge (`$REX_ROOT/config.json`).
 - `crates/rex`: unified entry (`rex` opens desktop; config/proto/sidecar helpers).
 - `crates/rex-daemon`: daemon library/runtime (legacy shim binary `rex-daemon`).
-- `crates/rex-desktop`: Tauri backend (UDS proxy, daemon lifecycle, menu bar).
+- `apps/rex-desktop`: Electron shell (loads `apps/rex-web`).
+- `apps/rex-web`: React operator UI.
 - `crates/rex-stream-ui`: stream event projection for the desktop shell.
 - `crates/rex-capability-mock`: mock capability sidecar crate.
 - `crates/rex-sidecar-stub`: harness sidecar for CI.

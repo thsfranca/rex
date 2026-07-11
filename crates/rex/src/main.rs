@@ -1,5 +1,7 @@
 mod command;
 mod config_cmd;
+#[cfg(target_os = "macos")]
+mod desktop_launch;
 mod gateway_cmd;
 mod omlx_cmd;
 mod proto_cmd;
@@ -28,10 +30,7 @@ pub async fn run(args: impl Iterator<Item = String>) -> ExitCode {
             }
         },
         #[cfg(target_os = "macos")]
-        Ok(TopLevelCommand::Desktop(launch)) => {
-            rex_desktop_lib::run(launch);
-            ExitCode::SUCCESS
-        }
+        Ok(TopLevelCommand::Desktop(launch)) => desktop_launch::run_desktop(launch),
         #[cfg(not(target_os = "macos"))]
         Ok(TopLevelCommand::Desktop(_launch)) => {
             eprintln!("Error: Rex desktop app requires macOS.");

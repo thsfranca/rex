@@ -30,7 +30,7 @@ Define the **technical architecture** for Rex’s web-native desktop harness: El
 
 ```mermaid
 flowchart TD
-  subgraph desktop [rex_desktop_electron]
+  subgraph desktop [rex_desktop]
     Renderer[React_rex_web]
     Preload[preload_bridge]
     ElectronMain[Electron_main]
@@ -45,7 +45,7 @@ flowchart TD
 | Component | Responsibility |
 |-----------|----------------|
 | `rex` CLI | Ensures daemon; spawns/focuses desktop window; setup subcommands unchanged |
-| `apps/rex-desktop-electron` | Electron main: UDS client, daemon lifecycle, stream fan-out, macOS menu |
+| `apps/rex-desktop` | Electron main: UDS client, daemon lifecycle, stream fan-out, macOS menu |
 | `apps/rex-web` | Presentation only — transcript, timeline, composer, modals, Electric Alive canvases |
 | `rex-daemon` | Intelligence, policy, `StreamInference`, approvals (unchanged) |
 | Stream projection | Main-process gRPC / `rex-stream-ui` semantics → IPC events to renderer |
@@ -83,12 +83,11 @@ Metadata: `x-rex-harness-session-id`, `x-rex-trace-id` (same as prior desktop pa
 ## Project structure
 
 ```
-apps/rex-desktop-electron/  # Electron main + preload + packaging
-apps/rex-web/               # React 19 + Vite frontend
+apps/rex-desktop/           # Electron main + preload + packaging
+apps/rex-web/               # React 19 + Vite presentation (sole operator UI)
 crates/rex-ui-harness/      # MCP server + Playwright runner (Electron)
 fixtures/ui_probe/          # Mock scenarios + bootstrap
 proto/rex/v1/               # Shared contract (unchanged)
-crates/rex-desktop/         # Legacy Tauri shell — retired from product path after Electron ships
 ```
 
 Shared protobuf compiles to Rust (`rex-proto`) and TypeScript interfaces for webview types (generated or hand-maintained DTO mirrors).
