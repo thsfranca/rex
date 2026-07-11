@@ -39,3 +39,16 @@ From repo root:
 ```bash
 ./scripts/ci/run_electron_compositor_proof.sh
 ```
+
+## Daemon bridge
+
+Electron **main** owns UDS gRPC. The renderer uses `window.rexDesktop` only.
+
+Autostart uses `rex __rex_internal_daemon` with `cwd` set to the OS temp dir so a project overlay under `$HOME/.rex` does not override `$REX_ROOT/config.json` when the app is launched from a path under the home directory.
+
+```bash
+export REX_ROOT="$PWD/fixtures/ui_probe/rex_root"
+cargo build -p rex
+cd apps/rex-web && npm run build
+cd ../rex-desktop && npm start
+```
