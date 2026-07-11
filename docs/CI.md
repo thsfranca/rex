@@ -186,7 +186,7 @@ When Web UI probe or harness paths change, CI runs a shared **`ui-build`** job t
 1. **`ui-build`** (`ubuntu-latest`) — [`scripts/ci/build_ui_artifacts.sh`](scripts/ci/build_ui_artifacts.sh) builds `apps/rex-web/dist` and `crates/rex-ui-harness/dist` once; uploads artifacts for matrix reuse.
 2. **`ui-verify`** matrix — [`scripts/ci/run_ui_verify.sh`](scripts/ci/run_ui_verify.sh) downloads artifacts and runs scenarios:
    - **build** (`ubuntu-latest`) — rex-web production bundle compile gate (`--mode build`); harness build-only step (no browser)
-   - **desktop** (`macos-latest`) — reused web/harness dist + `npm ci` for preview/runtime deps; `cargo build -p rex -p rex-desktop --features e2e-testing`; native Playwright harness with probe daemon
+   - **desktop** (`macos-latest`) — Electron compositor proof (`apps/rex-desktop`) + `cargo build -p rex`
 
 Matrix legs pass `--skip-harness-build`; desktop also passes `--skip-web-build`. Local full builds omit skip flags.
 
@@ -195,8 +195,9 @@ Failure code: `UI_FAIL` (scenario failures) or `UI_BUILD_FAIL` (build step). See
 **UI-relevant** (`ui_verify_changed` only):
 
 - `apps/rex-web/**`
+- `apps/rex-desktop/**`
 - `crates/rex-ui-harness/**`
-- `crates/rex-desktop/**`
+- `scripts/ci/run_electron_compositor_proof.sh`
 - `fixtures/ui_probe/**`
 - `scripts/ci/run_ui_verify.sh`
 - `scripts/ci/build_ui_artifacts.sh`

@@ -19,7 +19,9 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: apps/rex-web/package-lock.json
+          cache-dependency-path: |
+            apps/rex-web/package-lock.json
+            apps/rex-desktop/package-lock.json
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -31,20 +33,19 @@ jobs:
         run: npm ci && npm run build
         working-directory: apps/rex-web
 
-      - name: Build desktop bundle
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          echo "Desktop release signing requires repository secrets and REX_DESKTOP_RELEASE_ENABLED=true."
-          cargo build -p rex-desktop --locked
+      - name: Install Electron shell
+        run: npm ci
+        working-directory: apps/rex-desktop
+
+      - name: Build CLI
+        run: cargo build -p rex --locked
 
       - name: Upload desktop artifact
         uses: actions/upload-artifact@v4
         with:
           name: rex-desktop-macos
-          path: target/debug/rex-desktop
+          path: |
+            apps/rex-desktop
+            apps/rex-web/dist
+            target/debug/rex
+          retention-days: 7

@@ -1,8 +1,8 @@
 {
-  "name": "rex-desktop-electron",
+  "name": "rex-desktop",
   "private": true,
   "version": "0.1.0",
-  "description": "Rex Electron shell scaffold and compositor proof (W126)",
+  "description": "Rex desktop shell (Electron) — loads apps/rex-web",
   "main": "src/main.cjs",
   "scripts": {
     "start": "electron .",

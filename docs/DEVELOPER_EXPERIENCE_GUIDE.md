@@ -14,13 +14,12 @@ Canonical **purpose and principles**: [PURPOSE_AND_PRINCIPLES.md](PURPOSE_AND_PR
 
 REX provides a local AI runtime with one daemon as the **system authority** for **streaming contracts, adapter policy, caches, pipelines, and the agent/economics roadmap** ([ADR 0001](architecture/decisions/0001-daemon-owns-agent-orchestration-and-economics.md)). Isolated **agent runtime environments** (when implemented) remain **supervised and policy-bound** to the daemon—see [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). **Sidecar ↔ daemon** integration uses a **dedicated brokered API**, not **`rex.v1`** — [ADR 0008](architecture/decisions/0008-dedicated-sidecar-control-plane-api.md).
 
-The interactive **desktop web UI** (bare **`rex`**) is the product usage path. The product shell is migrating to **Electron** ([ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md)); legacy Tauri path remains until W129. Daemon boundary and UDS `rex.v1` are unchanged ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md) pivot).
+The interactive **desktop web UI** (bare **`rex`**) is the product usage path. The product shell is **Electron** at `apps/rex-desktop` ([ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md)). Daemon boundary and UDS `rex.v1` are unchanged ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md) pivot).
 
 | Component | Responsibility |
 |---|---|
 | `rex` | Unified CLI: bare entry opens the desktop app (product); setup/doctor commands. |
-| `apps/rex-desktop-electron` | Electron shell (target): UDS proxy in main, menu bar, Chromium webview host. Compositor proof: `./scripts/ci/run_electron_compositor_proof.sh`. |
-| `crates/rex-desktop` | Legacy Tauri shell (retiring): UDS proxy, menu bar, WKWebView host. |
+| `apps/rex-desktop` | Electron shell: loads `apps/rex-web`; compositor proof; UDS proxy in main (W127). |
 | `apps/rex-web` | React presentation client (transcript, composer, timeline, Electric Alive). |
 | `rex-daemon` | Model/agent policy, adapters, caches, **`StreamInference`** lifecycle. |
 | `rex-proto` | `rex.v1` gRPC contract. |

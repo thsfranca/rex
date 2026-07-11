@@ -1,17 +1,6 @@
-import {
-  PluginClient,
-  TauriPage,
-  TauriProcessManager,
-} from "@srsholmes/tauri-playwright";
 import type { HarnessConfig } from "./config.js";
-import {
-  harnessDesktopCwd,
-  resolveDesktopBinary,
-  resolveRexBinary,
-  resetProbeDaemon,
-  stopHarnessDesktopApps,
-} from "./desktopProcess.js";
-import { ensureWebUiServer, stopWebUiServer } from "./devServer.js";
+import { stopHarnessDesktopApps } from "./desktopProcess.js";
+import { stopWebUiServer } from "./devServer.js";
 import type { HarnessSession } from "./page.js";
 import {
   pageFill,
@@ -25,8 +14,6 @@ import {
 export type { HarnessSession };
 
 let session: HarnessSession | null = null;
-let processManager: TauriProcessManager | null = null;
-let pluginClient: PluginClient | null = null;
 let desktopRepoRoot: string | null = null;
 
 export function getSession(): HarnessSession {
@@ -51,50 +38,16 @@ async function openDesktopSession(cfg: HarnessConfig): Promise<HarnessSession> {
     throw new Error("Desktop mode requires macOS.");
   }
 
-  process.env.REX_ROOT = cfg.rexRoot;
-  process.env.REX_SIDECAR_HARNESS = "direct";
-  process.env.TAURI_PLAYWRIGHT_SOCKET = cfg.desktopSocket;
-
-  await stopHarnessDesktopApps(cfg.repoRoot);
-  await resetProbeDaemon(cfg.rexRoot);
-  await ensureWebUiServer(cfg.repoRoot);
-
+  // Product shell is Electron (apps/rex-desktop). Playwright-electron session + daemon
+  // bridge IPC land in W127/W129. Desktop CI uses compositor proof until then.
   desktopRepoRoot = cfg.repoRoot;
-  const harnessCwd = harnessDesktopCwd();
-
-  const rexBin = resolveRexBinary(cfg.repoRoot);
-  const desktopBin = resolveDesktopBinary(cfg.repoRoot);
-  process.env.CARGO_BIN_EXE_rex = rexBin;
-  process.env.REX_BIN = rexBin;
-
-  processManager = new TauriProcessManager({
-    command: desktopBin,
-    args: ["--debug"],
-    cwd: harnessCwd,
-    socketPath: cfg.desktopSocket,
-    startTimeout: cfg.desktopStartTimeoutSecs,
-  });
-
-  await processManager.start();
-
-  pluginClient = new PluginClient(cfg.desktopSocket);
-  await pluginClient.connect();
-  const tauriPage = new TauriPage(pluginClient);
-  tauriPage.setDefaultTimeout(60_000);
-
-  session = { mode: "desktop", page: tauriPage, motionFrames: [], recording: false };
-
-  await pageWaitForSelector(session, '[data-testid="shell"]', 60_000);
-  await pageWaitForText(session, "Ready", 60_000);
-
-  return session;
+  throw new Error(
+    "Desktop ui_open awaits Electron daemon bridge (W127) and Playwright-electron harness (W129). " +
+      "Run ./scripts/ci/run_electron_compositor_proof.sh for the compositor gate, or use build-mode harness checks."
+  );
 }
 
 export async function closeSession(): Promise<void> {
-  pluginClient?.disconnect();
-  pluginClient = null;
-  processManager?.stop();
-  processManager = null;
   await stopWebUiServer();
   if (desktopRepoRoot) {
     await stopHarnessDesktopApps(desktopRepoRoot);

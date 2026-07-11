@@ -31,10 +31,10 @@ Hub: [WEB_UI_ARCHITECTURE.md](../../WEB_UI_ARCHITECTURE.md).
    - **Reconnection:** Main probes UDS; emits daemon lifecycle status to the renderer.
 
 5. **Monorepo layout (target):**
-   - `apps/rex-desktop-electron/` — Electron main, preload, packaging.
-   - `apps/rex-web/` — React presentation (unchanged role).
+   - `apps/rex-desktop/` — Electron main, preload, packaging (replaces the former Tauri crate).
+   - `apps/rex-web/` — React presentation (unchanged role; sole operator UI).
    - `crates/rex-ui-harness/` — MCP + Playwright against **Electron**.
-   - `crates/rex-desktop/` — Tauri shell **retired from product path** after Electron launch ships (archive/remove in follow-up slices).
+   - Former `crates/rex-desktop` (Tauri/WKWebView) is **removed** — do not resurrect a parallel shell.
 
 6. **Stream normalization:** Prefer TypeScript gRPC client in Electron main first; keep `rex-stream-ui` semantics for event vocabulary. Renderer consumes the same DTO/effect shapes via Zustand.
 

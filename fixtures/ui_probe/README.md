@@ -6,8 +6,8 @@ Validation harness for **rex-ui-harness** MCP.
 
 | Mode | When | What runs |
 |------|------|-----------|
-| **desktop** (default on macOS) | `ui_open` | Real `rex-desktop` (Tauri) + production `apps/rex-web/dist` + mock daemon |
-| **build** | Linux CI | `npm ci && npm run build` in `apps/rex-web` (same bundle artifact, no Tauri) |
+| **desktop** (default on macOS) | compositor proof / future `ui_open` | Electron `apps/rex-desktop` + `apps/rex-web/dist` + mock daemon (full `ui_open` after W127/W129) |
+| **build** | Linux CI | `npm ci && npm run build` in `apps/rex-web` (same bundle artifact) |
 
 Configure in `rex-ui-harness.toml`:
 
@@ -30,7 +30,7 @@ fixtures/ui_probe/
 ./scripts/setup_ui_probe_env.sh
 ```
 
-Builds `rex-web`, `rex-ui-harness`, and on macOS `rex-desktop --features e2e-testing`.
+Builds `rex-web`, `rex-ui-harness`, and installs Electron `apps/rex-desktop` (macOS also builds `rex` CLI).
 
 Register MCP in Cursor:
 

@@ -1,13 +1,13 @@
-import type { TauriPage } from "@srsholmes/tauri-playwright";
+import type { Page } from "playwright";
 
 export interface HarnessSession {
   mode: "desktop";
-  page: TauriPage;
+  page: Page;
   motionFrames: Buffer[];
   recording: boolean;
 }
 
-function page(session: HarnessSession): TauriPage {
+function page(session: HarnessSession): Page {
   return session.page;
 }
 
@@ -16,8 +16,7 @@ export async function pageEvaluate<T>(
   fn: (arg: unknown) => T,
   arg: unknown
 ): Promise<T> {
-  const script = `(${fn.toString()})(${JSON.stringify(arg)})`;
-  return page(session).evaluate(script) as Promise<T>;
+  return page(session).evaluate(fn, arg);
 }
 
 export async function pageClick(session: HarnessSession, selector: string): Promise<void> {
@@ -36,7 +35,7 @@ export async function pagePress(session: HarnessSession, key: string): Promise<v
   await page(session).keyboard.press(key);
 }
 
-const TAURI_WAIT_CHUNK_MS = 25_000;
+const WAIT_CHUNK_MS = 25_000;
 
 async function waitWithChunks(
   totalMs: number,
@@ -46,7 +45,7 @@ async function waitWithChunks(
   let lastError: unknown;
   while (Date.now() < deadline) {
     const remaining = deadline - Date.now();
-    const chunk = Math.min(TAURI_WAIT_CHUNK_MS, remaining);
+    const chunk = Math.min(WAIT_CHUNK_MS, remaining);
     try {
       await run(chunk);
       return;
@@ -68,7 +67,9 @@ export async function pageWaitForSelector(
   timeout?: number
 ): Promise<void> {
   const total = timeout ?? 60_000;
-  await waitWithChunks(total, (chunk) => page(session).waitForSelector(selector, chunk));
+  await waitWithChunks(total, (chunk) =>
+    page(session).waitForSelector(selector, { timeout: chunk }).then(() => undefined)
+  );
 }
 
 export async function pageWaitForText(
@@ -77,16 +78,16 @@ export async function pageWaitForText(
   timeout?: number
 ): Promise<void> {
   const total = timeout ?? 60_000;
-  await waitWithChunks(total, (chunk) => page(session).getByText(text).waitFor(chunk));
+  await waitWithChunks(total, (chunk) =>
+    page(session).getByText(text).waitFor({ timeout: chunk }).then(() => undefined)
+  );
 }
 
 export async function pageSnapshotTree(session: HarnessSession): Promise<string> {
-  return page(session).evaluate(
-    `(() => {
-      const shell = document.querySelector('[data-testid=shell]');
-      return shell ? shell.innerText : document.body.innerText;
-    })()`
-  );
+  return page(session).evaluate(() => {
+    const shell = document.querySelector('[data-testid=shell]');
+    return shell ? (shell as HTMLElement).innerText : document.body.innerText;
+  });
 }
 
 export async function pageScreenshot(session: HarnessSession): Promise<Buffer> {
@@ -97,37 +98,20 @@ export async function pageLocatorScreenshot(
   session: HarnessSession,
   selector: string
 ): Promise<Buffer> {
-  const b64 = await page(session).evaluate(
-    `(() => {
-      const el = document.querySelector(${JSON.stringify(selector)});
-      if (!el) throw new Error('Missing selector');
-      const rect = el.getBoundingClientRect();
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.floor(rect.width));
-      canvas.height = Math.max(1, Math.floor(rect.height));
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return '';
-      ctx.fillStyle = getComputedStyle(el).backgroundColor || 'transparent';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL('image/png').split(',')[1];
-    })()`
-  );
-  return Buffer.from(String(b64), "base64");
+  return page(session).locator(selector).screenshot();
 }
 
 export async function pageEmulateReducedMotion(
   session: HarnessSession,
   enabled: boolean
 ): Promise<void> {
-  await page(session).evaluate(
-    `(() => {
-      document.documentElement.style.setProperty(
-        'animation-duration',
-        ${JSON.stringify(enabled ? "0.001ms" : "")},
-        'important'
-      );
-    })()`
-  );
+  await page(session).evaluate((on) => {
+    document.documentElement.style.setProperty(
+      "animation-duration",
+      on ? "0.001ms" : "",
+      "important"
+    );
+  }, enabled);
 }
 
 export async function pageClockStep(_session: HarnessSession, durationMs: number): Promise<void> {
@@ -180,20 +164,7 @@ export async function pageCssTokenAssert(
 }
 
 export async function pageFill(session: HarnessSession, selector: string, text: string): Promise<void> {
-  await pageFocus(session, selector);
-  await page(session).evaluate(
-    `(() => {
-      const el = document.querySelector(${JSON.stringify(selector)});
-      if (!(el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement)) {
-        throw new Error("fill requires input or textarea");
-      }
-      const prototype =
-        el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-      const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
-      setter?.call(el, ${JSON.stringify(text)});
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-    })()`
-  );
+  await page(session).fill(selector, text);
 }
 
 export async function pageCanvasHash(session: HarnessSession, selector: string): Promise<string> {

@@ -31,9 +31,8 @@ guidelines_changed:
   - 'scripts/ci/test_guidelines_checks.sh'
 ui_verify_changed:
   - 'apps/rex-web/**'
-  - 'apps/rex-desktop-electron/**'
+  - 'apps/rex-desktop/**'
   - 'crates/rex-ui-harness/**'
-  - 'crates/rex-desktop/**'
   - 'fixtures/ui_probe/**'
   - 'scripts/ci/run_ui_verify.sh'
   - 'scripts/ci/run_electron_compositor_proof.sh'

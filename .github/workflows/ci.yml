@@ -294,7 +294,7 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: apps/rex-desktop-electron/package-lock.json
+          cache-dependency-path: apps/rex-desktop/package-lock.json
 
       - name: Run Electron compositor proof
         id: run_electron_compositor_proof
