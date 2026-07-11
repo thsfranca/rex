@@ -33,27 +33,32 @@ pick_log() {
     ENV_SETUP_FAIL) candidates=(sidecar-pip.log sidecar-proto.log) ;;
     SIDECAR_FAIL) candidates=(stub-sidecar.log rex-agent.log) ;;
     RUFF_FAIL) candidates=(rex-agent.log) ;;
-    NPM_CI_FAIL) candidates=(extension-npm-ci.log) ;;
+    NPM_CI_FAIL) candidates=(extension-npm-ci.log electron-compositor-npm.log) ;;
     TYPECHECK_FAIL) candidates=(extension-typecheck.log) ;;
     LINT_FAIL) candidates=(extension-lint.log) ;;
     PACKAGE_FAIL) candidates=(extension-package.log) ;;
     GUIDELINES_FAIL) candidates=(guidelines.log) ;;
-    UI_FAIL) candidates=(ui-harness.log ui-web-build.log ui-harness-build.log ui-desktop-build.log) ;;
+    UI_FAIL) candidates=(
+      ui-harness.log
+      ui-web-build.log
+      ui-harness-build.log
+      ui-desktop-build.log
+      electron-compositor-proof.log
+    ) ;;
     *)
       candidates=()
       ;;
   esac
 
   local f
-  for f in "${candidates[@]}"; do
-    if [[ -f "${ARTIFACTS_DIR}/${f}" ]] \
-      && grep -qE 'FAIL |FAILED|panicked|error|Error:|assertion' "${ARTIFACTS_DIR}/${f}" 2>/dev/null; then
-      printf '%s\n' "${ARTIFACTS_DIR}/${f}"
-      return
-    fi
-  done
-
-  if ((${#candidates[@]} > 0)); then
+  if ((${#candidates[@]:-0} > 0)); then
+    for f in "${candidates[@]}"; do
+      if [[ -f "${ARTIFACTS_DIR}/${f}" ]] \
+        && grep -qE 'FAIL |FAILED|panicked|error|Error:|assertion' "${ARTIFACTS_DIR}/${f}" 2>/dev/null; then
+        printf '%s\n' "${ARTIFACTS_DIR}/${f}"
+        return
+      fi
+    done
     printf '%s\n' "${ARTIFACTS_DIR}/${candidates[0]}"
     return
   fi
