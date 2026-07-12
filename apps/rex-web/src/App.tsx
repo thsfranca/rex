@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ShellGrid, Text } from "./design-system";
+import { AmbientCanvas } from "./components/AmbientCanvas";
 import { AppHeader } from "./components/AppHeader";
 import { ApprovalModal } from "./components/ApprovalModal";
 import {
@@ -11,6 +12,7 @@ import {
 } from "./design-system";
 import { CommandPalette, ErrorBanner, type CommandAction } from "./components/CommandPalette";
 import { Composer } from "./components/Composer";
+import { ParticleField } from "./components/ParticleField";
 import { StatusPanel } from "./components/StatusPanel";
 import { SessionPicker } from "./components/SessionPicker";
 import { Timeline } from "./components/Timeline";
@@ -247,8 +249,9 @@ export default function App() {
 
   return (
     <>
-      {/* Fullscreen AmbientCanvas/ParticleField unmounted: WKWebView promotes
-          fullscreen WebGL above HTML chrome after regl init. */}
+      <AmbientCanvas phase={phase} />
+      <ParticleField phase={phase} />
+      <StatusOrbit working={working} />
       <ShellEntrance>
       <ShellGrid
         header={
@@ -271,7 +274,6 @@ export default function App() {
         }
       />
       </ShellEntrance>
-      <StatusOrbit working={working} />
       {error ? (
         <ErrorBanner message={error} onDismiss={() => useAppStore.getState().setError(null)} />
       ) : null}

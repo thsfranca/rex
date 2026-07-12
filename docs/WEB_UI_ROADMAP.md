@@ -42,7 +42,7 @@ Phased delivery for the **Electron + React** desktop harness ([ADR 0043](archite
 | 25 | **W125** | ADR 0043 Electron shell decision + compositor proof spec | **Done** |
 | 26 | **W126** | Electron scaffold + compositor proof CI | **Done** |
 | 27 | **W127** | Electron main UDS/stream + load `apps/rex-web` | **Done** |
-| 28 | **W128** | Remount Electric Alive on Electron; `rex` launches Electron | Planned |
+| 28 | **W128** | Remount Electric Alive on Electron; `rex` launches Electron | **Done** |
 | 29 | **W129** | Harness on Electron; retire Tauri product path | Planned |
 
 ## Phase detail
@@ -151,11 +151,12 @@ Phased delivery for the **Electron + React** desktop harness ([ADR 0043](archite
 
 - Main-process UDS gRPC (`@grpc/grpc-js`) + stream fan-out over preload IPC
 - `apps/rex-web` uses `window.rexDesktop` (Tauri invoke removed)
-- Loads `apps/rex-web/dist`; Electric Alive still unmounted until W128
+- Loads `apps/rex-web/dist`; Electric Alive remounted in W128
 
 ### W128 — Electric Alive on Electron
 
-- Remount AmbientCanvas + ParticleField; `rex` launches Electron
+- Remount AmbientCanvas + ParticleField on Electron (Chromium) shell
+- Bare `rex` launches Electron (`apps/rex-desktop`) — shipped with W126 shell swap
 
 ### W129 — Harness + retire Tauri path
 
