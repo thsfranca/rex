@@ -12,13 +12,9 @@ Register MCP: `node crates/rex-ui-harness/dist/index.js` with cwd = repo root.
 
 ## Default: real desktop + daemon (macOS)
 
-`ui_open` with no arguments will launch **Electron** `apps/rex-desktop` with production `apps/rex-web` once W129 lands (harness Electron transport). Until then, desktop CI uses the compositor proof gate (`./scripts/ci/run_electron_compositor_proof.sh`). Daemon UDS bridge in Electron main is **W127** (shipped).
+`ui_open` launches **Electron** `apps/rex-desktop` with production `apps/rex-web/dist` and the mock daemon under `REX_ROOT=fixtures/ui_probe/rex_root` (`sidecars.harness=direct`). Electron main owns UDS gRPC; the renderer never opens the socket.
 
-Planned desktop probe wiring:
-
-- `REX_ROOT=fixtures/ui_probe/rex_root` (mock inference, `sidecars.harness=direct`)
-- **`apps/rex-web/dist`** (same bundle Electron loads)
-- Electron main IPC → UDS `StreamInference` → streaming transcript
+Desktop CI gate: `./scripts/ci/run_ui_verify.sh --mode desktop` runs compositor proof (plus the separate `electron-compositor-proof` job). Full scenario suite (`node crates/rex-ui-harness/dist/run-ci.js --mode desktop`) is available locally for operator polish.
 
 Use `ui_open { "mode": "build" }` for build-only validation (no desktop session).
 
@@ -57,7 +53,7 @@ The in-app observability panel is **hidden unless Rex is started with `--debug`*
 rex --debug
 ```
 
-The harness will launch Electron automatically once W129 lands. Read `[data-testid=ui-observability]` or `window.__REX_UI_OBSERVABILITY__` for phase, stream events, and submit errors.
+The harness launches Electron via Playwright `_electron` (`ui_open`). Read `[data-testid=ui-observability]` or `window.__REX_UI_OBSERVABILITY__` for phase, stream events, and submit errors (panel visible when the app is started with `--debug`).
 
 ## Related
 

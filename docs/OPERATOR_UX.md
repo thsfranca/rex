@@ -6,7 +6,7 @@
 
 ## Product entry
 
-Bare **`rex`** opens the **Rex desktop app** (Tauri + React). The daemon is ensured automatically on launch.
+Bare **`rex`** opens the **Rex desktop app** (Electron + React). The daemon is ensured automatically on launch.
 
 Design and acceptance: [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md). Architecture: [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md).
 

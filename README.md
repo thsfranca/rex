@@ -16,7 +16,7 @@ Canonical **purpose and operating principles** (single source of truth): **[docs
 |---|---|
 | **gRPC + UDS** | Low-latency local transport; socket path from `$REX_ROOT/config.json` (`daemon.socket`). |
 | **Streaming completion** | `StreamInference` chunks with deterministic lifecycle logging on the daemon for triage. |
-| **Desktop operator app** | Bare **`rex`** opens the Tauri + React workspace; daemon auto-starts on launch ([docs/OPERATOR_UX.md](docs/OPERATOR_UX.md)). |
+| **Desktop operator app** | Bare **`rex`** opens the Electron + React workspace; daemon auto-starts on launch ([docs/OPERATOR_UX.md](docs/OPERATOR_UX.md)). |
 | **Setup and doctor commands** | `rex config`, `rex proto`, `rex sidecar`, `rex gateway`, `rex omlx` for layout and health checks. |
 | **Development agent** | **`ask` / `plan` / `agent`** modes in the desktop UI — assistant runtime in a **daemon-supervised sidecar** ([docs/MVP_SPEC.md](docs/MVP_SPEC.md), [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md)). |
 | **Brokered HTTP inference** | Daemon invokes **OpenAI-compatible** backend on behalf of the sidecar (`inference.openai_compat` in JSON); **mock** / **cursor-cli** for tests — [docs/ADAPTERS.md](docs/ADAPTERS.md), [docs/CONFIGURATION.md](docs/CONFIGURATION.md). |
@@ -40,7 +40,7 @@ Linear recipe from a clone to a working desktop session (requires **HTTP backend
 2. **Install** `rex` on PATH — [scripts/install-cli.sh](scripts/install-cli.sh).
 3. **Configure** brokered HTTP in `$REX_ROOT/config.json` — run `rex config init` (rex-agent + mock web search by default), then edit `inference.openai_compat` — [docs/CONFIGURATION.md](docs/CONFIGURATION.md), [docs/SIDECAR_RUNTIME.md](docs/SIDECAR_RUNTIME.md).
 4. **Build** the web UI bundle: `cd apps/rex-web && npm ci && npm run build`.
-5. **Run** `rex` — opens the **desktop web UI** (Tauri) and ensures a detached daemon. Socket defaults to `/tmp/rex.sock` unless overridden in JSON — [docs/OPERATOR_UX.md](docs/OPERATOR_UX.md).
+5. **Run** `rex` — opens the **desktop web UI** (Electron) and ensures a detached daemon. Socket defaults to `/tmp/rex.sock` unless overridden in JSON — [docs/OPERATOR_UX.md](docs/OPERATOR_UX.md).
 6. **Verify** in the app: submit a prompt; confirm streaming text and sidecar health in daemon logs.
 
 Details: [docs/OPERATOR_UX.md](docs/OPERATOR_UX.md), [docs/MVP_SPEC.md](docs/MVP_SPEC.md).
@@ -52,7 +52,7 @@ REX keeps the presentation client thin and centralizes model/runtime policy in o
 | Component | Role |
 |---|---|
 | Daemon | Own inference orchestration, stream lifecycle, and future scheduling and system policy. |
-| Desktop app | Own operator UX; consumes `StreamInference` over UDS via Tauri. |
+| Desktop app | Own operator UX; consumes `StreamInference` over UDS via Electron main. |
 | Protocol | gRPC over UDS for typed, local, low-latency calls. |
 
 ## Quickstart
@@ -158,7 +158,7 @@ Out of scope for Phase 1 (see [docs/MVP_SPEC.md](docs/MVP_SPEC.md)):
 | [docs/README.md](docs/README.md) | Documentation index and reading order. |
 | [docs/OPERATOR_UX.md](docs/OPERATOR_UX.md) | Desktop operator path and session flags. |
 | [docs/WEB_UI_DESIGN.md](docs/WEB_UI_DESIGN.md) | Web desktop design system and acceptance gate. |
-| [docs/WEB_UI_ARCHITECTURE.md](docs/WEB_UI_ARCHITECTURE.md) | Tauri + React architecture. |
+| [docs/WEB_UI_ARCHITECTURE.md](docs/WEB_UI_ARCHITECTURE.md) | Electron + React architecture. |
 | [docs/WEB_UI_ROADMAP.md](docs/WEB_UI_ROADMAP.md) | Web UI phased delivery. |
 | [docs/WEB_UI_AGENT_VALIDATION.md](docs/WEB_UI_AGENT_VALIDATION.md) | rex-ui-harness MCP validation. |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | SAD-style architecture (C4 views, quality attributes) + links to ADRs. |

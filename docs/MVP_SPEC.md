@@ -61,7 +61,7 @@ After v1.0, converge **routing, compaction, caches, metering, and richer tool/MC
 | Item | Definition |
 |---|---|
 | Daemon | `/tmp/rex.sock`; `rex.v1`; policy, broker, sidecar supervisor. |
-| Desktop | Tauri + React operator UI; bare **`rex`** entry ([OPERATOR_UX.md](OPERATOR_UX.md)). |
+| Desktop | Electron + React operator UI; bare **`rex`** entry ([OPERATOR_UX.md](OPERATOR_UX.md)). |
 | **Sidecar agent** | One supervised process; agent stack pluggable per [ADR 0005](architecture/decisions/0005-rex-owns-sidecar-environment-not-agent-implementations.md). |
 | **`rex.sidecar.v1`** | Control plane distinct from `rex.v1` — verbs in [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). |
 | **Brokered inference** | Daemon runs HTTP OpenAI-compat adapter on sidecar request ([CONFIGURATION.md](CONFIGURATION.md), [ADAPTERS.md](ADAPTERS.md)). |

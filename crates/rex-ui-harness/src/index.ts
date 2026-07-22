@@ -62,14 +62,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "ui_open",
       description:
-        "Launch Rex desktop session (Tauri + production dist + mock daemon).",
+        "Launch Rex desktop session (Electron + production dist + mock daemon).",
       inputSchema: {
         type: "object",
         properties: {
           mode: {
             type: "string",
             enum: ["desktop"],
-            description: "desktop = Tauri + UDS daemon",
+            description: "desktop = Electron + UDS daemon",
           },
         },
       },

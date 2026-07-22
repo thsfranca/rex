@@ -161,7 +161,7 @@ async function assertComposerReachable(): Promise<StepResult> {
 
 /**
  * Pixel gate: background-only paint is dark and low-variance; chrome has bright text/controls.
- * Catches WKWebView compositor blanks that leave DOM opacity at 1.
+ * Catches compositor blanks that leave DOM opacity at 1 while chrome is buried.
  */
 async function assertShellChromePainted(): Promise<StepResult> {
   const session = await import("./session.js").then((m) => m.getSession());
@@ -306,9 +306,13 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
   results.push(
     await assertLayout('[data-testid="edge-glow"]', "block")
   );
-  // Fullscreen AmbientCanvas/ParticleField are unmounted: WKWebView WebGL
-  // compositor layers bury the shell after mount. Composer reachability is
-  // the shell contract; modal particles remain covered below.
+  results.push(await assertCanvasTier("cinematic"));
+  results.push(await assertParticleRegl());
+  results.push(await assertParticleCanvasTier("cinematic"));
+  results.push(await assertCanvasAnimating('[data-testid="ambient"]'));
+  results.push(await assertCanvasAnimating('[data-testid="particles"]'));
+  results.push(await assertComposerReachable());
+  results.push(await assertShellChromePainted());
 
   await pageWaitForText(session, "mock: hello", 60_000);
   results.push({ step: "wait transcript mock hello", pass: true });
@@ -358,18 +362,14 @@ async function runDesktopSuite(cfg: HarnessConfig): Promise<StepResult[]> {
 }
 
 async function main(): Promise<void> {
-  const { mode, socket } = parseArgs();
+  const { mode, socket: _socket } = parseArgs();
   const repoRoot = findRepoRoot(process.cwd());
   const base = loadConfig(repoRoot);
   const cfg: HarnessConfig = {
     ...base,
     mode,
     repoRoot,
-    ...(socket ? { desktopSocket: socket } : {}),
   };
-  if (socket) {
-    process.env.TAURI_PLAYWRIGHT_SOCKET = socket;
-  }
 
   if (mode === "build") {
     console.log(JSON.stringify({ mode, pass: true, steps: await runBuildSuite() }, null, 2));

@@ -19,7 +19,7 @@ The interactive **desktop web UI** (bare **`rex`**) is the product usage path. T
 | Component | Responsibility |
 |---|---|
 | `rex` | Unified CLI: bare entry opens the desktop app (product); setup/doctor commands. |
-| `apps/rex-desktop` | Electron shell: loads `apps/rex-web`; compositor proof; UDS proxy in main (W127). |
+| `apps/rex-desktop` | Electron shell: loads `apps/rex-web`; UDS proxy in main; compositor proof. |
 | `apps/rex-web` | React presentation client (transcript, composer, timeline, Electric Alive). |
 | `rex-daemon` | Model/agent policy, adapters, caches, **`StreamInference`** lifecycle. |
 | `rex-proto` | `rex.v1` gRPC contract. |
@@ -51,7 +51,7 @@ make run        # rebuild web UI + rex, launch desktop (macOS)
 # Or manually: cd apps/rex-web && npm install && npm run build; cargo build -p rex; rex
 ```
 
-**Current focus:** Web UI program **W125–W129** Electron migration — [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md), [ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md). Running **`rex`** opens the desktop app and ensures the daemon (Tauri until Electron launch lands). Install with **`./scripts/install-cli.sh`**. Agent UI validation: **rex-ui-harness** MCP — `./scripts/setup_ui_probe_env.sh`, [fixtures/ui_probe/README.md](../fixtures/ui_probe/README.md).
+**Current focus:** Web UI program — [WEB_UI_DESIGN.md](WEB_UI_DESIGN.md), [WEB_UI_ROADMAP.md](WEB_UI_ROADMAP.md), [ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md). Running **`rex`** opens Electron (`apps/rex-desktop`) and ensures the daemon. Install with **`./scripts/install-cli.sh`**. Agent UI validation: **rex-ui-harness** MCP (Playwright Electron) — `./scripts/setup_ui_probe_env.sh`, [fixtures/ui_probe/README.md](../fixtures/ui_probe/README.md).
 
 The Phase 1 product path requires a **supervised sidecar** for assistant modes — [MVP_SPEC.md](MVP_SPEC.md), [SIDECAR_RUNTIME.md](SIDECAR_RUNTIME.md). Configure **`sidecars`** and **`inference.openai_compat`** in JSON ([CONFIGURATION.md](CONFIGURATION.md)); legacy `REX_*` tuning env vars are ignored. CI may use `sidecars.harness: "direct"` (harness only).
 
