@@ -1,5 +1,6 @@
 import { execFile, execFileSync } from "node:child_process";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -34,6 +35,16 @@ export function resolveDesktopAppDir(repoRoot) {
         throw new Error(`Missing ${dir}; apps/rex-desktop is the Electron shell.`);
     }
     return dir;
+}
+/** Absolute path to the Electron binary installed under apps/rex-desktop. */
+export function resolveElectronExecutable(repoRoot) {
+    const appDir = resolveDesktopAppDir(repoRoot);
+    const electronPkg = path.join(appDir, "node_modules", "electron", "package.json");
+    if (!fs.existsSync(electronPkg)) {
+        throw new Error(`Missing Electron in ${appDir}; run: cd apps/rex-desktop && npm ci`);
+    }
+    const requireFromApp = createRequire(electronPkg);
+    return requireFromApp("electron");
 }
 export function harnessDesktopCwd() {
     const dir = path.join(os.tmpdir(), "rex-ui-harness-desktop");

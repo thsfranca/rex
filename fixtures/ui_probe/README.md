@@ -6,7 +6,7 @@ Validation harness for **rex-ui-harness** MCP.
 
 | Mode | When | What runs |
 |------|------|-----------|
-| **desktop** (default on macOS) | compositor proof / future `ui_open` | Electron `apps/rex-desktop` + `apps/rex-web/dist` + mock daemon (full `ui_open` after W127/W129) |
+| **desktop** (default on macOS) | Agent MCP / CI desktop | Electron `apps/rex-desktop` + `apps/rex-web/dist` + mock daemon via `ui_open` / `run-ci.js --mode desktop` |
 | **build** | Linux CI | `npm ci && npm run build` in `apps/rex-web` (same bundle artifact) |
 
 Configure in `rex-ui-harness.toml`:
@@ -42,7 +42,7 @@ Register MCP in Cursor:
 
 ## Desktop acceptance (real UI + daemon)
 
-1. `ui_open` — spawns Tauri app, waits for `Ready`
+1. `ui_open` — launches Electron `apps/rex-desktop`, waits for `Ready`
 2. `ui_assert_layout` — `[data-testid=shell]` display `grid`
 3. `ui_send_keys` — composer: `"hello"` + Enter
 4. `ui_wait_for` — text `mock: hello` in transcript; `#status-label` `Ready`

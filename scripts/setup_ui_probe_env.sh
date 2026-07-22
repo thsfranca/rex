@@ -52,4 +52,4 @@ echo "  args: [\"$HARNESS_DIR/dist/index.js\"]"
 echo "  cwd: $ROOT"
 echo
 echo "Restart MCP after first config copy. Enable Run Mode in Cursor Settings > Agents."
-echo "Bare rex launches Electron loading apps/rex-web (daemon IPC bridge completes in W127)."
+echo "Bare rex launches Electron loading apps/rex-web (UDS IPC in Electron main)."

@@ -1,11 +1,9 @@
 # Copy to repo-root rex-ui-harness.toml (local, untracked). Restart rex-ui-harness MCP after edits.
 
-# desktop = real Tauri app + UDS daemon (macOS). static = HTML probe fixture (CI / Linux).
+# desktop = Electron apps/rex-desktop + UDS daemon (macOS).
 [launch]
 mode = "desktop"
 
-base_url = "file://fixtures/ui_probe/static/index.html"
-static_root = "fixtures/ui_probe/static"
 baseline_dir = ".rex-ui-harness/baselines"
 
 [desktop]

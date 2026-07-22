@@ -1,8 +1,12 @@
-import { stopHarnessDesktopApps } from "./desktopProcess.js";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { harnessDesktopCwd, resetProbeDaemon, resolveDesktopAppDir, resolveElectronExecutable, resolveRexBinary, stopHarnessDesktopApps, } from "./desktopProcess.js";
 import { stopWebUiServer } from "./devServer.js";
 import { pageFill, pageFocus, pagePress, pageWaitForSelector, pageWaitForText, readObservabilitySnapshot, } from "./page.js";
+const require = createRequire(import.meta.url);
 let session = null;
 let desktopRepoRoot = null;
+let electronApp = null;
 export function getSession() {
     if (!session)
         throw new Error("No active session — call ui_open first");
@@ -21,13 +25,44 @@ async function openDesktopSession(cfg) {
     if (process.platform !== "darwin") {
         throw new Error("Desktop mode requires macOS.");
     }
-    // Product shell is Electron (apps/rex-desktop). Playwright-electron session + daemon
-    // bridge IPC land in W127/W129. Desktop CI uses compositor proof until then.
     desktopRepoRoot = cfg.repoRoot;
-    throw new Error("Desktop ui_open awaits Electron daemon bridge (W127) and Playwright-electron harness (W129). " +
-        "Run ./scripts/ci/run_electron_compositor_proof.sh for the compositor gate, or use build-mode harness checks.");
+    await resetProbeDaemon(cfg.rexRoot);
+    await stopHarnessDesktopApps(cfg.repoRoot);
+    const appDir = resolveDesktopAppDir(cfg.repoRoot);
+    const electronPath = resolveElectronExecutable(cfg.repoRoot);
+    const rexBin = resolveRexBinary(cfg.repoRoot);
+    const { _electron: electron } = require("playwright");
+    const timeoutMs = Math.max(30_000, cfg.desktopStartTimeoutSecs * 1000);
+    electronApp = await electron.launch({
+        executablePath: electronPath,
+        args: [appDir],
+        cwd: harnessDesktopCwd(),
+        timeout: timeoutMs,
+        env: {
+            ...process.env,
+            REX_ROOT: cfg.rexRoot,
+            REX_BIN: rexBin,
+            REX_SIDECAR_HARNESS: process.env.REX_SIDECAR_HARNESS ?? "direct",
+            REX_DESKTOP_HOST: "electron",
+            PATH: `${path.dirname(rexBin)}${path.delimiter}${process.env.PATH ?? ""}`,
+        },
+    });
+    const page = await electronApp.firstWindow();
+    await pageWaitForSelector({ mode: "desktop", page, motionFrames: [], recording: false }, '[data-testid="shell"]', timeoutMs);
+    await pageWaitForText({ mode: "desktop", page, motionFrames: [], recording: false }, "Ready", timeoutMs);
+    session = { mode: "desktop", page, motionFrames: [], recording: false };
+    return session;
 }
 export async function closeSession() {
+    if (electronApp) {
+        try {
+            await electronApp.close();
+        }
+        catch {
+            // App may already be closed.
+        }
+        electronApp = null;
+    }
     await stopWebUiServer();
     if (desktopRepoRoot) {
         await stopHarnessDesktopApps(desktopRepoRoot);

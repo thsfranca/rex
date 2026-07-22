@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Web UI verify: rex-web build + harness (build) or Electron compositor proof (desktop).
+# Web UI verify: rex-web build harness (build) or Electron compositor proof (desktop).
+# Full desktop scenario suite (run-ci.js --mode desktop) is available locally via
+# ui_open / npm run verify:ci but is not the CI gate until scenario stability lands.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -126,6 +128,11 @@ if [ "${result}" = "success" ] && [ "${MODE}" = "desktop" ]; then
       mark_failure "BuildAndChecks" "UI_BUILD_FAIL" "apps/rex-desktop npm ci failed."
     fi
   fi
+  if [ "${result}" = "success" ] && [ "${SKIP_HARNESS_BUILD}" = "false" ]; then
+    if ! (cd "${HARNESS_DIR}" && npm ci && npm run build) 2>&1 | tee "ci-observability/ui-harness-build.log"; then
+      mark_failure "BuildAndChecks" "UI_BUILD_FAIL" "rex-ui-harness npm ci/build failed."
+    fi
+  fi
 fi
 echo "::endgroup::"
 
@@ -152,7 +159,8 @@ if [ "${result}" = "success" ] && [ "${MODE}" = "build" ]; then
 fi
 
 if [ "${result}" = "success" ] && [ "${MODE}" = "desktop" ]; then
-  # Desktop gate is Electron compositor proof until harness desktop transport is on Electron (W129).
+  # CI desktop gate: compositor proof (stable). Full run-ci desktop scenarios are
+  # operator follow-up via ui_open / node crates/rex-ui-harness/dist/run-ci.js --mode desktop.
   set +e
   "${ROOT}/scripts/ci/run_electron_compositor_proof.sh" 2>&1 | tee "ci-observability/electron-compositor-proof.log"
   proof_exit=${PIPESTATUS[0]}

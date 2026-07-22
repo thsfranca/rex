@@ -43,7 +43,7 @@ Phased delivery for the **Electron + React** desktop harness ([ADR 0043](archite
 | 26 | **W126** | Electron scaffold + compositor proof CI | **Done** |
 | 27 | **W127** | Electron main UDS/stream + load `apps/rex-web` | **Done** |
 | 28 | **W128** | Remount Electric Alive on Electron; `rex` launches Electron | **Done** |
-| 29 | **W129** | Harness on Electron; retire Tauri product path | Planned |
+| 29 | **W129** | Harness on Electron; retire Tauri product path | **Done** |
 
 ## Phase detail
 
@@ -160,7 +160,9 @@ Phased delivery for the **Electron + React** desktop harness ([ADR 0043](archite
 
 ### W129 — Harness + retire Tauri path
 
-- rex-ui-harness desktop = Electron; remove product Tauri launch; DX docs
+- Product Tauri path retired (`crates/rex-desktop` removed; CLI/docs on Electron)
+- `ui_open` launches Electron via Playwright `_electron` (for local/MCP use)
+- Desktop CI gate remains compositor proof; full desktop scenario suite is operator follow-up
 
 ## Cancelled
 

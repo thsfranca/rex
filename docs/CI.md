@@ -186,7 +186,9 @@ When Web UI probe or harness paths change, CI runs a shared **`ui-build`** job t
 1. **`ui-build`** (`ubuntu-latest`) — [`scripts/ci/build_ui_artifacts.sh`](scripts/ci/build_ui_artifacts.sh) builds `apps/rex-web/dist` and `crates/rex-ui-harness/dist` once; uploads artifacts for matrix reuse.
 2. **`ui-verify`** matrix — [`scripts/ci/run_ui_verify.sh`](scripts/ci/run_ui_verify.sh) downloads artifacts and runs scenarios:
    - **build** (`ubuntu-latest`) — rex-web production bundle compile gate (`--mode build`); harness build-only step (no browser)
-   - **desktop** (`macos-latest`) — Electron compositor proof (`apps/rex-desktop`) + `cargo build -p rex`
+   - **desktop** (`macos-latest`) — Electron compositor proof + `cargo build -p rex` + `apps/rex-desktop` npm ci
+   - Separate job **`electron-compositor-proof`** — chrome + WebGL co-visibility ≥5s
+   - Local/MCP: `ui_open` / `run-ci.js --mode desktop` for full scenario polish (not CI gate yet)
 
 Matrix legs pass `--skip-harness-build`; desktop also passes `--skip-web-build`. Local full builds omit skip flags.
 
