@@ -43,7 +43,7 @@ Hub: [WEB_UI_ARCHITECTURE.md](../../WEB_UI_ARCHITECTURE.md).
    - Proof samples: luminance of chrome (not background-only) **and** hit-test that shell contains composer/header target.
    - Sample at least at **t=0, 1s, 3s, 5s** after WebGL init.
    - Failure = bury regression (must fail CI). Empty harness TestExecution must not report success.
-   - Desktop harness loads **`apps/rex-web/dist`**; mock only at daemon config (`REX_ROOT`).
+   - Desktop harness / compositor proof load **`apps/rex-web/dist`** only — no parallel proof HTML app.
 
 8. **Configuration:** No new JSON keys for UI mode — process context (`rex` spawn) selects the desktop app ([KISS config surface](../../CONFIGURATION.md)).
 

@@ -13,7 +13,7 @@ type RexDesktopApi = {
   host: string;
   shell: string;
   ensureDaemon: () => Promise<SystemStatus>;
-  getLaunchOptions: () => Promise<{ debug: boolean }>;
+  getLaunchOptions: () => Promise<{ debug: boolean; compositorProof?: boolean }>;
   getSystemStatus: () => Promise<SystemStatus>;
   listClosedSessions: () => Promise<SessionSummary[]>;
   fetchSessionEvents: (
@@ -64,7 +64,10 @@ export async function ensureDaemon(): Promise<SystemStatus> {
   return desktopApi().ensureDaemon();
 }
 
-export async function getLaunchOptions(): Promise<{ debug: boolean }> {
+export async function getLaunchOptions(): Promise<{
+  debug: boolean;
+  compositorProof?: boolean;
+}> {
   return desktopApi().getLaunchOptions();
 }
 

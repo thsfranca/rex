@@ -6,7 +6,6 @@ const { app, BrowserWindow } = require("electron");
 const { registerDaemonIpc } = require("./ipc/registerHandlers.cjs");
 
 const APP_ROOT = path.join(__dirname, "..");
-const PROOF_DIR = path.join(APP_ROOT, "proof");
 const WEB_DIST = path.resolve(APP_ROOT, "..", "rex-web", "dist", "index.html");
 
 let mainWindow = null;
@@ -15,13 +14,15 @@ let stopLifecycle = null;
 function parseArgs(argv) {
   const flags = new Set(argv.slice(2));
   return {
-    proof: flags.has("--proof") || process.env.REX_ELECTRON_PROOF === "1",
-    bury: flags.has("--bury") || process.env.REX_COMPOSITOR_PROOF_BURY === "1",
+    // Forces Electric Alive ambient draw in the real apps/rex-web UI (CI compositor gate).
+    compositorProof:
+      flags.has("--compositor-proof") ||
+      process.env.REX_COMPOSITOR_PROOF === "1",
     debug: flags.has("--debug") || process.env.REX_DESKTOP_DEBUG === "1",
   };
 }
 
-function createWindow({ proof, bury, debug }) {
+function createWindow({ debug }) {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -38,10 +39,9 @@ function createWindow({ proof, bury, debug }) {
     },
   });
 
-  if (proof) {
-    const query = bury ? "?bury=1" : "";
-    win.loadFile(path.join(PROOF_DIR, "index.html"), { search: query });
-  } else if (fs.existsSync(WEB_DIST)) {
+  if (fs.existsSync(WEB_DIST)) {
+    // Do not append ?query to file:// — Chromium leaves #root empty for the Vite bundle.
+    // Compositor proof is signaled via rex:launchOptions IPC instead.
     win.loadFile(WEB_DIST);
   } else {
     win.loadURL(
@@ -60,12 +60,10 @@ function createWindow({ proof, bury, debug }) {
 
 app.whenReady().then(() => {
   const opts = parseArgs(process.argv);
-  if (!opts.proof) {
-    stopLifecycle = registerDaemonIpc(
-      () => mainWindow,
-      { debug: opts.debug },
-    );
-  }
+  stopLifecycle = registerDaemonIpc(
+    () => mainWindow,
+    { debug: opts.debug, compositorProof: opts.compositorProof },
+  );
   mainWindow = createWindow(opts);
 
   app.on("activate", () => {

@@ -51,7 +51,7 @@ pick_log() {
   esac
 
   local f
-  if ((${#candidates[@]:-0} > 0)); then
+  if ((${#candidates[@]} > 0)); then
     for f in "${candidates[@]}"; do
       if [[ -f "${ARTIFACTS_DIR}/${f}" ]] \
         && grep -qE 'FAIL |FAILED|panicked|error|Error:|assertion' "${ARTIFACTS_DIR}/${f}" 2>/dev/null; then

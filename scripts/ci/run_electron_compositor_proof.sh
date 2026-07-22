@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Electron compositor proof (ADR 0043 / W126): chrome + fullscreen WebGL ≥5s.
+# Electron compositor proof (ADR 0043): apps/rex-web chrome + ambient WebGL ≥5s.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 APP_DIR="${ROOT}/apps/rex-desktop"
+WEB_DIR="${ROOT}/apps/rex-web"
 cd "$ROOT"
 mkdir -p ci-observability
 
@@ -33,6 +34,13 @@ elif ! command -v npm >/dev/null 2>&1; then
 fi
 
 echo "::group::Setup"
+if [ "${result}" = "success" ]; then
+  if [ ! -d "${WEB_DIR}/dist" ] || [ -z "$(ls -A "${WEB_DIR}/dist" 2>/dev/null || true)" ]; then
+    if ! (cd "${WEB_DIR}" && npm ci && npm run build) 2>&1 | tee "${ROOT}/ci-observability/electron-compositor-web-build.log"; then
+      mark_failure "Setup" "UI_BUILD_FAIL" "apps/rex-web build failed for compositor proof."
+    fi
+  fi
+fi
 if [ "${result}" = "success" ]; then
   cd "${APP_DIR}"
   if [ ! -d node_modules ]; then

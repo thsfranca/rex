@@ -4,7 +4,7 @@
 > Role: reference | Status: active | Audience: contributors | Read when: stream event vocabulary for desktop projection
 > Prefer: ## Event catalog
 
-Canonical reference for **internal stream events** projected by the desktop client: modes, event shapes, terminal invariant, and stable error codes. **Not** a public subprocess API — public operator transport is UDS gRPC `StreamInference` via the Tauri desktop ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md); [ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md) superseded).
+Canonical reference for **internal stream events** projected by the desktop client: modes, event shapes, terminal invariant, and stable error codes. **Not** a public subprocess API — public operator transport is UDS gRPC `StreamInference` via the Electron desktop ([ADR 0043](architecture/decisions/0043-electron-shell-for-electric-alive-compositor.md); [ADR 0038](architecture/decisions/0038-cli-ndjson-stream-transport.md) superseded).
 
 **Consumers:** `rex-stream-ui`, `fixtures/stream_events/` golden lines, guidelines CI. **Operator path:** [OPERATOR_UX.md](OPERATOR_UX.md). System context: [ARCHITECTURE.md](ARCHITECTURE.md).
 

@@ -7,7 +7,7 @@ REX keeps **routing/caching/pipeline policy in `rex-daemon`**, runs the **develo
 ## Current purpose
 
 - Ship reliable **`rex.v1`** streaming for the desktop client ([ADR 0042](architecture/decisions/0042-web-desktop-presentation-pivot.md)).
-- **Primary client:** Tauri web desktop — [OPERATOR_UX.md](OPERATOR_UX.md), [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md).
+- **Primary client:** Electron web desktop — [OPERATOR_UX.md](OPERATOR_UX.md), [WEB_UI_ARCHITECTURE.md](WEB_UI_ARCHITECTURE.md).
 - **MVP product path:** daemon-supervised **sidecar agent** + **brokered** HTTP inference + **one brokered tool**.
 - Concentrate **cost/performance levers** ([CONTEXT_EFFICIENCY.md](CONTEXT_EFFICIENCY.md)) in the daemon boundary.
 - **Harness only:** direct in-process **mock** / HTTP without sidecar for CI and migration.
