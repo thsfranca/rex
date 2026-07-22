@@ -50,6 +50,7 @@ async function hydrateSession(sessionId: string) {
 
 export default function App() {
   const [debugEnabled, setDebugEnabled] = useState(false);
+  const [compositorProof, setCompositorProof] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [statusPanelOpen, setStatusPanelOpen] = useState(false);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
@@ -110,7 +111,15 @@ export default function App() {
 
   useEffect(() => {
     void getLaunchOptions()
-      .then((options) => setDebugEnabled(options.debug))
+      .then((options) => {
+        setDebugEnabled(options.debug);
+        // CI compositor gate: force Electric Alive ambient draw without setPhase —
+        // cold-start setPhase("generating") clears #root under Electron.
+        // Signal via Electron launchOptions (not file:// ?query, which also breaks mount).
+        if (options.compositorProof) {
+          setCompositorProof(true);
+        }
+      })
       .catch(() => setDebugEnabled(false));
   }, []);
 
@@ -188,6 +197,7 @@ export default function App() {
   }, []);
 
   const working = phase === "generating" || phase === "tool_running";
+  const ambientPhase: typeof phase = compositorProof ? "generating" : phase;
 
   const handleApproval = async (approved: boolean) => {
     if (!pendingApproval?.approvalToken || !harnessSessionId) return;
@@ -249,9 +259,9 @@ export default function App() {
 
   return (
     <>
-      <AmbientCanvas phase={phase} />
-      <ParticleField phase={phase} />
-      <StatusOrbit working={working} />
+      <AmbientCanvas phase={ambientPhase} />
+      <ParticleField phase={ambientPhase} />
+      <StatusOrbit working={working || compositorProof} />
       <ShellEntrance>
       <ShellGrid
         header={

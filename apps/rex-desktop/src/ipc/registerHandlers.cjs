@@ -14,13 +14,14 @@ const {
 
 /**
  * @param {() => import('electron').BrowserWindow | null} getWindow
- * @param {{ debug: boolean }} launchState
+ * @param {{ debug: boolean, compositorProof?: boolean }} launchState
  */
 function registerDaemonIpc(getWindow, launchState) {
   ipcMain.handle("rex:ensureDaemon", async () => ensureDaemonReady());
   ipcMain.handle("rex:getSystemStatus", async () => getSystemStatus());
   ipcMain.handle("rex:launchOptions", async () => ({
     debug: Boolean(launchState.debug),
+    compositorProof: Boolean(launchState.compositorProof),
   }));
   ipcMain.handle("rex:listClosedSessions", async () => []);
   ipcMain.handle("rex:fetchSessionEvents", async (_e, args) =>

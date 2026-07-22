@@ -143,7 +143,7 @@ Phased delivery for the **Electron + React** desktop harness ([ADR 0043](archite
 
 ### W126 — Electron compositor proof
 
-- `apps/rex-desktop` Electron scaffold; loads `apps/rex-web`; compositor proof page under `proof/` (CI only)
+- `apps/rex-desktop` Electron scaffold; loads sole UI `apps/rex-web`; compositor proof runs against that UI (no parallel proof page)
 - CI/local script fails on bury: `./scripts/ci/run_electron_compositor_proof.sh`
 - Tauri `crates/rex-desktop` removed (no parallel shell)
 

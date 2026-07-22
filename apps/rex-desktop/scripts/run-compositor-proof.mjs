@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Compositor proof: chrome + fullscreen WebGL co-visible for ≥5s.
- * Samples at t=0,1,3,5s — luminance (not background-only) + hit-test.
+ * Compositor proof against the sole product UI (apps/rex-web):
+ * chrome + fullscreen ambient WebGL co-visible for ≥5s.
  *
  * Usage:
  *   node scripts/run-compositor-proof.mjs
@@ -17,7 +17,9 @@ const { _electron: electron } = require("playwright");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.join(__dirname, "..");
+const WEB_DIST = path.resolve(APP_ROOT, "..", "rex-web", "dist", "index.html");
 const SAMPLE_MS = [0, 1000, 3000, 5000];
+const CHROME_SELECTORS = ['[data-testid="app-header"]', '[data-testid="composer"]'];
 
 function parseArgs(argv) {
   const flags = new Set(argv.slice(2));
@@ -48,31 +50,24 @@ function meanRgb(png) {
   return { r: r / n, g: g / n, b: b / n, n };
 }
 
-function fractionNearWebglClear(png) {
-  // WebGL clear ≈ rgb(5, 199, 224) with small pulse on G.
-  let near = 0;
+function brightFraction(png) {
+  let bright = 0;
   let n = 0;
   for (let i = 0; i < png.data.length; i += 4) {
-    const r = png.data[i];
-    const g = png.data[i + 1];
-    const b = png.data[i + 2];
-    const dr = Math.abs(r - 5);
-    const dg = Math.abs(g - 199);
-    const db = Math.abs(b - 224);
-    if (dr < 40 && dg < 50 && db < 40) {
-      near += 1;
-    }
+    const lum =
+      0.2126 * png.data[i] +
+      0.7152 * png.data[i + 1] +
+      0.0722 * png.data[i + 2];
+    if (lum > 60) bright += 1;
     n += 1;
   }
-  return n === 0 ? 1 : near / n;
+  return n === 0 ? 0 : bright / n;
 }
 
 async function sampleChrome(page, selector) {
   const buf = await page.locator(selector).screenshot({ type: "png" });
   const png = PNG.sync.read(buf);
-  const mean = meanRgb(png);
-  const webglFrac = fractionNearWebglClear(png);
-  return { mean, webglFrac, pixels: mean.n };
+  return { mean: meanRgb(png), brightFrac: brightFraction(png), pixels: meanRgb(png).n };
 }
 
 async function hitTest(page, selector) {
@@ -102,19 +97,19 @@ async function hitTest(page, selector) {
 async function assertSample(page, label) {
   const errors = [];
 
-  const webglReady = await page.locator("body[data-webgl-ready='1']").count();
-  if (webglReady !== 1) {
-    errors.push(`${label}: WebGL not ready`);
+  const ambient = await page.locator('[data-testid="ambient"]').count();
+  if (ambient !== 1) {
+    errors.push(`${label}: ambient canvas missing`);
   }
 
-  const frames = Number(
-    (await page.locator("body").getAttribute("data-webgl-frames")) || "0",
-  );
-  if (frames < 1) {
-    errors.push(`${label}: WebGL frames=${frames}`);
+  const tier = await page
+    .locator('[data-testid="ambient"]')
+    .getAttribute("data-motion-tier");
+  if (tier !== "cinematic") {
+    errors.push(`${label}: ambient tier=${tier} (expected cinematic)`);
   }
 
-  for (const sel of ["#proof-header", "#proof-composer"]) {
+  for (const sel of CHROME_SELECTORS) {
     const hit = await hitTest(page, sel);
     if (!hit.ok) {
       errors.push(
@@ -123,16 +118,10 @@ async function assertSample(page, label) {
     }
 
     const chrome = await sampleChrome(page, sel);
-    if (chrome.webglFrac > 0.85) {
+    // Chrome must show painted text/controls, not a flat buried background.
+    if (chrome.brightFrac < 0.002) {
       errors.push(
-        `${label}: ${sel} luminance is background-only (webglFrac=${chrome.webglFrac.toFixed(3)})`,
-      );
-    }
-    // Chrome panel is dark; mean luminance should not look like cyan WebGL.
-    const lum = 0.2126 * chrome.mean.r + 0.7152 * chrome.mean.g + 0.0722 * chrome.mean.b;
-    if (lum > 160 && chrome.mean.g > 150 && chrome.mean.b > 150) {
-      errors.push(
-        `${label}: ${sel} mean looks like WebGL clear (lum=${lum.toFixed(1)})`,
+        `${label}: ${sel} luminance is background-only (brightFrac=${chrome.brightFrac.toFixed(4)})`,
       );
     }
   }
@@ -142,15 +131,19 @@ async function assertSample(page, label) {
 
 async function main() {
   const { bury, expectFail } = parseArgs(process.argv);
-  const electronPath = require("electron");
-
-  const args = [APP_ROOT, "--", "--proof"];
-  if (bury) {
-    args.push("--bury");
+  if (!require("node:fs").existsSync(WEB_DIST)) {
+    console.error(
+      `compositor-proof: missing ${WEB_DIST}; build apps/rex-web first`,
+    );
+    process.exitCode = 1;
+    return;
   }
 
+  const electronPath = require("electron");
+  const args = [APP_ROOT, "--", "--compositor-proof"];
+
   console.log(
-    `compositor-proof: launch electron bury=${bury} expectFail=${expectFail}`,
+    `compositor-proof: launch apps/rex-web bury=${bury} expectFail=${expectFail}`,
   );
 
   const app = await electron.launch({
@@ -158,16 +151,32 @@ async function main() {
     args,
     env: {
       ...process.env,
-      REX_ELECTRON_PROOF: "1",
-      ...(bury ? { REX_COMPOSITOR_PROOF_BURY: "1" } : {}),
+      REX_COMPOSITOR_PROOF: "1",
+      REX_DESKTOP_HOST: "electron",
     },
   });
 
   try {
     const page = await app.firstWindow();
-    await page.waitForSelector("body[data-webgl-ready='1']", {
-      timeout: 15_000,
-    });
+    await page.waitForSelector('[data-testid="shell"]', { timeout: 30_000 });
+    await page.waitForSelector('[data-testid="app-header"]', { timeout: 15_000 });
+    await page.waitForSelector('[data-testid="composer"]', { timeout: 15_000 });
+    await page.waitForSelector(
+      '[data-testid="ambient"][data-motion-tier="cinematic"]',
+      { timeout: 15_000 },
+    );
+
+    if (bury) {
+      await page.addStyleTag({
+        content: `
+          canvas#ambient {
+            z-index: 9999 !important;
+            pointer-events: auto !important;
+            opacity: 1 !important;
+          }
+        `,
+      });
+    }
 
     const t0 = Date.now();
     const allErrors = [];
@@ -215,7 +224,9 @@ async function main() {
       return;
     }
 
-    console.log("compositor-proof: PASSED (chrome + WebGL co-visible ≥5s)");
+    console.log(
+      "compositor-proof: PASSED (apps/rex-web chrome + ambient WebGL co-visible ≥5s)",
+    );
     process.exitCode = 0;
   } finally {
     await app.close();

@@ -95,7 +95,7 @@ flowchart TB
 
 | Subcommand / entry | Purpose |
 |------------|---------|
-| `rex` (no args) | Launch Tauri desktop (macOS); auto-starts daemon |
+| `rex` (no args) | Launch Electron desktop (macOS); auto-starts daemon |
 | `rex config` | `init`, `show`, `path`, `validate` |
 | `rex proto` | `doctor`, `install`, `path` |
 | `rex sidecar` | `list`, `init`, `doctor` |
