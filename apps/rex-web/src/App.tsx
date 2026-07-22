@@ -284,8 +284,11 @@ export default function App() {
         }
       />
       </ShellEntrance>
-      {error ? (
-        <ErrorBanner message={error} onDismiss={() => useAppStore.getState().setError(null)} />
+      {error && !compositorProof ? (
+        <ErrorBanner
+          message={error}
+          onDismiss={() => useAppStore.getState().setError(null)}
+        />
       ) : null}
       {pendingApproval && phase === "tool_approval" ? (
         <ApprovalModal
