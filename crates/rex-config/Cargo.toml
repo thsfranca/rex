@@ -14,5 +14,5 @@ sha2 = "0.11"
 thiserror = "2"
 
 [dev-dependencies]
-serial_test = "3"
+serial_test = "4"
 tempfile = "3"
