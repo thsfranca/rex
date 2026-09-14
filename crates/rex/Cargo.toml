@@ -19,5 +19,5 @@ tokio.workspace = true
 
 [dev-dependencies]
 assert_cmd = "2"
-serial_test = "3"
+serial_test = "4"
 tempfile = "3"
